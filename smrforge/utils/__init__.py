@@ -14,6 +14,8 @@ Planned features:
 See FEATURE_STATUS.md for current status.
 """
 
-__all__ = []
+from smrforge.utils.logo import get_logo_path, get_logo_data
+
+__all__ = ['get_logo_path', 'get_logo_data']
 
 # TODO: Add utility functions as needed
