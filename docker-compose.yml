@@ -43,3 +43,20 @@ services:
     # Install dev dependencies
     command: bash -c "pip install -e '.[dev]' && bash"
 
+  # Alternative service with optional OpenMC (use if main build fails)
+  smrforge-no-openmc:
+    build:
+      context: .
+      dockerfile: Dockerfile.optional-openmc
+    image: smrforge:no-openmc
+    container_name: smrforge-no-openmc
+    volumes:
+      - ./data:/app/data:rw
+      - ./output:/app/output:rw
+      - ./examples:/app/examples:ro
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+

@@ -143,6 +143,29 @@ environment:
 
 ## Troubleshooting
 
+### Build Fails with "pip install" Error
+
+If you see errors during the build process:
+
+1. **Try rebuilding with no cache:**
+   ```bash
+   docker-compose build --no-cache smrforge
+   ```
+
+2. **If OpenMC is causing issues, use the optional version:**
+   ```bash
+   docker-compose up -d smrforge-no-openmc
+   ```
+
+3. **Check detailed error logs:**
+   ```bash
+   docker-compose build smrforge 2>&1 | tee build.log
+   ```
+
+See `DOCKER_TROUBLESHOOTING.md` for detailed troubleshooting guide.
+
+## Troubleshooting (Legacy)
+
 ### Container won't start
 
 Check Docker Desktop is running and has enough resources allocated:
