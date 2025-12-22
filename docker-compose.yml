@@ -17,9 +17,10 @@ services:
     working_dir: /app
     environment:
       - PYTHONUNBUFFERED=1
-    # Override command to run interactively
+    # Keep container running for exec commands
     stdin_open: true
     tty: true
+    command: tail -f /dev/null
     # Or run a specific script
     # command: python examples/complete_integration_example.py
 
@@ -57,4 +58,5 @@ services:
       - PYTHONUNBUFFERED=1
     stdin_open: true
     tty: true
+    command: tail -f /dev/null
 
