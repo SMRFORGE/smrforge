@@ -104,49 +104,197 @@ class NuclearDataCache:
         library: Library,
         key: str
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Fetch from source and cache."""
-        # Check if OpenMC is available
-        try:
-            import openmc.data
-        except ImportError:
-            raise ImportError(
-                "OpenMC is required to fetch nuclear cross-section data but is not installed. "
-                "Install it with: pip install openmc>=0.13.0\n"
-                "Note: OpenMC requires build tools (CMake, gfortran) and may take several minutes to build.\n"
-                "For Docker, ensure the Dockerfile installs OpenMC successfully."
-            ) from None
-        
-        # Use OpenMC's data API as backend (much cleaner than PyNE)
-        
+        """Fetch from source and cache. Tries multiple backends in order."""
         # Download ENDF file if needed
         endf_file = self._ensure_endf_file(nuclide, library)
         
-        # Parse using OpenMC (fast C++ backend)
-        evaluation = openmc.data.endf.Evaluation(endf_file)
+        # Try OpenMC first (preferred - fast C++ backend)
+        try:
+            import openmc.data
+            evaluation = openmc.data.endf.Evaluation(endf_file)
+            reaction_mt = self._reaction_to_mt(reaction)
+            if reaction_mt in evaluation:
+                rxn_data = evaluation[reaction_mt]
+                energy, xs = rxn_data.xs['0K'].x, rxn_data.xs['0K'].y
+                
+                # Apply temperature if needed
+                if abs(temperature - 293.6) > 1.0:
+                    xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
+                
+                # Cache and return
+                self._save_to_cache(key, energy, xs)
+                return energy, xs
+        except ImportError:
+            pass  # Try next backend
+        except Exception as e:
+            # OpenMC available but failed - log and try next
+            import warnings
+            warnings.warn(f"OpenMC parsing failed: {e}. Trying alternative backend.", stacklevel=2)
         
-        # Extract reaction
-        reaction_mt = self._reaction_to_mt(reaction)
-        if reaction_mt in evaluation:
-            rxn_data = evaluation[reaction_mt]
-            energy, xs = rxn_data.xs['0K'].x, rxn_data.xs['0K'].y
+        # Try SANDY as alternative (lighter weight, pure Python)
+        try:
+            import sandy
+            endf_tapes = sandy.Endf6.from_file(str(endf_file))
+            reaction_mt = self._reaction_to_mt(reaction)
             
-            # Apply temperature if needed
-            if abs(temperature - 293.6) > 1.0:
-                xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
-        else:
-            # Reaction not available
-            energy = np.array([1e-5, 2e7])
-            xs = np.zeros(2)
+            # Extract cross section data
+            if reaction_mt in endf_tapes:
+                mf3 = endf_tapes.filter_by(mf=3, mt=reaction_mt)
+                if len(mf3) > 0:
+                    energy = mf3[0].data['E'].values
+                    xs = mf3[0].data['XS'].values
+                    
+                    # Apply temperature if needed
+                    if abs(temperature - 293.6) > 1.0:
+                        xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
+                    
+                    # Cache and return
+                    self._save_to_cache(key, energy, xs)
+                    return energy, xs
+        except ImportError:
+            pass  # Try next backend
+        except Exception as e:
+            import warnings
+            warnings.warn(f"SANDY parsing failed: {e}. Trying simple parser.", stacklevel=2)
         
-        # Cache in zarr with compression
+        # Fallback: Simple ENDF parser for common reactions
+        try:
+            energy, xs = self._simple_endf_parse(endf_file, reaction, nuclide)
+            if energy is not None and xs is not None:
+                # Apply temperature if needed
+                if abs(temperature - 293.6) > 1.0:
+                    xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
+                
+                # Cache and return
+                self._save_to_cache(key, energy, xs)
+                return energy, xs
+        except Exception as e:
+            import warnings
+            warnings.warn(f"Simple ENDF parser failed: {e}", stacklevel=2)
+        
+        # All backends failed - provide helpful error message
+        available_backends = []
+        try:
+            import openmc.data
+            available_backends.append("OpenMC")
+        except ImportError:
+            pass
+        try:
+            import sandy
+            available_backends.append("SANDY")
+        except ImportError:
+            pass
+        
+        error_msg = (
+            f"Failed to parse cross-section data for {nuclide.name}/{reaction}. "
+            f"No suitable backend available.\n\n"
+            f"Installed backends: {', '.join(available_backends) if available_backends else 'None'}\n\n"
+            f"To enable cross-section fetching, install one of:\n"
+            f"  - OpenMC (preferred): pip install openmc>=0.13.0\n"
+            f"    Note: Requires build tools (CMake, gfortran), takes several minutes to build\n"
+            f"  - SANDY (lighter alternative): pip install sandy\n"
+            f"    Pure Python, easier to install\n\n"
+            f"Alternatively, pre-populate the cache directory at:\n"
+            f"  {self.cache_dir}\n"
+            f"with processed cross-section data to avoid runtime fetching."
+        )
+        raise ImportError(error_msg)
+    
+    def _save_to_cache(self, key: str, energy: np.ndarray, xs: np.ndarray):
+        """Save cross-section data to zarr cache."""
         group = self.root.create_group(key, overwrite=True)
         group.create_dataset('energy', data=energy, chunks=(1024,), compression='zstd')
         group.create_dataset('xs', data=xs, chunks=(1024,), compression='zstd')
         
         # Cache in memory
         self._memory_cache[key] = (energy, xs)
+    
+    def _simple_endf_parse(
+        self, 
+        endf_file: Path, 
+        reaction: str, 
+        nuclide: Nuclide
+    ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        """
+        Simple ENDF parser for basic reactions (total, elastic, fission, capture).
+        This is a minimal fallback that parses basic MT numbers from ENDF files.
+        """
+        reaction_mt = self._reaction_to_mt(reaction)
         
-        return energy, xs
+        try:
+            with open(endf_file, 'r') as f:
+                lines = f.readlines()
+            
+            # Find MF=3 (cross sections) section
+            mf3_start = None
+            for i, line in enumerate(lines):
+                if line[70:72].strip() == '3' and int(line[72:75]) == reaction_mt:
+                    mf3_start = i
+                    break
+            
+            if mf3_start is None:
+                return None, None
+            
+            # Parse the data points
+            # ENDF format: each line can have up to 6 values (6E11.0 format)
+            # Data comes as pairs: (E1, XS1, E2, XS2, ...)
+            energy_list = []
+            xs_list = []
+            
+            i = mf3_start + 1
+            values = []  # Collect all values first
+            
+            while i < len(lines):
+                line = lines[i]
+                
+                # Check if we've moved to next section (look at control record)
+                if len(line) > 75:
+                    try:
+                        if line[70:72].strip() and int(line[70:72]) != 3:
+                            break  # Not MF=3 anymore
+                    except (ValueError, IndexError):
+                        pass
+                
+                # Parse data (6 values per line in 11-character fields starting at column 0)
+                for j in range(0, min(66, len(line)), 11):
+                    if j + 11 > len(line):
+                        break
+                    try:
+                        val_str = line[j:j+11].strip()
+                        if val_str:  # Only parse non-empty strings
+                            val = float(val_str)
+                            values.append(val)
+                    except (ValueError, IndexError):
+                        continue
+                
+                i += 1
+                
+                # Check for end of section (next control record or blank line)
+                if i < len(lines):
+                    next_line = lines[i]
+                    if len(next_line) > 75:
+                        try:
+                            # Check if next line is a new section
+                            mf = next_line[70:72].strip()
+                            if mf and int(mf) != 3:
+                                break
+                        except (ValueError, IndexError):
+                            pass
+            
+            # Pair up values: (E1, XS1, E2, XS2, ...)
+            for idx in range(0, len(values) - 1, 2):
+                energy_list.append(values[idx])
+                xs_list.append(values[idx + 1])
+            
+            if len(energy_list) > 0 and len(xs_list) > 0:
+                energy = np.array(energy_list)
+                xs = np.array(xs_list)
+                return energy, xs
+        
+        except Exception:
+            pass
+        
+        return None, None
     
     @staticmethod
     @njit(parallel=True, cache=True)

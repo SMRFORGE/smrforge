@@ -14,8 +14,11 @@ zarr>=2.14.0
 # Fast dataframes (alternative to pandas)
 polars>=0.19.0
 
-# Nuclear data handling
+# Nuclear data handling (at least one required for cross-section fetching)
+# Option 1: OpenMC (preferred, but requires build tools - CMake, gfortran)
 openmc>=0.13.0
+# Option 2: SANDY (lighter alternative, pure Python, easier to install)
+# sandy>=1.0.0  # Uncomment if you prefer SANDY over OpenMC
 
 # Validation and schemas
 pydantic>=2.0.0
