@@ -28,6 +28,16 @@ try:
 except ImportError:
     _RESONANCE_AVAILABLE = False
 
+try:
+    from smrforge.core.endf_parser import (
+        ENDFEvaluation,
+        ENDFCompatibility,
+        ReactionData,
+    )
+    _ENDF_PARSER_AVAILABLE = True
+except ImportError:
+    _ENDF_PARSER_AVAILABLE = False
+
 __all__ = ['constants', 'materials_database']
 
 if _CORE_DATA_AVAILABLE:
@@ -45,4 +55,11 @@ if _RESONANCE_AVAILABLE:
         'BondarenkoMethod',
         'SubgroupMethod',
         'EquivalenceTheory',
+    ])
+
+if _ENDF_PARSER_AVAILABLE:
+    __all__.extend([
+        'ENDFEvaluation',
+        'ENDFCompatibility',
+        'ReactionData',
     ])

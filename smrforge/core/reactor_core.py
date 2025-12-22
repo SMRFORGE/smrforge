@@ -155,7 +155,31 @@ class NuclearDataCache:
             pass  # Try next backend
         except Exception as e:
             import warnings
-            warnings.warn(f"SANDY parsing failed: {e}. Trying simple parser.", stacklevel=2)
+            warnings.warn(f"SANDY parsing failed: {e}. Trying SMRForge parser.", stacklevel=2)
+        
+        # Try SMRForge's custom ENDF parser (pure Python, no dependencies)
+        try:
+            from .endf_parser import ENDFCompatibility
+            evaluation = ENDFCompatibility(endf_file)
+            reaction_mt = self._reaction_to_mt(reaction)
+            
+            if reaction_mt in evaluation:
+                rxn_data = evaluation[reaction_mt]
+                energy = rxn_data.xs['0K'].x
+                xs = rxn_data.xs['0K'].y
+                
+                # Apply temperature if needed
+                if abs(temperature - 293.6) > 1.0:
+                    xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
+                
+                # Cache and return
+                self._save_to_cache(key, energy, xs)
+                return energy, xs
+        except ImportError:
+            pass  # Module import failed
+        except Exception as e:
+            import warnings
+            warnings.warn(f"SMRForge ENDF parser failed: {e}. Trying simple parser.", stacklevel=2)
         
         # Fallback: Simple ENDF parser for common reactions
         try:
@@ -194,6 +218,8 @@ class NuclearDataCache:
             f"    Note: Requires build tools (CMake, gfortran), takes several minutes to build\n"
             f"  - SANDY (lighter alternative): pip install sandy\n"
             f"    Pure Python, easier to install\n\n"
+            f"Note: SMRForge includes a built-in ENDF parser, but it failed to parse this file.\n"
+            f"This may indicate an issue with the ENDF file format or unsupported reaction.\n\n"
             f"Alternatively, pre-populate the cache directory at:\n"
             f"  {self.cache_dir}\n"
             f"with processed cross-section data to avoid runtime fetching."
@@ -218,6 +244,9 @@ class NuclearDataCache:
         """
         Simple ENDF parser for basic reactions (total, elastic, fission, capture).
         This is a minimal fallback that parses basic MT numbers from ENDF files.
+        
+        Note: The SMRForge ENDF parser (endf_parser.py) is preferred over this method.
+        This is kept as a last-resort fallback.
         """
         reaction_mt = self._reaction_to_mt(reaction)
         
