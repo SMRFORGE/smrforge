@@ -20,10 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     pkg-config \
     libhdf5-dev \
-    libhdf5-serial-dev \
     libblas-dev \
     liblapack-dev \
-    libatlas-base-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
 
