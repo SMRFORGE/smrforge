@@ -10,10 +10,17 @@ This is a custom implementation focused on what SMRForge needs:
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 import numpy as np
 import warnings
+
+try:
+    import polars as pl
+    POLARS_AVAILABLE = True
+except ImportError:
+    POLARS_AVAILABLE = False
+    pl = None
 
 
 @dataclass
@@ -77,6 +84,56 @@ class ENDFEvaluation:
         if mt not in self.reactions:
             raise KeyError(f"Reaction MT={mt} not found in {self.filename}")
         return self.reactions[mt]
+    
+    def to_polars(self) -> Optional['pl.DataFrame']:
+        """
+        Export all reactions as a Polars DataFrame.
+        
+        Returns:
+            DataFrame with columns: mt_number, reaction_name, energy, cross_section
+            Returns None if Polars is not available
+        """
+        if not POLARS_AVAILABLE:
+            return None
+        
+        records = []
+        for mt, reaction in self.reactions.items():
+            for energy, xs in zip(reaction.energy, reaction.cross_section):
+                records.append({
+                    'mt_number': mt,
+                    'reaction_name': reaction.reaction_name,
+                    'energy': energy,
+                    'cross_section': xs
+                })
+        
+        return pl.DataFrame(records)
+    
+    def get_reactions_dataframe(self) -> Optional['pl.DataFrame']:
+        """
+        Get a Polars DataFrame with one row per reaction (aggregated data).
+        
+        Returns:
+            DataFrame with columns: mt_number, reaction_name, n_points, 
+                                   energy_min, energy_max, xs_min, xs_max
+            Returns None if Polars is not available
+        """
+        if not POLARS_AVAILABLE:
+            return None
+        
+        records = []
+        for mt, reaction in self.reactions.items():
+            records.append({
+                'mt_number': mt,
+                'reaction_name': reaction.reaction_name,
+                'n_points': len(reaction.energy),
+                'energy_min': float(reaction.energy.min()),
+                'energy_max': float(reaction.energy.max()),
+                'xs_min': float(reaction.cross_section.min()),
+                'xs_max': float(reaction.cross_section.max()),
+                'xs_mean': float(reaction.cross_section.mean()),
+            })
+        
+        return pl.DataFrame(records)
     
     def _parse_file(self):
         """Parse ENDF file and extract all reactions."""
@@ -328,4 +385,12 @@ class ENDFCompatibility:
                 }
         
         return ReactionWrapper(reaction)
+    
+    def to_polars(self) -> Optional['pl.DataFrame']:
+        """Export all reactions as Polars DataFrame."""
+        return self._evaluation.to_polars()
+    
+    def get_reactions_dataframe(self) -> Optional['pl.DataFrame']:
+        """Get summary DataFrame of all reactions."""
+        return self._evaluation.get_reactions_dataframe()
 

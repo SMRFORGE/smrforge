@@ -69,6 +69,40 @@ if 18 in evaluation:  # MT=18 is fission
     xs_at_1MeV = fission.interpolate(1e6)  # 1 MeV in eV
 ```
 
+### Using Polars for Tabular Operations
+
+The ENDF parser integrates with Polars (used throughout SMRForge) for efficient tabular operations:
+
+```python
+from smrforge.core.endf_parser import ENDFEvaluation
+
+evaluation = ENDFEvaluation("U235.endf")
+
+# Export all reactions as a Polars DataFrame
+# Columns: mt_number, reaction_name, energy, cross_section
+df = evaluation.to_polars()
+if df is not None:
+    # Filter by energy range
+    filtered = df.filter(pl.col('energy') > 1e6)  # Above 1 MeV
+    
+    # Group by reaction
+    summary = df.group_by('reaction_name').agg([
+        pl.col('cross_section').min().alias('xs_min'),
+        pl.col('cross_section').max().alias('xs_max'),
+        pl.col('energy').count().alias('n_points')
+    ])
+    print(summary)
+
+# Get summary DataFrame (one row per reaction)
+summary_df = evaluation.get_reactions_dataframe()
+if summary_df is not None:
+    print(summary_df)
+    # Columns: mt_number, reaction_name, n_points, 
+    #          energy_min, energy_max, xs_min, xs_max, xs_mean
+```
+
+**Note**: Polars methods return `None` if Polars is not installed, allowing graceful degradation.
+
 ### Integration with NuclearDataCache
 
 The ENDF parser is automatically used as a fallback in `NuclearDataCache`:
@@ -96,11 +130,12 @@ energy, xs = cache.get_cross_section(
 | Feature | OpenMC | SMRForge Parser |
 |---------|--------|-----------------|
 | Installation | Requires build tools (CMake, gfortran) | Pure Python, no compilation |
-| Dependencies | C++ libraries, HDF5 | NumPy only |
+| Dependencies | C++ libraries, HDF5 | NumPy (+ optional Polars) |
 | Build time | Several minutes | Instant |
 | API compatibility | N/A | OpenMC-compatible |
 | Feature set | Full ENDF support | Cross-sections (MF=3) |
 | Performance | Very fast (C++) | Fast (Python, optimized) |
+| Data format | NumPy arrays | NumPy arrays + Polars DataFrame export |
 
 ## Advantages
 
@@ -109,6 +144,8 @@ energy, xs = cache.get_cross_section(
 3. **Maintainable**: Pure Python makes it easy to debug and extend
 4. **Focused**: Only implements what SMRForge actually uses
 5. **Fallback**: Automatically used if OpenMC/SANDY unavailable
+6. **Polars Integration**: Can export to Polars DataFrames for efficient tabular operations (consistent with rest of SMRForge)
+7. **Flexible**: Returns NumPy arrays (fast) but can export to Polars when needed
 
 ## Limitations
 
