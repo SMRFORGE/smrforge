@@ -105,8 +105,18 @@ class NuclearDataCache:
         key: str
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Fetch from source and cache."""
+        # Check if OpenMC is available
+        try:
+            import openmc.data
+        except ImportError:
+            raise ImportError(
+                "OpenMC is required to fetch nuclear cross-section data but is not installed. "
+                "Install it with: pip install openmc>=0.13.0\n"
+                "Note: OpenMC requires build tools (CMake, gfortran) and may take several minutes to build.\n"
+                "For Docker, ensure the Dockerfile installs OpenMC successfully."
+            ) from None
+        
         # Use OpenMC's data API as backend (much cleaner than PyNE)
-        import openmc.data
         
         # Download ENDF file if needed
         endf_file = self._ensure_endf_file(nuclide, library)
