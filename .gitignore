@@ -1,0 +1,90 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.pytype/
+
+# Documentation
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Data files
+*.hdf5
+*.h5
+*.csv
+*.dat
+data/raw/
+data/processed/
+# Keep data/ directory structure but ignore contents
+data/*
+!data/.gitkeep
+output/*
+!output/.gitkeep
+
+# Backup
+backup_*/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Docker (optional - comment out if you want to track)
+# Docker volumes and temporary files
+docker-compose.override.yml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Zarr data files
+*.zarr
+*.zarr.zip

@@ -1,0 +1,39 @@
+# Development Dockerfile with all tools
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Install system dependencies including development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gfortran \
+    git \
+    vim \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt requirements-dev.txt /app/
+
+# Install dependencies
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install -r requirements-dev.txt
+
+# Copy package files
+COPY setup.py pyproject.toml /app/
+COPY smrforge/ /app/smrforge/
+
+# Install package in development mode (will be overridden by volume mount)
+RUN pip install -e .
+
+# Create data/output directories
+RUN mkdir -p /app/data /app/output
+
+# Default to bash shell for interactive development
+CMD ["/bin/bash"]
+
