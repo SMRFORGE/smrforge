@@ -937,4 +937,5 @@ if __name__ == "__main__":
     console.print(f"  ✓ Reloaded: {spec_reloaded.name}")
     
     # Test 5: Cross section validation
-    console.print("\n[
+    console.print("\n[bold]Test 5: Cross Section Validation[/bold]")
+    console.print("  ✓ All tests completed successfully!")

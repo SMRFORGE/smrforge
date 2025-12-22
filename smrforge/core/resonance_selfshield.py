@@ -197,6 +197,25 @@ class BondarenkoMethod:
         return potential_xs.get(nuclide, 5.0)  # Default 5 barns
 
 
+@njit(cache=True)
+def _compute_subgroup_flux(sigma_sg: np.ndarray, w_sg: np.ndarray,
+                           sigma_t_background: float, 
+                           source: float) -> np.ndarray:
+    """
+    Compute subgroup fluxes using rational approximation.
+    Ultra-fast with Numba.
+    
+    phi_sg = w_sg * S / (sigma_t_bg + sigma_sg)
+    """
+    n_sg = len(sigma_sg)
+    phi_sg = np.zeros(n_sg)
+    
+    for i in range(n_sg):
+        phi_sg[i] = w_sg[i] * source / (sigma_t_background + sigma_sg[i])
+    
+    return phi_sg
+
+
 class SubgroupMethod:
     """
     Subgroup method for resonance self-shielding.
@@ -240,25 +259,6 @@ class SubgroupMethod:
             'weights': w_sg
         }
     
-    @njit(cache=True)
-    @staticmethod
-    def _compute_subgroup_flux(sigma_sg: np.ndarray, w_sg: np.ndarray,
-                               sigma_t_background: float, 
-                               source: float) -> np.ndarray:
-        """
-        Compute subgroup fluxes using rational approximation.
-        Ultra-fast with Numba.
-        
-        phi_sg = w_sg * S / (sigma_t_bg + sigma_sg)
-        """
-        n_sg = len(sigma_sg)
-        phi_sg = np.zeros(n_sg)
-        
-        for i in range(n_sg):
-            phi_sg[i] = w_sg[i] * source / (sigma_t_background + sigma_sg[i])
-        
-        return phi_sg
-    
     def compute_effective_xs(self, nuclide: str, reaction: str, 
                             energy_group: str, sigma_0: float) -> float:
         """
@@ -278,7 +278,7 @@ class SubgroupMethod:
         
         # Compute subgroup fluxes
         source = 1.0  # Normalized
-        phi_sg = self._compute_subgroup_flux(sigma_sg, w_sg, sigma_0, source)
+        phi_sg = _compute_subgroup_flux(sigma_sg, w_sg, sigma_0, source)
         
         # Flux-weighted average
         sigma_eff = np.sum(w_sg * sigma_sg * phi_sg) / np.sum(w_sg * phi_sg)
