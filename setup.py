@@ -19,6 +19,10 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/smrforge",
     packages=find_packages(exclude=["tests", "docs", "examples"]),
+    package_data={
+        # Include logo in package if needed
+    },
+    include_package_data=True,
     python_requires=">=3.8",
     install_requires=[
         "numpy>=1.20.0",

@@ -1,0 +1,17 @@
+# Include README and license
+include README.md
+include LICENSE
+
+# Include logo for documentation and packaging
+recursive-include docs/logo *.png *.svg *.jpg
+
+# Include package metadata
+include pyproject.toml
+
+# Exclude development files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store
+
