@@ -19,9 +19,13 @@ openmc>=0.13.0
 
 # Validation and schemas
 pydantic>=2.0.0
+pydantic-settings>=2.0.0
 
 # Terminal formatting and rich output
 rich>=13.0.0
+
+# HTTP requests (for nuclear data downloads)
+requests>=2.25.0
 
 # Machine learning (for surrogate models)
 scikit-learn>=1.0.0

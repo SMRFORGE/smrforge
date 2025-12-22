@@ -16,6 +16,8 @@ from smrforge.validation.pydantic_layer import (
     ReactorSpecification,
     CrossSectionData,
     SolverOptions,
+    GeometryParameters,
+    MaterialComposition,
     
     # Type validators
     NumpyArray,
@@ -34,6 +36,8 @@ __all__ = [
     'ReactorSpecification',
     'CrossSectionData',
     'SolverOptions',
+    'GeometryParameters',
+    'MaterialComposition',
     
     # Type validators
     'NumpyArray',

@@ -14,15 +14,44 @@ from rich.table import Table
 import matplotlib.pyplot as plt
 
 # Import SMRForge modules
-from smrforge.presets.htgr_designs import ValarAtomicsReactor, DesignLibrary
-from smrforge.geometry.core import PrismaticCore
-from smrforge.neutronics.solver import MultiGroupDiffusion, SolverOptions
-from smrforge.thermal.hydraulics import ChannelThermalHydraulics, ChannelGeometry
-from smrforge.nucdata.core import NuclearDataCache, CrossSectionTable, Nuclide
-from smrforge.nucdata.materials import MaterialDatabase
-from smrforge.nucdata.resonance import ResonanceSelfShielding
-from smrforge.profiling.performance import PerformanceProfiler, BenchmarkSuite
-from smrforge.tests.benchmarks.validation import BenchmarkLibrary, BenchmarkRunner
+from smrforge.presets.htgr import ValarAtomicsReactor, DesignLibrary
+from smrforge.geometry import PrismaticCore
+from smrforge.neutronics.solver import MultiGroupDiffusion
+from smrforge.validation.models import SolverOptions
+from smrforge.thermal import ChannelThermalHydraulics, ChannelGeometry
+from smrforge.core import NuclearDataCache, CrossSectionTable, Nuclide, ResonanceSelfShielding
+from smrforge.core.materials_database import MaterialDatabase
+# Note: PerformanceProfiler, BenchmarkSuite, BenchmarkLibrary, BenchmarkRunner are not yet implemented
+# Stub classes for now
+class PerformanceProfiler:
+    """Stub for PerformanceProfiler (not yet implemented)."""
+    def __init__(self):
+        pass
+    def profile(self, name):
+        """Context manager stub."""
+        return self
+    def __enter__(self):
+        return self
+    def __exit__(self, *args):
+        pass
+    def print_report(self, top_n=10):
+        """Stub method."""
+        pass
+    def export_results(self, path):
+        """Stub method."""
+        pass
+
+class BenchmarkLibrary:
+    """Stub for BenchmarkLibrary (not yet implemented)."""
+    pass
+
+class BenchmarkRunner:
+    """Stub for BenchmarkRunner (not yet implemented)."""
+    def __init__(self, library):
+        self.library = library
+    def run_suite(self, category, solver):
+        """Stub method."""
+        return {}
 
 
 class HTGRAnalysisPipeline:
@@ -142,7 +171,7 @@ class HTGRAnalysisPipeline:
         xs_table = CrossSectionTable()
         
         # 8-group structure optimized for HTGR
-        from smrforge.nucdata.constants import GROUP_STRUCTURES
+        from smrforge.core.constants import GROUP_STRUCTURES
         group_structure = GROUP_STRUCTURES['HTGR-8']
         
         # Generate at operating temperature

@@ -10,9 +10,9 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from ..geometry.core import PebbleBedCore, PrismaticCore
-from ..neutronics.solver import CrossSectionData
-from ..nucdata.materials import MaterialDatabase
+from ..geometry import PebbleBedCore, PrismaticCore
+from ..validation.models import CrossSectionData
+from ..core.materials_database import MaterialDatabase
 
 # Import Pydantic models
 from ..validation.models import (

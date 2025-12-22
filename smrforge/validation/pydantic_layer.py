@@ -281,13 +281,12 @@ class ReactorSpecification(BaseModel):
         if self.enrichment > 0.20:
             warnings.warn(
                 f"Enrichment {enr_pct:.1f}% exceeds LEU limit (20%). "
-                f"HALEU licensing required."
+                f"HEU classification - special licensing required."
             )
-        
-        if self.enrichment > 0.05:
-            raise ValueError(
-                f"Enrichment {enr_pct:.1f}% exceeds 5% limit. "
-                f"Not supported without special authorization."
+        elif self.enrichment > 0.05:
+            warnings.warn(
+                f"Enrichment {enr_pct:.1f}% is HALEU (5-20%). "
+                f"Valid for advanced reactor designs."
             )
         
         return self
@@ -366,9 +365,9 @@ class ReactorSpecification(BaseModel):
         """Classify enrichment level."""
         if self.enrichment < 0.01:
             return EnrichmentClass.NATURAL
-        elif self.enrichment <= 0.20:
-            return EnrichmentClass.LEU
         elif self.enrichment <= 0.05:
+            return EnrichmentClass.LEU
+        elif self.enrichment <= 0.20:
             return EnrichmentClass.HALEU
         else:
             return EnrichmentClass.HEU

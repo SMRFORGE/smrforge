@@ -4,12 +4,13 @@ Thermal-hydraulics analysis
 
 try:
     from smrforge.thermal.hydraulics import (
-        ThermalHydraulics,
         ChannelThermalHydraulics,
         ChannelGeometry,
         FluidProperties,
         FlowRegime,
     )
+    # Alias for backward compatibility
+    ThermalHydraulics = ChannelThermalHydraulics
     _THERMAL_AVAILABLE = True
 except ImportError as e:
     import warnings

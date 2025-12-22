@@ -61,7 +61,8 @@ class NuclearDataCache:
         self._memory_cache: Dict = {}
         
         # Open zarr store (lazy loading)
-        self.store = zarr.DirectoryStore(str(self.cache_dir))
+        from zarr.storage import DirectoryStore
+        self.store = DirectoryStore(str(self.cache_dir))
         self.root = zarr.open(self.store, mode='a')
     
     @lru_cache(maxsize=1024)
