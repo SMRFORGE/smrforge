@@ -48,11 +48,13 @@ RUN pip install --no-cache-dir openmc>=0.13.0 || \
     echo "WARNING: OpenMC installation failed. Container will work but OpenMC features won't be available."
 
 # Copy package files
-COPY setup.py pyproject.toml /app/
+COPY setup.py pyproject.toml README.md /app/
 COPY smrforge/ /app/smrforge/
 
 # Install SMRForge in development mode
-RUN pip install -e .
+# Use --no-deps since we've already installed all dependencies above
+# This avoids re-installing OpenMC (which is optional) from setup.py
+RUN pip install --no-deps -e .
 
 # Copy examples (optional - can be mounted as volume instead)
 COPY examples/ /app/examples/
