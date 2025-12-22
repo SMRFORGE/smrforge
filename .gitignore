@@ -64,6 +64,7 @@ output/*
 
 # Backup
 backup_*/
+smrforge-*/
 
 # OS
 Thumbs.db
