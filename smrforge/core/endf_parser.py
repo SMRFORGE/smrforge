@@ -1,6 +1,5 @@
 """
 SMRForge ENDF Parser - Lightweight Python-only ENDF-6 file parser.
-Provides OpenMC-compatible API without requiring OpenMC installation.
 
 This is a custom implementation focused on what SMRForge needs:
 - Cross-section data extraction (MF=3)
@@ -51,7 +50,6 @@ class ENDFEvaluation:
     """
     ENDF-6 file evaluation parser.
     
-    Provides an OpenMC-like interface for reading ENDF files.
     Usage:
         eval = ENDFEvaluation("U235.endf")
         if 1 in eval:  # MT=1 (total)
@@ -341,18 +339,20 @@ class ENDFEvaluation:
         return MT_NAMES.get(mt, f'MT{mt}')
 
 
-# Compatibility wrapper to match OpenMC API
+# Compatibility wrapper for extended API
 class ENDFCompatibility:
     """
-    Compatibility layer to match OpenMC's openmc.data.endf.Evaluation interface.
+    Extended API wrapper for ENDF evaluation.
     
-    Usage matches OpenMC:
+    Usage:
         from smrforge.core.endf_parser import ENDFCompatibility
         evaluation = ENDFCompatibility("U235.endf")
         if 1 in evaluation:  # MT=1 (total)
             rxn_data = evaluation[1]
-            energy = rxn_data.energy  # Same as OpenMC's xs['0K'].x
-            xs = rxn_data.cross_section  # Same as OpenMC's xs['0K'].y
+            energy = rxn_data.energy
+            xs = rxn_data.cross_section
+            # Or access via xs dictionary
+            xs_data = rxn_data.xs['0K']
     """
     
     def __init__(self, filename: Path):
@@ -364,19 +364,17 @@ class ENDFCompatibility:
         return mt in self._evaluation
     
     def __getitem__(self, mt: int):
-        """Get reaction data with OpenMC-like interface."""
+        """Get reaction data with extended interface."""
         reaction = self._evaluation[mt]
         
-        # Return object with OpenMC-like attributes
+        # Return object with extended attributes
         class ReactionWrapper:
             def __init__(self, reaction_data: ReactionData):
                 self._data = reaction_data
-                # OpenMC provides xs['0K'].x and xs['0K'].y
-                # We provide direct access
                 self.energy = reaction_data.energy
                 self.cross_section = reaction_data.cross_section
                 
-                # Simulate OpenMC's xs dictionary structure
+                # Provide xs dictionary structure for temperature data
                 self.xs = {
                     '0K': type('obj', (object,), {
                         'x': reaction_data.energy,

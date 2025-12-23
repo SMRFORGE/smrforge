@@ -58,7 +58,7 @@ See :doc:`docker_usage` for Docker installation instructions.
 System Dependencies
 -------------------
 
-For OpenMC (optional, for nuclear data):
+For SANDY (optional, for nuclear data):
 
 - CMake
 - gfortran

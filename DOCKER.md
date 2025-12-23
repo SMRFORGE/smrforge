@@ -138,7 +138,7 @@ You can set environment variables in `docker-compose.yml`:
 ```yaml
 environment:
   - PYTHONUNBUFFERED=1
-  - OPENMC_DATA_PATH=/app/data/nuclear_data
+  - SMRFORGE_DATA_PATH=/app/data/nuclear_data
 ```
 
 ## Troubleshooting
@@ -155,10 +155,7 @@ This usually happens when a package fails to build. Common causes:
    docker-compose up -d smrforge
    ```
 
-2. **OpenMC installation failures** - OpenMC can be tricky to install. Solutions:
-   - Use the optional Dockerfile: `docker-compose up -d smrforge-no-openmc`
-   - Or temporarily remove OpenMC from requirements.txt (it's optional)
-   - The Dockerfile includes all OpenMC dependencies (CMake, HDF5, C++ compiler, Git)
+2. **Package installation failures** - If optional packages fail to install, the container will still build. SMRForge includes a built-in ENDF parser and works without optional dependencies.
 
 #### Issue: Container won't start
 
@@ -189,19 +186,6 @@ Docker volume mounts can be slow on Windows/macOS. Consider:
 - Running on Linux for better I/O performance
 
 ### Specific Package Issues
-
-#### OpenMC Installation Problems
-
-OpenMC requires:
-- CMake >= 3.10
-- HDF5 development libraries
-- C++ compiler with C++11 support
-- Git (to clone dependencies)
-
-The Dockerfile includes all of these. If it still fails:
-1. Check OpenMC's official installation docs
-2. Use the optional-openmc Dockerfile variant
-3. OpenMC is optional - SMRForge works without it using alternative backends
 
 #### h5py Installation Problems
 
@@ -255,7 +239,7 @@ After successful build, verify packages:
 ```bash
 docker-compose exec smrforge python -c "import smrforge; print('OK')"
 docker-compose exec smrforge python -c "import numpy, scipy, matplotlib, pandas; print('Core packages OK')"
-docker-compose exec smrforge python -c "import openmc; print('OpenMC OK')" || echo "OpenMC not installed (optional)"
+docker-compose exec smrforge python -c "import sandy; print('SANDY OK')" || echo "SANDY not installed (optional)"
 ```
 
 ### Getting More Help

@@ -121,32 +121,7 @@ class NuclearDataCache:
         # Download ENDF file if needed
         endf_file = self._ensure_endf_file(nuclide, library)
         
-        # Try OpenMC first (preferred - fast C++ backend)
-        try:
-            import openmc.data
-            log_nuclear_data_fetch(nuclide.name, reaction, temperature, "openmc", logger)
-            evaluation = openmc.data.endf.Evaluation(endf_file)
-            reaction_mt = self._reaction_to_mt(reaction)
-            if reaction_mt in evaluation:
-                rxn_data = evaluation[reaction_mt]
-                energy, xs = rxn_data.xs['0K'].x, rxn_data.xs['0K'].y
-                
-                # Apply temperature if needed
-                if abs(temperature - 293.6) > 1.0:
-                    logger.debug(f"Applying Doppler broadening: {293.6}K → {temperature}K")
-                    xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
-                
-                # Cache and return
-                self._save_to_cache(key, energy, xs)
-                log_cache_operation("write", key, logger)
-                return energy, xs
-        except ImportError:
-            logger.debug("OpenMC not available, trying alternative backend")
-        except Exception as e:
-            # OpenMC available but failed - log and try next
-            logger.warning(f"OpenMC parsing failed: {e}. Trying alternative backend.")
-        
-        # Try SANDY as alternative (lighter weight, pure Python)
+        # Try SANDY first (lighter weight, pure Python)
         try:
             import sandy
             log_nuclear_data_fetch(nuclide.name, reaction, temperature, "sandy", logger)
@@ -221,11 +196,6 @@ class NuclearDataCache:
         # All backends failed - provide helpful error message
         available_backends = []
         try:
-            import openmc.data
-            available_backends.append("OpenMC")
-        except ImportError:
-            pass
-        try:
             import sandy
             available_backends.append("SANDY")
         except ImportError:
@@ -235,11 +205,9 @@ class NuclearDataCache:
             f"Failed to parse cross-section data for {nuclide.name}/{reaction}. "
             f"No suitable backend available.\n\n"
             f"Installed backends: {', '.join(available_backends) if available_backends else 'None'}\n\n"
-            f"To enable cross-section fetching, install one of:\n"
-            f"  - OpenMC (preferred): pip install openmc>=0.13.0\n"
-            f"    Note: Requires build tools (CMake, gfortran), takes several minutes to build\n"
-            f"  - SANDY (lighter alternative): pip install sandy\n"
-            f"    Pure Python, easier to install\n\n"
+            f"To enable cross-section fetching, install SANDY:\n"
+            f"  - SANDY (recommended): pip install sandy\n"
+            f"    Pure Python, easy to install\n\n"
             f"Note: SMRForge includes a built-in ENDF parser, but it failed to parse this file.\n"
             f"This may indicate an issue with the ENDF file format or unsupported reaction.\n\n"
             f"Alternatively, pre-populate the cache directory at:\n"
@@ -575,7 +543,7 @@ class DecayData:
     
     def _get_half_life(self, nuclide: Nuclide) -> float:
         """Get half-life from data files."""
-        # Use OpenMC data or pre-computed tables
+        # Use cached data or pre-computed tables
         # Placeholder implementation
         return 1e10  # seconds
     

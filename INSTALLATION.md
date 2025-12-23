@@ -160,9 +160,8 @@ All dependencies are standard Python packages available on PyPI:
 
 **Nuclear Data Backends:**
 - `sandy` - Lighter-weight ENDF parser (pure Python, recommended)
-- `openmc>=0.13.0` - Advanced nuclear data handling (requires build tools)
 
-SMRForge works without these optional dependencies - it includes a built-in ENDF parser. Install them only if you need advanced features:
+SMRForge works without this optional dependency - it includes a built-in ENDF parser. Install SANDY only if you need advanced features:
 
 ```bash
 # Install with SANDY (recommended - easy installation)
@@ -171,8 +170,6 @@ pip install -e ".[nuclear-data]"
 # Or install SANDY separately
 pip install sandy
 ```
-
-**Note:** OpenMC requires build tools (CMake, gfortran) and cannot be installed via standard pip/uv. If you need OpenMC, install it separately following the [OpenMC installation guide](https://docs.openmc.org/en/stable/installation/index.html).
 
 All core dependencies are **standard PyPI packages** - no conda-specific packages required.
 
@@ -195,24 +192,18 @@ print(f"k-eff = {k:.6f}")
 
 ## Troubleshooting
 
-### Issue: "openmc was not found in the package registry" or "openmc not found"
+### Issue: Nuclear data parsing errors
 
-**This is expected!** OpenMC is optional and is not included in the default installation. SMRForge works perfectly without it using built-in parsers and SANDY (if installed).
+SMRForge includes a built-in ENDF parser, but for advanced features you may want to install SANDY:
 
-**If you need OpenMC:**
-1. OpenMC requires build tools (CMake, gfortran, C++ compiler)
-2. It cannot be installed via standard pip/uv due to compilation requirements
-3. Install separately following the [OpenMC installation guide](https://docs.openmc.org/en/stable/installation/index.html)
-
-**Recommended alternative:**
 ```bash
-# Install SANDY instead (pure Python, much easier)
+# Install SANDY (pure Python, easy installation)
 pip install sandy
 # Or
 pip install -e ".[nuclear-data]"
 ```
 
-SMRForge will automatically use available backends in priority order: OpenMC (if installed) → SANDY (if installed) → Built-in parser.
+SMRForge will automatically use available backends in priority order: SANDY (if installed) → Built-in parser.
 
 ### Issue: "numba compilation errors"
 

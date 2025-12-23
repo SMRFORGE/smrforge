@@ -223,7 +223,7 @@ def export_results(results, filepath: Path, format: str = "hdf5"):
 
 - Reactor design import/export (JSON, YAML, HDF5)
 - Results export (CSV, HDF5, Parquet)
-- Import from other formats (OpenMC XML, etc.)
+- Import from other formats
 
 **Estimated Effort:** 1 week
 **Impact:** Better interoperability

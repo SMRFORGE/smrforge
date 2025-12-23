@@ -1,22 +1,16 @@
 # Nuclear Data Backend Alternatives
 
-SMRForge now supports multiple backends for parsing ENDF nuclear cross-section data. The system will try them in order until one succeeds.
+SMRForge supports multiple backends for parsing ENDF nuclear cross-section data. The system will try them in order until one succeeds.
 
 ## Supported Backends (in order of preference)
 
-### 1. OpenMC (Preferred)
-- **Pros**: Fast C++ backend, well-maintained, comprehensive
-- **Cons**: Requires build tools (CMake, gfortran), takes several minutes to build
-- **Installation**: `pip install openmc>=0.13.0`
-- **Status**: Preferred method if installation succeeds
-
-### 2. SANDY (Alternative)
-- **Pros**: Pure Python, easier to install, no compilation needed
-- **Cons**: Potentially slower than OpenMC for large files
+### 1. SANDY (Recommended)
+- **Pros**: Pure Python, easy to install, no compilation needed, well-maintained
+- **Cons**: Potentially slower than compiled alternatives for very large files
 - **Installation**: `pip install sandy`
-- **Status**: Good alternative if OpenMC fails to build
+- **Status**: Recommended for most users
 
-### 3. Simple ENDF Parser (Fallback)
+### 2. Simple ENDF Parser (Fallback)
 - **Pros**: No external dependencies, built into SMRForge
 - **Cons**: Limited to basic reactions (total, elastic, fission, capture), less robust
 - **Installation**: None required (built-in)
@@ -27,32 +21,28 @@ SMRForge now supports multiple backends for parsing ENDF nuclear cross-section d
 When cross-section data is needed:
 
 1. **Check cache first**: Data is cached in Zarr format for fast access
-2. **Try OpenMC**: If data not cached and OpenMC available, use it
-3. **Try SANDY**: If OpenMC not available, try SANDY
-4. **Try simple parser**: If both fail, use built-in parser for common reactions
-5. **Error if all fail**: Clear error message with installation instructions
+2. **Try SANDY**: If data not cached and SANDY available, use it
+3. **Try simple parser**: If SANDY not available, use built-in parser for common reactions
+4. **Error if all fail**: Clear error message with installation instructions
 
 ## Installation Recommendations
 
 ### For Docker/Production
 ```bash
-# Option 1: Install OpenMC (if build tools available)
-pip install openmc>=0.13.0
-
-# Option 2: Install SANDY (easier, no build tools)
+# Option 1: Install SANDY (recommended, no build tools)
 pip install sandy
 
-# Option 3: Pre-populate cache (no runtime dependencies)
+# Option 2: Pre-populate cache (no runtime dependencies)
 # Pre-process cross-sections and place in cache directory
 ```
 
 ### For Development
 ```bash
-# Install at least one backend
-pip install sandy  # Easiest option
+# Install SANDY for best experience
+pip install sandy
 
-# Or if you have build tools
-pip install openmc>=0.13.0
+# Or use the built-in parser (limited features)
+# No installation needed
 ```
 
 ## Pre-populating Cache (No Backend Needed)
@@ -68,13 +58,13 @@ import zarr
 # Cache location (default: ~/.smrforge/nucdata)
 cache_dir = Path.home() / ".smrforge" / "nucdata"
 
-# Pre-populate using any tool (OpenMC, SANDY, NJOY, etc.)
+# Pre-populate using any tool (SANDY, NJOY, etc.)
 # Data should be stored as: {library}/{nuclide}/{reaction}/{temperature}K/energy and xs
 ```
 
 ## Docker Considerations
 
-The Dockerfile tries to install OpenMC, but if it fails (common in slim images), the container will still build. At runtime:
+The Dockerfile does not require any nuclear data backends. At runtime:
 
 1. **Option 1**: Install SANDY in the running container:
    ```bash
@@ -82,8 +72,6 @@ The Dockerfile tries to install OpenMC, but if it fails (common in slim images),
    ```
 
 2. **Option 2**: Use pre-populated cache data mounted as a volume
-
-3. **Option 3**: Use a base image that has OpenMC pre-installed
 
 ## Error Messages
 
@@ -93,17 +81,18 @@ Failed to parse cross-section data for U235/total. No suitable backend available
 
 Installed backends: None
 
-To enable cross-section fetching, install one of:
-  - OpenMC (preferred): pip install openmc>=0.13.0
-  - SANDY (lighter alternative): pip install sandy
+To enable cross-section fetching, install SANDY:
+  - SANDY (recommended): pip install sandy
+    Pure Python, easy to install
+
+Note: SMRForge includes a built-in ENDF parser, but it failed to parse this file.
+This may indicate an issue with the ENDF file format or unsupported reaction.
 ```
 
 ## Performance Notes
 
 - **Cached data**: Fastest (no parsing needed)
-- **OpenMC**: Fast (C++ backend)
-- **SANDY**: Moderate (pure Python, but efficient)
+- **SANDY**: Fast (pure Python, but efficient)
 - **Simple parser**: Slowest (basic implementation)
 
 Once data is cached, all backends perform the same (just reading from cache).
-

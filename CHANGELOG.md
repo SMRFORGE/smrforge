@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging framework with structured logging
 - Example gallery with 6 example scripts
 - Sphinx documentation structure
-- Custom ENDF parser as alternative to OpenMC
-- Multi-backend nuclear data support (OpenMC, SANDY, custom parser)
+- Custom ENDF parser as built-in solution
+- Multi-backend nuclear data support (SANDY, custom parser)
 - Docker support with multiple Dockerfile configurations
 - Logo integration in README and documentation
 

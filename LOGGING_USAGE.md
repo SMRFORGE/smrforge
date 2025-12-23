@@ -65,7 +65,7 @@ Example output:
 
 Example output:
 ```
-2024-12-21 10:30:45 - smrforge.core - INFO - Fetching nuclear data: U235/fission at 1200.0K (backend: openmc)
+2024-12-21 10:30:45 - smrforge.core - INFO - Fetching nuclear data: U235/fission at 1200.0K (backend: sandy)
 2024-12-21 10:30:45 - smrforge.core - DEBUG - Cache write: endfb8.0/U235/fission/1200.0K
 ```
 

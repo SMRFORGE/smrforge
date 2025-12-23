@@ -38,7 +38,6 @@ module = [
     "matplotlib.*",
     "polars.*",
     "zarr.*",
-    "openmc.*",
     "rich.*",
 ]
 ignore_missing_imports = true

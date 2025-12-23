@@ -2,7 +2,6 @@
 """
 Monte Carlo neutron transport for SMRForge.
 Simplified implementation for design studies and validation.
-For production work, use OpenMC integration.
 """
 
 import numpy as np
@@ -218,7 +217,6 @@ class MonteCarloSolver:
     """
     Simplified Monte Carlo neutron transport solver.
     
-    For production use, integrate with OpenMC.
     This is for educational purposes and quick design studies.
     """
     
@@ -496,167 +494,6 @@ class MonteCarloSolver:
             )
         
         self.console.print(table)
-
-
-class OpenMCIntegration:
-    """
-    Integration with OpenMC for production Monte Carlo.
-    Provides simplified interface to OpenMC features.
-    """
-    
-    def __init__(self, spec: ReactorSpecification):
-        self.spec = spec
-        self.console = Console()
-        
-        try:
-            import openmc
-            self.openmc = openmc
-            self.available = True
-        except ImportError:
-            self.console.print("[yellow]⚠ OpenMC not installed[/yellow]")
-            self.available = False
-    
-    def create_model(self) -> Optional['openmc.Model']:
-        """Create OpenMC model from reactor specification."""
-        if not self.available:
-            self.console.print("[red]OpenMC not available[/red]")
-            return None
-        
-        # Create materials
-        fuel = self._create_fuel_material()
-        graphite = self._create_graphite_material()
-        
-        # Create geometry
-        model = self._create_cylindrical_geometry(fuel, graphite)
-        
-        # Create settings
-        model.settings = self._create_settings()
-        
-        # Create tallies
-        model.tallies = self._create_tallies()
-        
-        return model
-    
-    def _create_fuel_material(self):
-        """Create TRISO-UCO fuel material."""
-        fuel = self.openmc.Material(name="TRISO-UCO")
-        
-        # UCO composition (simplified)
-        fuel.add_nuclide('U235', self.spec.enrichment * 0.001, 'ao')
-        fuel.add_nuclide('U238', (1-self.spec.enrichment) * 0.001, 'ao')
-        fuel.add_element('C', 0.020, 'ao')
-        fuel.add_element('O', 0.015, 'ao')
-        
-        fuel.set_density('g/cm3', 10.5)
-        fuel.temperature = self.spec.outlet_temperature  # Use avg temp
-        
-        return fuel
-    
-    def _create_graphite_material(self):
-        """Create graphite moderator material."""
-        graphite = self.openmc.Material(name="Graphite")
-        graphite.add_element('C', 1.0, 'ao')
-        graphite.set_density('g/cm3', 1.74)
-        graphite.temperature = self.spec.outlet_temperature
-        
-        return graphite
-    
-    def _create_cylindrical_geometry(self, fuel, graphite):
-        """Create simplified cylindrical geometry."""
-        # Simplified - real version would use detailed hex lattice
-        
-        # Core region
-        r_core = self.spec.core_diameter / 2
-        h_core = self.spec.core_height
-        
-        core_cyl = self.openmc.ZCylinder(r=r_core, boundary_type='transmission')
-        core_bottom = self.openmc.ZPlane(z0=0, boundary_type='vacuum')
-        core_top = self.openmc.ZPlane(z0=h_core, boundary_type='vacuum')
-        
-        # Reflector
-        r_refl = r_core + self.spec.reflector_thickness
-        refl_cyl = self.openmc.ZCylinder(r=r_refl, boundary_type='vacuum')
-        
-        # Regions
-        core_region = -core_cyl & +core_bottom & -core_top
-        refl_region = +core_cyl & -refl_cyl & +core_bottom & -core_top
-        
-        # Cells
-        core_cell = self.openmc.Cell(fill=fuel, region=core_region)
-        refl_cell = self.openmc.Cell(fill=graphite, region=refl_region)
-        
-        # Universe
-        root = self.openmc.Universe(cells=[core_cell, refl_cell])
-        
-        # Geometry
-        geometry = self.openmc.Geometry(root)
-        
-        # Model
-        model = self.openmc.Model()
-        model.geometry = geometry
-        model.materials = self.openmc.Materials([fuel, graphite])
-        
-        return model
-    
-    def _create_settings(self):
-        """Create OpenMC settings."""
-        settings = self.openmc.Settings()
-        settings.batches = 110
-        settings.inactive = 10
-        settings.particles = 10000
-        
-        # Source
-        source = self.openmc.IndependentSource()
-        source.space = self.openmc.stats.CylindricalIndependent(
-            r=self.openmc.stats.Uniform(0, self.spec.core_diameter/2),
-            phi=self.openmc.stats.Uniform(0, 2*np.pi),
-            z=self.openmc.stats.Uniform(0, self.spec.core_height)
-        )
-        settings.source = source
-        
-        return settings
-    
-    def _create_tallies(self):
-        """Create OpenMC tallies."""
-        tallies = self.openmc.Tallies()
-        
-        # K-eff is automatic
-        
-        # Flux tally
-        flux_tally = self.openmc.Tally(name='flux')
-        flux_tally.scores = ['flux']
-        tallies.append(flux_tally)
-        
-        # Fission rate
-        fission_tally = self.openmc.Tally(name='fission_rate')
-        fission_tally.scores = ['fission']
-        tallies.append(fission_tally)
-        
-        return tallies
-    
-    def run(self, model: 'openmc.Model') -> Dict:
-        """Run OpenMC simulation."""
-        if not self.available:
-            return {}
-        
-        self.console.print("[bold]Running OpenMC...[/bold]")
-        
-        # Run
-        model.run()
-        
-        # Load results
-        with self.openmc.StatePoint('statepoint.110.h5') as sp:
-            k_eff = sp.keff
-            
-            results = {
-                'k_eff': k_eff.nominal_value,
-                'k_std': k_eff.std_dev,
-                'statepoint': sp
-            }
-        
-        self.console.print(f"[green]k_eff = {results['k_eff']:.6f} ± {results['k_std']:.6f}[/green]")
-        
-        return results
 
 
 if __name__ == "__main__":

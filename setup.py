@@ -40,7 +40,6 @@ setup(
         "polars>=0.19.0",
         # Terminal formatting
         "rich>=13.0.0",
-        # Note: openmc is optional - see extras_require["nuclear-data"]
     ],
     extras_require={
         "dev": [
@@ -61,12 +60,10 @@ setup(
         ],
         "nuclear-data": [
             # Optional nuclear data backends
-            # OpenMC requires build tools (CMake, gfortran) - install separately if needed
-            # "openmc>=0.13.0",  # Uncomment if you have build tools and want OpenMC support
             "sandy",  # Lighter-weight alternative for ENDF parsing
         ],
         "all": [
-            # Install all optional dependencies (except openmc which requires special setup)
+            # Install all optional dependencies
             "sandy",
             "plotly>=5.0",
             "dash>=2.0",

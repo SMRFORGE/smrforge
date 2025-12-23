@@ -174,11 +174,11 @@ def log_nuclear_data_fetch(
         nuclide: Nuclide name (e.g., "U235")
         reaction: Reaction type (e.g., "total", "fission")
         temperature: Temperature in Kelvin
-        backend: Backend used (e.g., "openmc", "sandy", "endf_parser")
+        backend: Backend used (e.g., "sandy", "endf_parser")
         logger: Logger instance. If None, uses default logger.
     
     Example:
-        >>> log_nuclear_data_fetch("U235", "fission", 1200.0, "openmc")
+        >>> log_nuclear_data_fetch("U235", "fission", 1200.0, "sandy")
     """
     if logger is None:
         logger = get_logger("smrforge.core")

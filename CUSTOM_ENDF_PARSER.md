@@ -1,15 +1,15 @@
 # SMRForge Custom ENDF Parser
 
-SMRForge includes its own lightweight, pure-Python ENDF-6 file parser that provides OpenMC-compatible functionality without requiring OpenMC installation.
+SMRForge includes its own lightweight, pure-Python ENDF-6 file parser that provides comprehensive functionality without requiring external dependencies.
 
 ## Overview
 
 The `smrforge.core.endf_parser` module implements a custom ENDF parser that:
 - ✅ **Pure Python** - No compilation needed, no external dependencies (beyond NumPy)
-- ✅ **OpenMC-compatible API** - Drop-in replacement for `openmc.data.endf.Evaluation`
+- ✅ **Clean API** - Simple, intuitive interface for ENDF file parsing
 - ✅ **Focused functionality** - Only implements what SMRForge needs
 - ✅ **Robust parsing** - Handles standard ENDF-6 format files
-- ✅ **Lightweight** - Much smaller and faster to install than OpenMC
+- ✅ **Lightweight** - Fast to install and use
 
 ## Features
 
@@ -26,11 +26,11 @@ The `smrforge.core.endf_parser` module implements a custom ENDF parser that:
 - Parse MF=3 (cross-section) sections
 - Extract energy-dependent cross sections
 - Handle ENDF-6 format variations
-- Provide OpenMC-like interface
+- Provide clean, intuitive interface
 
 ## Usage
 
-### Basic Usage (OpenMC-compatible)
+### Basic Usage
 
 ```python
 from smrforge.core.endf_parser import ENDFCompatibility
@@ -43,7 +43,7 @@ evaluation = ENDFCompatibility(Path("U235.endf"))
 if 1 in evaluation:  # MT=1 is total cross section
     rxn_data = evaluation[1]
     
-    # Access energy and cross section (OpenMC-compatible)
+    # Access energy and cross section
     energy = rxn_data.xs['0K'].x  # Energy in eV
     xs = rxn_data.xs['0K'].y      # Cross section in barns
     
@@ -113,10 +113,9 @@ from smrforge.core.reactor_core import NuclearDataCache, Nuclide, Library
 cache = NuclearDataCache()
 
 # This will try:
-# 1. OpenMC (if installed)
-# 2. SANDY (if installed)
-# 3. SMRForge ENDF parser (built-in)
-# 4. Simple parser (fallback)
+# 1. SANDY (if installed)
+# 2. SMRForge ENDF parser (built-in)
+# 3. Simple parser (fallback)
 energy, xs = cache.get_cross_section(
     nuclide=Nuclide(92, 235),
     reaction='total',
@@ -125,25 +124,23 @@ energy, xs = cache.get_cross_section(
 )
 ```
 
-## Comparison with OpenMC
+## Comparison with Other Tools
 
-| Feature | OpenMC | SMRForge Parser |
-|---------|--------|-----------------|
-| Installation | Requires build tools (CMake, gfortran) | Pure Python, no compilation |
-| Dependencies | C++ libraries, HDF5 | NumPy (+ optional Polars) |
-| Build time | Several minutes | Instant |
-| API compatibility | N/A | OpenMC-compatible |
+| Feature | SANDY | SMRForge Parser |
+|---------|-------|-----------------|
+| Installation | `pip install sandy` | Built-in, no installation |
+| Dependencies | External package | NumPy (+ optional Polars) |
 | Feature set | Full ENDF support | Cross-sections (MF=3) |
-| Performance | Very fast (C++) | Fast (Python, optimized) |
+| Performance | Fast (pure Python) | Fast (Python, optimized) |
 | Data format | NumPy arrays | NumPy arrays + Polars DataFrame export |
 
 ## Advantages
 
-1. **No Build Dependencies**: Works immediately, no CMake or compilers needed
-2. **Docker-Friendly**: Easy to use in containers without complex build steps
+1. **No External Dependencies**: Works immediately, no additional packages needed (beyond NumPy)
+2. **Docker-Friendly**: Easy to use in containers without complex dependencies
 3. **Maintainable**: Pure Python makes it easy to debug and extend
 4. **Focused**: Only implements what SMRForge actually uses
-5. **Fallback**: Automatically used if OpenMC/SANDY unavailable
+5. **Fallback**: Automatically used if SANDY unavailable
 6. **Polars Integration**: Can export to Polars DataFrames for efficient tabular operations (consistent with rest of SMRForge)
 7. **Flexible**: Returns NumPy arrays (fast) but can export to Polars when needed
 
@@ -157,7 +154,7 @@ The custom parser is designed for SMRForge's needs:
 - ❌ Does NOT handle advanced ENDF features (complex interpolation, etc.)
 - ❌ Temperature-dependent data handled via Doppler broadening (not from file)
 
-For full ENDF support, use OpenMC or SANDY.
+For full ENDF support, use SANDY.
 
 ## File Format Support
 
