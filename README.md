@@ -36,6 +36,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 ## Documentation
 
 - **Installation**: See [`INSTALLATION.md`](INSTALLATION.md) for detailed installation instructions
+- **Usage**: See [`USAGE.md`](USAGE.md) for usage examples and quick reference
 - **Docker**: See [`DOCKER.md`](DOCKER.md) for Docker usage and troubleshooting
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development guidelines
 - **Changelog**: See [`CHANGELOG.md`](CHANGELOG.md) for version history and recent changes
@@ -96,7 +97,7 @@ docker-compose up -d smrforge
 docker-compose exec smrforge python -c "import smrforge as smr; print(smr.__version__)"
 ```
 
-For detailed Docker usage, see `DOCKER_USAGE.md`.
+For detailed Docker usage and troubleshooting, see [`DOCKER.md`](DOCKER.md).
 
 ## Quick Start
 

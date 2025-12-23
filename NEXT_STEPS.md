@@ -129,7 +129,7 @@ def plot_geometry(geometry, **kwargs)
 **What to add:**
 - `compare_designs()` - Compare multiple designs
 - `optimize_reactor()` - Design optimization wrapper
-- More convenience functions from API_IMPROVEMENTS_PROPOSAL.md
+- More convenience functions (see USAGE.md for current API)
 
 ---
 

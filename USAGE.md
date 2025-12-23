@@ -1,59 +1,57 @@
-# Easy Usage Examples - SMRForge One-Liners
+# SMRForge Usage Guide
 
-This document shows how to use SMRForge with simple one-liners and easy-to-use APIs.
+This guide shows how to use SMRForge with simple one-liners and easy-to-use APIs.
 
----
+## Quick Reference
 
-## Quick Start - One-Liners
-
-### 1. Get k-eff for a Preset Design (1 line!)
+### One-Liners
 
 ```python
 import smrforge as smr
 
-# One-liner: Get k-eff for Valar-10 reactor
-k = smr.quick_keff()  # Uses sensible defaults
-print(f"k-eff = {k:.6f}")
+# Get k-eff (simplest!)
+k = smr.quick_keff()
 
-# Or specify a preset
-k = smr.create_reactor("valar-10").solve_keff()
-print(f"k-eff = {k:.6f}")
-```
-
-### 2. Analyze a Preset Design (1 line!)
-
-```python
-import smrforge as smr
-
-# One-liner: Full analysis of preset design
+# Analyze preset design
 results = smr.analyze_preset("valar-10")
-print(f"k-eff: {results['k_eff']:.6f}")
-print(f"Power: {results['power_thermal_mw']:.1f} MWth")
-```
 
-### 3. Create Custom Reactor (3 lines)
-
-```python
-import smrforge as smr
-
-# Create custom reactor with simple parameters
-reactor = smr.create_reactor(
-    power_mw=10,
-    core_height=200,
-    core_diameter=100,
-    enrichment=0.195
-)
-
-# Solve (one-liner)
+# Create and solve custom reactor
+reactor = smr.create_reactor(power_mw=10, enrichment=0.195)
 results = reactor.solve()
-print(f"k-eff: {results['k_eff']:.6f}")
 ```
+
+### Available Functions
+
+| Function | Purpose | Returns |
+|----------|---------|---------|
+| `quick_keff(...)` | Quick k-eff calculation | `float` |
+| `create_reactor(name)` | Create reactor from preset | `SimpleReactor` |
+| `create_reactor(**kwargs)` | Create custom reactor | `SimpleReactor` |
+| `analyze_preset(name)` | Full analysis of preset | `Dict` |
+| `list_presets()` | List available presets | `List[str]` |
+| `compare_designs(names)` | Compare multiple designs | `Dict[str, Dict]` |
+
+### SimpleReactor Methods
+
+| Method | Purpose | Returns |
+|--------|---------|---------|
+| `solve_keff()` | Get k-eff only | `float` |
+| `solve()` | Full analysis | `Dict` |
+| `save(filepath)` | Save to JSON | None |
+| `load(filepath)` | Load from JSON | `SimpleReactor` |
+
+### Preset Designs
+
+- `"valar-10"` - Valar Atomics 10 MWth micro-reactor
+- `"gt-mhr-350"` - GT-MHR 350 MWth
+- `"htr-pm-200"` - HTR-PM 200 MWth
+- `"micro-htgr-1"` - Micro HTGR 1 MWth
 
 ---
 
-## Complete Examples
+## Examples
 
-### Example 1: Quick k-eff Calculation
+### 1. Quick k-eff Calculation
 
 ```python
 import smrforge as smr
@@ -66,7 +64,7 @@ k = smr.quick_keff(
 print(f"k-eff = {k:.6f}")
 ```
 
-### Example 2: Analyze Preset Design
+### 2. Analyze Preset Design
 
 ```python
 import smrforge as smr
@@ -82,22 +80,7 @@ print(f"  Power: {results['power_thermal_mw']:.1f} MWth")
 print(f"  Flux shape: {results['flux'].shape}")
 ```
 
-### Example 3: Compare Multiple Designs
-
-```python
-import smrforge as smr
-
-# Compare multiple designs
-results = smr.compare_designs(["valar-10", "htr-pm-200", "micro-htgr-1"])
-
-for name, data in results.items():
-    if 'k_eff' in data:
-        print(f"{name}: k-eff = {data['k_eff']:.6f}")
-    else:
-        print(f"{name}: Error - {data.get('error', 'Unknown')}")
-```
-
-### Example 4: Custom Reactor with Full Control
+### 3. Create Custom Reactor
 
 ```python
 import smrforge as smr
@@ -123,7 +106,22 @@ print(f"  Flux max: {results['flux'].max():.3e}")
 print(f"  Power: {results['power_thermal_mw']:.1f} MWth")
 ```
 
-### Example 5: Save and Load Reactors
+### 4. Compare Multiple Designs
+
+```python
+import smrforge as smr
+
+# Compare multiple designs
+results = smr.compare_designs(["valar-10", "htr-pm-200", "micro-htgr-1"])
+
+for name, data in results.items():
+    if 'k_eff' in data:
+        print(f"{name}: k-eff = {data['k_eff']:.6f}")
+    else:
+        print(f"{name}: Error - {data.get('error', 'Unknown')}")
+```
+
+### 5. Save and Load Reactors
 
 ```python
 import smrforge as smr
@@ -138,11 +136,12 @@ k = reactor2.solve_keff()
 print(f"k-eff from saved reactor: {k:.6f}")
 ```
 
-### Example 6: Iterative Design Study
+### 6. Design Study (Enrichment Sweep)
 
 ```python
 import smrforge as smr
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Study effect of enrichment on k-eff
 enrichments = np.linspace(0.15, 0.25, 11)
@@ -154,7 +153,6 @@ for enr in enrichments:
     print(f"Enrichment {enr:.3f}: k-eff = {k:.6f}")
 
 # Plot results
-import matplotlib.pyplot as plt
 plt.plot(enrichments, keffs, 'o-')
 plt.xlabel('Enrichment')
 plt.ylabel('k-eff')
@@ -162,23 +160,7 @@ plt.grid(True)
 plt.show()
 ```
 
-### Example 7: Power Sweep Study
-
-```python
-import smrforge as smr
-import numpy as np
-
-# Study different power levels
-powers = [5, 10, 20, 50]  # MW
-keffs = []
-
-for power in powers:
-    k = smr.quick_keff(power_mw=power)
-    keffs.append(k)
-    print(f"{power:2d} MW: k-eff = {k:.6f}")
-```
-
-### Example 8: Access Detailed Results
+### 7. Access Detailed Results
 
 ```python
 import smrforge as smr
@@ -224,12 +206,7 @@ xs_data = CrossSectionData(
     n_groups=2, n_materials=2,
     sigma_t=np.array([[0.30, 0.90], [0.28, 0.75]]),
     sigma_a=np.array([[0.008, 0.12], [0.002, 0.025]]),
-    sigma_f=np.array([[0.006, 0.10], [0.0, 0.0]]),
-    nu_sigma_f=np.array([[0.015, 0.25], [0.0, 0.0]]),
-    sigma_s=np.array([[[0.29, 0.01], [0.0, 0.78]], 
-                      [[0.28, 0.0], [0.0, 0.73]]]),
-    chi=np.array([[1.0, 0.0], [1.0, 0.0]]),
-    D=np.array([[1.0, 0.4], [1.2, 0.5]]),
+    # ... many more arrays
 )
 
 # Step 3: Create solver options
@@ -240,7 +217,6 @@ solver = MultiGroupDiffusion(core, xs_data, options)
 
 # Step 5: Solve
 k_eff, flux = solver.solve_steady_state()
-print(f"k-eff = {k_eff:.6f}")
 ```
 
 ### After (One-Liner - Easy!)
@@ -257,57 +233,34 @@ print(f"k-eff = {k_eff:.6f}")
 
 ---
 
-## Advanced Usage (Still Easy!)
+## Advanced Usage
 
-### Using SimpleReactor Class Directly
-
-```python
-import smrforge as smr
-
-# Create reactor
-reactor = smr.SimpleReactor(
-    power_mw=10,
-    core_height=200,
-    core_diameter=100,
-    enrichment=0.195
-)
-
-# Solve
-results = reactor.solve()
-
-# Access reactor specification
-print(f"Reactor: {reactor.spec.name}")
-print(f"Power: {reactor.spec.power_thermal/1e6:.1f} MWth")
-print(f"Enrichment: {reactor.spec.enrichment:.1%}")
-
-# Access underlying objects if needed
-solver = reactor._get_solver()
-core = reactor._get_core()
-xs = reactor._get_xs_data()
-```
-
-### Custom Cross Sections (Still Simple)
-
-For advanced users who want to customize cross sections but still use the easy API:
+The convenience API is great for common tasks, but the full API is still available for advanced use cases:
 
 ```python
-import smrforge as smr
-from smrforge.validation.models import CrossSectionData
-import numpy as np
+from smrforge.geometry.core_geometry import PrismaticCore
+from smrforge.neutronics.solver import MultiGroupDiffusion
+from smrforge.validation.models import CrossSectionData, SolverOptions
 
-# Create reactor
-reactor = smr.create_reactor("valar-10")
+# Full control when needed
+core = PrismaticCore(name="advanced")
+# ... configure geometry ...
 
-# Replace cross sections with custom ones
-reactor._xs_data = your_custom_xs_data  # Your CrossSectionData object
-
-# Solve with custom XS
-results = reactor.solve()
+xs_data = CrossSectionData(...)
+options = SolverOptions(...)
+solver = MultiGroupDiffusion(core, xs_data, options)
+k_eff, flux = solver.solve_steady_state()
 ```
+
+See the `examples/` directory for more complete examples:
+- `examples/basic_neutronics.py` - Basic neutronics calculations
+- `examples/preset_designs.py` - Working with preset designs
+- `examples/custom_reactor.py` - Custom reactor specifications
+- `examples/complete_integration_example.py` - Complete workflow
 
 ---
 
-## Tips for Easy Usage
+## Tips
 
 1. **Start with presets**: Use `smr.list_presets()` to see available designs
 2. **Use defaults**: Most functions have sensible defaults
@@ -317,13 +270,5 @@ results = reactor.solve()
 
 ---
 
-## Migration Guide
-
-If you have existing code using the old API:
-
-1. Replace geometry + XS creation with `smr.create_reactor()`
-2. Replace solver setup with `reactor.solve()` or `reactor.solve_keff()`
-3. Access results from the returned dictionary instead of solver attributes
-
-Old code still works, but the new API is much simpler for common tasks!
+*For more information, see the [API Reference](docs/api_reference.rst) and [Examples](examples/).*
 

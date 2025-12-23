@@ -234,7 +234,7 @@ def export_results(results, filepath: Path, format: str = "hdf5"):
 
 **Current State:** Basic convenience functions exist
 
-**What to Add (from API_IMPROVEMENTS_PROPOSAL.md):**
+**What to Add (see USAGE.md for current convenience API):**
 
 ```python
 # Already partially implemented, but could expand:
