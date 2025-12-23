@@ -66,7 +66,11 @@ try:
     _CONVENIENCE_AVAILABLE = True
 except ImportError as e:
     import warnings
-    warnings.warn(f"Could not import convenience functions: {e}", ImportWarning)
+    warnings.warn(
+        f"Could not import convenience functions: {e}\n"
+        f"Some features may not be available. Please check your installation.",
+        ImportWarning
+    )
     _CONVENIENCE_AVAILABLE = False
 
 __all__ = [

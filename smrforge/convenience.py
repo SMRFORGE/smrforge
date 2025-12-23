@@ -7,6 +7,8 @@ from typing import Dict, Optional, List, Union
 from pathlib import Path
 import numpy as np
 
+# Core imports - these are required for convenience functions to work
+# If they fail, the convenience module cannot be imported (by design)
 from .validation.models import ReactorSpecification, ReactorType, FuelType, SolverOptions, CrossSectionData
 from .geometry.core_geometry import PrismaticCore
 from .neutronics.solver import MultiGroupDiffusion
@@ -157,6 +159,7 @@ def quick_keff(power_mw: float = 10.0,
         k-eff value
         
     Example:
+        >>> import smrforge as smr
         >>> k = smr.quick_keff(power_mw=10, enrichment=0.195)
         >>> print(f"k-eff = {k:.6f}")
     """
