@@ -17,7 +17,7 @@ setup(
     description="Small Modular Reactor Design and Analysis Toolkit",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/smrforge",
+    url="https://github.com/cmwhalen/smrforge",
     packages=find_packages(exclude=["tests", "docs", "examples"]),
     package_data={
         # Include logo in package if needed
@@ -76,8 +76,8 @@ setup(
     ],
     keywords="nuclear reactor simulation SMR neutronics thermal-hydraulics",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/smrforge/issues",
-        "Source": "https://github.com/yourusername/smrforge",
+        "Bug Reports": "https://github.com/cmwhalen/smrforge/issues",
+        "Source": "https://github.com/cmwhalen/smrforge",
         "Documentation": "https://smrforge.readthedocs.io",
     },
 )

@@ -61,7 +61,7 @@ brew install uv
 **Simplest method (uv manages everything):**
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/smrforge.git
+git clone https://github.com/cmwhalen/smrforge.git
 cd smrforge
 
 # Install with uv (uv will create venv and install everything)
@@ -102,7 +102,7 @@ pip install -e .
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/smrforge.git
+git clone https://github.com/cmwhalen/smrforge.git
 cd smrforge
 
 # Install in development mode with all dependencies

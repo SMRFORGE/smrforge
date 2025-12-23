@@ -47,7 +47,7 @@ Be respectful, inclusive, and collaborative. This is a technical project focused
 
 1. **Clone your fork:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/smrforge.git
+   git clone https://github.com/cmwhalen/smrforge.git
    cd smrforge
    ```
 
@@ -244,11 +244,11 @@ If you're setting up the repository on GitHub for the first time:
 
 2. **Connect your local repository:**
    ```bash
-   # Add GitHub remote (replace YOUR_USERNAME with your GitHub username)
-   git remote add origin https://github.com/YOUR_USERNAME/smrforge.git
+   # Add GitHub remote (replace cmwhalen with your GitHub username)
+   git remote add origin https://github.com/cmwhalen/smrforge.git
    
    # Or use SSH (recommended for long-term):
-   git remote add origin git@github.com:YOUR_USERNAME/smrforge.git
+   git remote add origin git@github.com:cmwhalen/smrforge.git
    ```
 
 3. **Push to GitHub:**

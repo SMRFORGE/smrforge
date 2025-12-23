@@ -54,7 +54,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/smrforge.git
+git clone https://github.com/cmwhalen/smrforge.git
 cd smrforge
 
 # Create virtual environment (recommended)
@@ -74,7 +74,7 @@ pip install -e ".[dev,docs,viz]"
 # Install uv: https://github.com/astral-sh/uv
 
 # Clone repository
-git clone https://github.com/yourusername/smrforge.git
+git clone https://github.com/cmwhalen/smrforge.git
 cd smrforge
 
 # Install with uv (much faster!)
@@ -87,7 +87,7 @@ uv pip install -e . --python 3.10
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/smrforge.git
+git clone https://github.com/cmwhalen/smrforge.git
 cd smrforge
 
 # Build and run with Docker Compose
@@ -163,11 +163,11 @@ If you use SMRForge in your research, please cite:
   author = {Your Name},
   title = {SMRForge: Small Modular Reactor Design Toolkit},
   year = {2024},
-  url = {https://github.com/yourusername/smrforge}
+  url = {https://github.com/cmwhalen/smrforge}
 }
 ```
 
 ## Contact
 
 - Email: your.email@example.com
-- Issues: https://github.com/yourusername/smrforge/issues
+- Issues: https://github.com/cmwhalen/smrforge/issues
