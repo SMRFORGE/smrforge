@@ -1,0 +1,24 @@
+/* Custom CSS for SMRForge documentation */
+
+/* Logo styling */
+img.logo {
+    max-width: 400px;
+    margin: 20px auto;
+    display: block;
+}
+
+/* Branding colors */
+:root {
+    --smrforge-primary: #1a5490;
+    --smrforge-secondary: #2e7d32;
+}
+
+/* Custom header styling */
+.wy-side-nav-search {
+    background-color: var(--smrforge-primary);
+}
+
+.wy-side-nav-search > a {
+    color: #ffffff;
+}
+
