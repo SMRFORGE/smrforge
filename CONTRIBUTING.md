@@ -175,6 +175,37 @@ def test_solver_converges(solver):
 
 We aim for 80%+ test coverage on critical modules. New code should include tests.
 
+#### Check Coverage
+
+Run tests with coverage:
+```bash
+pytest --cov=smrforge --cov-report=html
+```
+
+This generates an HTML report in `htmlcov/index.html` showing:
+- Overall coverage percentage
+- Coverage by module
+- Line-by-line coverage details
+
+For a quick terminal report:
+```bash
+pytest --cov=smrforge --cov-report=term-missing
+```
+
+For CI/CD integration:
+```bash
+pytest --cov=smrforge --cov-report=xml
+```
+
+#### Coverage Targets
+
+Critical modules should have 80%+ coverage:
+- `smrforge.neutronics.solver` - Core solver
+- `smrforge.validation.models` - Validation framework
+- `smrforge.core.reactor_core` - Nuclear data handling
+
+See `.github/workflows/ci.yml` for automated coverage in CI/CD.
+
 ## Commit Messages
 
 Use clear, descriptive commit messages:
@@ -193,6 +224,39 @@ Examples:
 - `Add logging framework for neutronics solver`
 - `Fix zarr compatibility issue (DirectoryStore → LocalStore)`
 - `Add integration tests for complete workflow`
+
+## GitHub Setup (For New Contributors)
+
+If you're setting up the repository on GitHub for the first time:
+
+1. **Create a GitHub repository:**
+   - Go to https://github.com/new
+   - Name it `smrforge` (or your preferred name)
+   - Choose public or private
+   - **Don't initialize with README** (we already have one)
+
+2. **Connect your local repository:**
+   ```bash
+   # Add GitHub remote (replace YOUR_USERNAME with your GitHub username)
+   git remote add origin https://github.com/YOUR_USERNAME/smrforge.git
+   
+   # Or use SSH (recommended for long-term):
+   git remote add origin git@github.com:YOUR_USERNAME/smrforge.git
+   ```
+
+3. **Push to GitHub:**
+   ```bash
+   # Set default branch to main
+   git branch -M main
+   
+   # Push to GitHub
+   git push -u origin main
+   ```
+
+**Authentication:** GitHub no longer accepts passwords. Use:
+- **Personal Access Token** (for HTTPS) - Generate at GitHub → Settings → Developer settings
+- **SSH Keys** (recommended) - Generate with `ssh-keygen` and add to GitHub
+- **GitHub CLI** - Use `gh auth login`
 
 ## Git Workflow
 

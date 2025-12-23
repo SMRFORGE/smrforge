@@ -1,6 +1,6 @@
 # Docker Usage Guide for SMRForge
 
-This guide explains how to use SMRForge with Docker Desktop.
+This guide explains how to use SMRForge with Docker Desktop, including setup, usage, and troubleshooting.
 
 ## Prerequisites
 
@@ -143,36 +143,30 @@ environment:
 
 ## Troubleshooting
 
-### Build Fails with "pip install" Error
+### Common Build Issues
 
-If you see errors during the build process:
+#### Issue: `pip install` fails with exit code 1
 
-1. **Try rebuilding with no cache:**
+This usually happens when a package fails to build. Common causes:
+
+1. **Missing system dependencies** - The Dockerfile includes all necessary dependencies, but try rebuilding with no cache:
    ```bash
    docker-compose build --no-cache smrforge
+   docker-compose up -d smrforge
    ```
 
-2. **If OpenMC is causing issues, use the optional version:**
-   ```bash
-   docker-compose up -d smrforge-no-openmc
-   ```
+2. **OpenMC installation failures** - OpenMC can be tricky to install. Solutions:
+   - Use the optional Dockerfile: `docker-compose up -d smrforge-no-openmc`
+   - Or temporarily remove OpenMC from requirements.txt (it's optional)
+   - The Dockerfile includes all OpenMC dependencies (CMake, HDF5, C++ compiler, Git)
 
-3. **Check detailed error logs:**
-   ```bash
-   docker-compose build smrforge 2>&1 | tee build.log
-   ```
-
-See `DOCKER_TROUBLESHOOTING.md` for detailed troubleshooting guide.
-
-## Troubleshooting (Legacy)
-
-### Container won't start
+#### Issue: Container won't start
 
 Check Docker Desktop is running and has enough resources allocated:
 - Docker Desktop → Settings → Resources
 - Recommended: 4GB RAM, 2 CPUs minimum
 
-### Permission issues (Linux/macOS)
+#### Issue: Permission issues (Linux/macOS)
 
 If you get permission errors when mounting volumes:
 ```bash
@@ -180,7 +174,7 @@ If you get permission errors when mounting volumes:
 sudo chown -R $USER:$USER data output
 ```
 
-### Import errors
+#### Issue: Import errors
 
 Make sure the container has the latest code:
 ```bash
@@ -188,11 +182,88 @@ docker-compose build --no-cache smrforge
 docker-compose up -d smrforge
 ```
 
-### Slow performance
+#### Issue: Slow performance
 
 Docker volume mounts can be slow on Windows/macOS. Consider:
 - Using Docker volumes instead of bind mounts for large datasets
 - Running on Linux for better I/O performance
+
+### Specific Package Issues
+
+#### OpenMC Installation Problems
+
+OpenMC requires:
+- CMake >= 3.10
+- HDF5 development libraries
+- C++ compiler with C++11 support
+- Git (to clone dependencies)
+
+The Dockerfile includes all of these. If it still fails:
+1. Check OpenMC's official installation docs
+2. Use the optional-openmc Dockerfile variant
+3. OpenMC is optional - SMRForge works without it using alternative backends
+
+#### h5py Installation Problems
+
+h5py needs HDF5 development libraries. The Dockerfile includes:
+- `libhdf5-dev`
+- `libhdf5-serial-dev`
+
+If h5py still fails, you may need to set environment variables:
+```dockerfile
+ENV HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial
+```
+
+#### Numba Compilation Issues
+
+Numba is optional for performance. If it fails:
+1. The library still works without it (just slower)
+2. Remove it from requirements.txt temporarily
+3. Install later: `pip install numba`
+
+### Network Issues
+
+If packages fail to download:
+1. Check Docker's network connectivity
+2. Try building with `--network=host` (Linux only)
+3. Use a proxy if behind corporate firewall
+
+### Disk Space Issues
+
+If build fails due to disk space:
+
+```bash
+# Clean up Docker
+docker system prune -a
+
+# Check disk space
+docker system df
+```
+
+### Build Performance
+
+To speed up rebuilds:
+
+1. The Dockerfile uses layer caching (requirements installed before code copy)
+2. Use BuildKit: `DOCKER_BUILDKIT=1 docker-compose build`
+3. Use multi-stage builds for smaller final image
+
+### Verifying Installation
+
+After successful build, verify packages:
+
+```bash
+docker-compose exec smrforge python -c "import smrforge; print('OK')"
+docker-compose exec smrforge python -c "import numpy, scipy, matplotlib, pandas; print('Core packages OK')"
+docker-compose exec smrforge python -c "import openmc; print('OpenMC OK')" || echo "OpenMC not installed (optional)"
+```
+
+### Getting More Help
+
+1. Check the full build log: `docker-compose build 2>&1 | tee build.log`
+2. Run interactively to debug: `docker run -it --rm smrforge:latest bash`
+3. Check package-specific documentation
+4. Open an issue with the full error message
 
 ## Cleaning Up
 
