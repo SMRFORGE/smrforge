@@ -10,12 +10,12 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from ..geometry import PebbleBedCore, PrismaticCore
-from ..validation.models import CrossSectionData
 from ..core.materials_database import MaterialDatabase
+from ..geometry import PebbleBedCore, PrismaticCore
 
 # Import Pydantic models
 from ..validation.models import (
+    CrossSectionData,
     FuelType,
     GeometryParameters,
     GraphiteGrade,

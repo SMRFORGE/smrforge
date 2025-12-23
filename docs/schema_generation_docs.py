@@ -8,106 +8,110 @@ from pathlib import Path
 from typing import Dict, Any
 
 from smrforge.validation.models import (
-    ReactorSpecification, CrossSectionData, SolverOptions,
-    GeometryParameters, MaterialComposition, TransientConditions,
-    SMRForgeSettings
+    ReactorSpecification,
+    CrossSectionData,
+    SolverOptions,
+    GeometryParameters,
+    MaterialComposition,
+    TransientConditions,
+    SMRForgeSettings,
 )
 
 
 def generate_schema(model_class, output_path: Path):
     """
     Generate JSON schema for a Pydantic model.
-    
+
     Args:
         model_class: Pydantic model class
         output_path: Path to save JSON schema
     """
     schema = model_class.model_json_schema()
-    
+
     # Add metadata
-    schema['$schema'] = "https://json-schema.org/draft/2020-12/schema"
-    schema['title'] = f"{model_class.__name__} Schema"
-    schema['description'] = model_class.__doc__ or f"Schema for {model_class.__name__}"
-    
+    schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+    schema["title"] = f"{model_class.__name__} Schema"
+    schema["description"] = model_class.__doc__ or f"Schema for {model_class.__name__}"
+
     # Save to file
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         json.dump(schema, f, indent=2)
-    
+
     print(f"✓ Generated schema: {output_path}")
-    
+
     return schema
 
 
 def generate_markdown_docs(model_class) -> str:
     """
     Generate Markdown documentation from Pydantic model.
-    
+
     Args:
         model_class: Pydantic model class
-    
+
     Returns:
         Markdown documentation string
     """
     schema = model_class.model_json_schema()
-    
+
     md = f"# {model_class.__name__}\n\n"
-    
+
     if model_class.__doc__:
         md += f"{model_class.__doc__.strip()}\n\n"
-    
+
     md += "## Fields\n\n"
     md += "| Field | Type | Required | Description |\n"
     md += "|-------|------|----------|-------------|\n"
-    
-    properties = schema.get('properties', {})
-    required = schema.get('required', [])
-    
+
+    properties = schema.get("properties", {})
+    required = schema.get("required", [])
+
     for field_name, field_info in properties.items():
-        field_type = field_info.get('type', 'any')
+        field_type = field_info.get("type", "any")
         is_required = "✓" if field_name in required else ""
-        description = field_info.get('description', '')
-        
+        description = field_info.get("description", "")
+
         # Handle complex types
-        if 'anyOf' in field_info:
-            types = [t.get('type', 'any') for t in field_info['anyOf']]
-            field_type = ' | '.join(types)
-        
+        if "anyOf" in field_info:
+            types = [t.get("type", "any") for t in field_info["anyOf"]]
+            field_type = " | ".join(types)
+
         md += f"| `{field_name}` | {field_type} | {is_required} | {description} |\n"
-    
+
     md += "\n## Constraints\n\n"
-    
+
     # Add constraints
     for field_name, field_info in properties.items():
         constraints = []
-        
-        if 'minimum' in field_info:
+
+        if "minimum" in field_info:
             constraints.append(f"minimum: {field_info['minimum']}")
-        if 'maximum' in field_info:
+        if "maximum" in field_info:
             constraints.append(f"maximum: {field_info['maximum']}")
-        if 'minLength' in field_info:
+        if "minLength" in field_info:
             constraints.append(f"min length: {field_info['minLength']}")
-        if 'maxLength' in field_info:
+        if "maxLength" in field_info:
             constraints.append(f"max length: {field_info['maxLength']}")
-        if 'pattern' in field_info:
+        if "pattern" in field_info:
             constraints.append(f"pattern: `{field_info['pattern']}`")
-        
+
         if constraints:
             md += f"- **{field_name}**: {', '.join(constraints)}\n"
-    
+
     # Add example
-    if 'examples' in schema.get('json_schema_extra', {}):
+    if "examples" in schema.get("json_schema_extra", {}):
         md += "\n## Example\n\n```json\n"
-        example = schema['json_schema_extra']['examples'][0]
+        example = schema["json_schema_extra"]["examples"][0]
         md += json.dumps(example, indent=2)
         md += "\n```\n"
-    
+
     return md
 
 
 def generate_all_schemas(output_dir: Path):
     """Generate schemas for all Pydantic models."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     models = [
         ReactorSpecification,
         CrossSectionData,
@@ -115,23 +119,23 @@ def generate_all_schemas(output_dir: Path):
         GeometryParameters,
         MaterialComposition,
         TransientConditions,
-        SMRForgeSettings
+        SMRForgeSettings,
     ]
-    
+
     print(f"Generating schemas in: {output_dir}\n")
-    
+
     for model in models:
         # JSON schema
         schema_path = output_dir / f"{model.__name__}.schema.json"
         generate_schema(model, schema_path)
-        
+
         # Markdown docs
         md_path = output_dir / f"{model.__name__}.md"
         md_content = generate_markdown_docs(model)
-        with open(md_path, 'w') as f:
+        with open(md_path, "w") as f:
             f.write(md_content)
         print(f"✓ Generated docs: {md_path}")
-    
+
     print(f"\n✓ Generated {len(models)} schemas and docs")
 
 
@@ -139,28 +143,26 @@ def generate_openapi_spec(output_path: Path):
     """Generate OpenAPI specification for potential API."""
     from fastapi import FastAPI
     from fastapi.openapi.utils import get_openapi
-    
+
     app = FastAPI(
         title="SMRForge API",
         description="HTGR Small Modular Reactor Analysis API",
-        version="0.1.0"
+        version="0.1.0",
     )
-    
+
     # Add example endpoints (these would be real in production)
     @app.post("/reactor/validate", response_model=ReactorSpecification)
     def validate_reactor(spec: ReactorSpecification):
         """Validate a reactor specification."""
         return spec
-    
+
     @app.post("/analysis/neutronics")
     def run_neutronics(
-        spec: ReactorSpecification,
-        xs_data: CrossSectionData,
-        options: SolverOptions
+        spec: ReactorSpecification, xs_data: CrossSectionData, options: SolverOptions
     ):
         """Run neutronics analysis."""
         return {"status": "success", "k_eff": 1.045}
-    
+
     # Generate OpenAPI spec
     openapi_schema = get_openapi(
         title=app.title,
@@ -168,17 +170,17 @@ def generate_openapi_spec(output_path: Path):
         description=app.description,
         routes=app.routes,
     )
-    
-    with open(output_path, 'w') as f:
+
+    with open(output_path, "w") as f:
         json.dump(openapi_schema, f, indent=2)
-    
+
     print(f"✓ Generated OpenAPI spec: {output_path}")
 
 
 def create_example_configs(output_dir: Path):
     """Create example configuration files."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Example 1: Micro-reactor
     micro_config = {
         "name": "Micro-HTGR-Example",
@@ -200,12 +202,12 @@ def create_example_configs(output_dir: Path):
         "capacity_factor": 0.90,
         "target_burnup": 200.0,
         "doppler_coefficient": -0.00004,
-        "shutdown_margin": 0.08
+        "shutdown_margin": 0.08,
     }
-    
-    with open(output_dir / "micro_htgr_example.json", 'w') as f:
+
+    with open(output_dir / "micro_htgr_example.json", "w") as f:
         json.dump(micro_config, f, indent=2)
-    
+
     # Example 2: Settings
     settings_example = """# SMRForge Settings (.env file)
 
@@ -227,10 +229,10 @@ SMRFORGE_VALIDATION_WARNINGS=true
 # Logging
 SMRFORGE_LOG_LEVEL=INFO
 """
-    
-    with open(output_dir / "example.env", 'w') as f:
+
+    with open(output_dir / "example.env", "w") as f:
         f.write(settings_example)
-    
+
     print(f"✓ Created example configs in: {output_dir}")
 
 
@@ -377,39 +379,40 @@ spec = ReactorSpecification.model_construct(**spec_dict)
 - [Example Configurations](./examples/)
 
 """
-    
-    with open(output_path, 'w') as f:
+
+    with open(output_path, "w") as f:
         f.write(guide)
-    
+
     print(f"✓ Generated validation guide: {output_path}")
 
 
 if __name__ == "__main__":
     from rich.console import Console
+
     console = Console()
-    
+
     console.print("[bold cyan]Generating Schemas and Documentation[/bold cyan]\n")
-    
+
     # Setup output directories
     docs_dir = Path("./docs")
     schemas_dir = docs_dir / "schemas"
     examples_dir = docs_dir / "examples"
-    
+
     # Generate everything
     generate_all_schemas(schemas_dir)
     console.print()
-    
+
     create_example_configs(examples_dir)
     console.print()
-    
+
     generate_validation_guide(docs_dir / "validation_guide.md")
     console.print()
-    
+
     try:
         generate_openapi_spec(docs_dir / "openapi.json")
     except ImportError:
         console.print("[yellow]⚠ FastAPI not installed, skipping OpenAPI spec[/yellow]")
-    
+
     console.print("\n[bold green]✓ Documentation generation complete![/bold green]")
     console.print(f"\nGenerated files in:")
     console.print(f"  • Schemas: {schemas_dir}")

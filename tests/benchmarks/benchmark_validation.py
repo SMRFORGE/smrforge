@@ -6,6 +6,7 @@ Tests for Pydantic validation in SMRForge.
 import numpy as np
 import pytest
 from pydantic import ValidationError
+
 from smrforge.validation.models import (
     CrossSectionData,
     FuelType,

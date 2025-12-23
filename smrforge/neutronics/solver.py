@@ -10,17 +10,20 @@ This module provides:
   - Comprehensive logging and error handling
 """
 
+import time
+from typing import Dict, Optional, Tuple
+
 import numpy as np
 from numba import njit, prange
-from scipy.sparse import csr_matrix, diags, linalg as sparse_linalg
-from typing import Tuple, Optional, Dict
-import time
 from pydantic import ValidationError
+from scipy.sparse import csr_matrix, diags
+from scipy.sparse import linalg as sparse_linalg
+
+from ..utils.logging import get_logger
 
 # Import Pydantic models
 from ..validation.models import CrossSectionData, SolverOptions
 from ..validation.validators import DataValidator, ValidationResult
-from ..utils.logging import get_logger
 
 # Get logger for this module
 logger = get_logger("smrforge.neutronics")
@@ -31,8 +34,7 @@ class MultiGroupDiffusion:
     Multi-group neutron diffusion solver with automatic input validation.
     """
 
-    def __init__(self, geometry, xs_data: CrossSectionData,
-                 options: SolverOptions):
+    def __init__(self, geometry, xs_data: CrossSectionData, options: SolverOptions):
         """
         Initialize solver with validated inputs.
 
@@ -69,9 +71,7 @@ class MultiGroupDiffusion:
         validator = DataValidator()
 
         # Validate solver inputs comprehensively
-        result = validator.validate_solver_inputs(
-            self.geometry, self.xs, self.options
-        )
+        result = validator.validate_solver_inputs(self.geometry, self.xs, self.options)
 
         if result.has_errors():
             # Print detailed validation report
@@ -84,8 +84,9 @@ class MultiGroupDiffusion:
         # Warnings are OK, but print them
         if result.issues:
             import warnings
+
             for issue in result.issues:
-                if issue.level.value == 'warning':
+                if issue.level.value == "warning":
                     warnings.warn(str(issue))
 
     def _setup_mesh(self) -> None:
@@ -141,7 +142,7 @@ class MultiGroupDiffusion:
     def _update_xs_maps(self) -> None:
         """
         Update homogenized cross sections from material map.
-        
+
         Optimized using numpy advanced indexing for vectorized assignment.
         ~10-100x faster than nested loops for large meshes.
         """
@@ -203,11 +204,9 @@ class MultiGroupDiffusion:
         validator = DataValidator()
 
         # Dummy power for validation (will be normalized later)
-        power = np.ones_like(self.flux[:,:,0])
+        power = np.ones_like(self.flux[:, :, 0])
 
-        result = validator.validate_solution(
-            self.k_eff, self.flux, power, 1.0
-        )
+        result = validator.validate_solution(self.k_eff, self.flux, power, 1.0)
 
         if result.has_errors():
             logger.error("Solution validation failed")
@@ -260,36 +259,36 @@ class MultiGroupDiffusion:
     def _update_fission_source(self, k_eff: float) -> None:
         """
         Update fission source.
-        
+
         Optimized using vectorized operations for ~5-20x speedup.
         """
         # Fission rate: [nz, nr, 1]
         fission_rate = np.sum(self.nu_sigma_f_map * self.flux, axis=2, keepdims=True)
-        
+
         # chi is [n_materials, ng]
         # Get chi for each cell: [nz, nr, ng]
         chi_map = self.xs.chi[self.material_map, :]
-        
+
         # Broadcast multiplication: [nz, nr, ng]
         self.source = chi_map * fission_rate / k_eff
 
     def _update_scattering_source(self, g: int) -> None:
         """
         Update scattering source for group g.
-        
+
         Optimized using vectorized operations for ~5-50x speedup depending on number of groups.
         """
         # Vectorized: sigma_s is [n_materials, ng, ng]
         # flux is [nz, nr, ng]
         # material_map is [nz, nr]
-        
+
         # Get scattering matrix for each cell: [nz, nr, ng]
         # sigma_s[mat, :, g] selects all source groups -> target group g for each material
         sigma_s_mat = self.xs.sigma_s[self.material_map, :, g]  # [nz, nr, ng]
-        
+
         # Dot product along group dimension: [nz, nr]
         scatter_in = np.sum(sigma_s_mat * self.flux, axis=2)
-        
+
         self.source[:, :, g] += scatter_in
 
     def _solve_group(self, g: int) -> np.ndarray:
@@ -332,9 +331,9 @@ class MultiGroupDiffusion:
 
                 r = self.r_centers[ir]
                 dr_left = self.dr[ir] if ir > 0 else self.dr[ir]
-                dr_right = self.dr[ir] if ir < self.nr-1 else self.dr[ir]
+                dr_right = self.dr[ir] if ir < self.nr - 1 else self.dr[ir]
                 dz_down = self.dz[iz] if iz > 0 else self.dz[iz]
-                dz_up = self.dz[iz] if iz < self.nz-1 else self.dz[iz]
+                dz_up = self.dz[iz] if iz < self.nz - 1 else self.dz[iz]
 
                 V = 2 * np.pi * r * self.dr[ir] * self.dz[iz]
 
@@ -344,7 +343,7 @@ class MultiGroupDiffusion:
                 if ir > 0:
                     r_left = self.r_mesh[ir]
                     A_left = 2 * np.pi * r_left * self.dz[iz]
-                    D_left = 0.5 * (D + self.D_map[iz, ir-1, g])
+                    D_left = 0.5 * (D + self.D_map[iz, ir - 1, g])
                     coef_left = D_left * A_left / dr_left
 
                     diag += coef_left
@@ -354,9 +353,9 @@ class MultiGroupDiffusion:
                     idx += 1
 
                 if ir < self.nr - 1:
-                    r_right = self.r_mesh[ir+1]
+                    r_right = self.r_mesh[ir + 1]
                     A_right = 2 * np.pi * r_right * self.dz[iz]
-                    D_right = 0.5 * (D + self.D_map[iz, ir+1, g])
+                    D_right = 0.5 * (D + self.D_map[iz, ir + 1, g])
                     coef_right = D_right * A_right / dr_right
 
                     diag += coef_right
@@ -366,10 +365,10 @@ class MultiGroupDiffusion:
                     idx += 1
 
                 # Axial leakage
-                A_axial = np.pi * (self.r_mesh[ir+1]**2 - self.r_mesh[ir]**2)
+                A_axial = np.pi * (self.r_mesh[ir + 1] ** 2 - self.r_mesh[ir] ** 2)
 
                 if iz > 0:
-                    D_bottom = 0.5 * (D + self.D_map[iz-1, ir, g])
+                    D_bottom = 0.5 * (D + self.D_map[iz - 1, ir, g])
                     coef_bottom = D_bottom * A_axial / dz_down
 
                     diag += coef_bottom
@@ -379,7 +378,7 @@ class MultiGroupDiffusion:
                     idx += 1
 
                 if iz < self.nz - 1:
-                    D_top = 0.5 * (D + self.D_map[iz+1, ir, g])
+                    D_top = 0.5 * (D + self.D_map[iz + 1, ir, g])
                     coef_top = D_top * A_axial / dz_up
 
                     diag += coef_top
@@ -418,18 +417,18 @@ class MultiGroupDiffusion:
     def _arnoldi_method(self) -> Tuple[float, np.ndarray]:
         """
         Arnoldi/Krylov eigenvalue method.
-        
+
         ⚠️ NOT IMPLEMENTED ⚠️
-        
+
         This method is not yet implemented. Use the power iteration method
         (default) instead, which is fully functional and tested.
-        
+
         The Arnoldi method would provide faster convergence for large problems,
         but power iteration works well for most use cases.
-        
+
         Raises:
             NotImplementedError: Always raised (method not implemented)
-            
+
         See Also:
             solve_steady_state() - Uses power iteration (default, fully functional)
             FEATURE_STATUS.md - Feature status documentation
@@ -458,7 +457,7 @@ class MultiGroupDiffusion:
         # Vectorized computation: sigma_f is [n_materials, ng]
         # Get fission cross section for each cell: [nz, nr, ng]
         sigma_f_map = self.xs.sigma_f[self.material_map, :]
-        
+
         # Sum over groups: [nz, nr]
         power_density = np.sum(sigma_f_map * self.flux, axis=2) * E_per_fission
 
@@ -472,7 +471,7 @@ class MultiGroupDiffusion:
     def _cell_volumes(self) -> np.ndarray:
         """
         Compute cell volumes [nz, nr].
-        
+
         Cached and vectorized for better performance.
         Volumes are computed once and reused since geometry doesn't change.
         """
@@ -486,7 +485,9 @@ class MultiGroupDiffusion:
             self._cell_volumes_cache = (2 * np.pi * r * dr * dz).T  # [nz, nr]
         return self._cell_volumes_cache
 
-    def compute_reactivity_coefficients(self, delta_T: float = 10.0) -> Dict[str, float]:
+    def compute_reactivity_coefficients(
+        self, delta_T: float = 10.0
+    ) -> Dict[str, float]:
         """
         Compute reactivity feedback coefficients.
 
@@ -503,15 +504,12 @@ class MultiGroupDiffusion:
 
         # Would need temperature-dependent XS in real implementation
         # This is a placeholder
-        return {
-            'doppler': -3.5e-5,
-            'moderator': -1.0e-5,
-            'total': -4.5e-5
-        }
+        return {"doppler": -3.5e-5, "moderator": -1.0e-5, "total": -4.5e-5}
 
 
 if __name__ == "__main__":
     from rich.console import Console
+
     console = Console()
 
     console.print("[bold cyan]Updated Multi-Group Diffusion Solver[/bold cyan]\n")
@@ -530,16 +528,13 @@ if __name__ == "__main__":
             nu_sigma_f=np.array([[0.125, 0.375]]),
             sigma_s=np.array([[[0.39, 0.01], [0.0, 0.58]]]),
             chi=np.array([[1.0, 0.0]]),
-            D=np.array([[1.5, 0.4]])
+            D=np.array([[1.5, 0.4]]),
         )
         console.print("  ✓ Cross sections validated by Pydantic")
 
         # Create validated solver options
         options = SolverOptions(
-            max_iterations=100,
-            tolerance=1e-6,
-            eigen_method="power",
-            verbose=False
+            max_iterations=100, tolerance=1e-6, eigen_method="power", verbose=False
         )
         console.print("  ✓ Solver options validated by Pydantic")
 
@@ -559,7 +554,7 @@ if __name__ == "__main__":
             nu_sigma_f=np.array([[0.125, 0.375]]),
             sigma_s=np.array([[[0.39, 0.01], [0.0, 0.58]]]),
             chi=np.array([[1.0, 0.0]]),
-            D=np.array([[1.5, 0.4]])
+            D=np.array([[1.5, 0.4]]),
         )
     except ValidationError as e:
         console.print("  ✓ Pydantic caught invalid cross sections:")

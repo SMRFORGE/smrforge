@@ -22,6 +22,7 @@ author = "SMRForge Development Team"
 # Get version from package
 try:
     from smrforge import __version__
+
     version = __version__
     release = __version__
 except ImportError:
@@ -70,4 +71,3 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
 }
-
