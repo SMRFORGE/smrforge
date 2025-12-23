@@ -29,6 +29,7 @@ setup(
         "scipy>=1.7.0",
         "matplotlib>=3.4.0",
         "pydantic>=2.0.0",
+        "pydantic-settings>=2.0.0",
         "pandas>=1.3.0",
         "h5py>=3.0.0",
         "scikit-learn>=1.0.0",
@@ -40,6 +41,8 @@ setup(
         "polars>=0.19.0",
         # Terminal formatting
         "rich>=13.0.0",
+        # HTTP requests (for nuclear data downloads)
+        "requests>=2.25.0",
     ],
     extras_require={
         "dev": [
