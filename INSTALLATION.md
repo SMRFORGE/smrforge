@@ -195,9 +195,24 @@ print(f"k-eff = {k:.6f}")
 
 ## Troubleshooting
 
-### Issue: "openmc not found"
+### Issue: "openmc was not found in the package registry" or "openmc not found"
 
-If `openmc` installation fails, it's an optional dependency for advanced nuclear data features. The core library works without it for basic calculations. SMRForge includes alternative backends (SANDY, custom parser) that work without OpenMC.
+**This is expected!** OpenMC is optional and is not included in the default installation. SMRForge works perfectly without it using built-in parsers and SANDY (if installed).
+
+**If you need OpenMC:**
+1. OpenMC requires build tools (CMake, gfortran, C++ compiler)
+2. It cannot be installed via standard pip/uv due to compilation requirements
+3. Install separately following the [OpenMC installation guide](https://docs.openmc.org/en/stable/installation/index.html)
+
+**Recommended alternative:**
+```bash
+# Install SANDY instead (pure Python, much easier)
+pip install sandy
+# Or
+pip install -e ".[nuclear-data]"
+```
+
+SMRForge will automatically use available backends in priority order: OpenMC (if installed) → SANDY (if installed) → Built-in parser.
 
 ### Issue: "numba compilation errors"
 
