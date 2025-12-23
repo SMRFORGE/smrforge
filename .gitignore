@@ -45,9 +45,10 @@ htmlcov/
 .pytype/
 
 # Documentation
+# Only ignore build output, not source files
 docs/_build/
-docs/_static/
-docs/_templates/
+docs/.doctrees/
+# Note: docs/_static/ and docs/_templates/ should be tracked if they contain custom files
 
 # Data files
 *.hdf5
