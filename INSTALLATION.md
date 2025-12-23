@@ -154,10 +154,27 @@ All dependencies are standard Python packages available on PyPI:
 - `numba>=0.56.0` - Performance optimization
 - `zarr>=2.14.0` - Data storage
 - `polars>=0.19.0` - Fast dataframes
-- `openmc>=0.13.0` - Nuclear data handling (optional)
 - `rich>=13.0.0` - Terminal formatting
 
-All of these are **standard PyPI packages** - no conda-specific packages required.
+### Optional Dependencies
+
+**Nuclear Data Backends:**
+- `sandy` - Lighter-weight ENDF parser (pure Python, recommended)
+- `openmc>=0.13.0` - Advanced nuclear data handling (requires build tools)
+
+SMRForge works without these optional dependencies - it includes a built-in ENDF parser. Install them only if you need advanced features:
+
+```bash
+# Install with SANDY (recommended - easy installation)
+pip install -e ".[nuclear-data]"
+
+# Or install SANDY separately
+pip install sandy
+```
+
+**Note:** OpenMC requires build tools (CMake, gfortran) and cannot be installed via standard pip/uv. If you need OpenMC, install it separately following the [OpenMC installation guide](https://docs.openmc.org/en/stable/installation/index.html).
+
+All core dependencies are **standard PyPI packages** - no conda-specific packages required.
 
 ---
 

@@ -38,10 +38,9 @@ setup(
         "zarr>=2.14.0",
         # Fast dataframes
         "polars>=0.19.0",
-        # Nuclear data handling
-        "openmc>=0.13.0",
         # Terminal formatting
         "rich>=13.0.0",
+        # Note: openmc is optional - see extras_require["nuclear-data"]
     ],
     extras_require={
         "dev": [
@@ -57,6 +56,18 @@ setup(
             "sphinx-autodoc-typehints>=1.18",
         ],
         "viz": [
+            "plotly>=5.0",
+            "dash>=2.0",
+        ],
+        "nuclear-data": [
+            # Optional nuclear data backends
+            # OpenMC requires build tools (CMake, gfortran) - install separately if needed
+            # "openmc>=0.13.0",  # Uncomment if you have build tools and want OpenMC support
+            "sandy",  # Lighter-weight alternative for ENDF parsing
+        ],
+        "all": [
+            # Install all optional dependencies (except openmc which requires special setup)
+            "sandy",
             "plotly>=5.0",
             "dash>=2.0",
         ],

@@ -16,7 +16,13 @@ polars>=0.19.0
 
 # Nuclear data handling (at least one required for cross-section fetching)
 # Option 1: OpenMC (preferred, but requires build tools - CMake, gfortran)
-openmc>=0.13.0
+# Optional: OpenMC for advanced nuclear data handling
+# Note: OpenMC requires build tools (CMake, gfortran) and is not available via standard pip/uv
+# Install separately if needed: https://docs.openmc.org/en/stable/installation/index.html
+# openmc>=0.13.0
+
+# Alternative: SANDY (lighter-weight, pure Python) - recommended for easier installation
+# sandy
 # Option 2: SANDY (lighter alternative, pure Python, easier to install)
 # sandy>=1.0.0  # Uncomment if you prefer SANDY over OpenMC
 
