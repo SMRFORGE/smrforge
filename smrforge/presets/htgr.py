@@ -1,4 +1,4 @@
-# presets/htgr_designs.py (UPDATED with Pydantic)
+# smrforge/presets/htgr.py
 """
 Reference HTGR designs using Pydantic validation.
 All designs are automatically validated on construction.

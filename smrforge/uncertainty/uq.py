@@ -1,4 +1,4 @@
-# uncertainty/uq.py
+# smrforge/uncertainty/uq.py
 """
 Comprehensive uncertainty quantification and sensitivity analysis.
 Supports: Monte Carlo, Latin Hypercube, Sobol indices, FAST, polynomial chaos.

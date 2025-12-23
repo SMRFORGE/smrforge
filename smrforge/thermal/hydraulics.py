@@ -1,4 +1,4 @@
-# thermal/hydraulics.py
+# smrforge/thermal/hydraulics.py
 """
 Thermal-hydraulics solver for HTGR applications.
 Supports 1D channel models, porous media, and conjugate heat transfer.

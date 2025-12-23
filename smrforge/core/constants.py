@@ -1,6 +1,11 @@
-# nucdata/constants.py
+# smrforge/core/constants.py
 """
 Constants and element data for nuclear calculations.
+
+This module provides:
+- Element symbols and atomic numbers
+- Physical constants (neutron mass, Avogadro, etc.)
+- Standard energy group structures for nuclear calculations
 """
 
 import numpy as np

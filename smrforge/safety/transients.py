@@ -1,4 +1,4 @@
-# safety/transients.py
+# smrforge/safety/transients.py
 """
 HTGR-specific transient scenarios and accident analysis.
 Includes: LOFC, ATWS, reactivity insertion, air/water ingress.

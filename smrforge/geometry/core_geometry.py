@@ -1,4 +1,4 @@
-# geometry/core.py
+# smrforge/geometry/core_geometry.py
 """
 Comprehensive geometry module for HTGR cores.
 Supports prismatic block, pebble bed, and hybrid designs.

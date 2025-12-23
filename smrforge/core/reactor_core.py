@@ -1,7 +1,13 @@
-# nucdata/core.py - Modern Nuclear Data Handler
+# smrforge/core/reactor_core.py - Modern Nuclear Data Handler
 """
 Fast, efficient nuclear data handling using modern Python libraries.
 Replacement for PyNE with better performance and usability.
+
+This module contains:
+- NuclearDataCache: High-performance caching for nuclear data
+- CrossSectionTable: Cross-section data management
+- Nuclide: Lightweight nuclide representation
+- DecayData: Decay data handling
 """
 
 from dataclasses import dataclass
@@ -242,7 +248,7 @@ class NuclearDataCache:
         )
         raise ImportError(error_msg)
     
-    def _save_to_cache(self, key: str, energy: np.ndarray, xs: np.ndarray):
+    def _save_to_cache(self, key: str, energy: np.ndarray, xs: np.ndarray) -> None:
         """Save cross-section data to zarr cache."""
         group = self.root.create_group(key, overwrite=True)
         group.create_dataset('energy', data=energy, chunks=(1024,), compression='zstd')

@@ -1,4 +1,4 @@
-# validation/models.py
+# smrforge/validation/pydantic_layer.py
 """
 Pydantic v2 models for SMRForge with automatic validation.
 Provides type safety, bounds checking, and serialization.

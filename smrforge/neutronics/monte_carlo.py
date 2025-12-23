@@ -1,4 +1,4 @@
-# neutronics/monte_carlo.py
+# smrforge/neutronics/monte_carlo.py
 """
 Monte Carlo neutron transport for SMRForge.
 Simplified implementation for design studies and validation.

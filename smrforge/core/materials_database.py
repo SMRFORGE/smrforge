@@ -1,7 +1,14 @@
-# nucdata/materials.py
+# smrforge/core/materials_database.py
 """
 Comprehensive material property database for HTGR applications.
 Fast, temperature-dependent properties with modern implementation.
+
+This module provides:
+- MaterialProperty: Base class for temperature-dependent properties
+- GraphiteMaterial: Nuclear graphite properties (IG-110, H-451, NBG-18, etc.)
+- HeliumCoolant: Helium coolant properties
+- TRISOFuel: TRISO particle fuel properties
+- MaterialDatabase: Central database for querying material properties
 """
 
 from dataclasses import dataclass

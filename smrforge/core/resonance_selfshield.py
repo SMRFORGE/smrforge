@@ -1,7 +1,14 @@
-# nucdata/resonance.py
+# smrforge/core/resonance_selfshield.py
 """
 Fast resonance self-shielding calculations for HTGR applications.
 Implements Bondarenko method and subgroup methods with modern algorithms.
+
+This module provides:
+- ResonanceData: Resonance parameter storage
+- BondarenkoMethod: Fast Bondarenko self-shielding
+- SubgroupMethod: Subgroup method for resonance treatment
+- EquivalenceTheory: Equivalence theory implementation
+- ResonanceSelfShielding: Main interface for self-shielding calculations
 """
 
 import numpy as np

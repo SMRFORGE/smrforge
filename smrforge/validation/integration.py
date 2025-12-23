@@ -1,4 +1,4 @@
-# validation/decorators.py
+# smrforge/validation/integration.py
 """
 Decorators and utilities for automatic validation integration.
 Apply to functions/classes to enforce validation rules.

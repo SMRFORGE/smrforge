@@ -1,6 +1,13 @@
-# neutronics/solver.py (UPDATED with Pydantic validation)
+# smrforge/neutronics/solver.py
 """
 Multi-group neutron diffusion solver with Pydantic validation.
+
+This module provides:
+- MultiGroupDiffusion: Main multi-group diffusion solver class
+  - Power iteration eigenvalue method
+  - Steady-state solution
+  - Power distribution computation
+  - Comprehensive logging and error handling
 """
 
 import numpy as np
