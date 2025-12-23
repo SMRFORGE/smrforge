@@ -33,7 +33,13 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 
 **See `FEATURE_STATUS.md` for detailed status of all features.**
 
-See `CHANGELOG.md` for version history and recent changes.
+## Documentation
+
+- **Installation**: See [`INSTALLATION.md`](INSTALLATION.md) for detailed installation instructions
+- **Docker**: See [`DOCKER.md`](DOCKER.md) for Docker usage and troubleshooting
+- **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development guidelines
+- **Changelog**: See [`CHANGELOG.md`](CHANGELOG.md) for version history and recent changes
+- **Release Process**: See [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md) for release procedures
 
 ## Installation
 
@@ -74,7 +80,7 @@ cd smrforge
 uv pip install -e . --python 3.10
 ```
 
-**Note**: This library works with standard Python installations using pip, uv, or conda. See `INSTALLATION_GUIDE.md` or `UV_INSTALLATION.md` for more details.
+**Note**: This library works with standard Python installations using pip, uv, or conda. See [`INSTALLATION.md`](INSTALLATION.md) for more details.
 
 #### Using Docker
 

@@ -77,7 +77,11 @@ Be respectful, inclusive, and collaborative. This is a technical project focused
 We use **Black** for code formatting:
 
 ```bash
+# Format all Python files
 black smrforge/ tests/
+
+# Check formatting without making changes
+black --check smrforge/ tests/
 ```
 
 Configuration is in `pyproject.toml`. Line length is 88 characters.
@@ -88,6 +92,9 @@ We use **isort** for import organization:
 
 ```bash
 isort smrforge/ tests/
+
+# Check import order
+isort --check-only smrforge/ tests/
 ```
 
 ### Type Hints
