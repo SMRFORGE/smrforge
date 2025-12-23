@@ -13,6 +13,10 @@ from pydantic import ValidationError
 # Import Pydantic models
 from ..validation.models import CrossSectionData, SolverOptions
 from ..validation.validators import DataValidator, ValidationResult
+from ..utils.logging import get_logger
+
+# Get logger for this module
+logger = get_logger("smrforge.neutronics")
 
 
 class MultiGroupDiffusion:
@@ -153,11 +157,12 @@ class MultiGroupDiffusion:
             RuntimeError: If solver fails to converge
             ValueError: If solution is non-physical
         """
-        if self.options.verbose:
-            print(f"Solving {self.ng}-group diffusion...")
-            print(f"Mesh: {self.nz}z × {self.nr}r = {self.nz*self.nr*self.ng} unknowns")
-            print(f"Method: {self.options.eigen_method}")
-            print(f"Tolerance: {self.options.tolerance}")
+        logger.info(f"Solving {self.ng}-group diffusion equation")
+        logger.debug(
+            f"Mesh: {self.nz}z × {self.nr}r = {self.nz*self.nr*self.ng} unknowns, "
+            f"Method: {self.options.eigen_method}, "
+            f"Tolerance: {self.options.tolerance}"
+        )
 
         start_time = time.time()
 
@@ -176,9 +181,10 @@ class MultiGroupDiffusion:
         # Validate solution
         self._validate_solution()
 
-        if self.options.verbose:
-            print(f"Converged: k_eff = {self.k_eff:.6f}")
-            print(f"Time: {elapsed:.2f} seconds")
+        logger.info(
+            f"Solver converged: k_eff = {self.k_eff:.6f}, "
+            f"time = {elapsed:.2f} seconds"
+        )
 
         return self.k_eff, self.flux
 
@@ -197,6 +203,7 @@ class MultiGroupDiffusion:
         )
 
         if result.has_errors():
+            logger.error("Solution validation failed")
             result.print_report()
             raise ValueError(
                 f"Solution validation failed. "
@@ -220,17 +227,24 @@ class MultiGroupDiffusion:
 
             error = abs(k_new - k_old) / k_old
 
-            if self.options.verbose and iteration % 10 == 0:
-                print(f"  Iter {iteration:4d}: k_eff = {k_new:.6f}, error = {error:.2e}")
+            # Log every 10 iterations or when converged
+            if iteration % 10 == 0 or error < self.options.tolerance:
+                logger.debug(
+                    f"Iteration {iteration:4d}: k_eff = {k_new:.8f}, "
+                    f"error = {error:.2e}"
+                )
 
             if error < self.options.tolerance:
-                if self.options.verbose:
-                    print(f"  Converged in {iteration+1} iterations")
+                logger.info(f"Converged in {iteration+1} iterations")
                 return k_new, self.flux
 
             k_old = k_new
             self.flux /= np.max(self.flux)
 
+        logger.error(
+            f"Failed to converge in {self.options.max_iterations} iterations. "
+            f"Final error: {error:.2e}, tolerance: {self.options.tolerance}"
+        )
         raise RuntimeError(
             f"Failed to converge in {self.options.max_iterations} iterations. "
             f"Final error: {error:.2e}, tolerance: {self.options.tolerance}"

@@ -14,6 +14,10 @@ from numba import njit, prange
 import zarr  # Modern, fast alternative to HDF5
 import requests
 from enum import Enum
+from ..utils.logging import get_logger, log_nuclear_data_fetch, log_cache_operation
+
+# Get logger for this module
+logger = get_logger("smrforge.core")
 
 
 class Library(Enum):
@@ -83,6 +87,7 @@ class NuclearDataCache:
         
         # Check memory cache first
         if key in self._memory_cache:
+            log_cache_operation("hit", key, logger)
             return self._memory_cache[key]
         
         # Check zarr cache
@@ -91,9 +96,11 @@ class NuclearDataCache:
             energy = group['energy'][:]
             xs = group['xs'][:]
             self._memory_cache[key] = (energy, xs)
+            log_cache_operation("hit", key, logger)
             return energy, xs
         except KeyError:
             # Not cached, fetch and cache
+            log_cache_operation("miss", key, logger)
             return self._fetch_and_cache(nuclide, reaction, temperature, library, key)
     
     def _fetch_and_cache(
@@ -111,6 +118,7 @@ class NuclearDataCache:
         # Try OpenMC first (preferred - fast C++ backend)
         try:
             import openmc.data
+            log_nuclear_data_fetch(nuclide.name, reaction, temperature, "openmc", logger)
             evaluation = openmc.data.endf.Evaluation(endf_file)
             reaction_mt = self._reaction_to_mt(reaction)
             if reaction_mt in evaluation:
@@ -119,21 +127,23 @@ class NuclearDataCache:
                 
                 # Apply temperature if needed
                 if abs(temperature - 293.6) > 1.0:
+                    logger.debug(f"Applying Doppler broadening: {293.6}K → {temperature}K")
                     xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
                 
                 # Cache and return
                 self._save_to_cache(key, energy, xs)
+                log_cache_operation("write", key, logger)
                 return energy, xs
         except ImportError:
-            pass  # Try next backend
+            logger.debug("OpenMC not available, trying alternative backend")
         except Exception as e:
             # OpenMC available but failed - log and try next
-            import warnings
-            warnings.warn(f"OpenMC parsing failed: {e}. Trying alternative backend.", stacklevel=2)
+            logger.warning(f"OpenMC parsing failed: {e}. Trying alternative backend.")
         
         # Try SANDY as alternative (lighter weight, pure Python)
         try:
             import sandy
+            log_nuclear_data_fetch(nuclide.name, reaction, temperature, "sandy", logger)
             endf_tapes = sandy.Endf6.from_file(str(endf_file))
             reaction_mt = self._reaction_to_mt(reaction)
             
@@ -146,13 +156,15 @@ class NuclearDataCache:
                     
                     # Apply temperature if needed
                     if abs(temperature - 293.6) > 1.0:
+                        logger.debug(f"Applying Doppler broadening: {293.6}K → {temperature}K")
                         xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
                     
                     # Cache and return
                     self._save_to_cache(key, energy, xs)
+                    log_cache_operation("write", key, logger)
                     return energy, xs
         except ImportError:
-            pass  # Try next backend
+            logger.debug("SANDY not available, trying built-in parser")
         except Exception as e:
             import warnings
             warnings.warn(f"SANDY parsing failed: {e}. Trying SMRForge parser.", stacklevel=2)
@@ -160,6 +172,7 @@ class NuclearDataCache:
         # Try SMRForge's custom ENDF parser (pure Python, no dependencies)
         try:
             from .endf_parser import ENDFCompatibility
+            log_nuclear_data_fetch(nuclide.name, reaction, temperature, "endf_parser", logger)
             evaluation = ENDFCompatibility(endf_file)
             reaction_mt = self._reaction_to_mt(reaction)
             
@@ -170,31 +183,34 @@ class NuclearDataCache:
                 
                 # Apply temperature if needed
                 if abs(temperature - 293.6) > 1.0:
+                    logger.debug(f"Applying Doppler broadening: {293.6}K → {temperature}K")
                     xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
                 
                 # Cache and return
                 self._save_to_cache(key, energy, xs)
+                log_cache_operation("write", key, logger)
                 return energy, xs
         except ImportError:
-            pass  # Module import failed
+            logger.debug("ENDF parser not available, trying simple parser")
         except Exception as e:
-            import warnings
-            warnings.warn(f"SMRForge ENDF parser failed: {e}. Trying simple parser.", stacklevel=2)
+            logger.warning(f"SMRForge ENDF parser failed: {e}. Trying simple parser.")
         
         # Fallback: Simple ENDF parser for common reactions
         try:
+            log_nuclear_data_fetch(nuclide.name, reaction, temperature, "simple_parser", logger)
             energy, xs = self._simple_endf_parse(endf_file, reaction, nuclide)
             if energy is not None and xs is not None:
                 # Apply temperature if needed
                 if abs(temperature - 293.6) > 1.0:
+                    logger.debug(f"Applying Doppler broadening: {293.6}K → {temperature}K")
                     xs = self._doppler_broaden(energy, xs, 293.6, temperature, nuclide.A)
                 
                 # Cache and return
                 self._save_to_cache(key, energy, xs)
+                log_cache_operation("write", key, logger)
                 return energy, xs
         except Exception as e:
-            import warnings
-            warnings.warn(f"Simple ENDF parser failed: {e}", stacklevel=2)
+            logger.error(f"Simple ENDF parser failed: {e}")
         
         # All backends failed - provide helpful error message
         available_backends = []
