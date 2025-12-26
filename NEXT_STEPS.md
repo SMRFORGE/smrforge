@@ -12,11 +12,13 @@ This document consolidates next steps and recommended additions based on current
 
 ### ✅ Recently Completed (December 2024)
 - ✅ API documentation generated (Sphinx)
-- ✅ Test coverage measured (35% overall)
+- ✅ Test coverage improved (67% overall, up from 35%)
 - ✅ Code formatting applied (Black and isort)
+- ✅ Test infrastructure for external data dependencies (mock fixtures)
+- ✅ Coverage analysis and roadmap completed
 
 ### 🔴 Next Priority Actions
-1. **Increase test coverage** from 35% to 80%+ (1-2 weeks)
+1. **Increase test coverage** from 67% to 75-80%+ (focus on `reactor_core.py` and `endf_parser.py`)
 2. **Review and improve** API documentation docstrings (1 week)
 3. **Deploy documentation** to GitHub Pages or Read the Docs (2-4 hours)
 
@@ -64,9 +66,9 @@ This document consolidates next steps and recommended additions based on current
 
 ## 🔴 HIGH PRIORITY - Immediate Actions
 
-### 1. Increase Test Coverage to 80%+ (1-2 weeks) 📊
+### 1. Increase Test Coverage to 75-80%+ (1-2 weeks) 📊
 
-**Status:** Current coverage is 35%, target is 80%+ on critical modules
+**Status:** Current coverage is 67% overall, target is 75-80% on all modules
 
 **What to do:**
 ```bash
@@ -74,18 +76,25 @@ pytest --cov=smrforge --cov-report=html --cov-report=term-missing
 # Review htmlcov/index.html to identify gaps
 ```
 
-**Target:** 80%+ coverage on critical modules
+**Target:** 75-80% coverage on all modules, focusing on:
+- `reactor_core.py`: 49% → 75-80%
+- `endf_parser.py`: 40% → 75-80%
+- `resonance_selfshield.py`: 27% → 75-80%
 
 **Action Items:**
-- Identify low-coverage modules from coverage report
-- Add tests for uncovered critical paths
-- Focus on core modules: `solver.py`, `reactor_core.py`, `pydantic_layer.py`
+- ✅ Test infrastructure for external data dependencies (mock fixtures) - DONE
+- 🔴 Create realistic mock ENDF files (`tests/data/sample_U235.endf`)
+- 🟠 Fix zarr API usage in `_save_to_cache`
+- 🟡 Test `_parse_mf3_section` fully (97 lines - largest gap)
+- 🟡 Test `_simple_endf_parse` fully (57 lines)
 - Add edge case and error handling tests
 - Set coverage thresholds in CI/CD (currently reports but doesn't fail)
 
 **Impact:** Ensures code quality and reliability for production use
 
 **Priority:** High - Blocks progression from alpha to beta release
+
+**See `TESTING_AND_COVERAGE.md` for detailed roadmap and priorities.**
 
 ---
 
@@ -304,10 +313,10 @@ These modules are currently stubs and are **NOT blocking** production:
 - ✅ API docs generated (needs review and enhancement)
 - ⚠️ Documentation needs to be deployed (GitHub Pages/Read the Docs)
 
-**Code Quality:** ✅ **GOOD** (needs test coverage improvement)
+**Code Quality:** ✅ **GOOD** (test coverage improving)
 - Code is functional and tested
 - ✅ Consistent formatting applied (Black/isort)
-- ⚠️ Test coverage at 35% (target: 80%+)
+- ⚠️ Test coverage at 67% (target: 75-80%, focus on `reactor_core.py` and `endf_parser.py`)
 - Type hints incomplete but not blocking
 
 **Production Readiness:** ✅ **READY FOR ALPHA**
