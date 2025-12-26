@@ -296,11 +296,11 @@ class MultiGroupDiffusion:
         A, b = self._build_group_system(g)
 
         if self.options.inner_solver == "bicgstab":
-            flux_1d, info = sparse_linalg.bicgstab(A, b, tol=1e-8)
+            flux_1d, info = sparse_linalg.bicgstab(A, b, rtol=1e-8)
             if info != 0:
                 raise RuntimeError(f"BiCGSTAB failed with code {info}")
         elif self.options.inner_solver == "gmres":
-            flux_1d, info = sparse_linalg.gmres(A, b, tol=1e-8)
+            flux_1d, info = sparse_linalg.gmres(A, b, rtol=1e-8)
             if info != 0:
                 raise RuntimeError(f"GMRES failed with code {info}")
         else:

@@ -439,7 +439,7 @@ class CrossSectionData(BaseModel):
     sigma_s: PositiveArray = Field(description="Scattering matrix [1/cm]")
 
     # Fission spectrum [material, group]
-    chi: NormalizedArray = Field(description="Fission spectrum (must sum to 1)")
+    chi: PositiveArray = Field(description="Fission spectrum (must sum to 1 per material)")
 
     # Diffusion coefficients [material, group]
     D: PositiveArray = Field(description="Diffusion coefficient [cm]")
@@ -479,6 +479,16 @@ class CrossSectionData(BaseModel):
         # Check reasonable diffusion coefficient
         if np.any(self.D > 20):
             warnings.warn("Very large diffusion coefficient (> 20 cm)")
+
+        # Validate chi normalization: for fissioning materials, chi must sum to 1.0 per material
+        for mat_idx in range(self.n_materials):
+            # Only validate chi normalization for materials that fission
+            if np.any(self.sigma_f[mat_idx, :] > 0):
+                chi_sum = np.sum(self.chi[mat_idx, :])
+                if not np.isclose(chi_sum, 1.0, rtol=1e-3):
+                    raise ValueError(
+                        f"chi for material {mat_idx} must sum to 1.0, got {chi_sum}"
+                    )
 
         return self
 

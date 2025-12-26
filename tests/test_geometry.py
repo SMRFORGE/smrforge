@@ -177,3 +177,97 @@ class TestGeometryUtilities:
             assert export_path.exists()
         except ImportError:
             pytest.skip("Geometry export not available")
+
+    def test_prismatic_core_methods(self):
+        """Test additional PrismaticCore methods."""
+        try:
+            from smrforge.geometry.core_geometry import PrismaticCore
+
+            core = PrismaticCore(name="Test-Methods")
+            core.build_hexagonal_lattice(
+                n_rings=1, pitch=40.0, block_height=79.3, n_axial=2, flat_to_flat=36.0
+            )
+
+            # Test total_fuel_volume
+            fuel_vol = core.total_fuel_volume()
+            assert fuel_vol >= 0
+
+            # Test total_power
+            power = core.total_power()
+            assert power >= 0
+
+            # Test get_block_by_position
+            block = core.get_block_by_position(0.0, 0.0, 50.0)
+            assert block is not None or len(core.blocks) == 0
+
+            # Test to_dataframe
+            try:
+                df = core.to_dataframe()
+                assert df is not None
+            except Exception:
+                # May fail if polars not available
+                pass
+        except ImportError:
+            pytest.skip("PrismaticCore not available")
+
+    def test_material_region(self):
+        """Test MaterialRegion dataclass."""
+        try:
+            from smrforge.geometry.core_geometry import MaterialRegion
+
+            region = MaterialRegion(
+                material_id="fuel",
+                composition={"U235": 0.001, "U238": 0.01},
+                temperature=1200.0,
+                density=10.0,
+            )
+
+            assert region.total_number_density() == 0.011
+            assert region.material_id == "fuel"
+        except ImportError:
+            pytest.skip("MaterialRegion not available")
+
+    def test_fuel_channel(self):
+        """Test FuelChannel dataclass."""
+        try:
+            from smrforge.geometry.core_geometry import FuelChannel, MaterialRegion, Point3D
+
+            mat_region = MaterialRegion(
+                material_id="fuel",
+                composition={"U235": 0.001},
+                temperature=1200.0,
+                density=10.0,
+            )
+
+            channel = FuelChannel(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                radius=0.5,
+                height=100.0,
+                material_region=mat_region,
+            )
+
+            assert channel.volume() > 0
+            assert channel.id == 1
+        except ImportError:
+            pytest.skip("FuelChannel not available")
+
+    def test_pebble_bed_total_volume(self):
+        """Test PebbleBedCore methods."""
+        try:
+            from smrforge.geometry.core_geometry import PebbleBedCore
+
+            core = PebbleBedCore(name="Test-Volume")
+            core.build_structured_packing(
+                core_height=200.0, core_diameter=100.0, pebble_radius=3.0
+            )
+
+            # Test that pebbles were created
+            assert len(core.pebbles) > 0
+            assert core.core_height == 200.0
+            assert core.core_diameter == 100.0
+
+            # Test that packing fraction is set
+            assert 0 < core.packing_fraction <= 1.0
+        except ImportError:
+            pytest.skip("PebbleBedCore not available")

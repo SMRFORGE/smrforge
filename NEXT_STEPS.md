@@ -8,6 +8,22 @@ This document consolidates next steps and recommended additions based on current
 
 ---
 
+## 🎯 Current Status & Immediate Next Steps
+
+### ✅ Recently Completed (December 2024)
+- ✅ API documentation generated (Sphinx)
+- ✅ Test coverage measured (35% overall)
+- ✅ Code formatting applied (Black and isort)
+
+### 🔴 Next Priority Actions
+1. **Increase test coverage** from 35% to 80%+ (1-2 weeks)
+2. **Review and improve** API documentation docstrings (1 week)
+3. **Deploy documentation** to GitHub Pages or Read the Docs (2-4 hours)
+
+**Focus:** Quality assurance and developer experience improvements before beta release.
+
+---
+
 ## ✅ Recently Completed
 
 ### Foundation (Phase 1) ✅ **COMPLETE**
@@ -48,71 +64,69 @@ This document consolidates next steps and recommended additions based on current
 
 ## 🔴 HIGH PRIORITY - Immediate Actions
 
-### 1. Generate Sphinx API Documentation ⚡ **QUICK WIN** (2-4 hours)
+### 1. Increase Test Coverage to 80%+ (1-2 weeks) 📊
 
-**Status:** Infrastructure exists, just needs execution
-
-**What to do:**
-```bash
-cd docs
-sphinx-apidoc -o . ../smrforge --separate
-sphinx-build -b html . _build/html
-```
-
-**Action Items:**
-- Run `sphinx-apidoc` to generate API docs
-- Review and improve docstrings where needed
-- Deploy to GitHub Pages or Read the Docs
-- Add to CI/CD for automatic generation
-
-**Impact:** Essential for developer experience
-
----
-
-### 2. Verify Test Coverage (1-2 hours) 📊
-
-**Status:** Tests exist, coverage not yet verified
+**Status:** Current coverage is 35%, target is 80%+ on critical modules
 
 **What to do:**
 ```bash
 pytest --cov=smrforge --cov-report=html --cov-report=term-missing
-# Review htmlcov/index.html
+# Review htmlcov/index.html to identify gaps
 ```
 
 **Target:** 80%+ coverage on critical modules
 
 **Action Items:**
-- Measure current coverage
-- Identify gaps in test coverage
+- Identify low-coverage modules from coverage report
 - Add tests for uncovered critical paths
-- Set coverage thresholds in CI/CD
+- Focus on core modules: `solver.py`, `reactor_core.py`, `pydantic_layer.py`
+- Add edge case and error handling tests
+- Set coverage thresholds in CI/CD (currently reports but doesn't fail)
 
-**Impact:** Ensures code quality and reliability
+**Impact:** Ensures code quality and reliability for production use
+
+**Priority:** High - Blocks progression from alpha to beta release
 
 ---
 
-### 3. Code Formatting and Style (2-3 hours) 🎨
+### 2. Review and Improve API Documentation Docstrings (1 week) 📚
 
-**Status:** Formatters configured but not consistently applied
-
-**What to do:**
-```bash
-# Run Black formatter
-black smrforge/ tests/
-
-# Run isort
-isort smrforge/ tests/
-
-# Verify formatting in CI (already configured)
-```
+**Status:** API docs generated, but docstrings need review and enhancement
 
 **Action Items:**
-- Run Black on entire codebase
-- Run isort for import organization
-- Fix any formatting inconsistencies
-- Ensure CI passes formatting checks
+- Review generated API documentation for completeness
+- Enhance docstrings with examples where missing
+- Ensure all public functions/classes have proper docstrings
+- Add type hints documentation
+- Improve docstring formatting consistency (NumPy/Google style)
 
-**Impact:** Code consistency and maintainability
+**Impact:** Essential for developer experience and adoption
+
+**Priority:** High - Improves usability significantly
+
+---
+
+### 3. Deploy Documentation to GitHub Pages or Read the Docs (2-4 hours) 🌐
+
+**Status:** HTML documentation builds successfully, needs hosting
+
+**What to do:**
+- Option A: GitHub Pages (free, simple)
+  - Enable GitHub Pages in repository settings
+  - Set up GitHub Actions workflow to build and deploy docs on push
+- Option B: Read the Docs (free, automatic)
+  - Connect repository to Read the Docs
+  - Configure build settings
+
+**Action Items:**
+- Set up automated documentation deployment
+- Configure documentation versioning (stable vs. latest)
+- Add documentation link to README.md
+- Test documentation links and navigation
+
+**Impact:** Makes documentation easily accessible to users
+
+**Priority:** High - Essential for user adoption
 
 ---
 
@@ -223,12 +237,19 @@ These modules are currently stubs and are **NOT blocking** production:
 
 ## 📋 Recommended Implementation Timeline
 
-### This Week (High Priority)
-1. ✅ Generate Sphinx API docs (2-4 hours)
-2. ✅ Verify test coverage (1-2 hours)
-3. ✅ Run code formatters (2-3 hours)
+### ✅ Completed (Quick Wins - Dec 2024)
+1. ✅ Generate Sphinx API docs (2-4 hours) - **DONE**
+2. ✅ Verify test coverage (1-2 hours) - **DONE** (measured at 35%)
+3. ✅ Run code formatters (2-3 hours) - **DONE** (Black and isort applied)
 
-**Total:** ~1 day of focused work
+**Total:** ✅ Completed
+
+### Next 1-2 Weeks (High Priority)
+1. Increase test coverage from 35% to 80%+ (focus on critical modules)
+2. Review and improve API documentation docstrings
+3. Deploy documentation to GitHub Pages or Read the Docs
+
+**Total:** ~1-2 weeks of focused work
 
 ### Next 2-3 Weeks (Medium Priority)
 4. Visualization module (start implementation)
@@ -256,9 +277,10 @@ These modules are currently stubs and are **NOT blocking** production:
 - Example gallery
 
 ### ⚠️ Needs Attention (High Priority)
-- Generate actual API docs from Sphinx structure
-- Verify test coverage meets 80%+ target
-- Apply code formatting consistently
+- ✅ API docs generated (needs docstring improvements)
+- ⚠️ Increase test coverage from 35% to 80%+ target
+- ✅ Code formatting applied (Black and isort)
+- ⚠️ Deploy documentation to GitHub Pages/Read the Docs
 
 ### 📝 Optional Enhancements (Medium/Low Priority)
 - Visualization module
@@ -276,14 +298,16 @@ These modules are currently stubs and are **NOT blocking** production:
 - Comprehensive test suite
 - Good error handling and validation
 
-**Documentation:** ✅ **GOOD** (needs API docs generation)
+**Documentation:** ✅ **GOOD** (needs docstring improvements and deployment)
 - User documentation exists
 - Examples available
-- API docs structure ready (needs execution)
+- ✅ API docs generated (needs review and enhancement)
+- ⚠️ Documentation needs to be deployed (GitHub Pages/Read the Docs)
 
-**Code Quality:** ⚠️ **GOOD** (needs formatting pass)
+**Code Quality:** ✅ **GOOD** (needs test coverage improvement)
 - Code is functional and tested
-- Needs consistent formatting
+- ✅ Consistent formatting applied (Black/isort)
+- ⚠️ Test coverage at 35% (target: 80%+)
 - Type hints incomplete but not blocking
 
 **Production Readiness:** ✅ **READY FOR ALPHA**
