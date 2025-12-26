@@ -428,3 +428,154 @@ class TestGeometryUtilities:
             assert p3.z == 4.0
         except ImportError:
             pytest.skip("Point3D not available")
+
+    def test_graphite_block_vertices(self):
+        """Test GraphiteBlock.vertices() method."""
+        try:
+            from smrforge.geometry.core_geometry import GraphiteBlock, MaterialRegion, Point3D
+
+            block = GraphiteBlock(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                flat_to_flat=36.0,
+                height=79.3,
+            )
+
+            vertices = block.vertices()
+            assert vertices.shape == (6, 2)  # 6 vertices, 2D (x, y)
+            assert np.all(np.isfinite(vertices))
+        except ImportError:
+            pytest.skip("GraphiteBlock not available")
+
+    def test_graphite_block_total_fuel_volume(self):
+        """Test GraphiteBlock.total_fuel_volume() method."""
+        try:
+            from smrforge.geometry.core_geometry import (
+                FuelChannel,
+                GraphiteBlock,
+                MaterialRegion,
+                Point3D,
+            )
+
+            mat_region = MaterialRegion(
+                material_id="fuel", composition={"U235": 0.001}, temperature=1200.0, density=10.0
+            )
+
+            block = GraphiteBlock(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                flat_to_flat=36.0,
+                height=79.3,
+            )
+
+            # Add a fuel channel
+            channel = FuelChannel(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                radius=0.5,
+                height=79.3,
+                material_region=mat_region,
+            )
+            block.fuel_channels.append(channel)
+
+            fuel_vol = block.total_fuel_volume()
+            assert fuel_vol > 0
+            assert fuel_vol == channel.volume()
+        except ImportError:
+            pytest.skip("GraphiteBlock not available")
+
+    def test_graphite_block_power(self):
+        """Test GraphiteBlock.power() method."""
+        try:
+            from smrforge.geometry.core_geometry import (
+                FuelChannel,
+                GraphiteBlock,
+                MaterialRegion,
+                Point3D,
+            )
+
+            mat_region = MaterialRegion(
+                material_id="fuel", composition={"U235": 0.001}, temperature=1200.0, density=10.0
+            )
+
+            block = GraphiteBlock(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                flat_to_flat=36.0,
+                height=79.3,
+            )
+
+            # Add fuel channel with power density
+            channel = FuelChannel(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                radius=0.5,
+                height=79.3,
+                material_region=mat_region,
+                power_density=10.0,  # W/cm³
+            )
+            block.fuel_channels.append(channel)
+
+            power = block.power()
+            assert power > 0
+            expected_power = channel.power_density * channel.volume()
+            assert np.isclose(power, expected_power)
+        except ImportError:
+            pytest.skip("GraphiteBlock not available")
+
+    def test_pebble_volume(self):
+        """Test Pebble.volume() method."""
+        try:
+            from smrforge.geometry.core_geometry import MaterialRegion, Pebble, Point3D
+
+            pebble = Pebble(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                radius=3.0,
+                fuel_zone_radius=2.5,
+            )
+
+            volume = pebble.volume()
+            expected = (4 / 3) * np.pi * 3.0**3
+            assert np.isclose(volume, expected)
+        except ImportError:
+            pytest.skip("Pebble not available")
+
+    def test_pebble_fuel_volume(self):
+        """Test Pebble.fuel_volume() method."""
+        try:
+            from smrforge.geometry.core_geometry import MaterialRegion, Pebble, Point3D
+
+            pebble = Pebble(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                radius=3.0,
+                fuel_zone_radius=2.5,
+            )
+
+            fuel_vol = pebble.fuel_volume()
+            expected = (4 / 3) * np.pi * 2.5**3
+            assert np.isclose(fuel_vol, expected)
+            # Fuel volume should be less than total volume
+            assert fuel_vol < pebble.volume()
+        except ImportError:
+            pytest.skip("Pebble not available")
+
+    def test_coolant_channel(self):
+        """Test CoolantChannel dataclass."""
+        try:
+            from smrforge.geometry.core_geometry import CoolantChannel, Point3D
+
+            channel = CoolantChannel(
+                id=1,
+                position=Point3D(0.0, 0.0, 0.0),
+                radius=1.0,
+                height=79.3,
+                flow_area=3.14,  # π * r²
+            )
+
+            assert channel.id == 1
+            assert channel.radius == 1.0
+            assert channel.height == 79.3
+        except ImportError:
+            pytest.skip("CoolantChannel not available")
