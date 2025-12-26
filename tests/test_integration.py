@@ -267,13 +267,13 @@ class TestUtilityFunctions:
     def test_check_normalized_valid(self):
         """Test check_normalized with valid array."""
         arr = np.array([0.3, 0.4, 0.3])
-        check_normalized(arr, "test")
+        check_normalized(arr, tolerance=1e-6, name="test")
 
     def test_check_normalized_invalid(self):
         """Test check_normalized with invalid array."""
         arr = np.array([0.3, 0.4, 0.5])  # Sums to 1.2, not 1.0
         with pytest.raises(ValueError):
-            check_normalized(arr, "test", tolerance=1e-6)
+            check_normalized(arr, tolerance=1e-6, name="test")
 
     def test_check_physical_temperature_valid(self):
         """Test check_physical_temperature with valid value."""
