@@ -286,3 +286,257 @@ class TestTransientSimulations:
             assert transient.geometry == mock_geometry
         except ImportError:
             pytest.skip("Transients not available")
+
+    def test_lofc_transient_get_kinetics_parameters(self, mock_reactor_spec, mock_geometry):
+        """Test LOFCTransient._get_kinetics_parameters."""
+        try:
+            from smrforge.safety.transients import LOFCTransient
+
+            transient = LOFCTransient(mock_reactor_spec, mock_geometry)
+            params = transient._get_kinetics_parameters()
+
+            assert params is not None
+            assert len(params.beta) == 6
+            assert len(params.lambda_d) == 6
+            assert params.alpha_fuel < 0  # Negative feedback
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_lofc_transient_forced_convection_removal(self, mock_reactor_spec, mock_geometry):
+        """Test LOFCTransient._forced_convection_removal."""
+        try:
+            from smrforge.safety.transients import LOFCTransient
+
+            transient = LOFCTransient(mock_reactor_spec, mock_geometry)
+
+            # Test with flow
+            Q = transient._forced_convection_removal(mdot=10.0, T_coolant=1000.0)
+            assert Q > 0
+
+            # Test with zero flow
+            Q_zero = transient._forced_convection_removal(mdot=0.0, T_coolant=1000.0)
+            assert Q_zero == 0.0
+
+            # Test with very low flow
+            Q_low = transient._forced_convection_removal(mdot=0.001, T_coolant=1000.0)
+            assert Q_low == 0.0
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_lofc_transient_passive_cooling(self, mock_reactor_spec, mock_geometry):
+        """Test LOFCTransient._passive_cooling."""
+        try:
+            from smrforge.safety.transients import LOFCTransient
+
+            transient = LOFCTransient(mock_reactor_spec, mock_geometry)
+
+            Q = transient._passive_cooling(T_fuel=1500.0, T_mod=1400.0, T_ambient=300.0)
+            assert Q > 0  # Should be positive (heat removal)
+
+            # Higher temperature should give more cooling
+            Q_higher = transient._passive_cooling(T_fuel=1600.0, T_mod=1500.0, T_ambient=300.0)
+            assert Q_higher > Q
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_lofc_transient_simulate(self, mock_reactor_spec, mock_geometry):
+        """Test LOFCTransient.simulate method."""
+        try:
+            from smrforge.safety.transients import LOFCTransient, TransientConditions, TransientType
+
+            transient = LOFCTransient(mock_reactor_spec, mock_geometry)
+
+            conditions = TransientConditions(
+                initial_power=10e6,
+                initial_temperature=1200.0,
+                initial_flow_rate=50.0,
+                initial_pressure=7.0e6,
+                transient_type=TransientType.LOFC,
+                trigger_time=0.0,
+                scram_available=True,
+                t_end=100.0,  # Short simulation for testing
+            )
+
+            result = transient.simulate(conditions)
+
+            assert "t" in result
+            assert "power" in result
+            assert "T_fuel" in result
+            assert len(result["t"]) > 0
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_atws_transient_get_kinetics_parameters(self, mock_reactor_spec, mock_geometry):
+        """Test ATWSTransient._get_kinetics_parameters."""
+        try:
+            from smrforge.safety.transients import ATWSTransient
+
+            transient = ATWSTransient(mock_reactor_spec, mock_geometry)
+            params = transient._get_kinetics_parameters()
+
+            assert params is not None
+            assert len(params.beta) == 6
+            assert params.alpha_fuel < 0  # Strong negative feedback for ATWS
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_atws_transient_passive_cooling(self, mock_reactor_spec, mock_geometry):
+        """Test ATWSTransient._passive_cooling."""
+        try:
+            from smrforge.safety.transients import ATWSTransient
+
+            transient = ATWSTransient(mock_reactor_spec, mock_geometry)
+
+            Q = transient._passive_cooling(T_fuel=1500.0, T_mod=1400.0, T_ambient=300.0)
+            assert Q > 0
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_atws_transient_simulate(self, mock_reactor_spec, mock_geometry):
+        """Test ATWSTransient.simulate method."""
+        try:
+            from smrforge.safety.transients import ATWSTransient, TransientConditions, TransientType
+
+            transient = ATWSTransient(mock_reactor_spec, mock_geometry)
+
+            conditions = TransientConditions(
+                initial_power=10e6,
+                initial_temperature=1200.0,
+                initial_flow_rate=50.0,
+                initial_pressure=7.0e6,
+                transient_type=TransientType.ATWS,
+                trigger_time=0.0,
+                scram_available=False,  # ATWS - no scram
+                t_end=100.0,  # Short simulation
+            )
+
+            result = transient.simulate(conditions)
+
+            assert "t" in result
+            assert "power" in result
+            assert "T_fuel" in result
+            assert len(result["t"]) > 0
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_reactivity_insertion_accident_creation(self, mock_reactor_spec):
+        """Test creating ReactivityInsertionAccident."""
+        try:
+            from smrforge.safety.transients import ReactivityInsertionAccident
+
+            ria = ReactivityInsertionAccident(mock_reactor_spec)
+
+            assert ria.spec == mock_reactor_spec
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_reactivity_insertion_accident_get_kinetics_parameters(self, mock_reactor_spec):
+        """Test ReactivityInsertionAccident._get_kinetics_parameters."""
+        try:
+            from smrforge.safety.transients import ReactivityInsertionAccident
+
+            ria = ReactivityInsertionAccident(mock_reactor_spec)
+            params = ria._get_kinetics_parameters()
+
+            assert params is not None
+            assert len(params.beta) == 6
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_reactivity_insertion_accident_simulate(self, mock_reactor_spec):
+        """Test ReactivityInsertionAccident.simulate method."""
+        try:
+            from smrforge.safety.transients import (
+                ReactivityInsertionAccident,
+                TransientConditions,
+                TransientType,
+            )
+
+            ria = ReactivityInsertionAccident(mock_reactor_spec)
+
+            conditions = TransientConditions(
+                initial_power=10e6,
+                initial_temperature=1200.0,
+                initial_flow_rate=50.0,
+                initial_pressure=7.0e6,
+                transient_type=TransientType.RIA,
+                trigger_time=0.0,
+            )
+
+            result = ria.simulate(
+                rho_inserted=0.01,  # 1% dk/k
+                insertion_time=0.1,  # 100 ms
+                conditions=conditions,
+            )
+
+            assert "t" in result
+            assert "power" in result
+            assert "T_fuel" in result
+            assert len(result["t"]) > 0
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_air_water_ingress_analysis_creation(self, mock_reactor_spec, mock_geometry):
+        """Test creating AirWaterIngressAnalysis."""
+        try:
+            from smrforge.safety.transients import AirWaterIngressAnalysis
+
+            analysis = AirWaterIngressAnalysis(mock_reactor_spec, mock_geometry)
+
+            assert analysis.spec == mock_reactor_spec
+            assert analysis.geometry == mock_geometry
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_air_water_ingress_analysis_simulate_air_ingress(self, mock_reactor_spec, mock_geometry):
+        """Test AirWaterIngressAnalysis.simulate_air_ingress method."""
+        try:
+            from smrforge.safety.transients import (
+                AirWaterIngressAnalysis,
+                TransientConditions,
+                TransientType,
+            )
+
+            analysis = AirWaterIngressAnalysis(mock_reactor_spec, mock_geometry)
+
+            conditions = TransientConditions(
+                initial_power=10e6,
+                initial_temperature=1200.0,
+                initial_flow_rate=50.0,
+                initial_pressure=7.0e6,
+                transient_type=TransientType.AIR_INGRESS,
+                trigger_time=0.0,
+                t_end=3600.0,  # 1 hour for testing
+            )
+
+            result = analysis.simulate_air_ingress(break_size=100.0, conditions=conditions)
+
+            assert "t" in result
+            assert "T_graphite" in result
+            assert "mass_oxidized" in result
+            assert "pressure" in result
+            assert len(result["t"]) > 0
+        except ImportError:
+            pytest.skip("Transients not available")
+
+    def test_decay_heat_ans_standard_edge_cases(self):
+        """Test decay_heat_ans_standard with edge cases."""
+        try:
+            from smrforge.safety.transients import decay_heat_ans_standard
+
+            # Test with very short time
+            t_short = np.array([0.1, 0.5, 1.0])
+            P_decay = decay_heat_ans_standard(t_short, P0=10e6, t_operate=86400.0)
+            assert len(P_decay) == len(t_short)
+            assert np.all(P_decay >= 0)
+
+            # Test with long time
+            t_long = np.array([3600.0, 86400.0, 604800.0])  # 1 hour, 1 day, 1 week
+            P_decay_long = decay_heat_ans_standard(t_long, P0=10e6, t_operate=86400.0 * 365)
+            assert len(P_decay_long) == len(t_long)
+            assert np.all(P_decay_long >= 0)
+
+            # Decay heat should decrease with time
+            assert P_decay_long[0] > P_decay_long[-1]
+        except ImportError:
+            pytest.skip("Transients not available")

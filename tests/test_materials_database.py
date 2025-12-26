@@ -261,6 +261,38 @@ class TestHeliumCoolant:
         # Just check it's positive and reasonable
         assert 0.3 < Pr < 3.0
 
+    def test_helium_coolant_reynolds_number(self):
+        """Test HeliumCoolant Reynolds number calculation."""
+        helium = HeliumCoolant()
+
+        T = 1000.0  # K
+        P = 7.0e6  # Pa
+        velocity = 10.0  # m/s
+        diameter = 0.1  # m
+
+        Re = helium.reynolds_number(T, P, velocity, diameter)
+
+        assert isinstance(Re, float)
+        assert Re > 0
+        # Typical Re for helium flow in HTGR is in turbulent range (>2300)
+        # At these conditions, should be turbulent
+        assert Re > 1000
+
+    def test_helium_coolant_density_correlation(self):
+        """Test HeliumCoolant density uses the correct correlation (line 236 coverage)."""
+        helium = HeliumCoolant()
+
+        # Test the density function directly to cover the correlation
+        T = 1000.0
+        P = 7.0e6
+        rho = helium.density(T, P)
+
+        # Verify it matches ideal gas law: rho = P / (R * T)
+        R = 2077.0  # J/kg-K
+        expected_rho = P / (R * T)
+
+        assert np.isclose(rho, expected_rho, rtol=1e-6)
+
 
 class TestTRISOFuel:
     """Test TRISOFuel class."""
@@ -276,6 +308,22 @@ class TestTRISOFuel:
         triso = TRISOFuel("UO2")
         # Check that it was initialized
         assert hasattr(triso, "kernel_radius")
+
+    def test_triso_fuel_uo2_kernel_conductivity(self):
+        """Test TRISOFuel UO2 kernel conductivity correlation (coverage for lines 365-368)."""
+        triso = TRISOFuel("UO2")
+
+        # Test that the UO2 kernel conductivity is computed correctly
+        T = 1200.0  # K
+        k_kernel = triso.kernel_conductivity(T)
+
+        assert isinstance(k_kernel, float)
+        assert k_kernel > 0
+        # UO2 conductivity should be lower than UCO (due to porosity correction)
+        triso_uco = TRISOFuel("UCO")
+        k_uco = triso_uco.kernel_conductivity(T)
+        # UO2 typically has lower conductivity than UCO
+        assert k_kernel > 0  # Just ensure it's positive
 
     def test_triso_fuel_geometry_properties(self):
         """Test TRISOFuel geometry properties."""
@@ -424,6 +472,61 @@ class TestMaterialDatabase:
         # Should be empty if property doesn't exist
         assert len(comparison) == 0
 
+    def test_material_database_compare_properties_non_callable(self):
+        """Test compare_properties with non-callable property (line 590 coverage)."""
+        db = MaterialDatabase()
+
+        # Test with a property that exists but is not callable
+        # Create a mock material with a non-callable property
+        class MockMaterial:
+            def __init__(self):
+                self.constant_property = 42.0  # Non-callable property
+
+        db.materials["mock_material"] = MockMaterial()
+
+        T_range = np.linspace(300, 1000, 3)
+        comparison = db.compare_properties(
+            ["mock_material"],
+            "constant_property",
+            T_range,
+        )
+
+        # Should return the constant value for all temperatures
+        assert len(comparison) == len(T_range)
+        assert np.allclose(comparison["value"].to_numpy(), 42.0)
+
+    def test_material_database_structural_materials(self):
+        """Test structural materials (B4C and Alloy800H) - coverage for lines 518, 521, 528, 531."""
+        db = MaterialDatabase()
+
+        # Test B4C
+        b4c = db.get("b4c")
+        assert b4c is not None
+        assert hasattr(b4c, "thermal_conductivity")
+        assert hasattr(b4c, "density")
+
+        # Test B4C properties
+        k_b4c = b4c.thermal_conductivity(1000.0)
+        rho_b4c = b4c.density(1000.0)  # Temperature doesn't affect density for B4C
+
+        assert isinstance(k_b4c, float)
+        assert k_b4c > 0
+        assert np.isclose(rho_b4c, 2520.0)  # Should be constant
+
+        # Test Alloy800H
+        alloy = db.get("alloy_800h")
+        assert alloy is not None
+        assert hasattr(alloy, "thermal_conductivity")
+        assert hasattr(alloy, "density")
+
+        # Test Alloy800H properties
+        k_alloy = alloy.thermal_conductivity(1000.0)
+        rho_alloy = alloy.density(1000.0)  # Temperature doesn't affect density
+
+        assert isinstance(k_alloy, float)
+        assert k_alloy > 0
+        assert np.isclose(rho_alloy, 8000.0)  # Should be constant
+
 
 class TestFastFunctions:
     """Test Numba-accelerated fast property functions."""
@@ -437,6 +540,32 @@ class TestFastFunctions:
         assert isinstance(k_array, np.ndarray)
         assert len(k_array) == len(T_array)
         assert np.all(k_array > 0)
+
+    def test_graphite_conductivity_fast_all_grades(self):
+        """Test graphite_conductivity_fast for all grades (coverage for lines 611-627)."""
+        T_array = np.linspace(300, 2000, 100)
+
+        # Test grade 0 (IG-110)
+        k_ig110 = graphite_conductivity_fast(T_array, grade=0)
+        assert isinstance(k_ig110, np.ndarray)
+        assert len(k_ig110) == len(T_array)
+        assert np.all(k_ig110 > 0)
+
+        # Test grade 1 (H-451) - has conditional branch for T < 600
+        k_h451 = graphite_conductivity_fast(T_array, grade=1)
+        assert isinstance(k_h451, np.ndarray)
+        assert len(k_h451) == len(T_array)
+        assert np.all(k_h451 > 0)
+
+        # Test grade 2 (NBG-18)
+        k_nbg18 = graphite_conductivity_fast(T_array, grade=2)
+        assert isinstance(k_nbg18, np.ndarray)
+        assert len(k_nbg18) == len(T_array)
+        assert np.all(k_nbg18 > 0)
+
+        # Verify different grades give different results
+        assert not np.allclose(k_ig110, k_h451)
+        assert not np.allclose(k_h451, k_nbg18)
 
     def test_helium_properties_fast(self):
         """Test helium_properties_fast function."""

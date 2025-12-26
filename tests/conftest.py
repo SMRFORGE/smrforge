@@ -336,6 +336,101 @@ def sample_reactor_spec():
     )
 
 
+# Nuclear data fixtures for testing
+@pytest.fixture
+def mock_endf_file_content():
+    """Create minimal valid ENDF file content for testing."""
+    # Minimal ENDF format structure (MF=1, MT=451 - header)
+    endf_content = """ 1.001000+3 9.991673-1          0          0          0          0  125 1451    1
+ 2.224631+6 2.224631+6          0          0          0          6  125 1451    2
+ 0.000000+0 9.991673-1          0          0          0          0  125 1451    3
+                                                                   125 1451    4
+                                                                   125 1451    5
+                                                                   125 1451    6
+ 1.001000+3 9.991673-1          0          0          0          0  125 1451  451
+                                                                   125 1451    0
+ 0.000000+0 0.000000+0          0          0          0          3  125 1451    0
+ 3.000000+0 0.000000+0          0          0          0          0  125 1451    3
+ 1.000000+0 2.530000-2          0          0          0          0  125 1451    0
+                                                                   125 1451    0
+ 0.000000+0 0.000000+0          0          0          0          1  125 1451  3  1
+ 1.000000+0 2.530000-2          0          0          0          0  125 1451  3  2
+                                                                   125 1451  3  3
+                                                                   125 0  0    0
+"""
+    return endf_content
+
+
+@pytest.fixture
+def mock_endf_file(temp_dir, mock_endf_file_content):
+    """Create a mock ENDF file for testing."""
+    endf_path = temp_dir / "U235.endf"
+    endf_path.write_text(mock_endf_file_content)
+    return endf_path
+
+
+@pytest.fixture
+def mock_requests_get(monkeypatch, mock_endf_file_content):
+    """Mock requests.get to return mock ENDF file content."""
+    from unittest.mock import Mock
+
+    def mock_get(url, **kwargs):
+        response = Mock()
+        response.content = mock_endf_file_content.encode("utf-8")
+        response.status_code = 200
+        response.ok = True
+        return response
+
+    monkeypatch.setattr("requests.get", mock_get)
+    return mock_get
+
+
+@pytest.fixture
+def mock_sandy_unavailable(monkeypatch):
+    """Mock SANDY as unavailable (ImportError)."""
+    import sys
+
+    if "sandy" in sys.modules:
+        # Don't patch if already imported
+        return
+
+    def raise_import_error(*args, **kwargs):
+        raise ImportError("SANDY not available")
+
+    # Patch the import in the module
+    original_import = __import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "sandy":
+            raise ImportError("SANDY not available")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", mock_import)
+
+
+@pytest.fixture
+def pre_populated_cache(temp_dir):
+    """Create a NuclearDataCache with pre-populated test data."""
+    from smrforge.core.reactor_core import NuclearDataCache, Nuclide, Library
+    import numpy as np
+    import zarr
+
+    cache = NuclearDataCache(cache_dir=temp_dir / "test_cache")
+
+    # Pre-populate with test cross-section data
+    nuc = Nuclide(Z=92, A=235, m=0)
+    key = f"{Library.ENDF_B_VIII.value}/{nuc.name}/total/293.6K"
+
+    # Create test energy and cross-section arrays
+    energy = np.logspace(5, 7, 100)  # 100 keV to 10 MeV
+    xs = np.ones_like(energy) * 10.0  # Constant 10 barns
+
+    # Store in memory cache
+    cache._memory_cache[key] = (energy, xs)
+
+    return cache
+
+
 # Markers for test organization
 def pytest_configure(config):
     """Configure custom markers."""
@@ -344,3 +439,4 @@ def pytest_configure(config):
     )
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
+    config.addinivalue_line("markers", "network: marks tests that require network access")
