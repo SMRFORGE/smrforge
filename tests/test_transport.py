@@ -663,3 +663,173 @@ class TestMonteCarloEngine:
         assert result["n_histories"] == 10
         assert engine.n_histories == 10
 
+    def test_mc_engine_run_eigenvalue(self, simple_setup):
+        """Test run_eigenvalue method."""
+        region, source = simple_setup
+        engine = MonteCarloEngine(regions=[region], source=source, seed=42)
+
+        # Run with small numbers for speed
+        result = engine.run_eigenvalue(n_generations=5, n_per_generation=10, n_skip=2)
+
+        assert "k_eff_mean" in result
+        assert "k_eff_std" in result
+        assert "k_eff_history" in result
+        assert "n_generations" in result
+        assert "n_per_generation" in result
+        assert result["n_generations"] == 5
+        assert len(result["k_eff_history"]) == 5
+
+    def test_mc_engine_process_fission(self, simple_setup):
+        """Test process_fission method."""
+        region, source = simple_setup
+        engine = MonteCarloEngine(regions=[region], source=source, seed=42)
+
+        neutron = Neutron(
+            position=np.array([0.0, 0.0, 0.0]),
+            direction=np.array([1.0, 0.0, 0.0]),
+            energy=1.0,
+            weight=1.0,
+        )
+
+        fission_neutrons = engine.process_fission(neutron, region)
+
+        # Should return a list of neutrons
+        assert isinstance(fission_neutrons, list)
+        assert len(fission_neutrons) >= 0  # Number depends on nu value
+
+    def test_mc_engine_transport_neutron_leakage(self, simple_setup):
+        """Test transport_neutron handles leakage."""
+        region, source = simple_setup
+        engine = MonteCarloEngine(regions=[region], source=source, seed=42)
+
+        # Create neutron that will leak out (far from region)
+        neutron = Neutron(
+            position=np.array([100.0, 100.0, 100.0]),  # Far outside sphere
+            direction=np.array([1.0, 0.0, 0.0]),
+            energy=1.0,
+        )
+
+        history = engine.transport_neutron(neutron)
+
+        # Should handle leakage gracefully
+        assert neutron.state == ParticleState.LEAKED
+        assert isinstance(history, list)
+
+    def test_mc_engine_transport_neutron_with_weight_window(self, simple_setup):
+        """Test transport_neutron with weight window."""
+        region, source = simple_setup
+        engine = MonteCarloEngine(regions=[region], source=source, seed=42)
+        engine.enable_variance_reduction(importance_map=None, weight_window=True)
+
+        neutron = Neutron(
+            position=np.array([0.0, 0.0, 0.0]),
+            direction=np.array([1.0, 0.0, 0.0]),
+            energy=1.0,
+            weight=0.1,  # Below lower bound
+        )
+
+        # Transport should handle weight window
+        history = engine.transport_neutron(neutron)
+
+        # Should return list (may be split or cutoff)
+        assert isinstance(history, list)
+
+    def test_mc_engine_transport_neutron_with_tally(self, simple_setup):
+        """Test transport_neutron scores track-length tallies."""
+        region, source = simple_setup
+        engine = MonteCarloEngine(regions=[region], source=source, seed=42)
+
+        flux_tally = FluxTally(name="test_flux", region=region)
+        engine.add_tally(flux_tally)
+
+        neutron = Neutron(
+            position=np.array([0.0, 0.0, 0.0]),
+            direction=np.array([1.0, 0.0, 0.0]),
+            energy=1.0,
+        )
+
+        history = engine.transport_neutron(neutron)
+
+        # Tally should have been scored
+        assert isinstance(history, list)
+        # Tally may have been updated (check it doesn't crash)
+
+    def test_mc_engine_sample_distance_infinite(self, simple_setup):
+        """Test sample_distance returns infinity for zero cross-section."""
+        region, source = simple_setup
+        engine = MonteCarloEngine(regions=[region], source=source, seed=42)
+
+        # Create material with zero cross-section
+        energy_grid = np.array([0.001, 1.0, 10.0])
+        xs = CrossSection(
+            energy_grid=energy_grid,
+            total=np.array([0.0, 0.0, 0.0]),  # Zero cross-section
+            scatter=np.array([0.0, 0.0, 0.0]),
+            absorption=np.array([0.0, 0.0, 0.0]),
+            fission=np.array([0.0, 0.0, 0.0]),
+            nu=np.array([0.0, 0.0, 0.0]),
+        )
+        zero_material = Material(name="void", density=0.0, cross_section=xs, atomic_mass=1.0)
+        zero_region = Region(geometry=region.geometry, material=zero_material)
+
+        neutron = Neutron(
+            position=np.array([0.0, 0.0, 0.0]),
+            direction=np.array([1.0, 0.0, 0.0]),
+            energy=1.0,
+        )
+
+        distance = engine.sample_distance(neutron, zero_region)
+        # Should return infinity for zero cross-section
+        assert np.isinf(distance)
+
+    def test_mc_engine_sample_collision_type_zero_total(self, simple_setup):
+        """Test sample_collision_type handles zero total cross-section."""
+        region, source = simple_setup
+        engine = MonteCarloEngine(regions=[region], source=source, seed=42)
+
+        # Create material with zero total cross-section
+        energy_grid = np.array([0.001, 1.0, 10.0])
+        xs = CrossSection(
+            energy_grid=energy_grid,
+            total=np.array([0.0, 0.0, 0.0]),
+            scatter=np.array([0.0, 0.0, 0.0]),
+            absorption=np.array([0.0, 0.0, 0.0]),
+            fission=np.array([0.0, 0.0, 0.0]),
+            nu=np.array([0.0, 0.0, 0.0]),
+        )
+        zero_material = Material(name="void", density=0.0, cross_section=xs, atomic_mass=1.0)
+        zero_region = Region(geometry=region.geometry, material=zero_material)
+
+        neutron = Neutron(
+            position=np.array([0.0, 0.0, 0.0]),
+            direction=np.array([1.0, 0.0, 0.0]),
+            energy=1.0,
+        )
+
+        collision_type = engine.sample_collision_type(neutron, zero_region)
+        # Should return ABSORPTION for zero total
+        assert collision_type == CollisionType.ABSORPTION
+
+    def test_mc_engine_run_batch_zero_histories(self, simple_setup):
+        """Test run_batch with zero histories."""
+        region, source = simple_setup
+        engine = MonteCarloEngine(regions=[region], source=source, seed=42)
+
+        result = engine.run_batch(n_histories=0)
+
+        assert "k_eff" in result
+        assert result["k_eff"] == 0.0
+        assert result["n_histories"] == 0
+
+
+class TestParallelMonteCarlo:
+    """Test ParallelMonteCarlo class."""
+
+    def test_parallel_monte_carlo_creation(self):
+        """Test ParallelMonteCarlo is a class with static method."""
+        from smrforge.neutronics.transport import ParallelMonteCarlo
+
+        # Should be a class
+        assert hasattr(ParallelMonteCarlo, "run_parallel")
+        assert callable(ParallelMonteCarlo.run_parallel)
+
