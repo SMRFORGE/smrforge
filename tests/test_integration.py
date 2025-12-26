@@ -89,6 +89,26 @@ class TestValidateOutputs:
         result = mock_solver_tuple()
         assert result[0] == 1.05
 
+    def test_validate_outputs_invalid_raises(self):
+        """Test validate_outputs raises on invalid outputs."""
+
+        @validate_outputs(k_eff=lambda k: PhysicalValidator.validate_k_eff(k))
+        def mock_solver_invalid():
+            return {"k_eff": 5.0}  # Invalid k_eff (too high)
+
+        with pytest.raises(ValueError, match="Output validation failed"):
+            mock_solver_invalid()
+
+    def test_validate_outputs_dict_missing_key(self):
+        """Test validate_outputs with dict missing key (should not error)."""
+
+        @validate_outputs(k_eff=lambda k: PhysicalValidator.validate_k_eff(k))
+        def mock_solver_no_key():
+            return {"other": 1.0}  # Missing k_eff key
+
+        result = mock_solver_no_key()
+        assert "other" in result
+
 
 class TestValidateArray:
     """Test validate_array function."""
@@ -98,6 +118,52 @@ class TestValidateArray:
         arr = np.array([1.0, 2.0, 3.0, 4.0])
         result = validate_array(arr, "test_array")
         assert result.valid is True
+
+    def test_validate_array_not_numpy(self):
+        """Test validate_array with non-numpy array."""
+        arr = [1.0, 2.0, 3.0]  # List, not numpy array
+        result = validate_array(arr, "test_array")
+        assert result.valid is False
+        assert result.has_errors()
+
+    def test_validate_array_empty(self):
+        """Test validate_array with empty array."""
+        arr = np.array([])
+        result = validate_array(arr, "test_array")
+        assert not result.valid or result.has_issues()  # Should issue warning
+
+    def test_validate_array_with_nan(self):
+        """Test validate_array with NaN values."""
+        arr = np.array([1.0, 2.0, np.nan, 4.0])
+        result = validate_array(arr, "test_array", allow_nan=False)
+        assert result.valid is False
+        assert result.has_errors()
+
+    def test_validate_array_with_inf(self):
+        """Test validate_array with Inf values."""
+        arr = np.array([1.0, 2.0, np.inf, 4.0])
+        result = validate_array(arr, "test_array", allow_inf=False)
+        assert result.valid is False
+        assert result.has_errors()
+
+    def test_validate_array_with_negative(self):
+        """Test validate_array with negative values."""
+        arr = np.array([1.0, -2.0, 3.0, 4.0])
+        result = validate_array(arr, "test_array", allow_negative=False)
+        assert result.valid is False
+        assert result.has_errors()
+
+    def test_validate_array_with_min_val(self):
+        """Test validate_array with min_val check."""
+        arr = np.array([1.0, 2.0, 0.5, 4.0])
+        result = validate_array(arr, "test_array", min_val=1.0)
+        assert len(result.issues) > 0  # Should have warnings for values below min
+
+    def test_validate_array_with_max_val(self):
+        """Test validate_array with max_val check."""
+        arr = np.array([1.0, 2.0, 5.0, 4.0])
+        result = validate_array(arr, "test_array", max_val=4.0)
+        assert len(result.issues) > 0  # Should have warnings for values above max
 
     def test_validate_array_not_numpy(self):
         """Test validate_array with non-numpy array."""
