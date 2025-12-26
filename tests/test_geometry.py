@@ -271,3 +271,160 @@ class TestGeometryUtilities:
             assert 0 < core.packing_fraction <= 1.0
         except ImportError:
             pytest.skip("PebbleBedCore not available")
+
+    def test_generate_mesh_with_reflector(self):
+        """Test mesh generation with reflector thickness."""
+        try:
+            from smrforge.geometry.core_geometry import PrismaticCore
+
+            core = PrismaticCore(name="Test-Mesh")
+            core.build_hexagonal_lattice(
+                n_rings=1, pitch=40.0, block_height=79.3, n_axial=2, flat_to_flat=36.0
+            )
+            core.reflector_thickness = 30.0
+
+            # Generate mesh
+            core.generate_mesh(n_radial=11, n_axial=21)
+
+            assert core.radial_mesh is not None
+            assert core.axial_mesh is not None
+            # Radial mesh should extend beyond core by reflector thickness
+            assert core.radial_mesh[-1] > core.core_diameter / 2
+        except ImportError:
+            pytest.skip("PrismaticCore not available")
+
+    def test_get_block_by_position(self):
+        """Test get_block_by_position method."""
+        try:
+            from smrforge.geometry.core_geometry import PrismaticCore
+
+            core = PrismaticCore(name="Test-Position")
+            core.build_hexagonal_lattice(
+                n_rings=1, pitch=40.0, block_height=79.3, n_axial=2, flat_to_flat=36.0
+            )
+
+            if len(core.blocks) > 0:
+                # Test with position of first block
+                first_block = core.blocks[0]
+                found_block = core.get_block_by_position(
+                    first_block.position.x,
+                    first_block.position.y,
+                    first_block.position.z,
+                )
+                # Should find a block (might not be exact due to simplified check)
+                assert found_block is not None or len(core.blocks) == 0
+
+                # Test with position outside core
+                outside_block = core.get_block_by_position(1000.0, 1000.0, 1000.0)
+                assert outside_block is None
+        except ImportError:
+            pytest.skip("PrismaticCore not available")
+
+    def test_prismatic_to_dataframe(self):
+        """Test PrismaticCore.to_dataframe method."""
+        try:
+            from smrforge.geometry.core_geometry import PrismaticCore
+
+            core = PrismaticCore(name="Test-DF")
+            core.build_hexagonal_lattice(
+                n_rings=1, pitch=40.0, block_height=79.3, n_axial=1, flat_to_flat=36.0
+            )
+
+            df = core.to_dataframe()
+            assert df is not None
+            # Should have columns
+            assert len(df.columns) > 0
+        except ImportError:
+            pytest.skip("PrismaticCore not available")
+
+    def test_pebble_bed_to_dataframe(self):
+        """Test PebbleBedCore.to_dataframe method."""
+        try:
+            from smrforge.geometry.core_geometry import PebbleBedCore
+
+            core = PebbleBedCore(name="Test-DF")
+            core.build_structured_packing(
+                core_height=100.0, core_diameter=50.0, pebble_radius=2.0
+            )
+
+            if len(core.pebbles) > 0:
+                df = core.to_dataframe()
+                assert df is not None
+                assert len(df.columns) > 0
+        except ImportError:
+            pytest.skip("PebbleBedCore not available")
+
+    def test_compute_distance_matrix(self):
+        """Test compute_distance_matrix function."""
+        try:
+            from smrforge.geometry.core_geometry import compute_distance_matrix
+
+            # Create small array of positions
+            positions = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+
+            dist_matrix = compute_distance_matrix(positions)
+
+            assert dist_matrix.shape == (3, 3)
+            # Should be symmetric
+            assert np.allclose(dist_matrix, dist_matrix.T)
+            # Diagonal should be zero
+            assert np.allclose(np.diag(dist_matrix), 0.0)
+            # Distance from [0,0,0] to [1,0,0] should be 1.0
+            assert np.isclose(dist_matrix[0, 1], 1.0)
+        except ImportError:
+            pytest.skip("compute_distance_matrix not available")
+
+    def test_geometry_export_pebble_bed(self, temp_dir):
+        """Test geometry export for PebbleBedCore."""
+        try:
+            from smrforge.geometry.core_geometry import GeometryExporter, PebbleBedCore
+
+            core = PebbleBedCore(name="Test-Export-PB")
+            core.build_structured_packing(
+                core_height=100.0, core_diameter=50.0, pebble_radius=2.0
+            )
+
+            export_path = temp_dir / "test_pebble_bed.json"
+            GeometryExporter.to_json(core, export_path)
+
+            assert export_path.exists()
+            # Verify file contains expected data
+            import json
+
+            with open(export_path) as f:
+                data = json.load(f)
+            assert data["name"] == "Test-Export-PB"
+            assert "n_pebbles" in data
+        except ImportError:
+            pytest.skip("GeometryExporter not available")
+
+    def test_point3d_to_array(self):
+        """Test Point3D.to_array method."""
+        try:
+            from smrforge.geometry.core_geometry import Point3D
+
+            p = Point3D(1.0, 2.0, 3.0)
+            arr = p.to_array()
+
+            assert isinstance(arr, np.ndarray)
+            assert len(arr) == 3
+            assert arr[0] == 1.0
+            assert arr[1] == 2.0
+            assert arr[2] == 3.0
+        except ImportError:
+            pytest.skip("Point3D not available")
+
+    def test_point3d_subtraction(self):
+        """Test Point3D subtraction."""
+        try:
+            from smrforge.geometry.core_geometry import Point3D
+
+            p1 = Point3D(5.0, 6.0, 7.0)
+            p2 = Point3D(1.0, 2.0, 3.0)
+
+            p3 = p1 - p2
+            assert p3.x == 4.0
+            assert p3.y == 4.0
+            assert p3.z == 4.0
+        except ImportError:
+            pytest.skip("Point3D not available")
