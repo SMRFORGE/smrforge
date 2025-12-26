@@ -467,6 +467,142 @@ class TestFlowRegime:
             pytest.skip("FlowRegime not available")
 
 
+class TestConjugateHeatTransfer:
+    """Test ConjugateHeatTransfer class."""
+
+    def test_conjugate_heat_transfer_creation(self):
+        """Test creating a ConjugateHeatTransfer instance."""
+        try:
+            from smrforge.thermal.hydraulics import ConjugateHeatTransfer
+
+            # Create mock solvers
+            class MockNeutronics:
+                def __init__(self):
+                    self.flux = np.ones((10, 10, 2))  # 2 groups
+
+                def solve_steady_state(self):
+                    return 1.0, np.ones((10, 10, 2))
+
+                def compute_power_distribution(self, power):
+                    return np.ones((10, 10))
+
+            class MockThermal:
+                def solve_with_power(self, power):
+                    return np.full((10, 10), 1200.0)
+
+            neutronics = MockNeutronics()
+            thermal = MockThermal()
+
+            coupled = ConjugateHeatTransfer(neutronics, thermal)
+            assert coupled.neutronics == neutronics
+            assert coupled.thermal == thermal
+        except ImportError:
+            pytest.skip("ConjugateHeatTransfer not available")
+
+    def test_solve_coupled_convergence(self):
+        """Test solve_coupled method converges."""
+        try:
+            from smrforge.thermal.hydraulics import ConjugateHeatTransfer
+
+            # Create mock solvers that converge quickly
+            class MockNeutronics:
+                def __init__(self):
+                    self.flux = np.ones((5, 5, 2))
+
+                def solve_steady_state(self):
+                    return 1.0, np.ones((5, 5, 2))
+
+                def compute_power_distribution(self, power):
+                    return np.ones((5, 5))
+
+            class MockThermal:
+                def __init__(self):
+                    self.temp = 1200.0
+
+                def solve_with_power(self, power):
+                    # Return same temperature to converge quickly
+                    return np.full((5, 5), self.temp)
+
+            neutronics = MockNeutronics()
+            thermal = MockThermal()
+
+            coupled = ConjugateHeatTransfer(neutronics, thermal)
+            result = coupled.solve_coupled(max_iterations=5, tolerance=1e-2)
+
+            assert "k_eff" in result
+            assert "flux" in result
+            assert "power" in result
+            assert "T_fuel" in result
+            assert result["k_eff"] == 1.0
+        except ImportError:
+            pytest.skip("ConjugateHeatTransfer not available")
+
+
+class TestHeatTransferCoefficient:
+    """Test _heat_transfer_coefficient method for different regimes."""
+
+    def test_heat_transfer_coefficient_transitional(self):
+        """Test _heat_transfer_coefficient in transitional regime."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=100.0,
+                diameter=1.0,
+                flow_area=np.pi * 0.25,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {
+                "temperature": 600.0,
+                "pressure": 7e6,
+                "mass_flow_rate": 0.01,
+            }
+            channel = ChannelThermalHydraulics(geometry, inlet)
+
+            # Test transitional Re (~3000)
+            Re = 3000.0  # Transitional
+            Pr = 0.7
+            k = 0.5
+
+            # The method should interpolate between laminar and turbulent
+            h = channel._heat_transfer_coefficient(Re, Pr, k)
+            assert h > 0
+            assert np.isfinite(h)
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+
+class TestFrictionFactor:
+    """Test _friction_factor method."""
+
+    def test_friction_factor_laminar(self):
+        """Test _friction_factor in laminar regime."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=100.0,
+                diameter=1.0,
+                flow_area=np.pi * 0.25,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {
+                "temperature": 600.0,
+                "pressure": 7e6,
+                "mass_flow_rate": 0.001,
+            }
+            channel = ChannelThermalHydraulics(geometry, inlet)
+
+            Re = 1000.0  # Laminar
+            f = channel._friction_factor(Re)
+
+            # Laminar: f = 64/Re
+            expected = 64.0 / Re
+            assert np.isclose(f, expected, rtol=1e-3)
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+
 class TestTridiagonalSolver:
     """Test tridiagonal solver function."""
 

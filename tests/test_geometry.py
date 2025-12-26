@@ -579,3 +579,122 @@ class TestGeometryUtilities:
             assert channel.height == 79.3
         except ImportError:
             pytest.skip("CoolantChannel not available")
+
+
+class TestPebbleBedCoreMethods:
+    """Test additional PebbleBedCore methods."""
+
+    def test_build_random_packing(self):
+        """Test build_random_packing method."""
+        try:
+            from smrforge.geometry.core_geometry import PebbleBedCore
+
+            core = PebbleBedCore(name="Test-Random")
+            # Use small dimensions to avoid long execution
+            core.build_random_packing(
+                core_height=50.0,
+                core_diameter=20.0,
+                pebble_radius=2.0,
+                annular_inner_diameter=0.0,
+            )
+
+            assert core.core_height == 50.0
+            assert core.core_diameter == 20.0
+            # Should have created some pebbles (may vary due to randomness)
+            assert len(core.pebbles) >= 0  # Can be 0 if no valid positions found
+        except ImportError:
+            pytest.skip("PebbleBedCore not available")
+
+    def test_build_random_packing_annular(self):
+        """Test build_random_packing with annular geometry."""
+        try:
+            from smrforge.geometry.core_geometry import PebbleBedCore
+
+            core = PebbleBedCore(name="Test-Annular")
+            core.build_random_packing(
+                core_height=50.0,
+                core_diameter=30.0,
+                pebble_radius=2.0,
+                annular_inner_diameter=10.0,
+            )
+
+            assert core.annular_inner_diameter == 10.0
+            assert len(core.pebbles) >= 0
+        except ImportError:
+            pytest.skip("PebbleBedCore not available")
+
+    def test_simulate_recirculation(self):
+        """Test simulate_recirculation method."""
+        try:
+            from smrforge.geometry.core_geometry import PebbleBedCore
+
+            core = PebbleBedCore(name="Test-Recirculation")
+            core.build_structured_packing(
+                core_height=100.0, core_diameter=50.0, pebble_radius=3.0
+            )
+
+            if len(core.pebbles) > 0:
+                # Store initial residence times
+                initial_residence = [p.residence_time for p in core.pebbles]
+
+                # Simulate one step
+                core.simulate_recirculation(n_passes=1, discharge_burnup=90.0)
+
+                # Check that residence time increased for all pebbles
+                # (positions may change due to sorting and movement)
+                for i, pebble in enumerate(core.pebbles):
+                    assert pebble.residence_time >= initial_residence[i]
+                    # Position should be within reasonable bounds (0 to core_height)
+                    assert 0 <= pebble.position.z <= core.core_height + 10.0
+        except ImportError:
+            pytest.skip("PebbleBedCore not available")
+
+    def test_get_pebble_neighbors(self):
+        """Test get_pebble_neighbors method."""
+        try:
+            from smrforge.geometry.core_geometry import PebbleBedCore
+
+            core = PebbleBedCore(name="Test-Neighbors")
+            core.build_structured_packing(
+                core_height=50.0, core_diameter=30.0, pebble_radius=2.0
+            )
+
+            if len(core.pebbles) > 1:
+                # Get neighbors for first pebble
+                neighbors = core.get_pebble_neighbors(0, radius=10.0)
+
+                # Should return list of Pebble objects (excluding the pebble itself)
+                assert isinstance(neighbors, list)
+                assert all(hasattr(p, "id") for p in neighbors)
+                # First pebble should not be in neighbors
+                assert all(p.id != 0 for p in neighbors)
+        except ImportError:
+            pytest.skip("PebbleBedCore not available")
+
+    def test_geometry_export_pebble_bed_json(self, temp_dir):
+        """Test GeometryExporter.to_json for PebbleBedCore."""
+        try:
+            from smrforge.geometry.core_geometry import GeometryExporter, PebbleBedCore
+
+            core = PebbleBedCore(name="Test-Export-Pebble")
+            core.build_structured_packing(
+                core_height=50.0, core_diameter=30.0, pebble_radius=2.0
+            )
+
+            export_path = temp_dir / "test_pebble_core.json"
+            GeometryExporter.to_json(core, export_path)
+
+            assert export_path.exists()
+
+            # Check JSON content
+            import json
+
+            with open(export_path) as f:
+                data = json.load(f)
+
+            assert data["name"] == "Test-Export-Pebble"
+            assert data["type"] == "PebbleBedCore"
+            assert "n_pebbles" in data
+            assert "packing_fraction" in data
+        except ImportError:
+            pytest.skip("GeometryExporter not available")

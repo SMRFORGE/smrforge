@@ -350,6 +350,26 @@ class TestUtilityFunctions:
         with pytest.raises(ValueError):
             check_physical_temperature(-10.0, "test")
 
+    def test_check_physical_temperature_too_high(self):
+        """Test check_physical_temperature with temperature exceeding limits."""
+        with pytest.raises(ValueError, match="exceeds physical limits"):
+            check_physical_temperature(5000.0, "test")
+
+    def test_check_physical_temperature_zero(self):
+        """Test check_physical_temperature with zero (invalid)."""
+        with pytest.raises(ValueError, match="below absolute zero"):
+            check_physical_temperature(0.0, "test")
+
+    def test_check_physical_temperature_too_high(self):
+        """Test check_physical_temperature with temperature exceeding limits."""
+        with pytest.raises(ValueError, match="exceeds physical limits"):
+            check_physical_temperature(5000.0, "test")
+
+    def test_check_physical_temperature_zero(self):
+        """Test check_physical_temperature with zero (invalid)."""
+        with pytest.raises(ValueError, match="below absolute zero"):
+            check_physical_temperature(0.0, "test")
+
 
 class TestValidationContext:
     """Test ValidationContext context manager."""
@@ -368,3 +388,22 @@ class TestValidationContext:
 
         # Should be restored after context
         assert obj._validation_enabled is True
+
+    def test_validation_context_with_exception(self):
+        """Test ValidationContext restores state even if exception occurs."""
+
+        class TestValidatedClass(ValidatedClass):
+            pass
+
+        obj = TestValidatedClass()
+        original_state = obj._validation_enabled
+
+        try:
+            with ValidationContext(obj):
+                assert obj._validation_enabled is False
+                raise ValueError("Test exception")
+        except ValueError:
+            pass
+
+        # Should be restored even after exception
+        assert obj._validation_enabled == original_state
