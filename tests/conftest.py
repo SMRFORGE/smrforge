@@ -370,6 +370,42 @@ def mock_endf_file(temp_dir, mock_endf_file_content):
 
 
 @pytest.fixture
+def realistic_endf_file(temp_dir):
+    """Create a realistic mock ENDF file with proper format for testing _simple_endf_parse."""
+    endf_path = temp_dir / "U235_realistic.endf"
+    
+    # Build ENDF file content with proper format
+    # Using simpler format that matches the existing mock file style
+    endf_content = """ 1.001000+3 9.991673-1          0          0          0          0 125 1451    1
+ 9.223500+4 2.350000+2          0          0          0          0 125 1451    2
+                                                                   125 1451    0
+ 1.001000+3 9.991673-1          0          0          0          0 125 3  1    1
+ 0.000000+0 0.000000+0          0          0          0          6 125 3  1    2
+ 1.000000+5 1.000000+1 1.000000+6 1.200000+1 5.000000+6 1.500000+1 125 3  1    3
+ 1.000000+7 1.800000+1 2.000000+7 2.000000+1 5.000000+7 2.200000+1 125 3  1    4
+                                                                   125 0  0    0
+ 1.001000+3 9.991673-1          0          0          0          0 125 3  2    1
+ 0.000000+0 0.000000+0          0          0          0          4 125 3  2    2
+ 1.000000+5 8.000000+0 1.000000+6 9.000000+0 1.000000+7 1.000000+1 125 3  2    3
+ 5.000000+7 1.100000+1 0.000000+0 0.000000+0 0.000000+0 0.000000+0 125 3  2    4
+                                                                   125 0  0    0
+ 1.001000+3 9.991673-1          0          0          0          0 125 3 18    1
+ 0.000000+0 0.000000+0          0          0          0          5 125 3 18    2
+ 1.000000+5 1.500000+0 1.000000+6 2.000000+0 5.000000+6 2.500000+0 125 3 18    3
+ 1.000000+7 3.000000+0 2.000000+7 3.500000+0 0.000000+0 0.000000+0 125 3 18    4
+                                                                   125 0  0    0
+ 1.001000+3 9.991673-1          0          0          0          0 125 3102    1
+ 0.000000+0 0.000000+0          0          0          0          4 125 3102    2
+ 1.000000+5 5.000000-1 1.000000+6 1.000000+0 1.000000+7 1.500000+0 125 3102    3
+ 5.000000+7 2.000000+0 0.000000+0 0.000000+0 0.000000+0 0.000000+0 125 3102    4
+                                                                   125 0  0    0
+                                                                   125 0  0    0
+"""
+    endf_path.write_text(endf_content)
+    return endf_path
+
+
+@pytest.fixture
 def mock_requests_get(monkeypatch, mock_endf_file_content):
     """Mock requests.get to return mock ENDF file content."""
     from unittest.mock import Mock
@@ -403,6 +439,25 @@ def mock_sandy_unavailable(monkeypatch):
     def mock_import(name, *args, **kwargs):
         if name == "sandy":
             raise ImportError("SANDY not available")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", mock_import)
+
+
+@pytest.fixture
+def mock_endf_parserpy_unavailable(monkeypatch):
+    """Mock endf-parserpy as unavailable (ImportError)."""
+    import sys
+
+    if "endf_parserpy" in sys.modules:
+        # Don't patch if already imported
+        return
+
+    original_import = __import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "endf_parserpy":
+            raise ImportError("endf-parserpy not available")
         return original_import(name, *args, **kwargs)
 
     monkeypatch.setattr("builtins.__import__", mock_import)

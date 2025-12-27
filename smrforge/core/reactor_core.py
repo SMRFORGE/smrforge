@@ -225,9 +225,10 @@ class NuclearDataCache:
         Fetch cross-section data from source and cache it.
         
         Tries multiple backends in order of preference:
-        1. SANDY (if available) - recommended, pure Python
-        2. SMRForge built-in ENDF parser (endf_parser.py)
-        3. Simple fallback parser for basic reactions
+        1. endf-parserpy (if available) - official IAEA library, recommended
+        2. SANDY (if available) - good for uncertainty quantification
+        3. SMRForge built-in ENDF parser (endf_parser.py)
+        4. Simple fallback parser for basic reactions
         
         Automatically applies Doppler broadening for non-standard temperatures
         and saves results to both memory and persistent cache.
@@ -247,14 +248,53 @@ class NuclearDataCache:
         """
         # Download ENDF file if needed
         endf_file = self._ensure_endf_file(nuclide, library)
+        reaction_mt = self._reaction_to_mt(reaction)
 
-        # Try SANDY first (lighter weight, pure Python)
+        # Try endf-parserpy first (official IAEA library, recommended)
+        try:
+            from endf_parserpy import EndfParserFactory
+
+            log_nuclear_data_fetch(
+                nuclide.name, reaction, temperature, "endf-parserpy", logger
+            )
+            parser = EndfParserFactory.create()
+            endf_dict = parser.parsefile(str(endf_file))
+
+            # Extract MF=3 (cross sections), MT=reaction_mt
+            if 3 in endf_dict and reaction_mt in endf_dict[3]:
+                mf3_mt = endf_dict[3][reaction_mt]
+                energy, xs = self._extract_mf3_data(mf3_mt)
+
+                if energy is not None and xs is not None and len(energy) > 0:
+                    # Apply temperature if needed
+                    if abs(temperature - 293.6) > 1.0:
+                        logger.debug(
+                            f"Applying Doppler broadening: {293.6}K → {temperature}K"
+                        )
+                        xs = self._doppler_broaden(
+                            energy, xs, 293.6, temperature, nuclide.A
+                        )
+
+                    # Cache and return
+                    self._save_to_cache(key, energy, xs)
+                    log_cache_operation("write", key, logger)
+                    return energy, xs
+        except ImportError:
+            logger.debug("endf-parserpy not available, trying SANDY")
+        except Exception as e:
+            import warnings
+
+            warnings.warn(
+                f"endf-parserpy parsing failed: {e}. Trying SANDY.", stacklevel=2
+            )
+            logger.debug(f"endf-parserpy error: {e}")
+
+        # Try SANDY second (good for uncertainty quantification)
         try:
             import sandy
 
             log_nuclear_data_fetch(nuclide.name, reaction, temperature, "sandy", logger)
             endf_tapes = sandy.Endf6.from_file(str(endf_file))
-            reaction_mt = self._reaction_to_mt(reaction)
 
             # Extract cross section data
             if reaction_mt in endf_tapes:
@@ -293,7 +333,6 @@ class NuclearDataCache:
                 nuclide.name, reaction, temperature, "endf_parser", logger
             )
             evaluation = ENDFCompatibility(endf_file)
-            reaction_mt = self._reaction_to_mt(reaction)
 
             if reaction_mt in evaluation:
                 rxn_data = evaluation[reaction_mt]
@@ -344,8 +383,12 @@ class NuclearDataCache:
         # All backends failed - provide helpful error message
         available_backends = []
         try:
+            from endf_parserpy import EndfParserFactory
+            available_backends.append("endf-parserpy")
+        except ImportError:
+            pass
+        try:
             import sandy
-
             available_backends.append("SANDY")
         except ImportError:
             pass
@@ -354,9 +397,11 @@ class NuclearDataCache:
             f"Failed to parse cross-section data for {nuclide.name}/{reaction}. "
             f"No suitable backend available.\n\n"
             f"Installed backends: {', '.join(available_backends) if available_backends else 'None'}\n\n"
-            f"To enable cross-section fetching, install SANDY:\n"
-            f"  - SANDY (recommended): pip install sandy\n"
-            f"    Pure Python, easy to install\n\n"
+            f"To enable cross-section fetching, install one of:\n"
+            f"  - endf-parserpy (recommended): pip install endf-parserpy\n"
+            f"    Official IAEA library, comprehensive ENDF-6 support\n"
+            f"  - SANDY (alternative): pip install sandy\n"
+            f"    Good for uncertainty quantification\n\n"
             f"Note: SMRForge includes a built-in ENDF parser, but it failed to parse this file.\n"
             f"This may indicate an issue with the ENDF file format or unsupported reaction.\n\n"
             f"Alternatively, pre-populate the cache directory at:\n"
@@ -380,8 +425,10 @@ class NuclearDataCache:
             cache for faster subsequent access.
         """
         group = self.root.create_group(key, overwrite=True)
-        group.create_dataset("energy", data=energy, chunks=(1024,), compression="zstd")
-        group.create_dataset("xs", data=xs, chunks=(1024,), compression="zstd")
+        # Use create_array with data parameter (shape is inferred from data)
+        # Note: zstd compression requires numcodecs, using default compression for compatibility
+        group.create_array("energy", data=energy, chunks=(1024,))
+        group.create_array("xs", data=xs, chunks=(1024,))
 
         # Cache in memory
         self._memory_cache[key] = (energy, xs)
@@ -493,6 +540,112 @@ class NuclearDataCache:
         except Exception:
             pass
 
+        return None, None
+
+    @staticmethod
+    def _extract_mf3_data(mf3_mt_data) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        """
+        Extract energy and cross-section arrays from endf-parserpy MF3 section data.
+        
+        This method handles the various ways endf-parserpy might structure MF3 data.
+        MF3 sections contain tabulated (energy, cross-section) pairs.
+        
+        Args:
+            mf3_mt_data: The parsed MF3/MT data structure from endf-parserpy.
+        
+        Returns:
+            Tuple of (energy, cross_section) arrays, or (None, None) if extraction fails.
+        """
+        try:
+            # Try common structure patterns for MF3 data
+            # Pattern 1: Direct 'E' and 'XS' keys (similar to SANDY)
+            if isinstance(mf3_mt_data, dict):
+                if 'E' in mf3_mt_data and 'XS' in mf3_mt_data:
+                    energy = np.array(mf3_mt_data['E'])
+                    xs = np.array(mf3_mt_data['XS'])
+                    if len(energy) == len(xs) and len(energy) > 0:
+                        return energy, xs
+                
+                # Pattern 2: 'energy' and 'cross_section' keys
+                if 'energy' in mf3_mt_data and 'cross_section' in mf3_mt_data:
+                    energy = np.array(mf3_mt_data['energy'])
+                    xs = np.array(mf3_mt_data['cross_section'])
+                    if len(energy) == len(xs) and len(energy) > 0:
+                        return energy, xs
+                
+                # Pattern 3: 'data' field with pairs
+                if 'data' in mf3_mt_data:
+                    data = mf3_mt_data['data']
+                    if isinstance(data, (list, np.ndarray)) and len(data) > 0:
+                        # Data might be pairs: [(E1, XS1), (E2, XS2), ...]
+                        data_array = np.array(data)
+                        if len(data_array.shape) == 2 and data_array.shape[1] == 2:
+                            energy = data_array[:, 0]
+                            xs = data_array[:, 1]
+                            return energy, xs
+                        # Or flat array: [E1, XS1, E2, XS2, ...] - interleaved pairs
+                        if len(data_array.shape) == 1 and len(data_array) % 2 == 0 and len(data_array) >= 2:
+                            # Extract as [E1, E2, ...] and [XS1, XS2, ...]
+                            energy = data_array[::2]  # Every even index (0, 2, 4, ...)
+                            xs = data_array[1::2]     # Every odd index (1, 3, 5, ...)
+                            if len(energy) == len(xs) and len(energy) > 0:
+                                return energy, xs
+                
+                # Pattern 4: ENDF variable names (EndfVariable objects)
+                # endf-parserpy uses EndfVariable for structured data
+                energy_value = None
+                xs_value = None
+                for key, value in mf3_mt_data.items():
+                    # Look for energy-like keys (check for 'E' or 'ENERGY' in key)
+                    if isinstance(key, str):
+                        key_upper = key.upper()
+                        # Check for energy (must have E or ENERGY, but not XS or CROSS)
+                        if ('E' in key_upper or 'ENERGY' in key_upper) and 'XS' not in key_upper and 'CROSS' not in key_upper:
+                            if hasattr(value, '__iter__') and not isinstance(value, str):
+                                energy_value = value
+                        # Look for cross-section-like keys (XS, SIGMA, CROSS)
+                        elif 'XS' in key_upper or 'SIGMA' in key_upper or 'CROSS' in key_upper:
+                            if hasattr(value, '__iter__') and not isinstance(value, str):
+                                xs_value = value
+                
+                if energy_value is not None and xs_value is not None:
+                    # Convert to arrays if needed
+                    energy_array = np.array(energy_value) if not isinstance(energy_value, np.ndarray) else energy_value
+                    xs_array = np.array(xs_value) if not isinstance(xs_value, np.ndarray) else xs_value
+                    if len(energy_array) == len(xs_array) and len(energy_array) > 0:
+                        return energy_array, xs_array
+            
+            # Pattern 5: Try to extract from tabulated data structure
+            # MF3 typically has a LIST record with (E, XS) pairs
+            # Check for common ENDF record structures
+            if isinstance(mf3_mt_data, (list, tuple)):
+                data_array = np.array(mf3_mt_data)
+                if len(data_array.shape) == 2 and data_array.shape[1] == 2:
+                    # Pairs format: [(E1, XS1), (E2, XS2), ...]
+                    energy = data_array[:, 0]
+                    xs = data_array[:, 1]
+                    return energy, xs
+                elif len(data_array) % 2 == 0 and len(data_array) > 0:
+                    # Flat pairs format: [E1, XS1, E2, XS2, ...]
+                    pairs = len(data_array) // 2
+                    energy = data_array[:pairs]
+                    xs = data_array[pairs:]
+                    if len(energy) == len(xs):
+                        return energy, xs
+            elif isinstance(mf3_mt_data, np.ndarray):
+                if len(mf3_mt_data.shape) == 2 and mf3_mt_data.shape[1] == 2:
+                    energy = mf3_mt_data[:, 0]
+                    xs = mf3_mt_data[:, 1]
+                    return energy, xs
+                elif len(mf3_mt_data) % 2 == 0 and len(mf3_mt_data) > 0:
+                    pairs = len(mf3_mt_data) // 2
+                    energy = mf3_mt_data[:pairs]
+                    xs = mf3_mt_data[pairs:]
+                    if len(energy) == len(xs):
+                        return energy, xs
+        except Exception as e:
+            logger.debug(f"Failed to extract MF3 data from endf-parserpy structure: {e}")
+        
         return None, None
 
     @staticmethod

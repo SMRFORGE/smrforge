@@ -628,5 +628,5 @@ class TestTridiagonalSolver:
             assert np.allclose(b[0] * x[0] + c[0] * x[1], d[0])
             assert np.allclose(a[1] * x[0] + b[1] * x[1] + c[1] * x[2], d[1])
             assert np.allclose(a[2] * x[1] + b[2] * x[2], d[2])
-    except ImportError:
+        except ImportError:
             pytest.skip("solve_tridiagonal_fast not available")

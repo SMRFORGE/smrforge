@@ -462,7 +462,6 @@ class TestNuclearDataCacheAdditional:
             # Parsing may fail with minimal mock data - that's acceptable
             pass
 
-    @pytest.mark.skip(reason="zarr.create_dataset API requires shape parameter - code bug to fix")
     def test_get_cross_section_zarr_cache_hit(self, temp_dir):
         """Test get_cross_section returns data from zarr cache."""
         import zarr
@@ -502,7 +501,6 @@ class TestNuclearDataCacheAdditional:
         assert np.allclose(cached_energy, energy)
         assert np.allclose(cached_xs, xs)
 
-    @pytest.mark.skip(reason="zarr.create_dataset API requires shape parameter - code bug to fix")
     def test_save_to_cache(self, temp_dir):
         """Test _save_to_cache method."""
         from smrforge.core.reactor_core import NuclearDataCache

@@ -696,5 +696,5 @@ class TestPebbleBedCoreMethods:
             assert data["type"] == "PebbleBedCore"
             assert "n_pebbles" in data
             assert "packing_fraction" in data
-    except ImportError:
+        except ImportError:
             pytest.skip("GeometryExporter not available")

@@ -15,9 +15,11 @@ zarr>=2.14.0
 polars>=0.19.0
 
 # Nuclear data handling (optional - for cross-section fetching)
-# SANDY (lighter-weight, pure Python) - recommended for easier installation
+# endf-parserpy (official IAEA library) - recommended for full ENDF-6 support
+# endf-parserpy>=0.14.0  # Uncomment if you want endf-parserpy support
+# SANDY (alternative, good for uncertainty quantification)
 # sandy>=1.0.0  # Uncomment if you want SANDY support
-# Note: SMRForge includes a built-in ENDF parser, so this is optional
+# Note: SMRForge includes a built-in ENDF parser, so these are optional
 
 # Validation and schemas
 pydantic>=2.0.0
