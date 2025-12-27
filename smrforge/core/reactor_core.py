@@ -29,7 +29,18 @@ logger = get_logger("smrforge.core")
 
 
 class Library(Enum):
-    """Supported nuclear data libraries."""
+    """
+    Supported nuclear data libraries for cross-section data.
+    
+    Enum values correspond to library version strings used in file naming
+    and URL construction. Each library provides evaluated nuclear data in
+    ENDF-6 format.
+    
+    Attributes:
+        ENDF_B_VIII: ENDF/B-VIII.0 (United States evaluated nuclear data library).
+        JEFF_33: JEFF-3.3 (Joint Evaluated Fission and Fusion library, Europe).
+        JENDL_5: JENDL-5.0 (Japanese Evaluated Nuclear Data Library).
+    """
 
     ENDF_B_VIII = "endfb8.0"
     JEFF_33 = "jeff3.3"
@@ -38,7 +49,25 @@ class Library(Enum):
 
 @dataclass
 class Nuclide:
-    """Lightweight nuclide representation."""
+    """
+    Lightweight nuclide representation.
+    
+    Represents a specific isotope using atomic number (Z), mass number (A),
+    and optional metastable state (m). Provides conversions to common
+    notation systems (ZAM, name string).
+    
+    Attributes:
+        Z: Atomic number (proton count).
+        A: Mass number (proton + neutron count).
+        m: Metastable state index (0 for ground state, >0 for metastable states).
+    
+    Example:
+        >>> u235 = Nuclide(Z=92, A=235, m=0)
+        >>> print(u235.name)  # "U235"
+        >>> print(u235.zam)   # 922350
+        >>> u239m = Nuclide(Z=92, A=239, m=1)
+        >>> print(u239m.name)  # "U239m1"
+    """
 
     Z: int  # Atomic number
     A: int  # Mass number
@@ -46,12 +75,35 @@ class Nuclide:
 
     @property
     def zam(self) -> int:
-        """ZZAAAM notation."""
+        """
+        ZZAAAM notation (Z * 10000 + A * 10 + m).
+        
+        Returns:
+            Integer in ZZAAAM format (e.g., 922350 for U-235).
+        
+        Example:
+            >>> nuc = Nuclide(Z=92, A=235, m=0)
+            >>> nuc.zam
+            922350
+        """
         return self.Z * 10000 + self.A * 10 + self.m
 
     @property
     def name(self) -> str:
-        """Human-readable name like 'U235'."""
+        """
+        Human-readable nuclide name string.
+        
+        Returns:
+            String like "U235" for ground state or "U239m1" for metastable.
+        
+        Example:
+            >>> nuc = Nuclide(Z=92, A=235)
+            >>> nuc.name
+            'U235'
+            >>> nuc_meta = Nuclide(Z=92, A=239, m=1)
+            >>> nuc_meta.name
+            'U239m1'
+        """
         from .constants import ELEMENT_SYMBOLS
 
         symbol = ELEMENT_SYMBOLS[self.Z]
@@ -65,10 +117,31 @@ class Nuclide:
 class NuclearDataCache:
     """
     High-performance nuclear data cache using Zarr for storage.
-    Much faster than HDF5 with better compression and chunking.
+    
+    Much faster than HDF5 with better compression and chunking. Provides
+    two-level caching: in-memory cache for hot data and persistent Zarr
+    storage for cross-section data. Automatically fetches ENDF files when
+    needed and supports multiple backends (SANDY, built-in parser).
+    
+    Attributes:
+        cache_dir: Directory for persistent cache storage.
+        _memory_cache: In-memory dictionary cache for frequently accessed data.
+        root: Zarr root group for persistent storage.
     """
 
     def __init__(self, cache_dir: Optional[Path] = None):
+        """
+        Initialize nuclear data cache.
+        
+        Args:
+            cache_dir: Optional path to cache directory. Defaults to
+                ``~/.smrforge/nucdata`` if not provided.
+        
+        Example:
+            >>> cache = NuclearDataCache()
+            >>> # Or specify custom cache location
+            >>> cache = NuclearDataCache(cache_dir=Path("/tmp/nucdata"))
+        """
         self.cache_dir = cache_dir or Path.home() / ".smrforge" / "nucdata"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -91,9 +164,34 @@ class NuclearDataCache:
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get cross section data with aggressive caching.
-
+        
+        Checks in-memory cache first, then persistent Zarr cache, and finally
+        fetches and parses from ENDF files if needed. Automatically applies
+        Doppler broadening for temperatures other than 293.6 K.
+        
+        Args:
+            nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235)).
+            reaction: Reaction name (e.g., "fission", "capture", "elastic",
+                "total", "n,gamma", "n,2n", "n,alpha").
+            temperature: Temperature in Kelvin. Defaults to 293.6 K (room temp).
+            library: Nuclear data library. Defaults to ENDF/B-VIII.0.
+        
         Returns:
-            energy (eV), cross_section (barns)
+            Tuple of (energy, cross_section):
+                - energy: 1D array of neutron energies in eV.
+                - cross_section: 1D array of cross sections in barns.
+        
+        Raises:
+            ImportError: If no suitable backend (SANDY or built-in parser)
+                is available and cross-section data cannot be fetched.
+            ValueError: If nuclide or reaction is invalid.
+        
+        Example:
+            >>> cache = NuclearDataCache()
+            >>> u235 = Nuclide(Z=92, A=235)
+            >>> energy, xs = cache.get_cross_section(u235, "fission", temperature=900.0)
+            >>> print(f"Energy range: {energy.min():.2e} - {energy.max():.2e} eV")
+            >>> print(f"Fission XS at 1 eV: {np.interp(1.0, energy, xs):.2f} b")
         """
         key = f"{library.value}/{nuclide.name}/{reaction}/{temperature:.1f}K"
 
@@ -123,7 +221,30 @@ class NuclearDataCache:
         library: Library,
         key: str,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Fetch from source and cache. Tries multiple backends in order."""
+        """
+        Fetch cross-section data from source and cache it.
+        
+        Tries multiple backends in order of preference:
+        1. SANDY (if available) - recommended, pure Python
+        2. SMRForge built-in ENDF parser (endf_parser.py)
+        3. Simple fallback parser for basic reactions
+        
+        Automatically applies Doppler broadening for non-standard temperatures
+        and saves results to both memory and persistent cache.
+        
+        Args:
+            nuclide: Nuclide instance.
+            reaction: Reaction name string.
+            temperature: Temperature in Kelvin.
+            library: Nuclear data library enum.
+            key: Cache key string (format: "library/nuclide/reaction/temperature").
+        
+        Returns:
+            Tuple of (energy, cross_section) arrays.
+        
+        Raises:
+            ImportError: If all backends fail and data cannot be fetched.
+        """
         # Download ENDF file if needed
         endf_file = self._ensure_endf_file(nuclide, library)
 
@@ -245,7 +366,19 @@ class NuclearDataCache:
         raise ImportError(error_msg)
 
     def _save_to_cache(self, key: str, energy: np.ndarray, xs: np.ndarray) -> None:
-        """Save cross-section data to zarr cache."""
+        """
+        Save cross-section data to both Zarr cache and in-memory cache.
+        
+        Args:
+            key: Cache key string identifying the data.
+            energy: 1D array of neutron energies in eV.
+            xs: 1D array of cross sections in barns (must match energy length).
+        
+        Note:
+            Data is stored with zstd compression and 1024-element chunks
+            for optimal performance. The key is also added to the in-memory
+            cache for faster subsequent access.
+        """
         group = self.root.create_group(key, overwrite=True)
         group.create_dataset("energy", data=energy, chunks=(1024,), compression="zstd")
         group.create_dataset("xs", data=xs, chunks=(1024,), compression="zstd")
@@ -258,10 +391,32 @@ class NuclearDataCache:
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         """
         Simple ENDF parser for basic reactions (total, elastic, fission, capture).
+        
         This is a minimal fallback that parses basic MT numbers from ENDF files.
-
-        Note: The SMRForge ENDF parser (endf_parser.py) is preferred over this method.
-        This is kept as a last-resort fallback.
+        Only handles MF=3 (cross-section) sections and basic reactions. More
+        comprehensive parsing is available via the SMRForge ENDF parser
+        (endf_parser.py) or SANDY.
+        
+        Args:
+            endf_file: Path to ENDF-6 format file.
+            reaction: Reaction name (e.g., "fission", "capture", "elastic", "total").
+            nuclide: Nuclide instance (currently unused but kept for API consistency).
+        
+        Returns:
+            Tuple of (energy, cross_section) arrays, or (None, None) if parsing fails.
+            Energy is in eV, cross sections are in barns.
+        
+        Note:
+            The SMRForge ENDF parser (endf_parser.py) is preferred over this method.
+            This is kept as a last-resort fallback when other parsers are unavailable.
+        
+        Supported Reactions:
+            - "total" (MT=1)
+            - "elastic" (MT=2)
+            - "fission" (MT=18)
+            - "capture" or "n,gamma" (MT=102)
+            - "n,2n" (MT=16)
+            - "n,alpha" (MT=107)
         """
         reaction_mt = self._reaction_to_mt(reaction)
 
@@ -346,8 +501,26 @@ class NuclearDataCache:
         energy: np.ndarray, xs: np.ndarray, T_old: float, T_new: float, A: int
     ) -> np.ndarray:
         """
-        Fast Doppler broadening using Numba.
-        Much faster than PyNE's implementation.
+        Fast Doppler broadening of cross sections using Numba JIT compilation.
+        
+        Broadens cross sections from temperature T_old to T_new using a simplified
+        kernel-based approach. Much faster than PyNE's implementation due to
+        Numba parallelization.
+        
+        Args:
+            energy: 1D array of neutron energies in eV.
+            xs: 1D array of cross sections in barns at T_old.
+            T_old: Original temperature in Kelvin.
+            T_new: Target temperature in Kelvin.
+            A: Mass number of the target nuclide (for proper broadening physics).
+        
+        Returns:
+            1D array of broadened cross sections in barns at T_new.
+        
+        Note:
+            This is a simplified implementation. A production version would use
+            proper convolution with the Doppler broadening kernel for accurate
+            physics, especially in the resonance region.
         """
         # Simplified kernel-based broadening
         # Real implementation would use proper convolution
@@ -364,7 +537,21 @@ class NuclearDataCache:
 
     @staticmethod
     def _reaction_to_mt(reaction: str) -> int:
-        """Convert reaction string to MT number."""
+        """
+        Convert reaction name string to ENDF MT (reaction type) number.
+        
+        Args:
+            reaction: Reaction name (case-insensitive). Supported reactions:
+                - "total" -> MT=1
+                - "elastic" -> MT=2
+                - "fission" -> MT=18
+                - "capture" or "n,gamma" -> MT=102
+                - "n,2n" -> MT=16
+                - "n,alpha" -> MT=107
+        
+        Returns:
+            MT number (integer). Returns 1 (total) for unknown reactions.
+        """
         MT_MAP = {
             "total": 1,
             "elastic": 2,
@@ -377,7 +564,24 @@ class NuclearDataCache:
         return MT_MAP.get(reaction.lower(), 1)
 
     def _ensure_endf_file(self, nuclide: Nuclide, library: Library) -> Path:
-        """Download ENDF file if not present."""
+        """
+        Download ENDF file if not present in cache.
+        
+        Checks if the ENDF file for the specified nuclide and library exists
+        in the cache directory. If not, downloads it from IAEA Nuclear Data
+        Services and saves it locally.
+        
+        Args:
+            nuclide: Nuclide instance.
+            library: Nuclear data library enum.
+        
+        Returns:
+            Path to the ENDF file (either existing or newly downloaded).
+        
+        Raises:
+            requests.RequestException: If download fails (network error, HTTP error, etc.).
+            IOError: If file cannot be written to cache directory.
+        """
         endf_dir = self.cache_dir / "endf" / library.value
         endf_dir.mkdir(parents=True, exist_ok=True)
 
@@ -395,7 +599,21 @@ class NuclearDataCache:
 
     @staticmethod
     def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
-        """Get download URL for ENDF file."""
+        """
+        Construct download URL for ENDF file from IAEA Nuclear Data Services.
+        
+        Args:
+            nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
+            library: Nuclear data library enum (e.g., Library.ENDF_B_VIII).
+        
+        Returns:
+            URL string pointing to the ENDF file download endpoint.
+        
+        Note:
+            This is a simplified implementation. A production version would
+            need proper URL construction following IAEA NDS conventions,
+            including proper library versioning and nuclide naming schemes.
+        """
         # IAEA Nuclear Data Services
         base_url = "https://www-nds.iaea.org/public/download-endf"
         # Simplified - real implementation needs proper URL construction
@@ -404,11 +622,34 @@ class NuclearDataCache:
 
 class CrossSectionTable:
     """
-    Fast multi-group cross section table using Polars.
-    10-100x faster than pandas for tabular operations.
+    Fast multi-group cross section table using Polars DataFrames.
+    
+    Provides efficient storage and querying of multi-group cross sections
+    for multiple nuclides and reactions. Uses Polars instead of pandas for
+    10-100x better performance on tabular operations. Integrates with
+    NuclearDataCache for fetching continuous-energy cross sections and
+    collapsing them to multi-group structures.
+    
+    Attributes:
+        data: Polars DataFrame containing multi-group cross sections.
+            Columns: nuclide, reaction, group, xs.
+        _cache: NuclearDataCache instance for fetching nuclear data.
     """
 
     def __init__(self):
+        """
+        Initialize cross-section table.
+        
+        Creates an empty table. Use generate_multigroup() to populate it
+        with cross-section data.
+        
+        Example:
+            >>> table = CrossSectionTable()
+            >>> nuclides = [Nuclide(Z=92, A=235), Nuclide(Z=92, A=238)]
+            >>> reactions = ["fission", "capture"]
+            >>> groups = np.logspace(7, -1, 70)  # 70-group structure
+            >>> df = table.generate_multigroup(nuclides, reactions, groups)
+        """
         self.data: Optional[pl.DataFrame] = None
         self._cache = NuclearDataCache()
 
@@ -422,16 +663,48 @@ class CrossSectionTable:
     ) -> pl.DataFrame:
         """
         Generate multi-group cross sections with optimal performance.
-
+        
+        Fetches continuous-energy cross sections for all nuclide/reaction
+        combinations, collapses them to the specified group structure using
+        flux weighting, and stores the results in a Polars DataFrame. Uses
+        the internal NuclearDataCache for efficient data retrieval.
+        
         Args:
-            nuclides: List of nuclides
-            reactions: List of reactions (e.g., ['fission', 'capture'])
-            group_structure: Energy group boundaries [eV]
-            temperature: Temperature [K]
-            weighting_flux: Optional flux spectrum for collapsing
-
+            nuclides: List of Nuclide instances to process.
+            reactions: List of reaction names (e.g., ['fission', 'capture',
+                'elastic', 'total']).
+            group_structure: 1D array of energy group boundaries in eV.
+                Should be in descending order (highest to lowest energy).
+                Number of groups = len(group_structure) - 1.
+            temperature: Temperature in Kelvin for cross-section evaluation.
+                Defaults to 900.0 K (typical HTGR operating temperature).
+            weighting_flux: Optional 1D array of flux values for flux-weighting
+                during group collapse. Must match the energy structure of the
+                continuous-energy data. If None, uses 1/E weighting.
+        
         Returns:
-            Polars DataFrame with columns: nuclide, reaction, group, xs
+            Polars DataFrame with columns:
+                - nuclide: Nuclide name (str)
+                - reaction: Reaction name (str)
+                - group: Group index (int, 0-based)
+                - xs: Multi-group cross section in barns (float)
+        
+        Example:
+            >>> table = CrossSectionTable()
+            >>> u235 = Nuclide(Z=92, A=235)
+            >>> u238 = Nuclide(Z=92, A=238)
+            >>> # Create 7-group structure (typical for fast reactors)
+            >>> groups = np.array([2e7, 9.1188e6, 1e6, 1e5, 1e4, 1e3, 1e2, 1e-1])
+            >>> df = table.generate_multigroup(
+            ...     nuclides=[u235, u238],
+            ...     reactions=["fission", "capture"],
+            ...     group_structure=groups,
+            ...     temperature=900.0
+            ... )
+            >>> # Query specific nuclide/reaction
+            >>> u235_fission = df.filter(
+            ...     (pl.col("nuclide") == "U235") & (pl.col("reaction") == "fission")
+            ... )
         """
         n_groups = len(group_structure) - 1
 
@@ -474,8 +747,26 @@ class CrossSectionTable:
         weighting_flux: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """
-        Fast group collapse using Numba.
-        Orders of magnitude faster than PyNE.
+        Fast group collapse using Numba JIT compilation.
+        
+        Collapses continuous-energy cross sections to a multi-group structure
+        using flux-weighted averaging within each energy group. Uses Numba
+        parallel execution for orders of magnitude better performance than PyNE.
+        
+        Args:
+            energy: 1D array of continuous-energy points in eV (must be sorted).
+            xs: 1D array of cross sections in barns at corresponding energies.
+            group_bounds: 1D array of energy group boundaries in eV, in descending
+                order (highest to lowest). Number of groups = len(group_bounds) - 1.
+            weighting_flux: Optional 1D array of flux values for flux-weighting.
+                Must have same length as energy. If None, uses 1/E weighting.
+        
+        Returns:
+            1D array of multi-group cross sections in barns (one value per group).
+        
+        Note:
+            The group bounds should be in descending order (high to low energy),
+            which is the standard convention for neutron transport codes.
         """
         n_groups = len(group_bounds) - 1
         mg_xs = np.zeros(n_groups)
@@ -505,8 +796,32 @@ class CrossSectionTable:
 
     def pivot_for_solver(self, nuclides: List[str], reactions: List[str]) -> np.ndarray:
         """
-        Pivot table into matrix form optimized for solver.
-        Returns shape: (n_nuclides, n_reactions, n_groups)
+        Pivot multi-group cross-section table into 3D array for solver input.
+        
+        Converts the Polars DataFrame format into a NumPy array optimized
+        for neutron transport solver consumption. The array shape follows
+        the standard (nuclide, reaction, group) ordering.
+        
+        Args:
+            nuclides: List of nuclide name strings to include (must match
+                nuclide names in the table).
+            reactions: List of reaction name strings to include (must match
+                reaction names in the table).
+        
+        Returns:
+            3D NumPy array with shape (n_nuclides, n_reactions, n_groups)
+            containing cross-section values in barns. Ordering follows
+            the input nuclide and reaction lists.
+        
+        Example:
+            >>> table = CrossSectionTable()
+            >>> # ... populate table ...
+            >>> # Pivot for solver
+            >>> xs_matrix = table.pivot_for_solver(
+            ...     nuclides=["U235", "U238"],
+            ...     reactions=["fission", "capture", "absorption"]
+            ... )
+            >>> print(xs_matrix.shape)  # (2, 3, n_groups)
         """
         # Filter and pivot using Polars (extremely fast)
         filtered = self.data.filter(
@@ -525,23 +840,76 @@ class CrossSectionTable:
 class DecayData:
     """
     Fast decay data handling for fission products and actinides.
+    
+    Provides decay constants and decay chains for radioactive nuclides.
+    Used for burnup calculations, decay heat analysis, and isotope inventory
+    evolution. Integrates with NuclearDataCache for data retrieval.
+    
+    Attributes:
+        _cache: NuclearDataCache instance for accessing decay data.
+        _decay_constants: Dictionary mapping nuclides to decay constants.
+        _branching_ratios: Dictionary mapping (parent, daughter) tuples to
+            branching ratios.
     """
 
     def __init__(self):
+        """
+        Initialize decay data handler.
+        
+        Creates empty caches for decay constants and branching ratios.
+        Data is loaded on-demand when methods are called.
+        """
         self._cache = NuclearDataCache()
         self._decay_constants: Dict[Nuclide, float] = {}
         self._branching_ratios: Dict[Tuple[Nuclide, Nuclide], float] = {}
 
     @lru_cache(maxsize=512)
     def get_decay_constant(self, nuclide: Nuclide) -> float:
-        """Get decay constant [1/s]."""
+        """
+        Get decay constant for a nuclide.
+        
+        Args:
+            nuclide: Nuclide instance.
+        
+        Returns:
+            Decay constant in units of 1/s. Returns 0.0 for stable nuclides
+            or if half-life data is unavailable.
+        
+        Example:
+            >>> decay = DecayData()
+            >>> u235 = Nuclide(Z=92, A=235)
+            >>> lambda_decay = decay.get_decay_constant(u235)
+            >>> print(f"Half-life: {np.log(2) / lambda_decay / (365.25*24*3600):.2e} years")
+        """
         half_life = self._get_half_life(nuclide)  # seconds
         return np.log(2) / half_life if half_life > 0 else 0.0
 
     def build_decay_matrix(self, nuclides: List[Nuclide]) -> np.ndarray:
         """
-        Build Bateman equation decay matrix.
-        Fast sparse matrix construction.
+        Build Bateman equation decay matrix for a chain of nuclides.
+        
+        Constructs a sparse matrix A where the system of ODEs dN/dt = A*N
+        describes the time evolution of nuclide concentrations. The matrix
+        includes decay-out terms (diagonal) and decay-in terms (off-diagonal
+        via branching ratios).
+        
+        Args:
+            nuclides: List of Nuclide instances in the decay chain. Order
+                matters for matrix indexing.
+        
+        Returns:
+            Sparse matrix in scipy.sparse.csr_matrix format. Shape is
+            (n_nuclides, n_nuclides). Diagonal elements are negative
+            (decay out), off-diagonal elements are positive (decay in).
+        
+        Example:
+            >>> decay = DecayData()
+            >>> chain = [Nuclide(Z=92, A=235), Nuclide(Z=92, A=236)]
+            >>> A = decay.build_decay_matrix(chain)
+            >>> # Solve dN/dt = A*N using scipy.integrate
+            >>> from scipy.sparse.linalg import expm_multiply
+            >>> N0 = np.array([1.0, 0.0])  # Initial concentrations
+            >>> N_t = expm_multiply(A, N0, t=[0, 1e6])  # Concentrations at t=1e6 s
         """
         from scipy.sparse import lil_matrix
 
@@ -564,13 +932,40 @@ class DecayData:
         return A.tocsr()  # Convert to CSR for fast matrix ops
 
     def _get_half_life(self, nuclide: Nuclide) -> float:
-        """Get half-life from data files."""
+        """
+        Get half-life from decay data files.
+        
+        Args:
+            nuclide: Nuclide instance.
+        
+        Returns:
+            Half-life in seconds. Returns a large value (effectively stable)
+            if data is unavailable.
+        
+        Note:
+            This is a placeholder implementation. A production version would
+            query ENDF decay data files (MF=8) or pre-computed decay tables.
+        """
         # Use cached data or pre-computed tables
         # Placeholder implementation
         return 1e10  # seconds
 
     def _get_daughters(self, parent: Nuclide) -> List[Tuple[Nuclide, float]]:
-        """Get decay daughters and branching ratios."""
+        """
+        Get decay daughters and their branching ratios.
+        
+        Args:
+            parent: Parent nuclide instance.
+        
+        Returns:
+            List of (daughter_nuclide, branching_ratio) tuples. Branching
+            ratios sum to 1.0 for all decay modes.
+        
+        Note:
+            This is a placeholder implementation. A production version would
+            query ENDF decay data files (MF=8) to get decay modes and
+            branching ratios for each decay channel.
+        """
         # Query decay data
         # Placeholder implementation
         return []

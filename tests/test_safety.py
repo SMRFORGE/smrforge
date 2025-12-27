@@ -538,5 +538,5 @@ class TestTransientSimulations:
 
             # Decay heat should decrease with time
             assert P_decay_long[0] > P_decay_long[-1]
-        except ImportError:
+    except ImportError:
             pytest.skip("Transients not available")

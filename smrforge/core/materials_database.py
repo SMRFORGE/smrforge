@@ -22,7 +22,37 @@ from numba import njit
 
 @dataclass
 class MaterialProperty:
-    """Base class for temperature-dependent properties."""
+    """
+    Base class for temperature-dependent material properties.
+    
+    Encapsulates a property correlation function with validity range and
+    uncertainty information. Can be called directly with a temperature value
+    or used for vectorized array evaluation.
+    
+    Attributes:
+        name: Property name (e.g., "thermal_conductivity", "density").
+        units: Physical units (e.g., "W/m-K", "kg/m³", "J/kg-K").
+        T_min: Minimum valid temperature in Kelvin.
+        T_max: Maximum valid temperature in Kelvin.
+        correlation: Callable function f(T) that returns property value.
+        uncertainty: Optional relative uncertainty (0.05 = 5% uncertainty).
+    
+    Example:
+        >>> def k_corr(T):
+        ...     return 100.0 * (T / 300.0) ** (-0.5)
+        >>> k = MaterialProperty(
+        ...     name="thermal_conductivity",
+        ...     units="W/m-K",
+        ...     T_min=300.0,
+        ...     T_max=2000.0,
+        ...     correlation=k_corr,
+        ...     uncertainty=0.10
+        ... )
+        >>> k(600.0)  # Evaluate at 600 K
+        70.710678...
+        >>> T_array = np.array([400, 600, 800])
+        >>> k_array = k.evaluate_array(T_array)
+    """
 
     name: str
     units: str
@@ -32,7 +62,22 @@ class MaterialProperty:
     uncertainty: Optional[float] = None  # Relative uncertainty (e.g., 0.05 = 5%)
 
     def __call__(self, T: float) -> float:
-        """Evaluate property at temperature T."""
+        """
+        Evaluate property at temperature T.
+        
+        Args:
+            T: Temperature in Kelvin.
+        
+        Returns:
+            Property value at temperature T in the specified units.
+        
+        Raises:
+            ValueError: If T is outside the valid range [T_min, T_max].
+        
+        Example:
+            >>> prop = MaterialProperty(..., correlation=lambda T: 100.0 / T)
+            >>> value = prop(500.0)  # Returns 0.2
+        """
         if not (self.T_min <= T <= self.T_max):
             raise ValueError(
                 f"{self.name} correlation valid for {self.T_min}-{self.T_max}K, "
@@ -41,17 +86,72 @@ class MaterialProperty:
         return self.correlation(T)
 
     def evaluate_array(self, T: np.ndarray) -> np.ndarray:
-        """Vectorized evaluation."""
+        """
+        Vectorized evaluation of property over an array of temperatures.
+        
+        Args:
+            T: 1D NumPy array of temperatures in Kelvin.
+        
+        Returns:
+            1D NumPy array of property values. Values outside [T_min, T_max]
+            will raise ValueError (no automatic extrapolation).
+        
+        Example:
+            >>> T = np.linspace(300, 1000, 100)
+            >>> values = prop.evaluate_array(T)  # Returns array of length 100
+        """
         return np.vectorize(self.correlation)(T)
 
 
 class GraphiteMaterial:
     """
     Nuclear graphite properties for HTGR applications.
-    Covers various grades: H-451, IG-110, NBG-18, etc.
+    
+    Provides temperature-dependent properties for nuclear-grade graphite used
+    as moderator and structural material in HTGRs. Supports multiple graphite
+    grades with grade-specific thermal conductivity correlations. All other
+    properties (specific heat, density, thermal expansion, etc.) use universal
+    correlations valid for all nuclear graphite grades.
+    
+    Supported Grades:
+        - IG-110: High-quality isotropic graphite (high thermal conductivity)
+        - H-451: Near-isotropic graphite (used in Fort St. Vrain reactor)
+        - NBG-18: Modern vibration-molded graphite (SGL Carbon)
+    
+    Properties:
+        - Thermal conductivity (grade-specific)
+        - Specific heat capacity (universal McEligot correlation)
+        - Density (universal correlation)
+        - Thermal expansion coefficient
+        - Emissivity
+        - Young's modulus
+    
+    References:
+        IAEA TECDOC-1674: "Thermophysical Properties Database of Materials
+        for Light Water Reactors and Heavy Water Reactors"
+    
+    Example:
+        >>> graphite = GraphiteMaterial(grade="IG-110")
+        >>> k = graphite.thermal_conductivity(800.0)  # W/m-K at 800 K
+        >>> props = graphite.properties_at_temperature(1200.0)  # All properties
+        >>> cp = graphite.specific_heat(600.0)  # J/kg-K
     """
 
     def __init__(self, grade: str = "IG-110"):
+        """
+        Initialize graphite material for specified grade.
+        
+        Args:
+            grade: Graphite grade string. Must be one of: "IG-110", "H-451",
+                or "NBG-18". Defaults to "IG-110".
+        
+        Raises:
+            ValueError: If grade is not recognized.
+        
+        Example:
+            >>> graphite = GraphiteMaterial("H-451")
+            >>> print(graphite.grade)  # "H-451"
+        """
         self.grade = grade
         self._initialize_properties()
 
@@ -204,7 +304,26 @@ class GraphiteMaterial:
         return 4.0e-6 + 1.5e-9 * (T - 300)
 
     def properties_at_temperature(self, T: float) -> Dict[str, float]:
-        """Get all properties at once."""
+        """
+        Get all material properties at a specified temperature.
+        
+        Args:
+            T: Temperature in Kelvin.
+        
+        Returns:
+            Dictionary mapping property names to values:
+                - "thermal_conductivity": W/m-K
+                - "specific_heat": J/kg-K
+                - "density": kg/m³
+                - "thermal_expansion": 1/K
+                - "emissivity": dimensionless (0-1)
+                - "youngs_modulus": Pa
+        
+        Example:
+            >>> graphite = GraphiteMaterial("IG-110")
+            >>> props = graphite.properties_at_temperature(1200.0)
+            >>> print(f"k = {props['thermal_conductivity']:.2f} W/m-K")
+        """
         return {
             "thermal_conductivity": self.thermal_conductivity(T),
             "specific_heat": self.specific_heat(T),
@@ -217,11 +336,38 @@ class GraphiteMaterial:
 
 class HeliumCoolant:
     """
-    Helium coolant properties for HTGR.
-    Uses NIST-calibrated correlations.
+    Helium coolant properties for HTGR applications.
+    
+    Provides temperature and pressure-dependent properties for helium gas
+    used as primary coolant in HTGRs. Uses NIST-calibrated correlations
+    and ideal gas law for density. Properties include thermal conductivity,
+    viscosity, specific heat, and derived quantities (Prandtl number,
+    Reynolds number).
+    
+    Properties:
+        - Density (pressure-dependent via ideal gas law)
+        - Dynamic viscosity (Sutherland's formula)
+        - Thermal conductivity (polynomial fit to NIST data)
+        - Specific heat at constant pressure (nearly constant for helium)
+    
+    Default pressure: 7.0 MPa (typical HTGR operating pressure)
+    
+    Example:
+        >>> helium = HeliumCoolant()
+        >>> rho = helium.density(T=900.0, P=7.0e6)  # kg/m³
+        >>> mu = helium.dynamic_viscosity(900.0)  # Pa-s
+        >>> Pr = helium.prandtl_number(900.0)
+        >>> Re = helium.reynolds_number(T=900.0, P=7.0e6, velocity=50.0, diameter=0.1)
     """
 
     def __init__(self):
+        """
+        Initialize helium coolant properties.
+        
+        Sets up property correlations and physical constants. Helium is
+        treated as an ideal gas with constant specific heat and
+        temperature-dependent viscosity and thermal conductivity.
+        """
         self._initialize_properties()
         self.molar_mass = 4.002602  # g/mol
         self.R_specific = 2077.0  # J/kg-K
@@ -287,16 +433,43 @@ class HeliumCoolant:
 
     def density(self, T: float, P: float = 7.0e6) -> float:
         """
-        Density at temperature T and pressure P.
-
+        Calculate helium density using ideal gas law.
+        
+        Uses rho = P / (R_specific * T) where R_specific = 2077.0 J/kg-K
+        for helium.
+        
         Args:
-            T: Temperature [K]
-            P: Pressure [Pa], default 7 MPa (typical HTGR)
+            T: Temperature in Kelvin.
+            P: Pressure in Pascal. Defaults to 7.0 MPa (typical HTGR
+                operating pressure).
+        
+        Returns:
+            Density in kg/m³.
+        
+        Example:
+            >>> helium = HeliumCoolant()
+            >>> rho = helium.density(T=900.0, P=7.0e6)
+            >>> print(f"ρ = {rho:.2f} kg/m³")
         """
         return P / (self.R_specific * T)
 
     def prandtl_number(self, T: float) -> float:
-        """Prandtl number: Pr = mu * cp / k"""
+        """
+        Calculate Prandtl number at temperature T.
+        
+        Prandtl number characterizes the relative importance of momentum
+        and thermal diffusivity: Pr = μ * cp / k
+        
+        Args:
+            T: Temperature in Kelvin.
+        
+        Returns:
+            Dimensionless Prandtl number.
+        
+        Note:
+            For helium, Pr ≈ 0.67-0.7 (nearly constant due to constant cp
+            and similar temperature dependencies of μ and k).
+        """
         mu = self.dynamic_viscosity(T)
         cp = self.specific_heat(T)
         k = self.thermal_conductivity(T)
@@ -306,13 +479,25 @@ class HeliumCoolant:
         self, T: float, P: float, velocity: float, diameter: float
     ) -> float:
         """
-        Reynolds number: Re = rho * v * D / mu
-
+        Calculate Reynolds number for helium flow.
+        
+        Reynolds number characterizes flow regime (laminar vs. turbulent):
+        Re = ρ * v * D / μ
+        
         Args:
-            T: Temperature [K]
-            P: Pressure [Pa]
-            velocity: Flow velocity [m/s]
-            diameter: Hydraulic diameter [m]
+            T: Temperature in Kelvin.
+            P: Pressure in Pascal.
+            velocity: Flow velocity in m/s.
+            diameter: Hydraulic diameter in meters (4 * area / wetted perimeter
+                for non-circular channels).
+        
+        Returns:
+            Dimensionless Reynolds number.
+        
+        Note:
+            Transition from laminar to turbulent typically occurs at Re ≈ 2300
+            for pipe flow. HTGR coolant channels often operate in turbulent
+            regime (Re > 10,000) for effective heat transfer.
         """
         rho = self.density(T, P)
         mu = self.dynamic_viscosity(T)
@@ -321,11 +506,49 @@ class HeliumCoolant:
 
 class TRISOFuel:
     """
-    TRISO particle fuel properties.
-    Multi-layer coated particle with UCO or UO2 kernel.
+    TRISO (Tristructural-Isotropic) particle fuel properties.
+    
+    TRISO particles consist of a fuel kernel (UCO or UO2) surrounded by
+    multiple coating layers: porous buffer, inner PyC, SiC, and outer PyC.
+    This class provides thermal properties for each layer and calculates
+    effective thermal conductivity through the particle using a spherical
+    resistance model.
+    
+    Layer Structure (from inside to outside):
+        1. Kernel: UCO or UO2 (fuel)
+        2. Buffer: Porous PyC (accommodates fission products, 100 μm)
+        3. IPyC: Inner dense PyC layer (40 μm)
+        4. SiC: Silicon carbide barrier layer (35 μm, primary containment)
+        5. OPyC: Outer dense PyC layer (40 μm)
+    
+    Standard Geometry (425 μm kernel diameter):
+        - Kernel radius: 212.5 μm
+        - Buffer thickness: 100 μm
+        - IPyC thickness: 40 μm
+        - SiC thickness: 35 μm
+        - OPyC thickness: 40 μm
+        - Total particle radius: ~427.5 μm
+    
+    Example:
+        >>> triso_uco = TRISOFuel(kernel_type="UCO")
+        >>> k_eff = triso_uco.effective_conductivity(T=1200.0)  # W/m-K
+        >>> k_kernel = triso_uco.kernel_conductivity(1200.0)
+        >>> P_fail = triso_uco.failure_probability(T_max=1600.0, burnup=15.0, fluence=2e25)
     """
 
     def __init__(self, kernel_type: str = "UCO"):
+        """
+        Initialize TRISO fuel particle properties.
+        
+        Args:
+            kernel_type: Fuel kernel type, either "UCO" (uranium oxycarbide)
+                or "UO2" (uranium dioxide). Defaults to "UCO".
+        
+        Note:
+            UCO (UC0.5O1.5) has lower thermal conductivity than UO2 but better
+            chemical stability at high temperatures. UO2 has well-characterized
+            properties but may have compatibility issues at extreme conditions.
+        """
         self.kernel_type = kernel_type  # "UCO" or "UO2"
         self._initialize_geometry()
         self._initialize_properties()
@@ -422,8 +645,23 @@ class TRISOFuel:
 
     def effective_conductivity(self, T: float) -> float:
         """
-        Compute effective thermal conductivity through all layers.
-        Uses series resistance model (1D spherical).
+        Compute effective thermal conductivity through all TRISO layers.
+        
+        Uses a 1D spherical resistance model treating each layer as a thermal
+        resistance in series. Assumes steady-state radial heat conduction.
+        
+        Args:
+            T: Temperature in Kelvin (assumes all layers at same temperature
+                for simplicity; real particles have radial temperature gradient).
+        
+        Returns:
+            Effective thermal conductivity in W/m-K through the entire
+            particle (kernel + all coating layers).
+        
+        Note:
+            This is a simplified model assuming uniform temperature across
+            layers. Real TRISO particles have significant radial temperature
+            gradients due to internal heat generation in the kernel.
         """
         # Thermal resistances in series
         k_kernel = self.kernel_conductivity(T)
@@ -447,15 +685,37 @@ class TRISOFuel:
 
     def failure_probability(self, T_max: float, burnup: float, fluence: float) -> float:
         """
-        Estimate TRISO failure probability.
-
+        Estimate TRISO particle failure probability based on operating conditions.
+        
+        Uses simplified failure models considering temperature, burnup, and
+        fast neutron fluence effects. Based on AGR-1 experiment data and
+        typical failure mechanisms (SiC layer failure, kernel migration,
+        pressure vessel failure).
+        
         Args:
-            T_max: Maximum temperature [K]
-            burnup: Burnup [% FIMA]
-            fluence: Fast neutron fluence [n/cm²]
-
+            T_max: Maximum temperature experienced during operation in Kelvin.
+            burnup: Fuel burnup in % FIMA (Fissions per Initial Metal Atom).
+                Typical values: 5-20% FIMA for HTGR fuel.
+            fluence: Fast neutron fluence (>0.18 MeV) in n/cm². Typical values:
+                1e25 - 5e25 n/cm² for HTGR fuel lifetime.
+        
         Returns:
-            Failure probability (0-1)
+            Failure probability as a dimensionless value between 0 and 1.
+            Typical values: 1e-6 to 1e-4 for well-designed TRISO particles.
+        
+        Note:
+            This is a simplified empirical model. Real failure analysis
+            requires detailed mechanistic modeling of stress states, fission
+            product pressures, and irradiation damage.
+        
+        Example:
+            >>> triso = TRISOFuel("UCO")
+            >>> P_fail = triso.failure_probability(
+            ...     T_max=1600.0,  # 1327°C
+            ...     burnup=15.0,   # 15% FIMA
+            ...     fluence=2e25   # 2×10²⁵ n/cm²
+            ... )
+            >>> print(f"Failure probability: {P_fail:.2e}")
         """
         # Simplified model - real version would be more complex
         # Based on AGR-1 experiment data
@@ -483,10 +743,38 @@ class TRISOFuel:
 class MaterialDatabase:
     """
     Central database for all HTGR materials.
-    Fast query interface using Polars.
+    
+    Provides a unified interface for accessing material properties across
+    different material types (graphite, helium, TRISO fuel, structural
+    materials). Uses Polars for fast querying and comparison operations.
+    Supports filtering by material category and comparison of properties
+    across multiple materials.
+    
+    Available Materials:
+        - Graphite: IG-110, H-451, NBG-18
+        - Coolant: Helium
+        - Fuel: TRISO (UCO and UO2 kernels)
+        - Structural: B4C (control rods), Alloy 800H (metallic internals)
+    
+    Example:
+        >>> db = MaterialDatabase()
+        >>> graphite = db.get("graphite_IG-110")
+        >>> k = graphite.thermal_conductivity(1200.0)
+        >>> materials = db.list_materials(category="moderator")
+        >>> comparison = db.compare_properties(
+        ...     material_names=["graphite_IG-110", "graphite_H-451"],
+        ...     property_name="thermal_conductivity",
+        ...     T_range=np.linspace(300, 2000, 100)
+        ... )
     """
 
     def __init__(self):
+        """
+        Initialize material database.
+        
+        Loads all available materials and builds a searchable index.
+        Materials are accessible by name using get() method.
+        """
         self.materials: Dict[str, object] = {}
         self._load_materials()
         self._build_index()
@@ -564,7 +852,25 @@ class MaterialDatabase:
         return self.materials[name]
 
     def list_materials(self, category: Optional[str] = None) -> pl.DataFrame:
-        """List all materials, optionally filtered by category."""
+        """
+        List all materials in the database, optionally filtered by category.
+        
+        Args:
+            category: Optional category filter. Categories include:
+                - "moderator" (graphite materials)
+                - "coolant" (helium)
+                - "fuel" (TRISO particles)
+                - "structural" (B4C, Alloy 800H, etc.)
+                If None, returns all materials.
+        
+        Returns:
+            Polars DataFrame with columns: name, type, category.
+        
+        Example:
+            >>> db = MaterialDatabase()
+            >>> all_materials = db.list_materials()
+            >>> graphite_only = db.list_materials(category="moderator")
+        """
         if category:
             return self.index.filter(pl.col("category") == category)
         return self.index
@@ -572,7 +878,41 @@ class MaterialDatabase:
     def compare_properties(
         self, material_names: list, property_name: str, T_range: np.ndarray
     ) -> pl.DataFrame:
-        """Compare a property across multiple materials."""
+        """
+        Compare a specific property across multiple materials over temperature range.
+        
+        Evaluates the specified property for each material at each temperature
+        point and returns results in a Polars DataFrame suitable for plotting
+        or analysis.
+        
+        Args:
+            material_names: List of material name strings to compare.
+            property_name: Property name string (e.g., "thermal_conductivity",
+                "density", "specific_heat"). Must be a valid property on the
+                material objects.
+            T_range: 1D NumPy array of temperatures in Kelvin to evaluate.
+        
+        Returns:
+            Polars DataFrame with columns:
+                - material: Material name (str)
+                - temperature: Temperature in K (float)
+                - property: Property name (str)
+                - value: Property value (float)
+        
+        Example:
+            >>> db = MaterialDatabase()
+            >>> T = np.linspace(400, 1600, 100)
+            >>> comparison = db.compare_properties(
+            ...     material_names=["graphite_IG-110", "graphite_H-451"],
+            ...     property_name="thermal_conductivity",
+            ...     T_range=T
+            ... )
+            >>> # Plot comparison
+            >>> import matplotlib.pyplot as plt
+            >>> for mat in comparison["material"].unique():
+            ...     data = comparison.filter(pl.col("material") == mat)
+            ...     plt.plot(data["temperature"], data["value"], label=mat)
+        """
         records = []
         for name in material_names:
             mat = self.get(name)

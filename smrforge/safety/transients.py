@@ -21,7 +21,24 @@ from scipy.optimize import fsolve
 
 
 class TransientType(Enum):
-    """Types of transient scenarios."""
+    """
+    Types of transient scenarios for HTGR safety analysis.
+    
+    Enum values identify different accident scenarios and operational transients
+    that may occur in HTGRs. Each transient type requires different modeling
+    approaches and has different safety implications.
+    
+    Attributes:
+        LOFC: Loss of Forced Cooling - design basis accident, loss of primary
+            coolant circulation.
+        ATWS: Anticipated Transient Without Scram - failure to scram during
+            a transient event.
+        RIA: Reactivity Insertion Accident - uncontrolled reactivity addition.
+        LOCA: Loss of Coolant Accident - breach in primary pressure boundary.
+        AIR_INGRESS: Air ingress accident - air enters the primary circuit.
+        WATER_INGRESS: Water ingress accident - water enters the primary circuit.
+        LOAD_FOLLOWING: Normal operational transient for load following.
+    """
 
     LOFC = "loss_of_forced_cooling"
     ATWS = "anticipated_transient_without_scram"
@@ -34,7 +51,40 @@ class TransientType(Enum):
 
 @dataclass
 class TransientConditions:
-    """Initial and boundary conditions for transient."""
+    """
+    Initial and boundary conditions for transient simulation.
+    
+    Encapsulates all conditions needed to define and run a transient scenario,
+    including initial reactor state, transient trigger, time span, safety
+    system availability, and environmental conditions.
+    
+    Attributes:
+        initial_power: Initial reactor thermal power in Watts.
+        initial_temperature: Initial average core temperature in Kelvin.
+        initial_flow_rate: Initial primary coolant flow rate in kg/s.
+        initial_pressure: Initial primary system pressure in Pascal.
+        transient_type: Type of transient (TransientType enum).
+        trigger_time: Time at which transient is initiated in seconds.
+        t_start: Simulation start time in seconds (default: 0.0).
+        t_end: Simulation end time in seconds (default: 259200 = 72 hours).
+        scram_available: Whether control rod scram is available (default: True).
+        scram_delay: Time delay for scram insertion in seconds (default: 1.0).
+        emergency_cooling: Whether emergency cooling systems are active (default: False).
+        ambient_temperature: Ambient temperature for heat transfer in Kelvin (default: 300.0).
+        atmospheric_pressure: Atmospheric pressure in Pascal (default: 101325.0).
+    
+    Example:
+        >>> conditions = TransientConditions(
+        ...     initial_power=10e6,  # 10 MWth
+        ...     initial_temperature=1200.0,  # 927°C
+        ...     initial_flow_rate=5.0,  # kg/s
+        ...     initial_pressure=7.0e6,  # 7 MPa
+        ...     transient_type=TransientType.LOFC,
+        ...     trigger_time=0.0,
+        ...     scram_available=True,
+        ...     scram_delay=1.0
+        ... )
+    """
 
     initial_power: float  # W
     initial_temperature: float  # K (average core)
@@ -61,7 +111,43 @@ class TransientConditions:
 
 @dataclass
 class PointKineticsParameters:
-    """Point kinetics parameters for transient analysis."""
+    """
+    Point kinetics parameters for transient analysis.
+    
+    Contains all physical parameters needed for point kinetics equations
+    with temperature feedback. Used by PointKineticsSolver for transient
+    simulations.
+    
+    Attributes:
+        beta: 1D array of delayed neutron fractions for each precursor group.
+            Typically 6 groups for thermal reactors. Units: dimensionless.
+        lambda_d: 1D array of precursor decay constants for each group.
+            Units: 1/s. Must have same length as beta.
+        alpha_fuel: Fuel temperature reactivity coefficient. Units: dk/k/K
+            (change in reactivity per degree Kelvin).
+        alpha_moderator: Moderator temperature reactivity coefficient.
+            Units: dk/k/K.
+        Lambda: Prompt neutron lifetime in seconds. Typical values:
+            - Thermal reactors: ~10^-4 to 10^-3 s
+            - Fast reactors: ~10^-7 to 10^-6 s
+        fuel_heat_capacity: Effective fuel heat capacity in J/K. Used for
+            fuel temperature calculation.
+        moderator_heat_capacity: Effective moderator heat capacity in J/K.
+    
+    Example:
+        >>> # Typical HTGR delayed neutron parameters (6-group)
+        >>> beta = np.array([0.00021, 0.00141, 0.00127, 0.00255, 0.00074, 0.00027])
+        >>> lambda_d = np.array([0.0127, 0.0317, 0.115, 0.311, 1.40, 3.87])
+        >>> params = PointKineticsParameters(
+        ...     beta=beta,
+        ...     lambda_d=lambda_d,
+        ...     alpha_fuel=-5e-5,  # Negative = stable
+        ...     alpha_moderator=-2e-5,
+        ...     Lambda=1e-3,  # 1 ms
+        ...     fuel_heat_capacity=1e6,  # J/K
+        ...     moderator_heat_capacity=5e6  # J/K
+        ... )
+    """
 
     # Delayed neutron data (6 groups)
     beta: np.ndarray  # Delayed neutron fractions
@@ -80,17 +166,58 @@ class PointKineticsParameters:
 
     @property
     def beta_total(self) -> float:
-        """Total delayed neutron fraction."""
+        """
+        Total delayed neutron fraction.
+        
+        Returns:
+            Sum of all delayed neutron fractions (dimensionless).
+            Typical values: 0.006-0.007 for thermal reactors.
+        """
         return np.sum(self.beta)
 
 
 class PointKineticsSolver:
     """
     Fast point kinetics solver with temperature feedback.
-    Suitable for HTGR transient analysis.
+    
+    Solves the point kinetics equations coupled with fuel and moderator
+    temperature evolution. Suitable for HTGR transient analysis including
+    LOFC, ATWS, and other design basis accidents. Uses scipy's BDF method
+    for robust solution of the stiff ODE system.
+    
+    The solver integrates:
+        - Point kinetics equations (power and delayed neutron precursors)
+        - Fuel temperature evolution (energy balance)
+        - Moderator temperature evolution (energy balance)
+        - Temperature feedback reactivity (fuel + moderator coefficients)
+    
+    Attributes:
+        params: PointKineticsParameters instance containing physical constants.
+        n_groups: Number of delayed neutron precursor groups.
+    
+    Example:
+        >>> params = PointKineticsParameters(...)
+        >>> solver = PointKineticsSolver(params)
+        >>> def rho_ext(t):
+        ...     return -0.05 if t > 10.0 else 0.0  # Scram at t=10s
+        >>> def Q_removal(t, T_fuel, T_mod):
+        ...     return 0.9 * initial_power if t < 10.0 else 0.0
+        >>> result = solver.solve_transient(
+        ...     rho_external=rho_ext,
+        ...     power_removal=Q_removal,
+        ...     initial_state={'power': 10e6, 'T_fuel': 1200.0, 'T_mod': 900.0},
+        ...     t_span=(0.0, 3600.0)
+        ... )
     """
 
     def __init__(self, params: PointKineticsParameters):
+        """
+        Initialize point kinetics solver.
+        
+        Args:
+            params: PointKineticsParameters instance with delayed neutron
+                data, reactivity coefficients, and heat capacities.
+        """
         self.params = params
         self.n_groups = len(params.beta)
 
@@ -103,17 +230,37 @@ class PointKineticsSolver:
         max_step: float = 0.1,
     ) -> Dict:
         """
-        Solve point kinetics with feedback.
-
+        Solve point kinetics equations with temperature feedback.
+        
+        Integrates the coupled system of ODEs for power, delayed neutron
+        precursors, fuel temperature, and moderator temperature. Includes
+        temperature feedback reactivity and external reactivity insertion.
+        
         Args:
-            rho_external: External reactivity function rho(t)
-            power_removal: Heat removal Q(t, T_fuel, T_mod)
-            initial_state: {'power', 'T_fuel', 'T_mod', 'C_i'}
-            t_span: (t_start, t_end)
-            max_step: Maximum time step [s]
-
+            rho_external: Callable function rho(t) returning external reactivity
+                in dk/k units. Can model scram, control rod insertion, etc.
+            power_removal: Callable function Q(t, T_fuel, T_mod) returning heat
+                removal rate in Watts. Models forced cooling, natural convection, etc.
+            initial_state: Dictionary with keys:
+                - "power": Initial power in Watts.
+                - "T_fuel": Initial fuel temperature in Kelvin.
+                - "T_mod": Initial moderator temperature in Kelvin.
+                - "C_i": Optional 1D array of initial precursor concentrations.
+                    If not provided, calculated from steady-state assumption.
+            t_span: Tuple (t_start, t_end) in seconds.
+            max_step: Maximum time step for ODE solver in seconds (default: 0.1).
+        
         Returns:
-            Dict with time history of power, temperatures, reactivity
+            Dictionary with keys:
+                - "t": 1D array of time points in seconds.
+                - "power": 1D array of power values in Watts.
+                - "T_fuel": 1D array of fuel temperatures in Kelvin.
+                - "T_moderator": 1D array of moderator temperatures in Kelvin.
+                - "rho_external": 1D array of external reactivity values.
+        
+        Note:
+            Uses scipy.integrate.solve_ivp with BDF method for stiff systems.
+            Solver tolerances: rtol=1e-6, atol=1e-8.
         """
         # Initial state vector
         P0 = initial_state["power"]
@@ -197,10 +344,56 @@ class PointKineticsSolver:
 class LOFCTransient:
     """
     Loss of Forced Cooling (LOFC) transient analysis.
-    Critical design basis accident for HTGRs.
+    
+    Implements analysis for the Loss of Forced Cooling accident, which is a
+    critical design basis accident for HTGRs. In LOFC, the primary coolant
+    circulation is lost (e.g., pump failure, power loss), but the reactor
+    remains pressurized and can rely on passive heat removal mechanisms.
+    
+    Sequence of Events:
+        1. Normal operation
+        2. Loss of forced cooling (t=0)
+        3. Reactor scram (if available, after scram_delay)
+        4. Decay heat removal via passive cooling (natural convection, radiation)
+        5. Temperature peak (typically 30 minutes to several hours)
+        6. Long-term cooldown
+    
+    HTGRs are inherently safe during LOFC due to:
+        - Negative temperature reactivity coefficients
+        - High thermal inertia
+        - Passive heat removal capability
+    
+    Attributes:
+        spec: Reactor specification object.
+        geometry: Core geometry object.
+        console: Rich console for progress output.
+    
+    Example:
+        >>> from smrforge.presets.htgr import get_htgr_spec
+        >>> spec = get_htgr_spec("micro-htgr-1")
+        >>> geometry = ...  # Core geometry
+        >>> lofc = LOFCTransient(spec, geometry)
+        >>> conditions = TransientConditions(
+        ...     initial_power=1e6,  # 1 MWth
+        ...     initial_temperature=1200.0,
+        ...     initial_flow_rate=1.0,
+        ...     initial_pressure=7.0e6,
+        ...     transient_type=TransientType.LOFC,
+        ...     trigger_time=0.0,
+        ...     scram_available=True
+        ... )
+        >>> result = lofc.simulate(conditions)
     """
 
     def __init__(self, reactor_spec, core_geometry):
+        """
+        Initialize LOFC transient analyzer.
+        
+        Args:
+            reactor_spec: Reactor specification object containing power,
+                geometry parameters, and material properties.
+            core_geometry: Core geometry object for spatial calculations.
+        """
         self.spec = reactor_spec
         self.geometry = core_geometry
         self.console = Console()

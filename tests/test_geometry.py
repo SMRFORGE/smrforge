@@ -13,9 +13,9 @@ class TestGeometryImports:
 
     def test_geometry_module_import(self):
         """Test that geometry module can be imported."""
-        from smrforge import geometry
+    from smrforge import geometry
 
-        assert geometry is not None
+    assert geometry is not None
 
     def test_prismatic_core_import(self):
         """Test that PrismaticCore can be imported."""
@@ -696,5 +696,5 @@ class TestPebbleBedCoreMethods:
             assert data["type"] == "PebbleBedCore"
             assert "n_pebbles" in data
             assert "packing_fraction" in data
-        except ImportError:
+    except ImportError:
             pytest.skip("GeometryExporter not available")
