@@ -422,15 +422,35 @@ class NuclearDataCache:
         """
         Save cross-section data to both Zarr cache and in-memory cache.
         
+        Stores cross-section data in two locations for optimal performance:
+        1. Persistent Zarr storage for long-term caching across sessions
+        2. In-memory dictionary for fast access during the current session
+        
+        The Zarr storage uses chunked arrays (1024 elements per chunk) for
+        efficient I/O operations. Data is automatically compressed by Zarr.
+        
         Args:
-            key: Cache key string identifying the data.
-            energy: 1D array of neutron energies in eV.
-            xs: 1D array of cross sections in barns (must match energy length).
+            key: Cache key string identifying the data. Format is typically:
+                ``{library}/{nuclide}/{reaction}/{temperature}K``
+                Example: ``"endfb8.0/U235/fission/900.0K"``
+            energy: 1D array of neutron energies in eV. Must be finite and
+                sorted (typically ascending order).
+            xs: 1D array of cross sections in barns. Must match energy length
+                and be finite. Negative values are allowed but may be clamped
+                to zero in some contexts.
         
         Note:
-            Data is stored with zstd compression and 1024-element chunks
-            for optimal performance. The key is also added to the in-memory
-            cache for faster subsequent access.
+            If a cache entry with the same key already exists, it will be
+            overwritten. The in-memory cache is updated immediately, while
+            Zarr storage is written synchronously.
+        
+        Example:
+            >>> cache = NuclearDataCache()
+            >>> energy = np.logspace(4, 7, 1000)  # 10 keV to 10 MeV
+            >>> xs = np.ones_like(energy) * 10.0  # Constant 10 barns
+            >>> key = "endfb8.0/U235/fission/900.0K"
+            >>> cache._save_to_cache(key, energy, xs)
+            >>> # Data is now cached and can be retrieved via get_cross_section
         """
         group = self.root.create_group(key, overwrite=True)
         # Use create_array with data parameter (shape is inferred from data)
@@ -705,26 +725,48 @@ class NuclearDataCache:
         comprehensive parsing is available via the SMRForge ENDF parser
         (endf_parser.py) or SANDY.
         
+        The parser reads ENDF-6 format files directly, looking for MF=3 (cross-section)
+        sections with the appropriate MT number for the requested reaction. It handles
+        control records and data formatting automatically.
+        
         Args:
-            endf_file: Path to ENDF-6 format file.
+            endf_file: Path to ENDF-6 format file. Must be a valid ENDF-6 file
+                containing the requested reaction data.
             reaction: Reaction name (e.g., "fission", "capture", "elastic", "total").
+                Case-insensitive. See Supported Reactions below.
             nuclide: Nuclide instance (currently unused but kept for API consistency).
+                May be used in future versions for validation or logging.
         
         Returns:
             Tuple of (energy, cross_section) arrays, or (None, None) if parsing fails.
-            Energy is in eV, cross sections are in barns.
+            Energy is in eV, cross sections are in barns. Both arrays have the same
+            length and are sorted by energy (ascending).
+        
+        Raises:
+            FileNotFoundError: If endf_file does not exist.
+            ValueError: If the ENDF file format is invalid or the reaction is not found.
         
         Note:
             The SMRForge ENDF parser (endf_parser.py) is preferred over this method.
             This is kept as a last-resort fallback when other parsers are unavailable.
+            For production use, install endf-parserpy or use the built-in ENDF parser.
         
         Supported Reactions:
-            - "total" (MT=1)
-            - "elastic" (MT=2)
-            - "fission" (MT=18)
-            - "capture" or "n,gamma" (MT=102)
-            - "n,2n" (MT=16)
-            - "n,alpha" (MT=107)
+            - "total" (MT=1) - Total cross section
+            - "elastic" (MT=2) - Elastic scattering
+            - "fission" (MT=18) - Fission
+            - "capture" or "n,gamma" (MT=102) - Radiative capture
+            - "n,2n" (MT=16) - (n,2n) reaction
+            - "n,alpha" (MT=107) - (n,alpha) reaction
+        
+        Example:
+            >>> cache = NuclearDataCache()
+            >>> u235 = Nuclide(Z=92, A=235, m=0)
+            >>> endf_file = Path("path/to/U235.endf")
+            >>> energy, xs = cache._simple_endf_parse(endf_file, "fission", u235)
+            >>> if energy is not None:
+            ...     print(f"Found {len(energy)} data points")
+            ...     print(f"Energy range: {energy.min():.2e} - {energy.max():.2e} eV")
         """
         reaction_mt = self._reaction_to_mt(reaction)
 
@@ -887,13 +929,40 @@ class NuclearDataCache:
         Extract energy and cross-section arrays from endf-parserpy MF3 section data.
         
         This method handles the various ways endf-parserpy might structure MF3 data.
-        MF3 sections contain tabulated (energy, cross-section) pairs.
+        MF3 sections contain tabulated (energy, cross-section) pairs. The method
+        tries multiple patterns to extract the data, making it robust to different
+        versions and configurations of endf-parserpy.
+        
+        Supported data patterns:
+            1. Dictionary with 'E' and 'XS' keys (similar to SANDY format)
+            2. Dictionary with 'energy' and 'cross_section' keys
+            3. Dictionary with 'data' field containing pairs or interleaved values
+            4. Dictionary with energy/cross-section-like keys (pattern matching)
+            5. List/tuple/array of pairs: [(E1, XS1), (E2, XS2), ...]
+            6. Flat array: [E1, XS1, E2, XS2, ...]
         
         Args:
             mf3_mt_data: The parsed MF3/MT data structure from endf-parserpy.
+                Can be a dictionary, list, tuple, or numpy array in various formats.
         
         Returns:
-            Tuple of (energy, cross_section) arrays, or (None, None) if extraction fails.
+            Tuple of (energy, cross_section) arrays, or (None, None) if extraction
+            fails. Both arrays are numpy arrays with matching lengths.
+        
+        Example:
+            >>> # Pattern 1: E/XS keys
+            >>> data = {'E': [1e5, 1e6, 1e7], 'XS': [10.0, 12.0, 15.0]}
+            >>> energy, xs = NuclearDataCache._extract_mf3_data(data)
+            >>> len(energy)
+            3
+            
+            >>> # Pattern 2: energy/cross_section keys
+            >>> data = {'energy': np.array([1e4, 1e5]), 'cross_section': np.array([8.0, 9.0])}
+            >>> energy, xs = NuclearDataCache._extract_mf3_data(data)
+            
+            >>> # Pattern 3: data field with pairs
+            >>> data = {'data': [(1e5, 10.0), (1e6, 12.0)]}
+            >>> energy, xs = NuclearDataCache._extract_mf3_data(data)
         """
         try:
             # Try common structure patterns for MF3 data
@@ -1080,17 +1149,34 @@ class NuclearDataCache:
         """
         Convert reaction name string to ENDF MT (reaction type) number.
         
+        Maps human-readable reaction names to ENDF-6 Material Type (MT) numbers
+        used in nuclear data files. The mapping is case-insensitive and handles
+        common reaction name variations.
+        
         Args:
             reaction: Reaction name (case-insensitive). Supported reactions:
-                - "total" -> MT=1
-                - "elastic" -> MT=2
-                - "fission" -> MT=18
-                - "capture" or "n,gamma" -> MT=102
-                - "n,2n" -> MT=16
-                - "n,alpha" -> MT=107
+                - "total" -> MT=1 (total cross section)
+                - "elastic" -> MT=2 (elastic scattering)
+                - "fission" -> MT=18 (fission)
+                - "capture" or "n,gamma" -> MT=102 (radiative capture)
+                - "n,2n" -> MT=16 (n,2n reaction)
+                - "n,alpha" -> MT=107 (n,alpha reaction)
         
         Returns:
-            MT number (integer). Returns 1 (total) for unknown reactions.
+            MT number (integer). Returns 1 (total) for unknown reactions as a
+            safe default.
+        
+        Example:
+            >>> NuclearDataCache._reaction_to_mt("fission")
+            18
+            >>> NuclearDataCache._reaction_to_mt("FISSION")  # Case-insensitive
+            18
+            >>> NuclearDataCache._reaction_to_mt("capture")
+            102
+            >>> NuclearDataCache._reaction_to_mt("n,gamma")  # Alternative name
+            102
+            >>> NuclearDataCache._reaction_to_mt("unknown")  # Unknown reaction
+            1
         """
         MT_MAP = {
             "total": 1,
@@ -1109,18 +1195,30 @@ class NuclearDataCache:
         
         Checks if the ENDF file for the specified nuclide and library exists
         in the cache directory. If not, downloads it from IAEA Nuclear Data
-        Services and saves it locally.
+        Services and saves it locally. This is a blocking operation that
+        will wait for the download to complete.
         
         Args:
-            nuclide: Nuclide instance.
-            library: Nuclear data library enum.
+            nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
+            library: Nuclear data library enum (e.g., Library.ENDF_B_VIII).
         
         Returns:
             Path to the ENDF file (either existing or newly downloaded).
+            The file is stored in: ``{cache_dir}/endf/{library}/{nuclide.name}.endf``
         
         Raises:
             requests.RequestException: If download fails (network error, HTTP error, etc.).
-            IOError: If file cannot be written to cache directory.
+                Common cases include 404 (file not found) or network timeouts.
+            IOError: If file cannot be written to cache directory (permissions, disk full, etc.).
+        
+        Example:
+            >>> cache = NuclearDataCache()
+            >>> u235 = Nuclide(Z=92, A=235, m=0)
+            >>> endf_path = cache._ensure_endf_file(u235, Library.ENDF_B_VIII)
+            >>> assert endf_path.exists()
+            >>> # Subsequent calls return cached file immediately
+            >>> endf_path2 = cache._ensure_endf_file(u235, Library.ENDF_B_VIII)
+            >>> assert endf_path == endf_path2
         """
         endf_dir = self.cache_dir / "endf" / library.value
         endf_dir.mkdir(parents=True, exist_ok=True)
@@ -1144,21 +1242,46 @@ class NuclearDataCache:
         Download ENDF file if not present in cache (async version).
         
         Async version that supports parallel downloads. If client is provided,
-        uses it; otherwise creates a temporary client.
+        uses it; otherwise creates a temporary client that is automatically
+        closed after use. This allows multiple downloads to proceed concurrently
+        without blocking.
         
         Args:
-            nuclide: Nuclide instance.
-            library: Nuclear data library enum.
+            nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
+            library: Nuclear data library enum (e.g., Library.ENDF_B_VIII).
             client: Optional httpx.AsyncClient for making requests. If None,
-                creates a temporary client.
+                creates a temporary client that is closed after the download.
+                Providing a client allows reuse across multiple downloads for
+                better performance.
         
         Returns:
             Path to the ENDF file (either existing or newly downloaded).
+            The file is stored in: ``{cache_dir}/endf/{library}/{nuclide.name}.endf``
         
         Raises:
             httpx.HTTPError: If download fails (network error, HTTP error, etc.).
-            IOError: If file cannot be written to cache directory.
-            RuntimeError: If httpx is not available.
+                Common cases include 404 (file not found) or network timeouts.
+            IOError: If file cannot be written to cache directory (permissions, disk full, etc.).
+            RuntimeError: If httpx is not available (HTTPX_AVAILABLE is False).
+        
+        Example:
+            >>> import asyncio
+            >>> cache = NuclearDataCache()
+            >>> u235 = Nuclide(Z=92, A=235, m=0)
+            >>> # Single download
+            >>> endf_path = asyncio.run(
+            ...     cache._ensure_endf_file_async(u235, Library.ENDF_B_VIII)
+            ... )
+            >>> 
+            >>> # Parallel downloads with shared client
+            >>> async def download_multiple():
+            ...     async with httpx.AsyncClient() as client:
+            ...         u235_path = await cache._ensure_endf_file_async(u235, Library.ENDF_B_VIII, client)
+            ...         u238_path = await cache._ensure_endf_file_async(
+            ...             Nuclide(Z=92, A=238), Library.ENDF_B_VIII, client
+            ...         )
+            ...     return u235_path, u238_path
+            >>> paths = asyncio.run(download_multiple())
         """
         if not HTTPX_AVAILABLE:
             raise RuntimeError("httpx is required for async file downloads. Install with: pip install httpx")
@@ -1192,17 +1315,37 @@ class NuclearDataCache:
         """
         Construct download URL for ENDF file from IAEA Nuclear Data Services.
         
+        Generates the URL for downloading ENDF-6 format nuclear data files
+        from the IAEA Nuclear Data Services (NDS) website. The URL follows
+        a standard pattern based on the library version and nuclide name.
+        
         Args:
             nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
+                The nuclide's name property is used in the URL.
             library: Nuclear data library enum (e.g., Library.ENDF_B_VIII).
+                The library's value string is used in the URL path.
         
         Returns:
-            URL string pointing to the ENDF file download endpoint.
+            URL string pointing to the ENDF file download endpoint on the
+            IAEA NDS website. Format: ``https://www-nds.iaea.org/public/download-endf/{library}/{nuclide}.endf``
         
         Note:
             This is a simplified implementation. A production version would
             need proper URL construction following IAEA NDS conventions,
             including proper library versioning and nuclide naming schemes.
+            The actual IAEA NDS may require different URL patterns or authentication.
+        
+        Example:
+            >>> from smrforge.core.reactor_core import Nuclide, Library
+            >>> u235 = Nuclide(Z=92, A=235, m=0)
+            >>> url = NuclearDataCache._get_endf_url(u235, Library.ENDF_B_VIII)
+            >>> print(url)
+            https://www-nds.iaea.org/public/download-endf/endfb8.0/U235.endf
+            
+            >>> pu239 = Nuclide(Z=94, A=239, m=0)
+            >>> url = NuclearDataCache._get_endf_url(pu239, Library.JEFF_33)
+            >>> "jeff3.3" in url and "Pu239" in url
+            True
         """
         # IAEA Nuclear Data Services
         base_url = "https://www-nds.iaea.org/public/download-endf"
@@ -1484,21 +1627,43 @@ class CrossSectionTable:
         Collapses continuous-energy cross sections to a multi-group structure
         using flux-weighted averaging within each energy group. Uses Numba
         parallel execution for orders of magnitude better performance than PyNE.
+        The collapse uses trapezoidal rule integration for accurate flux-weighted
+        averaging within each group.
         
         Args:
-            energy: 1D array of continuous-energy points in eV (must be sorted).
+            energy: 1D array of continuous-energy points in eV (must be sorted
+                in ascending order). Typically covers the full energy range of
+                interest (e.g., 1e-5 eV to 20 MeV).
             xs: 1D array of cross sections in barns at corresponding energies.
+                Must have same length as energy.
             group_bounds: 1D array of energy group boundaries in eV, in descending
                 order (highest to lowest). Number of groups = len(group_bounds) - 1.
+                Example: [2e7, 1e6, 1e5, 1e4] creates 3 groups:
+                - Group 0: 1e6 - 2e7 eV
+                - Group 1: 1e5 - 1e6 eV
+                - Group 2: 1e4 - 1e5 eV
             weighting_flux: Optional 1D array of flux values for flux-weighting.
-                Must have same length as energy. If None, uses 1/E weighting.
+                Must have same length as energy. If None, uses 1/E weighting
+                (standard for thermal reactor applications).
         
         Returns:
             1D array of multi-group cross sections in barns (one value per group).
+            Length equals len(group_bounds) - 1. Values are flux-weighted averages
+            computed using trapezoidal rule integration.
         
         Note:
             The group bounds should be in descending order (high to low energy),
-            which is the standard convention for neutron transport codes.
+            which is the standard convention for neutron transport codes. The
+            energy array should be in ascending order for proper interpolation.
+        
+        Example:
+            >>> energy = np.logspace(4, 7, 1000)  # 10 keV to 10 MeV
+            >>> xs = np.ones_like(energy) * 10.0  # Constant 10 barns
+            >>> group_bounds = np.array([1e7, 1e6, 1e5])  # 2 groups
+            >>> mg_xs = CrossSectionTable._collapse_to_multigroup(energy, xs, group_bounds)
+            >>> len(mg_xs)
+            2
+            >>> # Values should be close to 10.0 (with slight variation due to weighting)
         """
         n_groups = len(group_bounds) - 1
         mg_xs = np.zeros(n_groups)
@@ -1549,32 +1714,42 @@ class CrossSectionTable:
 
     def pivot_for_solver(self, nuclides: List[str], reactions: List[str]) -> np.ndarray:
         """
-        Pivot multi-group cross-section table into 3D array for solver input.
+        Pivot multi-group cross-section table into 2D array for solver input.
         
         Converts the Polars DataFrame format into a NumPy array optimized
-        for neutron transport solver consumption. The array shape follows
-        the standard (nuclide, reaction, group) ordering.
+        for neutron transport solver consumption. The array is structured
+        with rows representing (nuclide, group) combinations and columns
+        representing reactions.
         
         Args:
             nuclides: List of nuclide name strings to include (must match
-                nuclide names in the table).
+                nuclide names in the table). Order determines row ordering.
             reactions: List of reaction name strings to include (must match
-                reaction names in the table).
+                reaction names in the table). Order determines column ordering.
         
         Returns:
-            3D NumPy array with shape (n_nuclides, n_reactions, n_groups)
-            containing cross-section values in barns. Ordering follows
-            the input nuclide and reaction lists.
+            2D NumPy array with shape (n_nuclides * n_groups, n_reactions)
+            containing cross-section values in barns. Each row corresponds
+            to a (nuclide, group) combination, and each column corresponds
+            to a reaction type.
+        
+        Raises:
+            AttributeError: If `self.data` is None.
+            pl.exceptions.ColumnNotFoundError: If a requested reaction is not
+                found in the pivoted table.
         
         Example:
             >>> table = CrossSectionTable()
-            >>> # ... populate table ...
+            >>> # ... populate table with generate_multigroup ...
             >>> # Pivot for solver
             >>> xs_matrix = table.pivot_for_solver(
             ...     nuclides=["U235", "U238"],
-            ...     reactions=["fission", "capture", "absorption"]
+            ...     reactions=["fission", "capture"]
             ... )
-            >>> print(xs_matrix.shape)  # (2, 3, n_groups)
+            >>> # Shape: (n_nuclides * n_groups, n_reactions)
+            >>> # For 2 nuclides and 3 groups: (6, 2)
+            >>> print(xs_matrix.shape)
+            (6, 2)
         """
         # Use lazy evaluation for filtering (optimized), then pivot eagerly
         # Note: pivot doesn't support lazy evaluation in Polars, so we filter
@@ -1628,18 +1803,36 @@ class DecayData:
         """
         Get decay constant for a nuclide.
         
+        Computes the decay constant (λ) from the half-life using the relationship
+        λ = ln(2) / T_1/2. The result is cached using LRU cache for performance.
+        Currently uses placeholder data (returns constant for all nuclides).
+        
         Args:
-            nuclide: Nuclide instance.
+            nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
+                The nuclide is used as a cache key, so different nuclides
+                will have separate cache entries.
         
         Returns:
             Decay constant in units of 1/s. Returns 0.0 for stable nuclides
-            or if half-life data is unavailable.
+            or if half-life data is unavailable. Currently returns a constant
+            value based on placeholder half-life data (1e10 seconds).
+        
+        Note:
+            This is a placeholder implementation. A production version would
+            query ENDF decay data files (MF=8) or pre-computed decay tables
+            to get actual half-lives for each nuclide.
         
         Example:
             >>> decay = DecayData()
             >>> u235 = Nuclide(Z=92, A=235)
             >>> lambda_decay = decay.get_decay_constant(u235)
-            >>> print(f"Half-life: {np.log(2) / lambda_decay / (365.25*24*3600):.2e} years")
+            >>> # Convert to half-life in years
+            >>> half_life_years = np.log(2) / lambda_decay / (365.25 * 24 * 3600)
+            >>> print(f"Half-life: {half_life_years:.2e} years")
+            
+            >>> # Cached on subsequent calls
+            >>> lambda_decay2 = decay.get_decay_constant(u235)
+            >>> assert lambda_decay == lambda_decay2  # Same value (cached)
         """
         half_life = self._get_half_life(nuclide)  # seconds
         return np.log(2) / half_life if half_life > 0 else 0.0
@@ -1653,19 +1846,39 @@ class DecayData:
         includes decay-out terms (diagonal) and decay-in terms (off-diagonal
         via branching ratios).
         
+        The matrix structure follows the Bateman equations:
+        - Diagonal elements (A[i,i]): -λ_i (decay out of nuclide i)
+        - Off-diagonal elements (A[j,i]): λ_i * b_ji (decay in to nuclide j
+          from parent nuclide i, where b_ji is the branching ratio)
+        
         Args:
             nuclides: List of Nuclide instances in the decay chain. Order
-                matters for matrix indexing.
+                matters for matrix indexing - nuclide at index i corresponds
+                to row/column i in the matrix. Should represent a connected
+                decay chain (parent-daughter relationships).
         
         Returns:
             Sparse matrix in scipy.sparse.csr_matrix format. Shape is
             (n_nuclides, n_nuclides). Diagonal elements are negative
             (decay out), off-diagonal elements are positive (decay in).
+            The matrix is in CSR (Compressed Sparse Row) format for efficient
+            matrix-vector operations.
+        
+        Note:
+            Currently uses placeholder decay data (constant half-lives, no
+            branching ratios). A production version would query ENDF decay
+            data files (MF=8) to get actual decay constants and branching ratios.
         
         Example:
             >>> decay = DecayData()
             >>> chain = [Nuclide(Z=92, A=235), Nuclide(Z=92, A=236)]
             >>> A = decay.build_decay_matrix(chain)
+            >>> print(A.shape)
+            (2, 2)
+            >>> # Diagonal should be negative (decay out)
+            >>> assert A[0, 0] < 0
+            >>> assert A[1, 1] < 0
+            >>> 
             >>> # Solve dN/dt = A*N using scipy.integrate
             >>> from scipy.sparse.linalg import expm_multiply
             >>> N0 = np.array([1.0, 0.0])  # Initial concentrations
