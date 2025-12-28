@@ -745,24 +745,61 @@ class NuclearDataCache:
             # Parse the data points
             # ENDF format: each line can have up to 6 values (6E11.0 format)
             # Data comes as pairs: (E1, XS1, E2, XS2, ...)
+            # First line after control record is another control record (skip it)
             energy_list = []
             xs_list = []
 
             i = mf3_start + 1
             values = []  # Collect all values first
+            
+            # Skip the second control record (first line after MF=3 control record)
+            # This line has zeros and a count: "0.000000+0 0.000000+0 ... 0 N"
+            if i < len(lines) and len(lines[i]) > 75:
+                try:
+                    mf_check = lines[i][70:72].strip()
+                    mt_check = lines[i][72:75].strip()
+                    first_val_str = lines[i][0:11].strip()
+                    second_val_str = lines[i][11:22].strip()
+                    if (mf_check == "3" and mt_check == str(reaction_mt) and
+                        first_val_str and second_val_str and
+                        abs(float(first_val_str)) < 1e-10 and abs(float(second_val_str)) < 1e-10):
+                        # This is the second control record, skip it
+                        i += 1
+                except (ValueError, IndexError):
+                    pass
 
+            # Parse data lines until we hit end of section
             while i < len(lines):
                 line = lines[i]
 
-                # Check if we've moved to next section (look at control record)
+                # Check for blank line (end of section)
+                if not line.strip():
+                    break
+
+                # Check if we've moved to next section
                 if len(line) > 75:
                     try:
-                        if line[70:72].strip() and int(line[70:72]) != 3:
+                        mf_check = line[70:72].strip()
+                        if mf_check and mf_check != "3":
                             break  # Not MF=3 anymore
+                        mt_check = line[72:75].strip()
+                        if mt_check and int(mt_check) != reaction_mt:
+                            break  # Different MT number
+                        # If this is a control record for same MT and we have data, we're done
+                        if mf_check == "3" and mt_check == str(reaction_mt) and len(values) > 0:
+                            # Check if it's a control record (zeros) or actual data
+                            try:
+                                first_val_str = line[0:11].strip()
+                                second_val_str = line[11:22].strip()
+                                if first_val_str and second_val_str:
+                                    if abs(float(first_val_str)) < 1e-10 and abs(float(second_val_str)) < 1e-10:
+                                        break  # Control record after data = end
+                            except (ValueError, IndexError):
+                                pass
                     except (ValueError, IndexError):
                         pass
 
-                # Parse data (6 values per line in 11-character fields starting at column 0)
+                # Parse data values from this line
                 for j in range(0, min(66, len(line)), 11):
                     if j + 11 > len(line):
                         break
@@ -776,49 +813,68 @@ class NuclearDataCache:
 
                 i += 1
 
-                # Check for end of section (next control record or blank line)
-                if i < len(lines):
-                    next_line = lines[i]
-                    if len(next_line) > 75:
-                        try:
-                            # Check if next line is a new section
-                            mf = next_line[70:72].strip()
-                            if mf and int(mf) != 3:
-                                break
-                        except (ValueError, IndexError):
-                            pass
-
             # Pair up values: (E1, XS1, E2, XS2, ...)
             # Only process complete pairs (must have even number of values)
+            if len(values) == 0:
+                logger.debug(f"No values parsed from ENDF MF=3 section for MT={reaction_mt}")
+                return None, None
+                
             if len(values) % 2 != 0:
                 logger.warning(f"Odd number of values in ENDF MF=3 section, MT={reaction_mt}, discarding last value")
                 values = values[:-1]  # Discard last unpaired value
             
+            # Filter out control record pairs (both energy and XS are zero or very small)
+            # Control records typically have zeros in the first few fields
             for idx in range(0, len(values) - 1, 2):
-                energy_list.append(values[idx])
-                xs_list.append(values[idx + 1])
+                e_val = values[idx]
+                xs_val = values[idx + 1]
+                # Skip pairs where both are essentially zero (likely from control records)
+                # But keep pairs where at least one value is significant (> 1e-5)
+                if abs(e_val) > 1e-5 or abs(xs_val) > 1e-5:
+                    energy_list.append(e_val)
+                    xs_list.append(xs_val)
 
             if len(energy_list) > 0 and len(xs_list) > 0:
                 energy = np.array(energy_list)
                 xs = np.array(xs_list)
                 
-                # Validate that energies are positive and cross sections are non-negative
-                if np.any(energy <= 0):
-                    logger.warning(f"Found non-positive energies in ENDF data for MT={reaction_mt}")
-                    # Filter out invalid energies
-                    valid_mask = energy > 0
+                # Validate and clean data
+                # Filter out invalid entries: energies and cross sections must be finite
+                # Allow zero energies (valid for thermal neutrons) but prefer positive energies
+                valid_mask = np.isfinite(energy) & np.isfinite(xs)
+                
+                if not np.all(valid_mask):
+                    # Only warn if we're removing a significant portion of data
+                    n_removed = np.sum(~valid_mask)
+                    if n_removed > len(energy) * 0.5:  # More than 50% invalid
+                        logger.warning(f"Found {n_removed} invalid entries in ENDF data for MT={reaction_mt} out of {len(energy)} total")
+                    elif n_removed > 0:
+                        logger.debug(f"Filtered {n_removed} invalid entries from ENDF data for MT={reaction_mt}")
+                    
                     energy = energy[valid_mask]
                     xs = xs[valid_mask]
                 
+                # Clamp negative cross sections to zero (they're unphysical)
                 if np.any(xs < 0):
-                    logger.warning(f"Found negative cross sections in ENDF data for MT={reaction_mt}, setting to zero")
+                    n_negative = np.sum(xs < 0)
+                    if n_negative > len(xs) * 0.1:  # More than 10% negative
+                        logger.warning(f"Found {n_negative} negative cross sections in ENDF data for MT={reaction_mt}, setting to zero")
                     xs = np.maximum(xs, 0.0)  # Clamp negative values to zero
+                
+                # Prefer positive energies if available, but keep zeros if that's all we have
+                if len(energy) > 0:
+                    positive_mask = energy > 0
+                    if np.any(positive_mask) and np.sum(positive_mask) >= 2:
+                        # We have at least 2 positive energy points, use those
+                        energy = energy[positive_mask]
+                        xs = xs[positive_mask]
+                    # Otherwise keep all data including zeros (better than returning None)
                 
                 # Ensure we still have valid data after filtering
                 if len(energy) > 0 and len(xs) > 0 and len(energy) == len(xs):
                     return energy, xs
                 else:
-                    logger.error(f"Invalid data after filtering for MT={reaction_mt}")
+                    logger.debug(f"No valid data remaining after filtering for MT={reaction_mt} (had {len(energy_list)} original points)")
 
         except Exception as e:
             logger.debug(f"Error parsing ENDF file {endf_file} for MT={reaction_mt}: {e}")
@@ -1257,6 +1313,23 @@ class CrossSectionTable:
                 energy, xs = self._cache.get_cross_section(
                     nuclide, reaction, temperature
                 )
+
+                # Validate data before collapsing
+                if energy is None or xs is None:
+                    raise ValueError(
+                        f"Failed to get cross-section data for {nuclide.name}/{reaction} "
+                        f"at {temperature}K"
+                    )
+                if len(energy) == 0 or len(xs) == 0:
+                    raise ValueError(
+                        f"Empty cross-section data for {nuclide.name}/{reaction} "
+                        f"at {temperature}K"
+                    )
+                if len(energy) != len(xs):
+                    raise ValueError(
+                        f"Mismatched energy and cross-section array lengths for "
+                        f"{nuclide.name}/{reaction}: {len(energy)} vs {len(xs)}"
+                    )
 
                 # Collapse to multi-group
                 mg_xs = self._collapse_to_multigroup(
