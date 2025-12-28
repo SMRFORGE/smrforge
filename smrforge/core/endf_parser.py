@@ -277,10 +277,10 @@ class ENDFEvaluation:
                             "+" in val_str or "-" in val_str[1:]
                         ):
                             # Find where the exponent starts (first + or - that's not at position 0)
-                            for i, char in enumerate(val_str[1:], 1):
+                            for char_idx, char in enumerate(val_str[1:], 1):
                                 if char in "+-":
                                     # Insert 'e' or 'E' before the sign
-                                    val_str = val_str[:i] + "e" + val_str[i:]
+                                    val_str = val_str[:char_idx] + "e" + val_str[char_idx:]
                                     break
 
                         # Convert to lowercase for Python's float parser
