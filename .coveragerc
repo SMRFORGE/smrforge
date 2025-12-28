@@ -1,0 +1,31 @@
+[run]
+source = smrforge
+omit = 
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */site-packages/*
+    */venv/*
+    */env/*
+    setup.py
+
+[report]
+precision = 1
+show_missing = True
+skip_covered = False
+
+# Exclude lines from coverage reports with explanations
+exclude_lines =
+    # JIT-compiled functions use pragma: no cover in the code
+    # See COVERAGE_EXCLUSIONS.md for details
+    
+    # Example/demo code: Not production code
+    if __name__ == .__main__.:
+    
+    # Type checking and protocol methods
+    @.*protocol|@.*overload
+
+[html]
+directory = htmlcov
+title = SMRForge Test Coverage
+

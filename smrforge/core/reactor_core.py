@@ -1060,9 +1060,13 @@ class NuclearDataCache:
     @njit(parallel=True, cache=True)
     def _doppler_broaden(
         energy: np.ndarray, xs: np.ndarray, T_old: float, T_new: float, A: int
-    ) -> np.ndarray:
+    ) -> np.ndarray:  # pragma: no cover
         """
         Fast Doppler broadening of cross sections using Numba JIT compilation.
+        
+        Note: This function is excluded from coverage reporting because Numba JIT
+        compilation makes line-by-line coverage tracking unreliable. This function
+        is extensively tested in tests/test_doppler_broaden.py (13 tests).
         
         Broadens cross sections from temperature T_old to T_new using an improved
         energy-dependent approximation. The broadening is more significant at lower
@@ -1620,9 +1624,14 @@ class CrossSectionTable:
         xs: np.ndarray,
         group_bounds: np.ndarray,
         weighting_flux: Optional[np.ndarray] = None,
-    ) -> np.ndarray:
+    ) -> np.ndarray:  # pragma: no cover
         """
         Fast group collapse using Numba JIT compilation.
+        
+        Note: This function is excluded from coverage reporting because Numba JIT
+        compilation makes line-by-line coverage tracking unreliable. This function
+        is extensively tested in tests/test_reactor_core.py and
+        tests/test_reactor_core_coverage_gaps.py.
         
         Collapses continuous-energy cross sections to a multi-group structure
         using flux-weighted averaging within each energy group. Uses Numba
