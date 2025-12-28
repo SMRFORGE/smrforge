@@ -163,7 +163,18 @@ class ENDFEvaluation:
                     # Extract ZA (Z*1000 + A) from line 1
                     if i + 1 < len(lines):
                         za_line = lines[i + 1]
-                        za = int(float(za_line[0:11]))
+                        za_str = za_line[0:11].strip()
+                        # Normalize ENDF format (e.g., " 9.223500+4" -> "9.223500e+4")
+                        # Same logic as in _parse_mf3_section
+                        if "E" not in za_str.upper() and ("+" in za_str or "-" in za_str[1:]):
+                            # Find where the exponent starts (first + or - that's not at position 0)
+                            for char_idx, char in enumerate(za_str[1:], 1):
+                                if char in "+-":
+                                    # Insert 'e' or 'E' before the sign
+                                    za_str = za_str[:char_idx] + "e" + za_str[char_idx:]
+                                    break
+                        za_str = za_str.lower()
+                        za = int(float(za_str))
                         z = za // 1000
                         a = za % 1000
                         self.metadata["Z"] = z
