@@ -936,14 +936,32 @@ class CrossSectionTable:
             mask = (energy >= E_low) & (energy <= E_high)
 
             if np.sum(mask) > 0:
-                # Flux-weighted average
+                # Flux-weighted average using trapezoidal rule integration
                 e_g = energy[mask]
                 xs_g = xs[mask]
                 flux_g = np.interp(e_g, energy, weighting_flux)
 
-                mg_xs[g] = np.sum(xs_g * flux_g * np.diff(e_g)) / np.sum(
-                    flux_g * np.diff(e_g)
-                )
+                # Use trapezoidal rule: ∫ f(E) dE ≈ Σ (f_i + f_{i+1})/2 * (E_{i+1} - E_i)
+                # Compute ∫ σ(E) φ(E) dE and ∫ φ(E) dE
+                n_points = len(e_g)
+                if n_points > 1:
+                    numerator = 0.0
+                    denominator = 0.0
+                    for i in range(n_points - 1):
+                        de = e_g[i + 1] - e_g[i]
+                        # Trapezoidal rule: average of endpoints times width
+                        xs_avg = (xs_g[i] + xs_g[i + 1]) * 0.5
+                        flux_avg = (flux_g[i] + flux_g[i + 1]) * 0.5
+                        numerator += xs_avg * flux_avg * de
+                        denominator += flux_avg * de
+                    
+                    if denominator > 0:
+                        mg_xs[g] = numerator / denominator
+                    else:
+                        mg_xs[g] = 0.0
+                else:
+                    # Single point - use that value directly
+                    mg_xs[g] = xs_g[0]
 
         return mg_xs
 

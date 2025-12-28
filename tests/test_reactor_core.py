@@ -181,7 +181,6 @@ class TestCrossSectionTable:
         assert table.data is None
         assert table._cache is not None
 
-    @pytest.mark.skip(reason="_collapse_to_multigroup has implementation bug with np.diff")
     def test_collapse_to_multigroup(self):
         """Test _collapse_to_multigroup static method."""
         from smrforge.core.reactor_core import CrossSectionTable
@@ -200,7 +199,6 @@ class TestCrossSectionTable:
         assert np.all(np.isfinite(mg_xs))
         assert np.all(mg_xs >= 0)
 
-    @pytest.mark.skip(reason="_collapse_to_multigroup has implementation bug with np.diff")
     def test_collapse_to_multigroup_with_weighting(self):
         """Test _collapse_to_multigroup with custom weighting flux."""
         from smrforge.core.reactor_core import CrossSectionTable
@@ -221,6 +219,49 @@ class TestCrossSectionTable:
         assert np.all(np.isfinite(mg_xs))
         # Should be close to original xs (2.0) since flux is flat
         assert np.allclose(mg_xs, 2.0, rtol=0.1)
+
+    def test_collapse_to_multigroup_single_point_in_group(self):
+        """Test _collapse_to_multigroup handles single point in a group correctly."""
+        from smrforge.core.reactor_core import CrossSectionTable
+
+        # Create test data with a group that has only one point
+        energy = np.array([1.0e5, 1.5e5, 5.0e5, 1.0e6, 5.0e6])
+        xs = np.ones_like(energy) * 3.0
+
+        # 3-group structure where middle group has only one point
+        group_bounds = np.array([5.0e6, 1.0e6, 1.5e5, 1.0e5])
+
+        mg_xs = CrossSectionTable._collapse_to_multigroup(energy, xs, group_bounds, None)
+
+        assert len(mg_xs) == 3
+        assert np.all(np.isfinite(mg_xs))
+        assert np.all(mg_xs >= 0)
+        # Single point should use that value directly
+        assert mg_xs[1] == 3.0
+
+    def test_collapse_to_multigroup_empty_group(self):
+        """Test _collapse_to_multigroup handles empty groups (zeros)."""
+        from smrforge.core.reactor_core import CrossSectionTable
+
+        # Create test data that only covers lower energy range
+        # Energy strictly below 1e5 to ensure groups above are empty
+        energy = np.logspace(3, 4.99, 50)  # 1e3 to ~9.7e4, strictly < 1e5
+        xs = np.ones_like(energy) * 5.0
+
+        # 3-group structure: [1e7, 1e6, 1e5, 1e4]
+        # Group 0: 1e6-1e7 (empty), Group 1: 1e5-1e6 (empty), Group 2: 1e4-1e5 (may have some data near boundary)
+        # Let's use [1e7, 1e6, 1e5, 1e3] to ensure clean separation
+        group_bounds = np.array([1e7, 1e6, 1e5, 1e3])
+
+        mg_xs = CrossSectionTable._collapse_to_multigroup(energy, xs, group_bounds, None)
+
+        assert len(mg_xs) == 3
+        assert np.all(np.isfinite(mg_xs))
+        # Empty groups should be zero
+        assert mg_xs[0] == 0.0
+        assert mg_xs[1] == 0.0
+        # Group with data should have positive value
+        assert mg_xs[2] > 0
 
     def test_pivot_for_solver(self):
         """Test pivot_for_solver method."""
