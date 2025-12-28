@@ -30,6 +30,7 @@ rich>=13.0.0
 
 # HTTP requests (for nuclear data downloads)
 requests>=2.25.0
+httpx>=0.24.0  # Async HTTP client for parallel downloads
 
 # Machine learning (for surrogate models)
 scikit-learn>=1.0.0
