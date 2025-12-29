@@ -149,6 +149,8 @@ power_dist = solver.compute_power_distribution(total_power=10e6)
 
 See [`USAGE.md`](USAGE.md) for more examples and the [`examples/`](examples/) directory for complete scripts.
 
+**New to SMRForge?** Start with the **[Tutorial](TUTORIAL.md)** - a step-by-step guide for beginners!
+
 ## Documentation
 
 [![Documentation Status](https://readthedocs.org/projects/smrforge/badge/?version=latest)](https://smrforge.readthedocs.io/en/latest/?badge=latest)
@@ -165,6 +167,7 @@ Full documentation available at: **[https://smrforge.readthedocs.io](https://smr
 
 ### Additional Resources
 
+- **Tutorial**: See [`TUTORIAL.md`](TUTORIAL.md) for a beginner-friendly step-by-step guide
 - **Installation**: See [`INSTALLATION.md`](INSTALLATION.md) for detailed installation instructions
 - **Usage Guide**: See [`USAGE.md`](USAGE.md) for usage examples and quick reference
 - **Docker**: See [`DOCKER.md`](DOCKER.md) for Docker usage and troubleshooting
