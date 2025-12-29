@@ -57,7 +57,7 @@ Before creating a release:
 
 2. **Update CHANGELOG.md:**
    ```markdown
-   ## [0.1.1] - 2024-12-22
+   ## [0.1.1] - 2025
    
    ### Fixed
    - Fix bug description
