@@ -27,6 +27,8 @@ These modules are fully implemented, tested, and ready for production use:
   - Basic mesh generation
 - ✅ **Geometry Import/Export** (`smrforge.geometry.importers`)
   - JSON import/export
+  - OpenMC XML import (basic geometries)
+  - Serpent input file import (basic geometries)
   - Geometry validation
   - Support for PrismaticCore and PebbleBedCore
 - ✅ **Control Rod Geometry** (`smrforge.geometry.control_rods`)
@@ -122,6 +124,7 @@ These modules are **functionally complete and well-tested**, but their APIs may 
   - LOFC (Loss of Forced Cooling) transient analysis
   - ATWS (Anticipated Transient Without Scram) analysis
   - Reactivity Insertion Accident (RIA) analysis
+  - LOCA (Loss of Coolant Accident) analysis
   - Air/Water ingress analysis
   - Decay heat calculations (ANS standard)
   - Input validation and error handling
@@ -245,5 +248,5 @@ If you're using features that are marked as experimental or not implemented:
 
 ---
 
-*Last Updated: 2024-12-28*
+*Last Updated: 2025*
 

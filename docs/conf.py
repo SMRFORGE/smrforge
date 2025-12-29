@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Project information
 project = "SMRForge"
-copyright = "2024, SMRForge Development Team"
+copyright = "2025, SMRForge Development Team"
 author = "SMRForge Development Team"
 
 # Get version from package

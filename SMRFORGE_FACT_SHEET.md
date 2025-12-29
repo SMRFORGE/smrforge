@@ -29,7 +29,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 |---------|---------------|--------------|
 | **Monte Carlo Transport** | 97.7% | Particle transport, k-eff calculations, tallies |
 | **Thermal-Hydraulics** | 45+ tests | 1D channel models, fluid properties, heat transfer |
-| **Safety Analysis** | 40+ tests | Transient simulations (LOFC, ATWS, RIA), point kinetics |
+| **Safety Analysis** | 40+ tests | Transient simulations (LOFC, ATWS, RIA, LOCA, air/water ingress), point kinetics |
 | **Uncertainty Quantification** | 55+ tests | Monte Carlo sampling, Sobol indices, sensitivity analysis |
 
 ---
@@ -190,7 +190,7 @@ k_eff, flux = solver.solve_steady_state()
 
 ### Safety Analysis
 - Point kinetics with temperature feedback
-- Transient scenarios (LOFC, ATWS, RIA)
+- Transient scenarios (LOFC, ATWS, RIA, LOCA, air/water ingress)
 - Decay heat calculations (ANS standard)
 - Temperature-dependent reactivity feedback
 
@@ -206,7 +206,9 @@ k_eff, flux = solver.solve_steady_state()
 - Pebble bed core geometries
 - Adaptive mesh refinement
 - Mesh quality evaluation
-- Import/export (JSON, OpenMC XML, Serpent)
+- Import/export (JSON, OpenMC XML, Serpent input files)
+- Control rod geometry and positioning
+- Assembly management and refueling patterns
 
 ---
 
@@ -305,7 +307,7 @@ python -c "import smrforge as smr; results = smr.analyze_preset('valar-10'); pri
 
 ---
 
-**Version**: 0.1.0 | **Last Updated**: 2024 | **Status**: Active Development
+**Version**: 0.1.0 | **Last Updated**: 2025 | **Status**: Active Development
 
 *SMRForge - Empowering SMR Design and Analysis*
 
