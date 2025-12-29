@@ -36,6 +36,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",  # Better type hint formatting
 ]
 
 # Templates
@@ -64,10 +65,32 @@ html_static_path = ["_static"]
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+
+# Autodoc settings
+autodoc_default_options = {
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": False,
+    "exclude-members": "__weakref__",
+}
+autodoc_mock_imports = []  # List any packages that should be mocked
+
+# Autosummary settings
+autosummary_generate = True
 
 # Intersphinx mapping
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
 }
+
+# ReadTheDocs-specific settings
+if os.environ.get("READTHEDOCS") == "True":
+    # ReadTheDocs uses a specific build directory structure
+    # Ensure proper path resolution
+    pass

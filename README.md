@@ -11,17 +11,19 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 ## Features
 
 ### ✅ Stable & Production Ready
-- **Neutronics**: Multi-group diffusion solver (power iteration), validated and tested
-- **Validation**: Pydantic-based input validation, physics checks
-- **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, etc.)
-- **Geometry**: Prismatic and pebble bed core geometries
-- **Convenience API**: One-liner functions for easy usage
+- **Neutronics**: Multi-group diffusion solver with power iteration and Arnoldi methods
+- **Geometry**: Prismatic and pebble bed core geometries with mesh generation
+- **Geometry Tools**: Import/export (JSON, OpenMC XML, Serpent), control rod geometry, assembly management
+- **Visualization**: 2D core layouts, flux/power distribution plots
+- **Validation**: Pydantic-based input validation with physics checks
+- **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
+- **Convenience API**: One-liner functions for quick analysis
 
 ### 🟡 Experimental (In Development)
-- **Monte Carlo Transport**: Basic implementation, needs validation
-- **Thermal-Hydraulics**: Channel models implemented, needs more testing
-- **Safety Analysis**: Transient simulations (LOCA, LOFA, REA, ATWS) implemented
-- **Uncertainty Quantification**: Basic framework exists
+- **Monte Carlo Transport**: Particle transport solver with comprehensive test coverage
+- **Thermal-Hydraulics**: 1D channel models with fluid properties
+- **Safety Analysis**: Transient simulations (LOCA, LOFA, ATWS, RIA) with point kinetics
+- **Uncertainty Quantification**: Monte Carlo sampling, sensitivity analysis (Sobol indices, Morris screening)
 
 ### ❌ Not Yet Implemented
 - **Fuel Performance**: Stub module (use external tools)
@@ -32,22 +34,24 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 
 **See `FEATURE_STATUS.md` for detailed status of all features.**
 
-## Documentation
-
-- **Installation**: See [`INSTALLATION.md`](INSTALLATION.md) for detailed installation instructions
-- **Usage**: See [`USAGE.md`](USAGE.md) for usage examples and quick reference
-- **Docker**: See [`DOCKER.md`](DOCKER.md) for Docker usage and troubleshooting
-- **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development guidelines
-- **Changelog**: See [`CHANGELOG.md`](CHANGELOG.md) for version history and recent changes
-- **Release Process**: See [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md) for release procedures
-
 ## Installation
 
 ### Requirements
 - **Python 3.8 or higher** (works with standard Python, no conda required!)
 - Standard pip installation
 
-### Quick Install
+### Install from PyPI
+
+```bash
+# Basic installation
+pip install smrforge
+
+# With optional dependencies
+pip install smrforge[uq,viz]  # Uncertainty quantification and visualization
+pip install smrforge[all]     # All optional dependencies
+```
+
+### Install from Source
 
 #### Using pip (Standard)
 
@@ -100,37 +104,86 @@ For detailed Docker usage and troubleshooting, see [`DOCKER.md`](DOCKER.md).
 
 ## Quick Start
 
+### Basic Usage
+
 ```python
 import smrforge as smr
 
-# Create a reactor
-reactor = smr.Reactor(name="SMR-160")
+# Quick k-eff calculation
+k = smr.quick_keff(power_mw=10, enrichment=0.195)
+print(f"k-effective: {k:.6f}")
+
+# Analyze a preset design
+results = smr.analyze_preset("valar-10")
+print(f"k-eff: {results['k_eff']:.6f}")
+print(f"Power: {results['power_thermal_mw']:.1f} MWth")
+```
+
+### Advanced Usage
+
+```python
+import smrforge as smr
+from smrforge.neutronics.solver import MultiGroupDiffusion
+from smrforge.presets.htgr import ValarAtomicsReactor
+
+# Create reactor from preset
+reactor = ValarAtomicsReactor()
 
 # Run neutronics analysis
-solver = smr.neutronics.NeutronicsSolver(reactor)
-k_eff = solver.solve_eigenvalue()
+solver = MultiGroupDiffusion(geometry, xs_data, options)
+k_eff, flux = solver.solve_steady_state()
 
-# Run thermal-hydraulics
-th = smr.thermal.ThermalHydraulics(reactor)
-temperatures = th.solve_steady_state()
-
-# Safety analysis
-transient = smr.safety.LOCA(reactor)
-results = transient.simulate(time=1000.0)
+# Compute power distribution
+power_dist = solver.compute_power_distribution(total_power=10e6)
 ```
+
+See [`USAGE.md`](USAGE.md) for more examples and the [`examples/`](examples/) directory for complete scripts.
 
 ## Documentation
 
-Full documentation available at: [https://smrforge.readthedocs.io](https://smrforge.readthedocs.io)
+[![Documentation Status](https://readthedocs.org/projects/smrforge/badge/?version=latest)](https://smrforge.readthedocs.io/en/latest/?badge=latest)
+
+Full documentation available at: **[https://smrforge.readthedocs.io](https://smrforge.readthedocs.io)**
+
+### Documentation Sections
+
+- **Installation Guide** - Detailed installation instructions
+- **Quick Start** - Get started in minutes
+- **API Reference** - Complete API documentation
+- **Examples** - Code examples and tutorials
+- **Contributing** - Development guidelines
+
+### Additional Resources
+
+- **Installation**: See [`INSTALLATION.md`](INSTALLATION.md) for detailed installation instructions
+- **Usage Guide**: See [`USAGE.md`](USAGE.md) for usage examples and quick reference
+- **Docker**: See [`DOCKER.md`](DOCKER.md) for Docker usage and troubleshooting
+- **Feature Status**: See [`FEATURE_STATUS.md`](FEATURE_STATUS.md) for module status
+- **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development guidelines
+- **Changelog**: See [`CHANGELOG.md`](CHANGELOG.md) for version history
 
 ## Examples
 
-See `examples/` directory for complete examples:
-- Basic reactor setup
-- Steady-state analysis
-- Transient simulations
-- Uncertainty quantification
-- Design optimization
+See the [`examples/`](examples/) directory for complete working examples:
+
+### Core Examples
+- **`basic_neutronics.py`** - Basic neutronics calculations
+- **`preset_designs.py`** - Using preset reactor designs
+- **`custom_reactor.py`** - Creating custom reactor configurations
+- **`thermal_analysis.py`** - Thermal-hydraulics analysis
+
+### Advanced Examples
+- **`comprehensive_examples.py`** - Complete workflow demonstrations
+- **`complete_integration_example.py`** - Full integration example
+- **`integrated_safety_uq.py`** - Safety analysis with uncertainty quantification
+
+### Geometry Examples
+- **`geometry_import_example.py`** - Importing geometries from external formats
+- **`control_rods_example.py`** - Control rod positioning and reactivity
+- **`assembly_refueling_example.py`** - Fuel assembly and refueling patterns
+- **`visualization_examples.py`** - Geometry and result visualization
+
+All examples are runnable and include comments explaining each step.
 
 ## Testing
 
@@ -147,11 +200,25 @@ pytest tests/test_neutronics.py
 
 ## Contributing
 
-Contributions welcome! Please see `CONTRIBUTING.md` for guidelines.
+Contributions are welcome! Please see [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
 
-## License
+### Development Setup
 
-MIT License - see `LICENSE` file for details.
+```bash
+# Clone repository
+git clone https://github.com/cmwhalen/smrforge.git
+cd smrforge
+
+# Install with development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/
+
+# Format code
+black smrforge/ tests/
+isort smrforge/ tests/
+```
 
 ## Citation
 
@@ -159,14 +226,20 @@ If you use SMRForge in your research, please cite:
 
 ```bibtex
 @software{smrforge,
-  author = {Your Name},
-  title = {SMRForge: Small Modular Reactor Design Toolkit},
+  author = {SMRForge Development Team},
+  title = {SMRForge: Small Modular Reactor Design and Analysis Toolkit},
   year = {2024},
-  url = {https://github.com/cmwhalen/smrforge}
+  url = {https://github.com/cmwhalen/smrforge},
+  version = {0.1.0}
 }
 ```
 
+## License
+
+MIT License - see [`LICENSE`](LICENSE) file for details.
+
 ## Contact
 
-- Email: your.email@example.com
-- Issues: https://github.com/cmwhalen/smrforge/issues
+- **GitHub Issues**: https://github.com/cmwhalen/smrforge/issues
+- **Documentation**: https://smrforge.readthedocs.io
+- **Repository**: https://github.com/cmwhalen/smrforge

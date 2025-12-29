@@ -65,11 +65,18 @@ setup(
             # Optional nuclear data backends
             "sandy",  # Lighter-weight alternative for ENDF parsing
         ],
+        "uq": [
+            # Uncertainty quantification and sensitivity analysis
+            "SALib>=1.4.0",  # Sensitivity analysis library
+            "seaborn>=0.12.0",  # Statistical visualization
+        ],
         "all": [
             # Install all optional dependencies
             "sandy",
             "plotly>=5.0",
             "dash>=2.0",
+            "SALib>=1.4.0",
+            "seaborn>=0.12.0",
         ],
     },
     classifiers=[
