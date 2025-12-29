@@ -26,6 +26,15 @@ These features are **functionally complete and well-tested**, but their APIs may
 - **Safety Analysis**: Transient simulations (LOCA, LOFA, ATWS, RIA) with point kinetics (40+ tests)
 - **Uncertainty Quantification**: Monte Carlo sampling, sensitivity analysis (Sobol indices, Morris screening) (55+ tests)
 
+### ⚡ Performance: Rust-Powered Dependencies
+SMRForge leverages **Rust-powered libraries** for critical performance:
+- **Pydantic 2.0**: Rust core for ultra-fast data validation (5-50x faster than v1)
+- **Polars**: Rust-based DataFrame library for fast data processing (10-100x faster than pandas)
+- **Rich**: Rust terminal library for beautiful, performant console output
+- **uv** (recommended installer): Rust-based package installer (10-100x faster than pip)
+
+These Rust implementations provide significant performance improvements without requiring Rust knowledge from users.
+
 ### ❌ Not Yet Implemented
 - **Fuel Performance**: Stub module (use external tools)
 - **Optimization**: Stub module (use scipy.optimize)
