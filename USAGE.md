@@ -256,6 +256,10 @@ See the `examples/` directory for more complete examples:
 - `examples/basic_neutronics.py` - Basic neutronics calculations
 - `examples/preset_designs.py` - Working with preset designs
 - `examples/custom_reactor.py` - Custom reactor specifications
+- `examples/visualization_examples.py` - Geometry visualization (2D plots, flux/power/temperature)
+- `examples/control_rods_example.py` - Control rod geometry and management
+- `examples/assembly_refueling_example.py` - Assembly management and refueling
+- `examples/geometry_import_example.py` - Geometry import/export (JSON)
 - `examples/complete_integration_example.py` - Complete workflow
 
 ---

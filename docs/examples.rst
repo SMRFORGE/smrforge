@@ -14,6 +14,17 @@ Basic Examples
    examples/custom_reactor
    examples/thermal_analysis
 
+Geometry Examples
+-----------------
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/visualization_examples
+   examples/control_rods_example
+   examples/assembly_refueling_example
+   examples/geometry_import_example
+
 Advanced Examples
 -----------------
 
