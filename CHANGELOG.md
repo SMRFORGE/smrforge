@@ -8,6 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Visualization Module** (`smrforge.visualization.geometry`)
+  - 2D core layout plotting (prismatic and pebble bed cores)
+  - Flux, power, and temperature distribution visualization
+  - Multiple view options (xy, xz, yz)
+  - Comprehensive test coverage (83.5%)
+- **Geometry Import/Export** (`smrforge.geometry.importers`)
+  - JSON format import/export for geometries
+  - Geometry validation (overlaps, dimensions, packing fraction)
+  - Support for PrismaticCore and PebbleBedCore
+  - Test coverage (93.5%)
+- **Control Rod Geometry** (`smrforge.geometry.control_rods`)
+  - Control rod positioning and geometry
+  - Control rod banks and systems
+  - Insertion/withdrawal control
+  - Reactivity worth calculations
+  - Shutdown margin analysis
+  - Test coverage (100%)
+- **Advanced Mesh Generation** (`smrforge.geometry.mesh_generation`)
+  - Adaptive mesh refinement
+  - Local refinement in specified regions
+  - Mesh quality evaluation (angles, aspect ratio, skewness, Jacobian)
+  - 2D unstructured mesh generation (Delaunay triangulation)
+  - Gradient computation methods
+  - Test coverage (100%)
+- **Assembly Management** (`smrforge.geometry.assembly`)
+  - Fuel assembly tracking with burnup management
+  - Refueling patterns (multi-batch support)
+  - Shuffle and refueling operations
+  - Cycle length estimation
+  - Test coverage (97.0%)
 - Comprehensive test infrastructure with 100+ test cases
 - Integration tests for complete workflows
 - GitHub Actions CI/CD pipeline
@@ -18,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-backend nuclear data support (SANDY, custom parser)
 - Docker support with multiple Dockerfile configurations
 - Logo integration in README and documentation
+- Test coverage for new features: 94.2% (82 new tests)
 
 ### Changed
 - Enhanced test fixtures and utilities

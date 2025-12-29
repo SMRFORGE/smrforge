@@ -26,9 +26,8 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 ### ❌ Not Yet Implemented
 - **Fuel Performance**: Stub module (use external tools)
 - **Optimization**: Stub module (use scipy.optimize)
-- **I/O Utilities**: Stub module (use Pydantic serialization)
-- **Visualization**: Stub module (use matplotlib directly)
-- **Control Systems**: Stub module
+- **General I/O Utilities**: Stub module (geometry I/O available via `geometry.importers`)
+- **Control Systems**: Stub module (control rod geometry available via `geometry.control_rods`)
 - **Economics**: Stub module
 
 **See `FEATURE_STATUS.md` for detailed status of all features.**

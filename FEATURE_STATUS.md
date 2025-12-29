@@ -24,7 +24,28 @@ These modules are fully implemented, tested, and ready for production use:
 - ✅ **Core Geometry** (`smrforge.geometry.core_geometry`)
   - Prismatic core support
   - Pebble bed core support
-  - Mesh generation
+  - Basic mesh generation
+- ✅ **Geometry Import/Export** (`smrforge.geometry.importers`)
+  - JSON import/export
+  - Geometry validation
+  - Support for PrismaticCore and PebbleBedCore
+- ✅ **Control Rod Geometry** (`smrforge.geometry.control_rods`)
+  - Control rod positioning and geometry
+  - Control rod banks and systems
+  - Insertion/withdrawal control
+  - Reactivity worth calculations
+  - Shutdown margin analysis
+- ✅ **Advanced Mesh Generation** (`smrforge.geometry.mesh_generation`)
+  - Adaptive mesh refinement
+  - Local refinement in regions
+  - Mesh quality evaluation (angles, aspect ratio, skewness)
+  - 2D unstructured mesh generation (Delaunay triangulation)
+- ✅ **Assembly Management** (`smrforge.geometry.assembly`)
+  - Fuel assembly tracking
+  - Burnup management
+  - Refueling patterns (multi-batch)
+  - Shuffle and refueling operations
+  - Cycle length estimation
 
 ### Validation
 - ✅ **Pydantic Models** (`smrforge.validation.models`) - Data validation
@@ -80,16 +101,25 @@ These modules are placeholders with no implementation:
   - **Recommendation**: Use scipy.optimize or implement as needed
 
 ### I/O Utilities
-- ❌ **I/O Module** (`smrforge.io`) - Empty stub
-  - **Status**: Not implemented
-  - **Use Case**: Import/export reactor designs, results
+- ✅ **Geometry Import** (`smrforge.geometry.importers`) - Implemented
+  - JSON import/export for geometry
+  - Geometry validation
+  - See Geometry section above
+- ❌ **General I/O Module** (`smrforge.io`) - Empty stub
+  - **Status**: Not implemented (geometry I/O available via importers)
+  - **Use Case**: General reactor design import/export
   - **Recommendation**: Use JSON/Pydantic serialization (already available via models)
 
 ### Visualization
-- ❌ **Visualization Module** (`smrforge.visualization`) - Empty stub
-  - **Status**: Not implemented
-  - **Use Case**: Plotting flux, power, geometry
-  - **Recommendation**: Use matplotlib directly or implement as needed
+- ✅ **Geometry Visualization** (`smrforge.visualization.geometry`)
+  - **Status**: Implemented and tested (83.5% coverage)
+  - **Features**:
+    - 2D core layout plots (top view, side views)
+    - Flux distribution overlays
+    - Power distribution visualization
+    - Temperature distribution plots
+    - Support for prismatic and pebble bed cores
+  - **Use Case**: Plotting geometry, flux, power, and temperature distributions
 
 ### Control Systems
 - ❌ **Control Module** (`smrforge.control`) - Empty stub
