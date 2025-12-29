@@ -188,19 +188,6 @@ These modules are placeholders with no implementation:
 
 None - all documented methods are implemented.
 
-### Geometry Importers
-- ⚠️ **OpenMC XML Import** (`GeometryImporter.from_openmc_xml()`)
-  - **Status**: Placeholder (raises `NotImplementedError`)
-  - **Alternative**: Use JSON import/export for geometry transfer
-  - **Impact**: Low - JSON format works well for geometry exchange
-  - **Note**: Full OpenMC CSG format conversion is complex
-
-- ⚠️ **Serpent Import** (`GeometryImporter.from_serpent()`)
-  - **Status**: Placeholder (raises `NotImplementedError`)
-  - **Alternative**: Use JSON import/export for geometry transfer
-  - **Impact**: Low - JSON format works well for geometry exchange
-  - **Note**: Serpent input format is complex and parser-dependent
-
 ---
 
 ## API Stability Guarantees

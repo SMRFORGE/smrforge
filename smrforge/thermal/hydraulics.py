@@ -81,18 +81,69 @@ class FluidProperties:
 
 class ChannelThermalHydraulics:
     """
-    1D thermal-hydraulics for single coolant channel.
-    Solves coupled momentum and energy equations.
+    1D thermal-hydraulics solver for single coolant channel.
+
+    Solves coupled momentum and energy equations for steady-state and transient
+    conditions. Supports helium coolant properties and power profile input.
+
+    Examples:
+        Basic steady-state solution::
+
+            from smrforge.thermal.hydraulics import (
+                ChannelThermalHydraulics,
+                ChannelGeometry
+            )
+
+            # Define channel geometry
+            geometry = ChannelGeometry(
+                length=500.0,  # cm
+                diameter=2.0,  # cm
+                flow_area=3.14159,  # cm²
+                heated_perimeter=6.28318  # cm
+            )
+
+            # Define inlet conditions
+            inlet_conditions = {
+                "temperature": 773.15,  # K (500°C)
+                "pressure": 7.0e6,  # Pa (7 MPa)
+                "mass_flow_rate": 0.1  # kg/s
+            }
+
+            # Create solver
+            solver = ChannelThermalHydraulics(geometry, inlet_conditions)
+
+            # Set power profile (constant power)
+            power_profile = np.ones(50) * 100.0  # 100 W per node
+            solver.set_power_profile(power_profile)
+
+            # Solve steady state
+            results = solver.solve_steady_state()
+
+            print(f"Outlet temperature: {results['temperature'][-1]:.1f} K")
+            print(f"Pressure drop: {results['pressure'][0] - results['pressure'][-1]:.2f} Pa")
+
+        With cosine power profile::
+
+            z = np.linspace(0, geometry.length, 50)
+            power_profile = 100.0 * np.cos(np.pi * z / geometry.length)
+            solver.set_power_profile(power_profile)
+            results = solver.solve_steady_state()
 
     Args:
-        geometry: ChannelGeometry object defining channel dimensions
+        geometry: ChannelGeometry object defining channel dimensions (length,
+                 diameter, flow_area, heated_perimeter)
         inlet_conditions: Dictionary with keys:
             - "temperature": Inlet temperature [K]
             - "pressure": Inlet pressure [Pa]
             - "mass_flow_rate": Mass flow rate [kg/s]
 
     Raises:
-        ValueError: If inputs are invalid
+        ValueError: If inputs are invalid (negative values, non-physical conditions)
+
+    Note:
+        The solver assumes helium coolant and uses correlations for friction factor
+        and heat transfer coefficient. For other coolants, extend the FluidProperties
+        class.
     """
 
     def __init__(self, geometry: ChannelGeometry, inlet_conditions: Dict):
@@ -195,15 +246,36 @@ class ChannelThermalHydraulics:
         """
         Solve steady-state thermal-hydraulics.
 
+        Solves the 1D energy and momentum equations along the channel to determine
+        the axial temperature and pressure distributions. Uses explicit marching
+        from inlet to outlet.
+
         Args:
-            T_fuel: Fuel temperature profile [K] (optional)
+            T_fuel: Fuel temperature profile [K] at each z location (optional).
+                   If provided, wall temperature is computed from fuel-to-coolant
+                   heat transfer. If None, a simplified wall temperature model is used.
 
         Returns:
-            Dict with temperature, pressure profiles
+            Dictionary containing:
+                - "temperature": Coolant temperature array [K] at each z location
+                - "pressure": Coolant pressure array [Pa] at each z location
+                - "z": Axial positions [cm]
 
         Raises:
-            ValueError: If T_fuel has incorrect shape
-            RuntimeError: If solution produces invalid results
+            ValueError: If T_fuel has incorrect shape or non-physical values
+            RuntimeError: If solution produces invalid results (negative temperature,
+                         non-physical pressure drop, etc.)
+
+        Example:
+            >>> solver = ChannelThermalHydraulics(geometry, inlet_conditions)
+            >>> solver.set_power_profile(power_profile)
+            >>> results = solver.solve_steady_state()
+            >>> print(f"Outlet T: {results['temperature'][-1]:.1f} K")
+            >>> print(f"Pressure drop: {(results['pressure'][0] - results['pressure'][-1])/1e3:.2f} kPa")
+
+        Note:
+            The solver assumes helium coolant properties and uses Dittus-Boelter
+            correlation for heat transfer and Moody chart for friction factor.
         """
         # Validate T_fuel if provided
         if T_fuel is not None:

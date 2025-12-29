@@ -177,19 +177,97 @@ class TestGeometryImporter:
         assert len(validation["warnings"]) > 0
         assert any("packing" in warning.lower() for warning in validation["warnings"])
 
-    def test_from_openmc_xml_not_implemented(self, temp_dir):
-        """Test that OpenMC XML import raises NotImplementedError."""
+    def test_from_openmc_xml_basic(self, temp_dir):
+        """Test OpenMC XML import with basic geometry."""
         xml_file = temp_dir / "test.xml"
-        xml_file.write_text("<geometry></geometry>")
+        # Simple OpenMC geometry with z-cylinder
+        xml_content = """<?xml version="1.0"?>
+<geometry>
+    <surface id="1" type="z-cylinder" coeffs="150.0 0.0 0.0"/>
+    <surface id="2" type="z-plane" coeffs="-396.5"/>
+    <surface id="3" type="z-plane" coeffs="396.5"/>
+</geometry>
+"""
+        xml_file.write_text(xml_content)
 
-        with pytest.raises(NotImplementedError):
+        core = GeometryImporter.from_openmc_xml(xml_file)
+
+        assert core is not None
+        assert isinstance(core, PrismaticCore)
+        assert core.name == "Imported-OpenMC"
+        assert core.core_diameter == pytest.approx(300.0, rel=0.01)  # radius * 2
+        assert core.core_height == pytest.approx(793.0, rel=0.01)  # z_max - z_min
+
+    def test_from_openmc_xml_no_dimensions(self, temp_dir):
+        """Test OpenMC XML import with no extractable dimensions."""
+        xml_file = temp_dir / "test.xml"
+        xml_content = """<?xml version="1.0"?>
+<geometry>
+    <surface id="1" type="plane" coeffs="1.0 0.0 0.0 0.0"/>
+</geometry>
+"""
+        xml_file.write_text(xml_content)
+
+        with pytest.raises(NotImplementedError, match="Could not extract core dimensions"):
             GeometryImporter.from_openmc_xml(xml_file)
 
-    def test_from_serpent_not_implemented(self, temp_dir):
-        """Test that Serpent import raises NotImplementedError."""
-        serpent_file = temp_dir / "test.inp"
-        serpent_file.write_text("surf 1 pz 0")
+    def test_from_openmc_xml_invalid_xml(self, temp_dir):
+        """Test OpenMC XML import with invalid XML."""
+        xml_file = temp_dir / "test.xml"
+        xml_file.write_text("not valid xml <")
 
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(ValueError, match="Invalid XML"):
+            GeometryImporter.from_openmc_xml(xml_file)
+
+    def test_from_serpent_basic(self, temp_dir):
+        """Test Serpent import with basic geometry."""
+        serpent_file = temp_dir / "test.inp"
+        # Simple Serpent geometry with cz and pz surfaces
+        serpent_content = """% Simple HTGR geometry
+surf 1 cz 150.0
+surf 2 pz -396.5
+surf 3 pz 396.5
+"""
+        serpent_file.write_text(serpent_content)
+
+        core = GeometryImporter.from_serpent(serpent_file)
+
+        assert core is not None
+        assert isinstance(core, PrismaticCore)
+        assert core.name == "Imported-Serpent"
+        assert core.core_diameter == pytest.approx(300.0, rel=0.01)  # radius * 2
+        assert core.core_height == pytest.approx(793.0, rel=0.01)  # z_max - z_min
+
+    def test_from_serpent_hexprism(self, temp_dir):
+        """Test Serpent import with hexprism surface."""
+        serpent_file = temp_dir / "test.inp"
+        # Serpent geometry with hexprism
+        serpent_content = """% Hexagonal prism geometry
+surf 1 hexprism 0.0 0.0 0.0 0.0 0.0 1.0 793.0 75.0
+"""
+        serpent_file.write_text(serpent_content)
+
+        core = GeometryImporter.from_serpent(serpent_file)
+
+        assert core is not None
+        assert isinstance(core, PrismaticCore)
+        assert core.core_height == pytest.approx(793.0, rel=0.01)
+        # hexprism apothem 75.0 gives approximate radius 150.0
+        assert core.core_diameter > 0
+
+    def test_from_serpent_no_dimensions(self, temp_dir):
+        """Test Serpent import with no extractable dimensions."""
+        serpent_file = temp_dir / "test.inp"
+        serpent_content = """% No useful surfaces
+surf 1 px 0.0
+"""
+        serpent_file.write_text(serpent_content)
+
+        with pytest.raises(NotImplementedError, match="Could not extract core dimensions"):
             GeometryImporter.from_serpent(serpent_file)
+
+    def test_from_serpent_file_not_found(self):
+        """Test Serpent import with non-existent file."""
+        with pytest.raises(FileNotFoundError):
+            GeometryImporter.from_serpent(Path("nonexistent.inp"))
 

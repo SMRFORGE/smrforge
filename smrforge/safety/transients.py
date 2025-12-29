@@ -183,48 +183,107 @@ class PointKineticsParameters:
 
 class PointKineticsSolver:
     """
-    Fast point kinetics solver with temperature feedback.
-    
-    Solves the point kinetics equations coupled with fuel and moderator
-    temperature evolution. Suitable for HTGR transient analysis including
-    LOFC, ATWS, and other design basis accidents. Uses scipy's BDF method
-    for robust solution of the stiff ODE system.
-    
-    The solver integrates:
-        - Point kinetics equations (power and delayed neutron precursors)
-        - Fuel temperature evolution (energy balance)
-        - Moderator temperature evolution (energy balance)
-        - Temperature feedback reactivity (fuel + moderator coefficients)
-    
-    Attributes:
-        params: PointKineticsParameters instance containing physical constants.
-        n_groups: Number of delayed neutron precursor groups.
-    
-    Example:
-        >>> params = PointKineticsParameters(...)
-        >>> solver = PointKineticsSolver(params)
-        >>> def rho_ext(t):
-        ...     return -0.05 if t > 10.0 else 0.0  # Scram at t=10s
-        >>> def Q_removal(t, T_fuel, T_mod):
-        ...     return 0.9 * initial_power if t < 10.0 else 0.0
-        >>> result = solver.solve_transient(
-        ...     rho_external=rho_ext,
-        ...     power_removal=Q_removal,
-        ...     initial_state={'power': 10e6, 'T_fuel': 1200.0, 'T_mod': 900.0},
-        ...     t_span=(0.0, 3600.0)
-        ... )
-    """
+    Point kinetics solver with temperature feedback.
 
+    Solves the point kinetics equations for reactor transients with temperature-dependent
+    reactivity feedback. This is a zero-dimensional model that represents the entire
+    reactor core as a single point, suitable for analysis of global transients where
+    spatial effects are less important than temporal behavior.
+
+    Examples:
+        Basic usage with constant reactivity::
+
+            from smrforge.safety.transients import PointKineticsParameters, PointKineticsSolver
+            import numpy as np
+
+            # Define parameters (6-group delayed neutrons for HTGR)
+            beta = np.array([0.00021, 0.00141, 0.00127, 0.00255, 0.00074, 0.00027])
+            lambda_d = np.array([0.0127, 0.0317, 0.115, 0.311, 1.40, 3.87])
+
+            params = PointKineticsParameters(
+                beta=beta,
+                lambda_d=lambda_d,
+                alpha_fuel=-5e-5,  # Negative = stable
+                alpha_moderator=-2e-5,
+                Lambda=1e-4,  # Prompt lifetime (s)
+                fuel_heat_capacity=1e6,  # J/K
+                moderator_heat_capacity=5e5,  # J/K
+            )
+
+            solver = PointKineticsSolver(params)
+
+            # Constant reactivity step
+            rho = lambda t: 0.001 if t > 0 else 0.0  # 1 m$ reactivity insertion
+            power_removal = lambda t, T_fuel, T_mod: 1e6  # Constant power removal
+
+            initial_state = {
+                "power": 1e6,  # W
+                "precursors": np.array([1e20, 1e20, 1e20, 1e20, 1e20, 1e20]),
+                "T_fuel": 1200.0,  # K
+                "T_moderator": 800.0,  # K
+            }
+
+            result = solver.solve_transient(
+                rho_external=rho,
+                power_removal=power_removal,
+                initial_state=initial_state,
+                t_span=(0.0, 100.0),
+                max_step=0.1,
+            )
+
+            print(f"Final power: {result['power'][-1]/1e6:.2f} MW")
+
+        With temperature feedback::
+
+            # Temperature-dependent reactivity
+            def reactivity_with_feedback(t):
+                if t < 0:
+                    return 0.0
+                # Initial reactivity insertion
+                rho_0 = 0.002  # 2 m$
+                # Feedback reduces reactivity as temperature rises
+                return rho_0 * np.exp(-0.01 * t)  # Decay over time
+
+            result = solver.solve_transient(
+                rho_external=reactivity_with_feedback,
+                power_removal=lambda t, T_f, T_m: 1e6,
+                initial_state=initial_state,
+                t_span=(0.0, 100.0),
+            )
+
+    Attributes:
+        params: PointKineticsParameters object containing all physical parameters
+
+    Note:
+        The solver uses scipy's solve_ivp for numerical integration. Temperature
+        feedback is computed from power balance equations, and reactivity is updated
+        based on temperature changes using the reactivity coefficients in params.
+    """
     def __init__(self, params: PointKineticsParameters):
         """
         Initialize point kinetics solver.
-        
+
         Args:
             params: PointKineticsParameters instance with delayed neutron
-                data, reactivity coefficients, and heat capacities.
+                data, reactivity coefficients, and heat capacities. Must contain
+                valid delayed neutron parameters, reactivity coefficients, and
+                heat capacities.
 
         Raises:
-            ValueError: If params is invalid
+            ValueError: If params is invalid (wrong type, empty arrays, non-positive
+                       values, etc.)
+
+        Example:
+            >>> params = PointKineticsParameters(
+            ...     beta=np.array([0.00021, 0.00141, ...]),
+            ...     lambda_d=np.array([0.0127, 0.0317, ...]),
+            ...     alpha_fuel=-5e-5,
+            ...     alpha_moderator=-2e-5,
+            ...     Lambda=1e-4,
+            ...     fuel_heat_capacity=1e6,
+            ...     moderator_heat_capacity=5e5,
+            ... )
+            >>> solver = PointKineticsSolver(params)
         """
         # Validate inputs
         if not isinstance(params, PointKineticsParameters):
@@ -273,40 +332,69 @@ class PointKineticsSolver:
     ) -> Dict:
         """
         Solve point kinetics equations with temperature feedback.
-        
+
         Integrates the coupled system of ODEs for power, delayed neutron
         precursors, fuel temperature, and moderator temperature. Includes
         temperature feedback reactivity and external reactivity insertion.
-        
+
         Args:
             rho_external: Callable function rho(t) returning external reactivity
-                in dk/k units. Can model scram, control rod insertion, etc.
-            power_removal: Callable function Q(t, T_fuel, T_mod) returning heat
-                removal rate in Watts. Models forced cooling, natural convection, etc.
+                in dk/k units (dimensionless). Can model scram, control rod insertion,
+                or any time-dependent reactivity change. Must accept float (time) and
+                return float (reactivity).
+            power_removal: Callable function Q(t, T_fuel, T_mod) returning heat removal
+                rate in Watts. Must accept three float arguments (time, fuel temperature,
+                moderator temperature) and return float (power).
             initial_state: Dictionary with keys:
-                - "power": Initial power in Watts.
-                - "T_fuel": Initial fuel temperature in Kelvin.
-                - "T_mod": Initial moderator temperature in Kelvin.
-                - "C_i": Optional 1D array of initial precursor concentrations.
-                    If not provided, calculated from steady-state assumption.
-            t_span: Tuple (t_start, t_end) in seconds.
-            max_step: Maximum time step for ODE solver in seconds (default: 0.1).
-        
+                - "power": Initial reactor power in Watts (float)
+                - "T_fuel": Initial fuel temperature in Kelvin (float)
+                - "T_moderator": Initial moderator temperature in Kelvin (float)
+                - "precursors" (optional): Initial delayed neutron precursor concentrations
+                  as numpy array. If not provided, computed from steady-state balance.
+            t_span: Tuple (t_start, t_end) defining simulation time span in seconds.
+            max_step: Maximum time step for ODE integrator in seconds (default: 0.1).
+
         Returns:
-            Dictionary with keys:
-                - "t": 1D array of time points in seconds.
-                - "power": 1D array of power values in Watts.
-                - "T_fuel": 1D array of fuel temperatures in Kelvin.
-                - "T_moderator": 1D array of moderator temperatures in Kelvin.
-                - "rho_external": 1D array of external reactivity values.
-        
-        Note:
-            Uses scipy.integrate.solve_ivp with BDF method for stiff systems.
-            Solver tolerances: rtol=1e-6, atol=1e-8.
+            Dictionary containing time history with keys:
+                - "time": Time array [s]
+                - "power": Power array [W]
+                - "T_fuel": Fuel temperature array [K]
+                - "T_moderator": Moderator temperature array [K]
+                - "reactivity": Total reactivity array [dk/k]
+                - "precursors": Precursor concentrations array [variable units]
 
         Raises:
-            ValueError: If inputs are invalid
-            RuntimeError: If solution fails
+            ValueError: If inputs are invalid (non-callable functions, missing keys,
+                       non-physical values, etc.)
+            RuntimeError: If ODE solver fails to converge or produces invalid results
+
+        Example:
+            >>> # Reactivity insertion with scram
+            >>> def rho_ext(t):
+            ...     if t < 5.0:
+            ...         return 0.002  # 2 m$ insertion
+            ...     else:
+            ...         return -0.05  # Scram insertion
+            >>> 
+            >>> def Q_removal(t, T_fuel, T_mod):
+            ...     return 0.9 * 1e6  # 90% of initial power
+            >>> 
+            >>> initial_state = {
+            ...     "power": 1e6,  # 1 MWth
+            ...     "T_fuel": 1200.0,  # K
+            ...     "T_moderator": 900.0,  # K
+            ... }
+            >>> 
+            >>> result = solver.solve_transient(
+            ...     rho_external=rho_ext,
+            ...     power_removal=Q_removal,
+            ...     initial_state=initial_state,
+            ...     t_span=(0.0, 100.0),
+            ...     max_step=0.1,
+            ... )
+            >>> 
+            >>> print(f"Peak power: {np.max(result['power'])/1e6:.2f} MW")
+            >>> print(f"Final power: {result['power'][-1]/1e6:.2f} MW")
         """
         # Validate inputs
         if not callable(rho_external):

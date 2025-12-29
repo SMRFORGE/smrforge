@@ -32,20 +32,103 @@ logger = get_logger("smrforge.neutronics")
 class MultiGroupDiffusion:
     """
     Multi-group neutron diffusion solver with automatic input validation.
+
+    This class solves the multi-group neutron diffusion equation using either
+    power iteration or Arnoldi/Krylov subspace methods. It includes comprehensive
+    input validation, logging, and error handling.
+
+    Examples:
+        Basic usage with power iteration::
+
+            from smrforge.geometry import PrismaticCore
+            from smrforge.neutronics.solver import MultiGroupDiffusion
+            from smrforge.validation.models import CrossSectionData, SolverOptions
+            import numpy as np
+
+            # Create geometry
+            geometry = PrismaticCore(name="TestCore")
+            geometry.core_height = 200.0
+            geometry.core_diameter = 100.0
+            geometry.build_mesh(n_radial=20, n_axial=10)
+
+            # Create cross sections (2-group)
+            xs_data = CrossSectionData(
+                n_groups=2,
+                n_materials=1,
+                sigma_t=np.array([[0.5, 0.8]]),
+                sigma_a=np.array([[0.1, 0.2]]),
+                sigma_f=np.array([[0.05, 0.15]]),
+                nu_sigma_f=np.array([[0.125, 0.375]]),
+                sigma_s=np.array([[[0.39, 0.01], [0.0, 0.58]]]),
+                chi=np.array([[1.0, 0.0]]),
+                D=np.array([[1.5, 0.4]]),
+            )
+
+            # Create solver options
+            options = SolverOptions(
+                max_iterations=100,
+                tolerance=1e-6,
+                eigen_method="power",  # or "arnoldi"
+                verbose=True
+            )
+
+            # Create and solve
+            solver = MultiGroupDiffusion(geometry, xs_data, options)
+            k_eff, flux = solver.solve_steady_state()
+            print(f"k-eff: {k_eff:.6f}")
+
+        Using Arnoldi method::
+
+            options = SolverOptions(
+                max_iterations=100,
+                tolerance=1e-6,
+                eigen_method="arnoldi",  # Faster for large problems
+                verbose=True
+            )
+            solver = MultiGroupDiffusion(geometry, xs_data, options)
+            k_eff, flux = solver.solve_steady_state()
+
+        Compute power distribution::
+
+            power = solver.compute_power_distribution(total_power_mw=10.0)
+            print(f"Max power density: {np.max(power):.2e} W/cm³")
     """
 
     def __init__(self, geometry, xs_data: CrossSectionData, options: SolverOptions):
         """
         Initialize solver with validated inputs.
 
+        The inputs are validated using Pydantic models and physics-based
+        validation to ensure consistency and correctness.
+
         Args:
-            geometry: Core geometry object
-            xs_data: CrossSectionData (Pydantic validated)
-            options: SolverOptions (Pydantic validated)
+            geometry: Core geometry object with mesh attributes (radial_mesh, axial_mesh,
+                     core_diameter, core_height)
+            xs_data: CrossSectionData object containing cross sections for all materials
+                     and energy groups (Pydantic validated)
+            options: SolverOptions object containing solver parameters like max_iterations,
+                    tolerance, and eigen_method (Pydantic validated)
 
         Raises:
-            ValidationError: If inputs don't pass Pydantic validation
-            ValueError: If inputs don't pass physics validation
+            ValidationError: If inputs don't pass Pydantic type/range validation
+            ValueError: If inputs don't pass physics-based validation (e.g., cross sections
+                       don't satisfy physical constraints)
+
+        Example:
+            >>> from smrforge.geometry import PrismaticCore
+            >>> from smrforge.neutronics.solver import MultiGroupDiffusion
+            >>> from smrforge.validation.models import CrossSectionData, SolverOptions
+            >>> import numpy as np
+            >>>
+            >>> geometry = PrismaticCore(name="Test")
+            >>> geometry.core_height = 200.0
+            >>> geometry.core_diameter = 100.0
+            >>> geometry.build_mesh(n_radial=20, n_axial=10)
+            >>>
+            >>> xs_data = CrossSectionData(...)  # See examples above
+            >>> options = SolverOptions(max_iterations=100, tolerance=1e-6)
+            >>>
+            >>> solver = MultiGroupDiffusion(geometry, xs_data, options)
         """
         # Inputs are already Pydantic-validated at this point
         self.geometry = geometry
@@ -157,13 +240,31 @@ class MultiGroupDiffusion:
         """
         Solve steady-state eigenvalue problem.
 
+        Solves the multi-group neutron diffusion equation to find the critical
+        eigenvalue (k-eff) and the corresponding flux distribution. Supports both
+        power iteration and Arnoldi/Krylov methods as specified in solver options.
+
         Returns:
-            k_eff: Effective multiplication factor
-            flux: Neutron flux distribution [nz, nr, ng]
+            Tuple containing:
+                - k_eff (float): Effective multiplication factor (should be ~1.0 for critical)
+                - flux (np.ndarray): Neutron flux distribution with shape [nz, nr, ng]
+                  where nz = number of axial mesh cells, nr = number of radial mesh cells,
+                  ng = number of energy groups
 
         Raises:
-            RuntimeError: If solver fails to converge
-            ValueError: If solution is non-physical
+            RuntimeError: If solver fails to converge within max_iterations
+            ValueError: If solution is non-physical (negative flux, infinite values, etc.)
+
+        Example:
+            >>> solver = MultiGroupDiffusion(geometry, xs_data, options)
+            >>> k_eff, flux = solver.solve_steady_state()
+            >>> print(f"k-eff: {k_eff:.6f}")
+            >>> print(f"Flux shape: {flux.shape}")  # [nz, nr, ng]
+            >>> print(f"Total flux: {np.sum(flux):.2e}")
+
+        Note:
+            The solution is stored in ``self.k_eff`` and ``self.flux`` for subsequent
+            use in methods like ``compute_power_distribution()``.
         """
         logger.info(f"Solving {self.ng}-group diffusion equation")
         logger.debug(
@@ -419,23 +520,37 @@ class MultiGroupDiffusion:
         """
         Arnoldi/Krylov eigenvalue method using scipy.sparse.linalg.eigs.
 
-        This method uses an iterative approach: it applies power iteration steps
-        as a linear operator and uses scipy's eigs to find the dominant eigenvalue.
+        This method uses an iterative Krylov subspace approach by applying power
+        iteration steps as a linear operator and using scipy's eigs to find the
+        dominant eigenvalue. The Arnoldi method can converge faster than power
+        iteration for large problems, especially when multiple eigenvalues are needed.
 
-        The Arnoldi method can converge faster than power iteration for large problems,
-        especially when multiple eigenvalues are needed.
+        The method wraps the multi-group diffusion operator as a LinearOperator
+        and uses scipy's eigs (which internally uses Arnoldi iteration) to find
+        the largest eigenvalue and corresponding eigenvector (flux).
 
         Returns:
-            k_eff: Effective multiplication factor
-            flux: Neutron flux distribution [nz, nr, ng]
+            Tuple containing:
+                - k_eff (float): Effective multiplication factor
+                - flux (np.ndarray): Neutron flux distribution [nz, nr, ng]
 
         Raises:
             RuntimeError: If solver fails to converge or produces invalid results
+                          (negative flux, non-physical k_eff, etc.)
 
         Note:
             This implementation uses scipy's sparse eigensolver (eigs), which
-            internally uses the Arnoldi iteration. For very large problems,
-            power iteration may be more memory-efficient.
+            internally uses the Arnoldi iteration. For very large problems with
+            limited memory, power iteration (``_power_iteration()``) may be more
+            memory-efficient as it doesn't need to store a Krylov subspace basis.
+
+        Example:
+            This method is called automatically when ``eigen_method="arnoldi"``
+            is set in SolverOptions::
+
+                >>> options = SolverOptions(eigen_method="arnoldi")
+                >>> solver = MultiGroupDiffusion(geometry, xs_data, options)
+                >>> k_eff, flux = solver.solve_steady_state()  # Calls _arnoldi_method internally
         """
         logger.debug("Starting Arnoldi eigenvalue method")
 
