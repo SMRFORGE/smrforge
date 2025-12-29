@@ -6,13 +6,13 @@ A comprehensive toolkit for nuclear reactor design, analysis, and optimization.
 Main modules:
 - core: Reactor components and materials (✅ Stable)
 - neutronics: Reactor physics and neutron transport (✅ Stable)
-- thermal: Thermal-hydraulics analysis (🟡 Experimental)
-- safety: Safety analysis and transients (🟡 Experimental)
-- uncertainty: Uncertainty quantification (🟡 Experimental)
+- thermal: Thermal-hydraulics analysis (🟡 Experimental - API may change)
+- safety: Safety analysis and transients (🟡 Experimental - API may change)
+- uncertainty: Uncertainty quantification (🟡 Experimental - API may change)
+- visualization: Plotting tools (✅ Stable)
 - fuel: Fuel performance modeling (❌ Not implemented)
 - optimization: Design optimization (❌ Not implemented)
 - io: Input/output utilities (❌ Not implemented)
-- visualization: Plotting tools (❌ Not implemented)
 - control: Control systems (❌ Not implemented)
 - economics: Cost modeling (❌ Not implemented)
 

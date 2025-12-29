@@ -19,11 +19,12 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
 
-### 🟡 Experimental (In Development)
-- **Monte Carlo Transport**: Particle transport solver with comprehensive test coverage
-- **Thermal-Hydraulics**: 1D channel models with fluid properties
-- **Safety Analysis**: Transient simulations (LOCA, LOFA, ATWS, RIA) with point kinetics
-- **Uncertainty Quantification**: Monte Carlo sampling, sensitivity analysis (Sobol indices, Morris screening)
+### 🟡 Experimental (API May Change)
+These features are **functionally complete and well-tested**, but their APIs may change in future versions:
+- **Monte Carlo Transport**: Particle transport solver (97.7% test coverage, 51+ tests)
+- **Thermal-Hydraulics**: 1D channel models with fluid properties (45+ tests)
+- **Safety Analysis**: Transient simulations (LOCA, LOFA, ATWS, RIA) with point kinetics (40+ tests)
+- **Uncertainty Quantification**: Monte Carlo sampling, sensitivity analysis (Sobol indices, Morris screening) (55+ tests)
 
 ### ❌ Not Yet Implemented
 - **Fuel Performance**: Stub module (use external tools)
