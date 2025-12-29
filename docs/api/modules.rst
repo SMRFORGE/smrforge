@@ -1,7 +1,7 @@
-smrforge
+geometry
 ========
 
 .. toctree::
    :maxdepth: 4
 
-   smrforge
+   geometry

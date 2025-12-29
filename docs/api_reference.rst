@@ -21,6 +21,7 @@ Core Functionality
    api/smrforge.neutronics
    api/smrforge.thermal
    api/smrforge.geometry
+   api/smrforge.visualization
    api/smrforge.validation
    api/smrforge.presets
    api/smrforge.convenience
@@ -42,7 +43,6 @@ Optional/Experimental Modules
    :maxdepth: 2
 
    api/smrforge.io
-   api/smrforge.visualization
    api/smrforge.fuel
    api/smrforge.optimization
    api/smrforge.control
