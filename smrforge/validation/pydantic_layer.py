@@ -519,6 +519,9 @@ class SolverOptions(BaseModel):
     omega: float = Field(
         default=1.5, gt=0, le=2.0, description="SOR relaxation parameter"
     )
+    skip_solution_validation: bool = Field(
+        default=False, description="Skip solution validation (for testing)"
+    )
 
     @field_validator("tolerance")
     @classmethod

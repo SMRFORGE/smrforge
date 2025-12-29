@@ -184,13 +184,40 @@ class TestAdvancedMeshGenerator:
 
         vertices = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]])
         triangles = np.array([[0, 1, 2]])
-        criteria = np.array([1.5])  # High refinement indicator
+        criteria = np.array([2.0])  # High refinement indicator
 
         new_vertices, new_triangles = generator.refine_mesh(vertices, triangles, criteria)
 
-        # Should return something (implementation may vary)
-        assert new_vertices is not None
-        assert new_triangles is not None
+        # Should have more vertices and triangles after refinement
+        assert len(new_vertices) > len(vertices)  # Added midpoints
+        assert len(new_triangles) > len(triangles)  # Split into 4 triangles
+        assert len(new_triangles) == 4  # One triangle split into 4
+
+    def test_refine_mesh_with_low_criteria(self):
+        """Test mesh refinement with low criteria (should not refine)."""
+        generator = AdvancedMeshGenerator()
+
+        vertices = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, 1.0], [1.5, 0.5]])
+        triangles = np.array([[0, 1, 2], [1, 3, 2]])
+        # Use criteria where most are low, so median is low and threshold filters them out
+        criteria = np.array([0.1, 0.2])  # Low refinement indicators
+
+        new_vertices, new_triangles = generator.refine_mesh(vertices, triangles, criteria)
+
+        # Should return unchanged for low criteria (threshold = 0.15 * 1.5 = 0.225, both < threshold)
+        assert np.array_equal(new_vertices, vertices)
+        assert np.array_equal(new_triangles, triangles)
+
+    def test_refine_mesh_criteria_length_mismatch(self):
+        """Test that criteria length mismatch raises ValueError."""
+        generator = AdvancedMeshGenerator()
+
+        vertices = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]])
+        triangles = np.array([[0, 1, 2]])
+        criteria = np.array([1.0, 2.0])  # Wrong length
+
+        with pytest.raises(ValueError, match="refinement_criteria length"):
+            generator.refine_mesh(vertices, triangles, criteria)
 
 
 class TestMeshQuality:

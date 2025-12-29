@@ -10,21 +10,57 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
-import seaborn as sns
+try:
+    import seaborn as sns
+except ImportError:
+    sns = None  # Optional dependency
 from numba import njit, prange
 from rich.console import Console
-from rich.progress import Progress, track
+from rich.progress import Progress
 from rich.table import Table
-from SALib.analyze import fast, morris, sobol
-from SALib.sample import latin, saltelli
-from SALib.sample import sobol as sobol_sample
+
+# Optional dependencies for sensitivity analysis
+try:
+    from SALib.analyze import fast, morris, sobol
+    from SALib.sample import latin, saltelli
+    from SALib.sample import sobol as sobol_sample
+    _SALIB_AVAILABLE = True
+except ImportError:
+    _SALIB_AVAILABLE = False
+    # Define dummy functions for type hints
+    fast = None
+    morris = None
+    sobol = None
+    latin = None
+    saltelli = None
+    sobol_sample = None
+
 from scipy.stats import qmc  # Quasi-Monte Carlo
 from scipy.stats import lognorm, norm, truncnorm, uniform
+
+from ..utils.logging import get_logger
+
+# Get logger for this module
+logger = get_logger("smrforge.uncertainty.uq")
 
 
 @dataclass
 class UncertainParameter:
-    """Definition of an uncertain parameter."""
+    """
+    Definition of an uncertain parameter.
+
+    Args:
+        name: Parameter name
+        distribution: Distribution type ('normal', 'uniform', 'lognormal', 'triangular')
+        nominal: Nominal value
+        uncertainty: Uncertainty specification - float (std) for normal/lognormal,
+            tuple (min, max) for uniform/triangular
+        units: Parameter units (optional)
+        description: Parameter description (optional)
+
+    Raises:
+        ValueError: If inputs are invalid
+    """
 
     name: str
     distribution: str  # 'normal', 'uniform', 'lognormal', 'triangular'
@@ -33,8 +69,65 @@ class UncertainParameter:
     units: str = ""
     description: str = ""
 
+    def __post_init__(self):
+        """Validate parameter definition."""
+        valid_distributions = ["normal", "uniform", "lognormal", "triangular"]
+        if self.distribution not in valid_distributions:
+            raise ValueError(
+                f"distribution must be one of {valid_distributions}, "
+                f"got {self.distribution}"
+            )
+
+        if not isinstance(self.name, str) or len(self.name) == 0:
+            raise ValueError(f"name must be non-empty string, got {self.name}")
+
+        # Validate uncertainty format based on distribution
+        if self.distribution in ["normal", "lognormal"]:
+            if not isinstance(self.uncertainty, (int, float)):
+                raise ValueError(
+                    f"For {self.distribution} distribution, uncertainty must be float (std), "
+                    f"got {type(self.uncertainty)}"
+                )
+            if self.uncertainty <= 0:
+                raise ValueError(
+                    f"For {self.distribution} distribution, uncertainty (std) must be > 0, "
+                    f"got {self.uncertainty}"
+                )
+        elif self.distribution in ["uniform", "triangular"]:
+            if not isinstance(self.uncertainty, tuple) or len(self.uncertainty) != 2:
+                raise ValueError(
+                    f"For {self.distribution} distribution, uncertainty must be tuple (min, max), "
+                    f"got {self.uncertainty}"
+                )
+            if self.uncertainty[0] >= self.uncertainty[1]:
+                raise ValueError(
+                    f"For {self.distribution} distribution, uncertainty[0] must be < uncertainty[1], "
+                    f"got {self.uncertainty}"
+                )
+            if self.distribution == "triangular":
+                if not (self.uncertainty[0] <= self.nominal <= self.uncertainty[1]):
+                    raise ValueError(
+                        f"For triangular distribution, nominal must be between uncertainty bounds, "
+                        f"got nominal={self.nominal}, bounds={self.uncertainty}"
+                    )
+
     def sample(self, n: int, random_state: Optional[int] = None) -> np.ndarray:
-        """Generate samples from distribution."""
+        """
+        Generate samples from distribution.
+
+        Args:
+            n: Number of samples
+            random_state: Random seed
+
+        Returns:
+            Array of n samples
+
+        Raises:
+            ValueError: If n is invalid
+        """
+        if n <= 0:
+            raise ValueError(f"n must be > 0, got {n}")
+
         rng = np.random.default_rng(random_state)
 
         if self.distribution == "normal":
@@ -102,12 +195,32 @@ class UQResults:
 class MonteCarloSampler:
     """
     Monte Carlo and Latin Hypercube sampling for UQ.
+
+    Args:
+        parameters: List of UncertainParameter objects
+
+    Raises:
+        ValueError: If parameters list is invalid
     """
 
     def __init__(self, parameters: List[UncertainParameter]):
+        if not isinstance(parameters, list):
+            raise ValueError(f"parameters must be list, got {type(parameters)}")
+
+        if len(parameters) == 0:
+            raise ValueError("parameters list cannot be empty")
+
+        for i, param in enumerate(parameters):
+            if not isinstance(param, UncertainParameter):
+                raise ValueError(
+                    f"parameters[{i}] must be UncertainParameter, got {type(param)}"
+                )
+
         self.parameters = parameters
         self.n_params = len(parameters)
         self.console = Console()
+
+        logger.debug(f"MonteCarloSampler initialized with {self.n_params} parameters")
 
     def sample_monte_carlo(
         self, n_samples: int, random_state: Optional[int] = None
@@ -121,7 +234,15 @@ class MonteCarloSampler:
 
         Returns:
             Samples array (n_samples, n_params)
+
+        Raises:
+            ValueError: If n_samples is invalid
         """
+        if n_samples <= 0:
+            raise ValueError(f"n_samples must be > 0, got {n_samples}")
+
+        logger.debug(f"Generating {n_samples} Monte Carlo samples")
+
         samples = np.zeros((n_samples, self.n_params))
 
         for i, param in enumerate(self.parameters):
@@ -135,7 +256,22 @@ class MonteCarloSampler:
         """
         Latin Hypercube Sampling for better space-filling.
         More efficient than pure MC for same number of samples.
+
+        Args:
+            n_samples: Number of samples
+            random_state: Random seed
+
+        Returns:
+            Samples array (n_samples, n_params)
+
+        Raises:
+            ValueError: If n_samples is invalid
         """
+        if n_samples <= 0:
+            raise ValueError(f"n_samples must be > 0, got {n_samples}")
+
+        logger.debug(f"Generating {n_samples} Latin Hypercube samples")
+
         sampler = qmc.LatinHypercube(d=self.n_params, seed=random_state)
 
         # Generate LHS in [0,1]^d
@@ -177,7 +313,22 @@ class MonteCarloSampler:
         """
         Sobol sequence sampling (quasi-Monte Carlo).
         Better convergence than random sampling.
+
+        Args:
+            n_samples: Number of samples (will be rounded up to next power of 2)
+            random_state: Random seed
+
+        Returns:
+            Samples array (n_samples, n_params)
+
+        Raises:
+            ValueError: If n_samples is invalid
         """
+        if n_samples <= 0:
+            raise ValueError(f"n_samples must be > 0, got {n_samples}")
+
+        logger.debug(f"Generating {n_samples} Sobol sequence samples")
+
         sampler = qmc.Sobol(d=self.n_params, scramble=True, seed=random_state)
 
         # Get next power of 2
@@ -209,6 +360,14 @@ class MonteCarloSampler:
 class UncertaintyPropagation:
     """
     Propagate uncertainties through reactor model.
+
+    Args:
+        parameters: List of UncertainParameter objects
+        model: Callable function that takes a parameter dict and returns results
+        output_names: List of output variable names
+
+    Raises:
+        ValueError: If inputs are invalid
     """
 
     def __init__(
@@ -217,11 +376,30 @@ class UncertaintyPropagation:
         model: Callable,
         output_names: List[str],
     ):
+        # Validate inputs
+        if not isinstance(parameters, list) or len(parameters) == 0:
+            raise ValueError("parameters must be non-empty list")
+
+        if not callable(model):
+            raise ValueError(f"model must be callable, got {type(model)}")
+
+        if not isinstance(output_names, list) or len(output_names) == 0:
+            raise ValueError("output_names must be non-empty list")
+
+        for i, name in enumerate(output_names):
+            if not isinstance(name, str) or len(name) == 0:
+                raise ValueError(f"output_names[{i}] must be non-empty string, got {name}")
+
         self.parameters = parameters
         self.model = model
         self.output_names = output_names
         self.sampler = MonteCarloSampler(parameters)
         self.console = Console()
+
+        logger.info(
+            f"UncertaintyPropagation initialized: {len(parameters)} parameters, "
+            f"{len(output_names)} outputs"
+        )
 
     def propagate(
         self,
@@ -241,7 +419,23 @@ class UncertaintyPropagation:
 
         Returns:
             UQResults object
+
+        Raises:
+            ValueError: If inputs are invalid
+            RuntimeError: If model evaluation fails
         """
+        # Validate inputs
+        if n_samples <= 0:
+            raise ValueError(f"n_samples must be > 0, got {n_samples}")
+
+        valid_methods = ["mc", "lhs", "sobol"]
+        if method not in valid_methods:
+            raise ValueError(f"method must be one of {valid_methods}, got {method}")
+
+        logger.info(
+            f"Starting uncertainty propagation: {n_samples} samples, method={method}"
+        )
+
         self.console.print(f"[bold cyan]Uncertainty Propagation[/bold cyan]")
         self.console.print(f"Parameters: {len(self.parameters)}")
         self.console.print(f"Samples: {n_samples}")
@@ -269,15 +463,34 @@ class UncertaintyPropagation:
                 params = {p.name: samples[i, j] for j, p in enumerate(self.parameters)}
 
                 # Run model
-                result = self.model(params)
+                try:
+                    result = self.model(params)
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Model evaluation failed at sample {i}: {e}"
+                    ) from e
 
                 # Extract outputs
                 if isinstance(result, dict):
+                    # Check all output names are present
+                    missing = [name for name in self.output_names if name not in result]
+                    if missing:
+                        raise RuntimeError(
+                            f"Model result missing outputs: {missing}"
+                        )
                     outputs[i, :] = [result[name] for name in self.output_names]
                 else:
-                    outputs[i, :] = result
+                    # Assume result is array-like
+                    result_array = np.array(result)
+                    if result_array.shape != (n_outputs,):
+                        raise RuntimeError(
+                            f"Model result shape {result_array.shape} != expected ({n_outputs},)"
+                        )
+                    outputs[i, :] = result_array
 
                 progress.update(task, advance=1)
+
+        logger.info(f"Completed {n_samples} model evaluations")
 
         # Compute statistics
         mean = np.mean(outputs, axis=0)
@@ -336,6 +549,14 @@ class UncertaintyPropagation:
 class SensitivityAnalysis:
     """
     Global sensitivity analysis using Sobol indices and Morris method.
+
+    Args:
+        parameters: List of UncertainParameter objects
+        model: Callable function that takes a parameter dict and returns results
+        output_names: List of output variable names
+
+    Raises:
+        ValueError: If inputs are invalid
     """
 
     def __init__(
@@ -344,10 +565,25 @@ class SensitivityAnalysis:
         model: Callable,
         output_names: List[str],
     ):
+        # Validate inputs
+        if not isinstance(parameters, list) or len(parameters) == 0:
+            raise ValueError("parameters must be non-empty list")
+
+        if not callable(model):
+            raise ValueError(f"model must be callable, got {type(model)}")
+
+        if not isinstance(output_names, list) or len(output_names) == 0:
+            raise ValueError("output_names must be non-empty list")
+
         self.parameters = parameters
         self.model = model
         self.output_names = output_names
         self.console = Console()
+
+        logger.info(
+            f"SensitivityAnalysis initialized: {len(parameters)} parameters, "
+            f"{len(output_names)} outputs"
+        )
 
     def sobol_analysis(
         self, n_samples: int = 1024, calc_second_order: bool = True
@@ -362,7 +598,26 @@ class SensitivityAnalysis:
 
         Returns:
             Dict of Sobol indices
+
+        Raises:
+            ValueError: If n_samples is invalid
+            ImportError: If SALib is not installed
+            RuntimeError: If model evaluation fails
         """
+        if n_samples <= 0:
+            raise ValueError(f"n_samples must be > 0, got {n_samples}")
+
+        if not _SALIB_AVAILABLE:
+            raise ImportError(
+                "SALib is required for Sobol analysis. "
+                "Install with: pip install salib"
+            )
+
+        logger.info(
+            f"Starting Sobol analysis: n_samples={n_samples}, "
+            f"calc_second_order={calc_second_order}"
+        )
+
         self.console.print(f"[bold cyan]Sobol Sensitivity Analysis[/bold cyan]")
 
         # Define problem for SALib
@@ -391,16 +646,39 @@ class SensitivityAnalysis:
         n_outputs = len(self.output_names)
         Y = np.zeros((n_evals, n_outputs))
 
-        for i in track(range(n_evals), description="Evaluating..."):
-            params = {
-                name: param_samples[i, j] for j, name in enumerate(problem["names"])
-            }
-            result = self.model(params)
+        with Progress() as progress:
+            task = progress.add_task("Evaluating...", total=n_evals)
 
-            if isinstance(result, dict):
-                Y[i, :] = [result[name] for name in self.output_names]
-            else:
-                Y[i, :] = result
+            for i in range(n_evals):
+                params = {
+                    name: param_samples[i, j] for j, name in enumerate(problem["names"])
+                }
+                try:
+                    result = self.model(params)
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Model evaluation failed at evaluation {i}: {e}"
+                    ) from e
+
+                if isinstance(result, dict):
+                    missing = [name for name in self.output_names if name not in result]
+                    if missing:
+                        raise RuntimeError(
+                            f"Model result missing outputs: {missing}"
+                        )
+                    Y[i, :] = [result[name] for name in self.output_names]
+                else:
+                    result_array = np.array(result)
+                    if result_array.shape != (len(self.output_names),):
+                        raise RuntimeError(
+                            f"Model result shape {result_array.shape} != expected "
+                            f"({len(self.output_names)},)"
+                        )
+                    Y[i, :] = result_array
+
+                progress.update(task, advance=1)
+
+        logger.info(f"Completed {n_evals} model evaluations for Sobol analysis")
 
         # Analyze each output
         sobol_results = {}
@@ -415,8 +693,24 @@ class SensitivityAnalysis:
         return sobol_results
 
     def _print_sobol_results(self, results: Dict):
-        """Print Sobol indices."""
+        """
+        Print Sobol indices in a formatted table.
+
+        Args:
+            results: Dict of Sobol analysis results
+
+        Raises:
+            ValueError: If results structure is invalid
+        """
+        if not isinstance(results, dict):
+            raise ValueError(f"results must be dict, got {type(results)}")
+
         for output_name, Si in results.items():
+            if not isinstance(Si, dict) or "S1" not in Si or "ST" not in Si:
+                logger.warning(
+                    f"Skipping {output_name}: invalid Sobol results structure"
+                )
+                continue
             self.console.print(f"\n[bold]Output: {output_name}[/bold]")
 
             table = Table()
@@ -456,7 +750,28 @@ class SensitivityAnalysis:
 
         Returns:
             Dict of Morris indices (mu_star, sigma)
+
+        Raises:
+            ValueError: If inputs are invalid
+            ImportError: If SALib is not installed
+            RuntimeError: If model evaluation fails
         """
+        if n_trajectories <= 0:
+            raise ValueError(f"n_trajectories must be > 0, got {n_trajectories}")
+        if n_levels < 2:
+            raise ValueError(f"n_levels must be >= 2, got {n_levels}")
+
+        if not _SALIB_AVAILABLE:
+            raise ImportError(
+                "SALib is required for Morris screening. "
+                "Install with: pip install salib"
+            )
+
+        logger.info(
+            f"Starting Morris screening: n_trajectories={n_trajectories}, "
+            f"n_levels={n_levels}"
+        )
+
         self.console.print(f"[bold cyan]Morris Screening[/bold cyan]")
 
         # Define problem
@@ -483,16 +798,39 @@ class SensitivityAnalysis:
         n_outputs = len(self.output_names)
         Y = np.zeros((n_evals, n_outputs))
 
-        for i in track(range(n_evals), description="Evaluating..."):
-            params = {
-                name: param_samples[i, j] for j, name in enumerate(problem["names"])
-            }
-            result = self.model(params)
+        with Progress() as progress:
+            task = progress.add_task("Evaluating...", total=n_evals)
 
-            if isinstance(result, dict):
-                Y[i, :] = [result[name] for name in self.output_names]
-            else:
-                Y[i, :] = result
+            for i in range(n_evals):
+                params = {
+                    name: param_samples[i, j] for j, name in enumerate(problem["names"])
+                }
+                try:
+                    result = self.model(params)
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Model evaluation failed at evaluation {i}: {e}"
+                    ) from e
+
+                if isinstance(result, dict):
+                    missing = [name for name in self.output_names if name not in result]
+                    if missing:
+                        raise RuntimeError(
+                            f"Model result missing outputs: {missing}"
+                        )
+                    Y[i, :] = [result[name] for name in self.output_names]
+                else:
+                    result_array = np.array(result)
+                    if result_array.shape != (len(self.output_names),):
+                        raise RuntimeError(
+                            f"Model result shape {result_array.shape} != expected "
+                            f"({len(self.output_names)},)"
+                        )
+                    Y[i, :] = result_array
+
+                progress.update(task, advance=1)
+
+        logger.info(f"Completed {n_evals} model evaluations for Morris screening")
 
         # Analyze
         morris_results = {}
@@ -506,8 +844,24 @@ class SensitivityAnalysis:
         return morris_results
 
     def _print_morris_results(self, results: Dict):
-        """Print Morris indices."""
+        """
+        Print Morris indices in a formatted table.
+
+        Args:
+            results: Dict of Morris analysis results
+
+        Raises:
+            ValueError: If results structure is invalid
+        """
+        if not isinstance(results, dict):
+            raise ValueError(f"results must be dict, got {type(results)}")
+
         for output_name, Si in results.items():
+            if not isinstance(Si, dict) or "mu_star" not in Si or "sigma" not in Si:
+                logger.warning(
+                    f"Skipping {output_name}: invalid Morris results structure"
+                )
+                continue
             self.console.print(f"\n[bold]Output: {output_name}[/bold]")
 
             table = Table()
@@ -552,7 +906,34 @@ class VisualizationTools:
     def plot_distributions(
         results: UQResults, output_idx: int = 0, figsize: Tuple[int, int] = (12, 8)
     ):
-        """Plot output distribution with statistics."""
+        """
+        Plot output distribution with statistics.
+
+        Args:
+            results: UQResults object with output samples
+            output_idx: Index of output to plot
+            figsize: Figure size tuple
+
+        Returns:
+            matplotlib Figure object
+
+        Raises:
+            ValueError: If inputs are invalid
+        """
+        if not isinstance(results, UQResults):
+            raise ValueError(f"results must be UQResults, got {type(results)}")
+
+        if output_idx < 0 or output_idx >= len(results.output_names):
+            raise ValueError(
+                f"output_idx must be in [0, {len(results.output_names)}), got {output_idx}"
+            )
+
+        if results.output_samples is None or results.output_samples.size == 0:
+            raise ValueError("results.output_samples is empty")
+
+        if results.mean is None or results.percentiles is None:
+            raise ValueError("results must have computed statistics (mean, percentiles)")
+
         fig, axes = plt.subplots(2, 2, figsize=figsize)
 
         output_name = results.output_names[output_idx]
@@ -605,7 +986,41 @@ class VisualizationTools:
     def plot_scatter_matrix(
         results: UQResults, max_params: int = 6, output_idx: int = 0
     ):
-        """Scatter matrix showing parameter correlations with output."""
+        """
+        Scatter matrix showing parameter correlations with output.
+
+        Args:
+            results: UQResults object with parameter and output samples
+            max_params: Maximum number of parameters to include
+            output_idx: Index of output to plot
+
+        Returns:
+            seaborn PairGrid object
+
+        Raises:
+            ValueError: If inputs are invalid
+            ImportError: If seaborn is not installed
+        """
+        if not isinstance(results, UQResults):
+            raise ValueError(f"results must be UQResults, got {type(results)}")
+
+        if output_idx < 0 or output_idx >= len(results.output_names):
+            raise ValueError(
+                f"output_idx must be in [0, {len(results.output_names)}), got {output_idx}"
+            )
+
+        if max_params <= 0:
+            raise ValueError(f"max_params must be > 0, got {max_params}")
+
+        if results.parameter_samples is None or results.parameter_samples.size == 0:
+            raise ValueError("results.parameter_samples is empty")
+
+        if sns is None:
+            raise ImportError(
+                "seaborn is required for scatter matrix plots. "
+                "Install with: pip install seaborn"
+            )
+
         n_params = min(len(results.parameter_names), max_params)
 
         # Create dataframe
@@ -618,7 +1033,7 @@ class VisualizationTools:
 
         df = pl.DataFrame(data_dict).to_pandas()
 
-        # Scatter matrix
+        # Scatter matrix (sns is checked above)
         fig = sns.pairplot(
             df, diag_kind="kde", corner=True, plot_kws={"alpha": 0.6, "s": 20}
         )
@@ -632,8 +1047,44 @@ class VisualizationTools:
     def plot_sobol_indices(
         sobol_results: Dict, output_name: str, parameter_names: List[str]
     ):
-        """Plot Sobol sensitivity indices."""
+        """
+        Plot Sobol sensitivity indices.
+
+        Args:
+            sobol_results: Dict of Sobol analysis results (from SensitivityAnalysis.sobol_analysis)
+            output_name: Name of output to plot
+            parameter_names: List of parameter names
+
+        Returns:
+            matplotlib Figure object
+
+        Raises:
+            ValueError: If inputs are invalid
+        """
+        if not isinstance(sobol_results, dict):
+            raise ValueError(f"sobol_results must be dict, got {type(sobol_results)}")
+
+        if output_name not in sobol_results:
+            raise ValueError(
+                f"output_name '{output_name}' not in sobol_results. "
+                f"Available: {list(sobol_results.keys())}"
+            )
+
+        if not isinstance(parameter_names, list) or len(parameter_names) == 0:
+            raise ValueError("parameter_names must be non-empty list")
+
         Si = sobol_results[output_name]
+
+        if not isinstance(Si, dict) or "S1" not in Si or "ST" not in Si:
+            raise ValueError(
+                f"Sobol results for '{output_name}' must contain 'S1' and 'ST' keys"
+            )
+
+        if len(Si["S1"]) != len(parameter_names) or len(Si["ST"]) != len(parameter_names):
+            raise ValueError(
+                f"Length mismatch: parameter_names has {len(parameter_names)} elements, "
+                f"but Sobol indices have {len(Si['S1'])} elements"
+            )
 
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 

@@ -85,7 +85,10 @@ def create_test_xs_data(
     nu_sigma_f = np.zeros_like(sigma_a)
 
     # Only first material (fuel) has fission
-    sigma_f[0, :] = 0.8 * sigma_a[0, :] + 0.01 * rng.random(n_groups)
+    # Ensure sigma_f <= sigma_a (physical constraint)
+    sigma_f[0, :] = 0.6 * sigma_a[0, :] + 0.01 * rng.random(n_groups)
+    # Make sure sigma_f doesn't exceed sigma_a
+    sigma_f[0, :] = np.minimum(sigma_f[0, :], 0.95 * sigma_a[0, :])
     nu_sigma_f[0, :] = 2.5 * sigma_f[0, :]  # nu ~ 2.5
 
     # Adjust for target k-eff

@@ -15,7 +15,11 @@ from rich.console import Console
 from rich.progress import Progress, track
 from rich.table import Table
 
+from ..utils.logging import get_logger
 from ..validation.models import CrossSectionData, ReactorSpecification
+
+# Get logger for this module
+logger = get_logger("smrforge.neutronics.monte_carlo")
 
 
 class ParticleType(Enum):
@@ -220,6 +224,16 @@ class MonteCarloSolver:
     Simplified Monte Carlo neutron transport solver.
 
     This is for educational purposes and quick design studies.
+
+    Args:
+        geometry: Simplified geometry object
+        xs_data: Cross-section data (Pydantic validated)
+        n_particles: Number of particles per generation (must be > 0)
+        n_generations: Number of generations (must be > 0)
+        seed: Random number generator seed for reproducibility (optional)
+
+    Raises:
+        ValueError: If input parameters are invalid
     """
 
     def __init__(
@@ -228,7 +242,11 @@ class MonteCarloSolver:
         xs_data: CrossSectionData,
         n_particles: int = 10000,
         n_generations: int = 100,
+        seed: Optional[int] = None,
     ):
+        # Validate inputs
+        self._validate_inputs(geometry, xs_data, n_particles, n_generations)
+
         self.geometry = geometry
         self.xs_data = xs_data
         self.n_particles = n_particles
@@ -238,26 +256,95 @@ class MonteCarloSolver:
         self.tallies: Dict[str, MCTally] = {}
         self.k_eff_history: List[float] = []
 
-        # Random number generator
-        self.rng = np.random.default_rng()
+        # Random number generator with seed for reproducibility
+        self.rng = np.random.default_rng(seed)
+        if seed is not None:
+            logger.info(f"Monte Carlo solver initialized with seed={seed}")
+        else:
+            logger.debug("Monte Carlo solver initialized with random seed")
+
+    def _validate_inputs(
+        self,
+        geometry: SimplifiedGeometry,
+        xs_data: CrossSectionData,
+        n_particles: int,
+        n_generations: int,
+    ) -> None:
+        """Validate input parameters."""
+        if not isinstance(geometry, SimplifiedGeometry):
+            raise ValueError(
+                f"geometry must be SimplifiedGeometry, got {type(geometry)}"
+            )
+
+        if not isinstance(xs_data, CrossSectionData):
+            raise ValueError(
+                f"xs_data must be CrossSectionData, got {type(xs_data)}"
+            )
+
+        if n_particles <= 0:
+            raise ValueError(f"n_particles must be > 0, got {n_particles}")
+
+        if n_generations <= 0:
+            raise ValueError(f"n_generations must be > 0, got {n_generations}")
+
+        # Validate that xs_data has compatible number of materials
+        # Geometry expects fuel (0) and reflector (1)
+        if xs_data.n_materials < 2:
+            logger.warning(
+                f"xs_data has {xs_data.n_materials} materials, "
+                f"but geometry expects at least 2 (fuel and reflector)"
+            )
+
+        # Validate cross-section data has at least one group
+        if xs_data.n_groups < 1:
+            raise ValueError(f"xs_data must have at least 1 group, got {xs_data.n_groups}")
+
+        logger.debug(
+            f"Validated inputs: {n_particles} particles, {n_generations} generations, "
+            f"{xs_data.n_groups} groups, {xs_data.n_materials} materials"
+        )
 
     def add_tally(self, tally: MCTally):
-        """Add a tally to track."""
+        """
+        Add a tally to track.
+
+        Args:
+            tally: MCTally object to add
+
+        Raises:
+            ValueError: If tally is not an MCTally instance
+        """
+        if not isinstance(tally, MCTally):
+            raise ValueError(f"tally must be MCTally, got {type(tally)}")
         self.tallies[tally.name] = tally
+        logger.debug(f"Added tally: {tally.name} (type: {tally.tally_type})")
 
     def run_eigenvalue(self) -> Dict:
         """
         Run k-eff calculation using power iteration.
 
         Returns:
-            Dict with k_eff, flux, and tallies
+            Dict with k_eff, k_std, k_history, and tallies
+
+        Raises:
+            RuntimeError: If calculation fails or produces invalid results
         """
+        logger.info(
+            f"Starting Monte Carlo eigenvalue calculation: "
+            f"{self.n_particles} particles, {self.n_generations} generations"
+        )
         self.console.print(f"[bold cyan]Monte Carlo Eigenvalue Calculation[/bold cyan]")
         self.console.print(f"Particles: {self.n_particles}")
         self.console.print(f"Generations: {self.n_generations}")
 
         # Initialize source
-        source_bank = self._initialize_source()
+        try:
+            source_bank = self._initialize_source()
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize source: {e}") from e
+
+        if len(source_bank) == 0:
+            raise RuntimeError("Failed to initialize source: empty source bank")
 
         # Skip first generations (inactive)
         n_inactive = max(10, self.n_generations // 10)
@@ -290,9 +377,24 @@ class MonteCarloSolver:
                 progress.update(task, advance=1)
 
         # Compute final k_eff (skip inactive generations)
-        k_eff = np.mean(self.k_eff_history[n_inactive:])
-        k_std = np.std(self.k_eff_history[n_inactive:])
+        active_history = self.k_eff_history[n_inactive:]
+        if len(active_history) == 0:
+            raise RuntimeError(
+                f"All {self.n_generations} generations were inactive. "
+                f"Increase n_generations or reduce inactive count."
+            )
 
+        k_eff = np.mean(active_history)
+        k_std = np.std(active_history)
+
+        # Validate results
+        if not np.isfinite(k_eff):
+            raise RuntimeError(f"Invalid k_eff: {k_eff}")
+        if not np.isfinite(k_std):
+            k_std = 0.0
+            logger.warning("k_std is not finite, setting to 0.0")
+
+        logger.info(f"Monte Carlo calculation complete: k_eff = {k_eff:.6f} ± {k_std:.6f}")
         self.console.print(
             f"\n[bold green]k_eff = {k_eff:.6f} ± {k_std:.6f}[/bold green]"
         )
@@ -438,12 +540,33 @@ class MonteCarloSolver:
         return 0.0
 
     def _sample_reaction(self, mat_id: int, energy: float) -> ReactionType:
-        """Sample reaction type."""
+        """
+        Sample reaction type.
+
+        Args:
+            mat_id: Material ID
+            energy: Neutron energy [eV]
+
+        Returns:
+            ReactionType enum value
+
+        Raises:
+            IndexError: If mat_id is out of bounds
+        """
+        if mat_id < 0 or mat_id >= self.xs_data.n_materials:
+            raise IndexError(
+                f"Material ID {mat_id} out of range [0, {self.xs_data.n_materials})"
+            )
+
         # Simplified - use 1 group approximation
         sigma_t = self.xs_data.sigma_t[mat_id, 0]
         sigma_s = self.xs_data.sigma_s[mat_id, 0, 0]
         sigma_f = self.xs_data.sigma_f[mat_id, 0]
         sigma_c = sigma_t - sigma_s - sigma_f
+
+        # Validate cross sections
+        if sigma_t <= 0:
+            raise ValueError(f"Invalid total cross section: {sigma_t} for material {mat_id}")
 
         # Sample
         xi = self.rng.random() * sigma_t

@@ -19,6 +19,11 @@ from rich.table import Table
 from scipy.integrate import odeint, solve_ivp
 from scipy.optimize import fsolve
 
+from ..utils.logging import get_logger
+
+# Get logger for this module
+logger = get_logger("smrforge.safety.transients")
+
 
 class TransientType(Enum):
     """
@@ -217,9 +222,46 @@ class PointKineticsSolver:
         Args:
             params: PointKineticsParameters instance with delayed neutron
                 data, reactivity coefficients, and heat capacities.
+
+        Raises:
+            ValueError: If params is invalid
         """
+        # Validate inputs
+        if not isinstance(params, PointKineticsParameters):
+            raise ValueError(
+                f"params must be PointKineticsParameters, got {type(params)}"
+            )
+
+        if len(params.beta) != len(params.lambda_d):
+            raise ValueError(
+                f"beta and lambda_d must have same length, "
+                f"got {len(params.beta)} and {len(params.lambda_d)}"
+            )
+
+        if len(params.beta) == 0:
+            raise ValueError("params.beta must have at least one group")
+
+        if params.Lambda <= 0:
+            raise ValueError(f"params.Lambda must be > 0, got {params.Lambda}")
+
+        if params.fuel_heat_capacity <= 0:
+            raise ValueError(
+                f"params.fuel_heat_capacity must be > 0, got {params.fuel_heat_capacity}"
+            )
+
+        if params.moderator_heat_capacity <= 0:
+            raise ValueError(
+                f"params.moderator_heat_capacity must be > 0, "
+                f"got {params.moderator_heat_capacity}"
+            )
+
         self.params = params
         self.n_groups = len(params.beta)
+
+        logger.debug(
+            f"PointKineticsSolver initialized: {self.n_groups} delayed neutron groups, "
+            f"Lambda={params.Lambda:.2e} s, beta_total={params.beta_total:.4f}"
+        )
 
     def solve_transient(
         self,
@@ -261,11 +303,50 @@ class PointKineticsSolver:
         Note:
             Uses scipy.integrate.solve_ivp with BDF method for stiff systems.
             Solver tolerances: rtol=1e-6, atol=1e-8.
+
+        Raises:
+            ValueError: If inputs are invalid
+            RuntimeError: If solution fails
         """
-        # Initial state vector
+        # Validate inputs
+        if not callable(rho_external):
+            raise ValueError(f"rho_external must be callable, got {type(rho_external)}")
+        if not callable(power_removal):
+            raise ValueError(f"power_removal must be callable, got {type(power_removal)}")
+
+        if not isinstance(initial_state, dict):
+            raise ValueError(f"initial_state must be dict, got {type(initial_state)}")
+
+        required_keys = ["power", "T_fuel", "T_mod"]
+        for key in required_keys:
+            if key not in initial_state:
+                raise ValueError(f"initial_state missing required key: {key}")
+
         P0 = initial_state["power"]
         T_fuel0 = initial_state["T_fuel"]
         T_mod0 = initial_state["T_mod"]
+
+        if P0 <= 0:
+            raise ValueError(f"initial_state['power'] must be > 0, got {P0}")
+        if T_fuel0 <= 0:
+            raise ValueError(f"initial_state['T_fuel'] must be > 0, got {T_fuel0}")
+        if T_mod0 <= 0:
+            raise ValueError(f"initial_state['T_mod'] must be > 0, got {T_mod0}")
+
+        if len(t_span) != 2:
+            raise ValueError(f"t_span must be tuple of length 2, got {len(t_span)}")
+        if t_span[1] <= t_span[0]:
+            raise ValueError(f"t_span[1] must be > t_span[0], got {t_span}")
+
+        if max_step <= 0:
+            raise ValueError(f"max_step must be > 0, got {max_step}")
+
+        logger.debug(
+            f"Starting transient solution: t_span={t_span}, "
+            f"P0={P0/1e6:.2f} MW, T_fuel0={T_fuel0:.1f} K, T_mod0={T_mod0:.1f} K"
+        )
+
+        # Initial state vector
         C0 = initial_state.get("C_i", np.zeros(self.n_groups))
 
         # Normalize precursor concentrations if not provided
@@ -312,15 +393,39 @@ class PointKineticsSolver:
             return np.concatenate([[dP_dt, dT_fuel_dt, dT_mod_dt], dC_dt])
 
         # Solve stiff ODE system
-        sol = solve_ivp(
-            derivatives,
-            t_span,
-            y0,
-            method="BDF",  # Backward differentiation (good for stiff)
-            max_step=max_step,
-            dense_output=True,
-            rtol=1e-6,
-            atol=1e-8,
+        try:
+            sol = solve_ivp(
+                derivatives,
+                t_span,
+                y0,
+                method="BDF",  # Backward differentiation (good for stiff)
+                max_step=max_step,
+                dense_output=True,
+                rtol=1e-6,
+                atol=1e-8,
+            )
+        except ValueError as e:
+            # Re-raise with more context
+            if "max_step" in str(e):
+                raise ValueError(f"max_step must be > 0, got {max_step}") from e
+            raise RuntimeError(f"ODE solver failed: {e}") from e
+        except Exception as e:
+            raise RuntimeError(f"ODE solver failed: {e}") from e
+
+        # Validate solution
+        if not sol.success:
+            raise RuntimeError(
+                f"ODE solver did not converge: {sol.message}. "
+                f"Try adjusting max_step or t_span."
+            )
+
+        if np.any(sol.y < 0):
+            logger.warning("Solution contains negative values (may be unphysical)")
+
+        logger.info(
+            f"Transient solution complete: {len(sol.t)} time steps, "
+            f"final P={sol.y[0, -1]/1e6:.2f} MW, "
+            f"final T_fuel={sol.y[1, -1]:.1f} K"
         )
 
         # Extract solution
@@ -393,10 +498,20 @@ class LOFCTransient:
             reactor_spec: Reactor specification object containing power,
                 geometry parameters, and material properties.
             core_geometry: Core geometry object for spatial calculations.
+
+        Raises:
+            ValueError: If inputs are invalid
         """
+        if reactor_spec is None:
+            raise ValueError("reactor_spec cannot be None")
+        if core_geometry is None:
+            raise ValueError("core_geometry cannot be None")
+
         self.spec = reactor_spec
         self.geometry = core_geometry
         self.console = Console()
+
+        logger.debug("LOFCTransient initialized")
 
     def simulate(self, conditions: TransientConditions) -> Dict:
         """
@@ -409,7 +524,39 @@ class LOFCTransient:
         4. Decay heat removal via passive cooling
         5. Temperature peak
         6. Long-term cooldown
+
+        Args:
+            conditions: TransientConditions object defining initial state and transient parameters
+
+        Returns:
+            Dict with time history of power, temperatures, etc.
+
+        Raises:
+            ValueError: If conditions are invalid
         """
+        # Validate conditions
+        if not isinstance(conditions, TransientConditions):
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
+        if conditions.initial_power <= 0:
+            raise ValueError(
+                f"conditions.initial_power must be > 0, got {conditions.initial_power}"
+            )
+
+        if conditions.initial_temperature <= 0:
+            raise ValueError(
+                f"conditions.initial_temperature must be > 0, "
+                f"got {conditions.initial_temperature}"
+            )
+
+        logger.info(
+            f"Starting LOFC simulation: P0={conditions.initial_power/1e6:.2f} MW, "
+            f"T0={conditions.initial_temperature:.1f} K, "
+            f"scram_available={conditions.scram_available}"
+        )
+
         self.console.print(f"[bold cyan]Simulating LOFC Transient[/bold cyan]")
         self.console.print(f"Initial power: {conditions.initial_power/1e6:.1f} MWth")
         self.console.print(f"Scram available: {conditions.scram_available}")
@@ -556,9 +703,26 @@ class ATWSTransient:
     """
 
     def __init__(self, reactor_spec, core_geometry):
+        """
+        Initialize ATWS transient analyzer.
+
+        Args:
+            reactor_spec: Reactor specification object
+            core_geometry: Core geometry object
+
+        Raises:
+            ValueError: If inputs are invalid
+        """
+        if reactor_spec is None:
+            raise ValueError("reactor_spec cannot be None")
+        if core_geometry is None:
+            raise ValueError("core_geometry cannot be None")
+
         self.spec = reactor_spec
         self.geometry = core_geometry
         self.console = Console()
+
+        logger.debug("ATWSTransient initialized")
 
     def simulate(self, conditions: TransientConditions) -> Dict:
         """
@@ -570,7 +734,27 @@ class ATWSTransient:
         3. Temperature rise → negative feedback
         4. Self-limiting power excursion
         5. Stabilization via inherent safety
+
+        Args:
+            conditions: TransientConditions object
+
+        Returns:
+            Dict with time history of power, temperatures, etc.
+
+        Raises:
+            ValueError: If conditions are invalid
         """
+        # Validate conditions
+        if not isinstance(conditions, TransientConditions):
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
+        logger.info(
+            f"Starting ATWS simulation: P0={conditions.initial_power/1e6:.2f} MW, "
+            f"T0={conditions.initial_temperature:.1f} K"
+        )
+
         self.console.print(f"[bold yellow]Simulating ATWS Transient[/bold yellow]")
         self.console.print(
             f"[yellow]⚠ Scram assumed FAILED - relying on inherent safety[/yellow]"

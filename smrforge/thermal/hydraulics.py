@@ -13,6 +13,11 @@ from numba import njit, prange
 from scipy.integrate import odeint, solve_ivp
 from scipy.optimize import fsolve
 
+from ..utils.logging import get_logger
+
+# Get logger for this module
+logger = get_logger("smrforge.thermal.hydraulics")
+
 
 class FlowRegime(Enum):
     """Flow regime classification."""
@@ -78,9 +83,22 @@ class ChannelThermalHydraulics:
     """
     1D thermal-hydraulics for single coolant channel.
     Solves coupled momentum and energy equations.
+
+    Args:
+        geometry: ChannelGeometry object defining channel dimensions
+        inlet_conditions: Dictionary with keys:
+            - "temperature": Inlet temperature [K]
+            - "pressure": Inlet pressure [Pa]
+            - "mass_flow_rate": Mass flow rate [kg/s]
+
+    Raises:
+        ValueError: If inputs are invalid
     """
 
     def __init__(self, geometry: ChannelGeometry, inlet_conditions: Dict):
+        # Validate inputs
+        self._validate_inputs(geometry, inlet_conditions)
+
         self.geom = geometry
         self.T_in = inlet_conditions["temperature"]  # K
         self.P_in = inlet_conditions["pressure"]  # Pa
@@ -99,14 +117,77 @@ class ChannelThermalHydraulics:
         # Heat transfer from fuel
         self.q_linear = np.zeros(self.nz + 1)  # W/cm (linear power density)
 
+        logger.debug(
+            f"ChannelThermalHydraulics initialized: length={geometry.length:.1f} cm, "
+            f"T_in={self.T_in:.1f} K, P_in={self.P_in/1e6:.2f} MPa, "
+            f"mdot={self.mdot:.4f} kg/s"
+        )
+
+    def _validate_inputs(self, geometry: ChannelGeometry, inlet_conditions: Dict) -> None:
+        """Validate input parameters."""
+        if not isinstance(geometry, ChannelGeometry):
+            raise ValueError(
+                f"geometry must be ChannelGeometry, got {type(geometry)}"
+            )
+
+        if not isinstance(inlet_conditions, dict):
+            raise ValueError(
+                f"inlet_conditions must be dict, got {type(inlet_conditions)}"
+            )
+
+        # Validate geometry
+        if geometry.length <= 0:
+            raise ValueError(f"geometry.length must be > 0, got {geometry.length}")
+        if geometry.flow_area <= 0:
+            raise ValueError(f"geometry.flow_area must be > 0, got {geometry.flow_area}")
+        if geometry.heated_perimeter <= 0:
+            raise ValueError(
+                f"geometry.heated_perimeter must be > 0, got {geometry.heated_perimeter}"
+            )
+
+        # Validate inlet conditions
+        required_keys = ["temperature", "pressure", "mass_flow_rate"]
+        for key in required_keys:
+            if key not in inlet_conditions:
+                raise ValueError(f"inlet_conditions missing required key: {key}")
+
+        T_in = inlet_conditions["temperature"]
+        P_in = inlet_conditions["pressure"]
+        mdot = inlet_conditions["mass_flow_rate"]
+
+        if T_in <= 0:
+            raise ValueError(f"inlet_conditions['temperature'] must be > 0, got {T_in}")
+        if P_in <= 0:
+            raise ValueError(f"inlet_conditions['pressure'] must be > 0, got {P_in}")
+        if mdot <= 0:
+            raise ValueError(
+                f"inlet_conditions['mass_flow_rate'] must be > 0, got {mdot}"
+            )
+
     def set_power_profile(self, power_profile: np.ndarray):
         """
         Set axial power profile.
 
         Args:
             power_profile: Linear power density [W/cm] at each z
+
+        Raises:
+            ValueError: If power_profile has incorrect shape or negative values
         """
+        if not isinstance(power_profile, np.ndarray):
+            power_profile = np.array(power_profile)
+
+        if len(power_profile) != len(self.z):
+            raise ValueError(
+                f"power_profile length {len(power_profile)} != z length {len(self.z)}"
+            )
+
+        if np.any(power_profile < 0):
+            logger.warning("Negative values in power_profile, setting to zero")
+            power_profile = np.maximum(power_profile, 0)
+
         self.q_linear = power_profile
+        logger.debug(f"Power profile set: max={np.max(power_profile):.1f} W/cm")
 
     def solve_steady_state(
         self, T_fuel: Optional[np.ndarray] = None
@@ -119,7 +200,24 @@ class ChannelThermalHydraulics:
 
         Returns:
             Dict with temperature, pressure profiles
+
+        Raises:
+            ValueError: If T_fuel has incorrect shape
+            RuntimeError: If solution produces invalid results
         """
+        # Validate T_fuel if provided
+        if T_fuel is not None:
+            if not isinstance(T_fuel, np.ndarray):
+                T_fuel = np.array(T_fuel)
+            if len(T_fuel) != len(self.z):
+                raise ValueError(
+                    f"T_fuel length {len(T_fuel)} != z length {len(self.z)}"
+                )
+            if np.any(T_fuel <= 0):
+                raise ValueError("T_fuel must be > 0")
+
+        logger.debug("Starting steady-state thermal-hydraulics solution")
+
         # March along channel from inlet
         for i in range(self.nz):
             z = self.z[i]
@@ -180,6 +278,22 @@ class ChannelThermalHydraulics:
             )
 
             self.P_coolant[i + 1] = P + dP_friction - dP_accel
+
+        # Validate solution
+        if np.any(self.T_coolant <= 0):
+            raise RuntimeError("Solution produced non-physical temperatures")
+        if np.any(self.P_coolant <= 0):
+            raise RuntimeError("Solution produced non-physical pressures")
+
+        T_out = self.T_coolant[-1]
+        P_out = self.P_coolant[-1]
+        dT = T_out - self.T_in
+        dP = self.P_in - P_out
+
+        logger.info(
+            f"Steady-state solution complete: T_out={T_out:.1f} K (ΔT={dT:.1f} K), "
+            f"P_out={P_out/1e6:.2f} MPa (ΔP={dP/1e3:.1f} kPa)"
+        )
 
         return {
             "z": self.z,
@@ -263,9 +377,21 @@ class FuelRodThermal:
     """
     Thermal conduction in fuel rod with TRISO particles.
     1D radial heat conduction.
+
+    Args:
+        radius: Fuel rod radius [cm]
+        n_nodes: Number of radial nodes (default: 50)
+
+    Raises:
+        ValueError: If inputs are invalid
     """
 
     def __init__(self, radius: float, n_nodes: int = 50):
+        if radius <= 0:
+            raise ValueError(f"radius must be > 0, got {radius}")
+        if n_nodes <= 0:
+            raise ValueError(f"n_nodes must be > 0, got {n_nodes}")
+
         self.radius = radius  # cm
         self.n_nodes = n_nodes
 
@@ -275,6 +401,8 @@ class FuelRodThermal:
 
         # Temperature profile
         self.T = np.zeros(n_nodes + 1)
+
+        logger.debug(f"FuelRodThermal initialized: radius={radius:.3f} cm, n_nodes={n_nodes}")
 
     def solve_steady_conduction(
         self, q_vol: float, k_fuel: float, T_surface: float
@@ -291,12 +419,28 @@ class FuelRodThermal:
 
         Returns:
             Temperature profile [K]
+
+        Raises:
+            ValueError: If inputs are invalid
         """
+        if q_vol < 0:
+            raise ValueError(f"q_vol must be >= 0, got {q_vol}")
+        if k_fuel <= 0:
+            raise ValueError(f"k_fuel must be > 0, got {k_fuel}")
+        if T_surface <= 0:
+            raise ValueError(f"T_surface must be > 0, got {T_surface}")
+
         # Analytical solution for constant k and q:
         # T(r) = T_surface + q''' * (R² - r²) / (4k)
 
         R = self.radius
         self.T = T_surface + q_vol * (R**2 - self.r**2) / (4 * k_fuel)
+
+        T_max = np.max(self.T)
+        logger.debug(
+            f"Steady-state conduction solved: T_max={T_max:.1f} K, "
+            f"T_surface={T_surface:.1f} K"
+        )
 
         return self.T
 
@@ -367,6 +511,15 @@ class PorousMediaFlow:
     """
     Flow through porous pebble bed using Ergun equation.
     Suitable for pebble-bed HTGR cores.
+
+    Args:
+        bed_height: Bed height [cm]
+        bed_diameter: Bed diameter [cm]
+        pebble_diameter: Pebble diameter [cm]
+        porosity: Void fraction (0 < porosity < 1)
+
+    Raises:
+        ValueError: If inputs are invalid
     """
 
     def __init__(
@@ -376,6 +529,16 @@ class PorousMediaFlow:
         pebble_diameter: float,
         porosity: float,
     ):
+        # Validate inputs
+        if bed_height <= 0:
+            raise ValueError(f"bed_height must be > 0, got {bed_height}")
+        if bed_diameter <= 0:
+            raise ValueError(f"bed_diameter must be > 0, got {bed_diameter}")
+        if pebble_diameter <= 0:
+            raise ValueError(f"pebble_diameter must be > 0, got {pebble_diameter}")
+        if not (0 < porosity < 1):
+            raise ValueError(f"porosity must be in (0, 1), got {porosity}")
+
         self.H = bed_height  # cm
         self.D = bed_diameter  # cm
         self.d_p = pebble_diameter  # cm
@@ -389,6 +552,12 @@ class PorousMediaFlow:
         self.T_coolant = np.zeros(self.nz + 1)
         self.P_coolant = np.zeros(self.nz + 1)
         self.velocity = np.zeros(self.nz + 1)
+
+        logger.debug(
+            f"PorousMediaFlow initialized: H={bed_height:.1f} cm, "
+            f"D={bed_diameter:.1f} cm, d_p={pebble_diameter:.2f} cm, "
+            f"ε={porosity:.3f}"
+        )
 
     def solve_flow(
         self, mdot: float, T_in: float, P_in: float, q_vol_profile: np.ndarray
@@ -404,7 +573,36 @@ class PorousMediaFlow:
 
         Returns:
             Dict with flow solutions
+
+        Raises:
+            ValueError: If inputs are invalid
+            RuntimeError: If solution produces invalid results
         """
+        # Validate inputs
+        if mdot <= 0:
+            raise ValueError(f"mdot must be > 0, got {mdot}")
+        if T_in <= 0:
+            raise ValueError(f"T_in must be > 0, got {T_in}")
+        if P_in <= 0:
+            raise ValueError(f"P_in must be > 0, got {P_in}")
+
+        if not isinstance(q_vol_profile, np.ndarray):
+            q_vol_profile = np.array(q_vol_profile)
+
+        if len(q_vol_profile) != len(self.z):
+            raise ValueError(
+                f"q_vol_profile length {len(q_vol_profile)} != z length {len(self.z)}"
+            )
+
+        if np.any(q_vol_profile < 0):
+            logger.warning("Negative values in q_vol_profile, setting to zero")
+            q_vol_profile = np.maximum(q_vol_profile, 0)
+
+        logger.debug(
+            f"Solving porous media flow: mdot={mdot:.3f} kg/s, "
+            f"T_in={T_in:.1f} K, P_in={P_in/1e6:.2f} MPa"
+        )
+
         self.T_coolant[0] = T_in
         self.P_coolant[0] = P_in
 
@@ -436,6 +634,22 @@ class PorousMediaFlow:
             self.T_coolant[i + 1] = T + dT
 
             self.velocity[i] = v_s
+
+        # Validate solution
+        if np.any(self.T_coolant <= 0):
+            raise RuntimeError("Solution produced non-physical temperatures")
+        if np.any(self.P_coolant <= 0):
+            raise RuntimeError("Solution produced non-physical pressures")
+
+        T_out = self.T_coolant[-1]
+        P_out = self.P_coolant[-1]
+        dT = T_out - T_in
+        dP = P_in - P_out
+
+        logger.info(
+            f"Porous media flow solution complete: T_out={T_out:.1f} K (ΔT={dT:.1f} K), "
+            f"P_out={P_out/1e6:.2f} MPa (ΔP={dP/1e3:.1f} kPa)"
+        )
 
         return {
             "z": self.z,

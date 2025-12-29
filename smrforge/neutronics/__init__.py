@@ -15,8 +15,10 @@ except ImportError as e:
     _SOLVER_AVAILABLE = False
 
 try:
-    from smrforge.neutronics.monte_carlo import MonteCarlo
+    from smrforge.neutronics.monte_carlo import MonteCarloSolver
 
+    # Alias for backward compatibility
+    MonteCarlo = MonteCarloSolver
     _MC_AVAILABLE = True
 except ImportError as e:
     import warnings
@@ -38,6 +40,6 @@ __all__ = []
 if _SOLVER_AVAILABLE:
     __all__.extend(["NeutronicsSolver", "MultiGroupDiffusion"])
 if _MC_AVAILABLE:
-    __all__.append("MonteCarlo")
+    __all__.extend(["MonteCarlo", "MonteCarloSolver"])
 if _TRANSPORT_AVAILABLE:
     __all__.append("Transport")

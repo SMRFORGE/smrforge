@@ -208,28 +208,92 @@ class AdvancedMeshGenerator:
         """
         Refine mesh based on criteria (e.g., error indicators).
 
+        This is a simplified implementation that splits triangles with high
+        refinement criteria by adding midpoints on each edge.
+
         Args:
-            vertices: Current vertex coordinates
-            triangles: Current triangle connectivity
-            refinement_criteria: Array of refinement indicators per triangle
+            vertices: Current vertex coordinates (n_vertices, 2)
+            triangles: Current triangle connectivity (n_triangles, 3)
+            refinement_criteria: Array of refinement indicators per triangle (n_triangles,)
 
         Returns:
-            Refined (vertices, triangles)
+            Tuple of (refined_vertices, refined_triangles)
+
+        Note:
+            This is a basic implementation. For production use, consider
+            specialized mesh refinement libraries (e.g., meshio, gmsh) for
+            more sophisticated refinement strategies.
         """
         if refinement_criteria is None:
             # No refinement
             return vertices, triangles
 
-        # Simplified refinement: split triangles with high criteria
-        threshold = np.median(refinement_criteria) * 1.5
+        if len(refinement_criteria) != len(triangles):
+            raise ValueError(
+                f"refinement_criteria length ({len(refinement_criteria)}) must match "
+                f"number of triangles ({len(triangles)})"
+            )
 
-        # This is a placeholder - full implementation would:
-        # 1. Identify triangles to refine
-        # 2. Split them (e.g., add midpoint)
-        # 3. Re-triangulate
-        # 4. Update connectivity
+        # Determine threshold for refinement
+        # Use median * 1.5 for multiple values, or a fixed multiplier for single value
+        if len(refinement_criteria) > 1:
+            threshold = np.median(refinement_criteria) * 1.5
+        else:
+            # For single value, use a threshold that allows refinement for values > median
+            # Use a fraction that's less than 1.0 so values above the median will refine
+            threshold = refinement_criteria[0] * 0.8
 
-        return vertices, triangles
+        # Identify triangles to refine
+        to_refine = refinement_criteria > threshold
+
+        if not np.any(to_refine):
+            # No triangles need refinement
+            return vertices, triangles
+
+        # Start with existing vertices
+        new_vertices = vertices.tolist()
+        new_triangles = []
+
+        # Map to track midpoints we've already created (edge -> vertex_index)
+        edge_midpoint_map = {}
+
+        def get_or_create_midpoint(v1_idx: int, v2_idx: int) -> int:
+            """Get or create midpoint vertex for an edge."""
+            # Use sorted indices as edge key (order-independent)
+            edge_key = tuple(sorted([v1_idx, v2_idx]))
+
+            if edge_key in edge_midpoint_map:
+                return edge_midpoint_map[edge_key]
+
+            # Create new midpoint
+            v1 = vertices[v1_idx]
+            v2 = vertices[v2_idx]
+            midpoint = ((v1[0] + v2[0]) / 2, (v1[1] + v2[1]) / 2)
+            midpoint_idx = len(new_vertices)
+            new_vertices.append(midpoint)
+            edge_midpoint_map[edge_key] = midpoint_idx
+            return midpoint_idx
+
+        # Process each triangle
+        for tri_idx, (tri, refine) in enumerate(zip(triangles, to_refine)):
+            v0, v1, v2 = int(tri[0]), int(tri[1]), int(tri[2])
+
+            if not refine:
+                # Keep original triangle
+                new_triangles.append([v0, v1, v2])
+            else:
+                # Split triangle into 4 sub-triangles using edge midpoints
+                m01 = get_or_create_midpoint(v0, v1)
+                m12 = get_or_create_midpoint(v1, v2)
+                m20 = get_or_create_midpoint(v2, v0)
+
+                # Create 4 sub-triangles
+                new_triangles.append([v0, m01, m20])
+                new_triangles.append([v1, m12, m01])
+                new_triangles.append([v2, m20, m12])
+                new_triangles.append([m01, m12, m20])
+
+        return np.array(new_vertices), np.array(new_triangles, dtype=int)
 
 
 def compute_mesh_gradient(
