@@ -20,6 +20,11 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from ..utils.logging import get_logger
+
+# Get logger for this module
+logger = get_logger("smrforge.neutronics.transport")
+
 # ============================================================================
 # CORE DATA STRUCTURES
 # ============================================================================
@@ -757,6 +762,201 @@ def example_bare_sphere_criticality():
     print(f"  Relative Error: {flux_tally.relative_error()*100:.2f}%")
 
     return results
+
+
+# ============================================================================
+# TRANSPORT CLASS (High-level interface)
+# ============================================================================
+
+
+class Transport:
+    """
+    High-level interface for Monte Carlo neutron transport solver.
+
+    This class provides a simplified API for running Monte Carlo transport
+    calculations with validation, logging, and integration with SMRForge's
+    validation framework.
+
+    Args:
+        regions: List of Region objects defining the geometry and materials
+        source: Callable function that returns a Neutron source particle
+        seed: Random number generator seed for reproducibility (optional)
+
+    Example:
+        >>> sphere = Sphere(center=np.array([0.0, 0.0, 0.0]), radius=10.0)
+        >>> material = Material(...)
+        >>> region = Region(geometry=sphere, material=material)
+        >>> def source():
+        ...     return Neutron(position=..., direction=..., energy=2.0)
+        >>> transport = Transport(regions=[region], source=source, seed=42)
+        >>> results = transport.run_eigenvalue(n_generations=50, n_per_generation=1000)
+    """
+
+    def __init__(
+        self,
+        regions: List[Region],
+        source: Callable[[], Neutron],
+        seed: Optional[int] = None,
+    ):
+        # Validate inputs
+        self._validate_inputs(regions, source)
+
+        self.regions = regions
+        self.source = source
+
+        # Create underlying Monte Carlo engine
+        self._engine = MonteCarloEngine(regions=regions, source=source, seed=seed)
+
+        if seed is not None:
+            logger.info(f"Transport solver initialized with {len(regions)} regions, seed={seed}")
+        else:
+            logger.info(f"Transport solver initialized with {len(regions)} regions, random seed")
+
+    def _validate_inputs(
+        self, regions: List[Region], source: Callable[[], Neutron]
+    ) -> None:
+        """Validate input parameters."""
+        if not isinstance(regions, list):
+            raise ValueError(f"regions must be a list, got {type(regions)}")
+
+        if len(regions) == 0:
+            raise ValueError("regions list cannot be empty")
+
+        for i, region in enumerate(regions):
+            if not isinstance(region, Region):
+                raise ValueError(
+                    f"regions[{i}] must be Region, got {type(region)}"
+                )
+
+        if not callable(source):
+            raise ValueError(f"source must be callable, got {type(source)}")
+
+    def add_tally(self, tally: Tally):
+        """
+        Add a tally to track during simulation.
+
+        Args:
+            tally: Tally object (FluxTally, ReactionRateTally, etc.)
+        """
+        if not isinstance(tally, Tally):
+            raise ValueError(f"tally must be Tally, got {type(tally)}")
+        self._engine.add_tally(tally)
+        logger.debug(f"Added tally: {tally.name}")
+
+    def enable_variance_reduction(
+        self,
+        importance_map: Optional[Dict[Region, float]] = None,
+        weight_window: bool = True,
+    ):
+        """
+        Enable variance reduction techniques.
+
+        Args:
+            importance_map: Dictionary mapping Region to importance value
+            weight_window: Whether to enable weight window variance reduction
+        """
+        self._engine.enable_variance_reduction(
+            importance_map=importance_map, weight_window=weight_window
+        )
+
+    def run_eigenvalue(
+        self,
+        n_generations: int = 100,
+        n_per_generation: int = 1000,
+        n_skip: int = 20,
+    ) -> Dict[str, any]:
+        """
+        Run k-eigenvalue calculation.
+
+        Args:
+            n_generations: Number of generations to run
+            n_per_generation: Number of neutron histories per generation
+            n_skip: Number of initial generations to skip (inactive generations)
+
+        Returns:
+            Dictionary with k_eff_mean, k_eff_std, k_eff_history, etc.
+
+        Raises:
+            ValueError: If parameters are invalid
+            RuntimeError: If calculation produces invalid results
+        """
+        # Validate parameters
+        if n_generations <= 0:
+            raise ValueError(f"n_generations must be > 0, got {n_generations}")
+
+        if n_per_generation <= 0:
+            raise ValueError(
+                f"n_per_generation must be > 0, got {n_per_generation}"
+            )
+
+        if n_skip < 0:
+            raise ValueError(f"n_skip must be >= 0, got {n_skip}")
+
+        if n_skip >= n_generations:
+            raise ValueError(
+                f"n_skip ({n_skip}) must be < n_generations ({n_generations})"
+            )
+
+        logger.info(
+            f"Starting eigenvalue calculation: {n_generations} generations, "
+            f"{n_per_generation} particles/generation, {n_skip} inactive generations"
+        )
+
+        # Run calculation
+        results = self._engine.run_eigenvalue(
+            n_generations=n_generations,
+            n_per_generation=n_per_generation,
+            n_skip=n_skip,
+        )
+
+        # Validate results
+        k_eff_mean = results["k_eff_mean"]
+        if not np.isfinite(k_eff_mean):
+            raise RuntimeError(f"Invalid k_eff_mean: {k_eff_mean}")
+
+        k_eff_std = results.get("k_eff_std", 0.0)
+        if not np.isfinite(k_eff_std):
+            logger.warning("k_eff_std is not finite, setting to 0.0")
+            results["k_eff_std"] = 0.0
+
+        logger.info(
+            f"Eigenvalue calculation complete: k_eff = {k_eff_mean:.6f} ± {k_eff_std:.6f}"
+        )
+
+        return results
+
+    def run_batch(self, n_histories: int) -> Dict[str, float]:
+        """
+        Run a batch of neutron histories.
+
+        Args:
+            n_histories: Number of histories to run
+
+        Returns:
+            Dictionary with k_eff, n_histories, n_collisions
+
+        Raises:
+            ValueError: If n_histories is invalid
+        """
+        if n_histories < 0:
+            raise ValueError(f"n_histories must be >= 0, got {n_histories}")
+
+        return self._engine.run_batch(n_histories=n_histories)
+
+    @property
+    def tallies(self) -> List[Tally]:
+        """Get list of tallies."""
+        return self._engine.tallies
+
+    @property
+    def n_histories(self) -> int:
+        """Get total number of histories run."""
+        return self._engine.n_histories
+
+    @property
+    def n_collisions(self) -> int:
+        """Get total number of collisions."""
+        return self._engine.n_collisions
 
 
 if __name__ == "__main__":
