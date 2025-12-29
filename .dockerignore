@@ -35,8 +35,22 @@ ENV/
 docs/_build/
 docs/.doctrees/
 
+# Documentation source (optional - include if you want docs in container)
+# Uncomment the next line to exclude all docs except what's needed for package
+# docs/
+
 # Backup directories
 backup_*/
+
+# Coverage and test artifacts
+.coverage
+.pytest_cache/
+htmlcov/
+*.cover
+
+# ReadTheDocs and build artifacts
+.readthedocs.yml
+docs/api/  # Auto-generated API docs (will be regenerated if needed)
 
 # Test files (can be included if needed)
 # tests/

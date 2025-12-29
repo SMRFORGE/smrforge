@@ -34,22 +34,12 @@ services:
       - ./:/app:rw
       - ./data:/app/data:rw
       - ./output:/app/output:rw
-    working_dir: /app
-    environment:
-      - PYTHONUNBUFFERED=1
-    stdin_open: true
-    tty: true
-    # Install dev dependencies
-    command: bash -c "pip install -e '.[dev]' && bash"
-
-    volumes:
-      - ./data:/app/data:rw
-      - ./output:/app/output:rw
       - ./examples:/app/examples:ro
     working_dir: /app
     environment:
       - PYTHONUNBUFFERED=1
     stdin_open: true
     tty: true
-    command: tail -f /dev/null
+    # Install dev dependencies on startup
+    command: bash -c "pip install -e '.[dev]' && bash"
 

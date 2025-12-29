@@ -1,5 +1,15 @@
 # Development Dockerfile with all tools
+# Includes development dependencies and build tools
+#
+# Build: docker build -f Dockerfile.dev -t smrforge:dev .
+# Or use: docker-compose up smrforge-dev
+
 FROM python:3.11-slim
+
+# Metadata labels
+LABEL maintainer="SMRForge Development Team" \
+      description="SMRForge Development Environment" \
+      version="0.1.0-dev"
 
 WORKDIR /app
 
@@ -21,20 +31,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt requirements-dev.txt /app/
-
-# Install dependencies
-RUN pip install --upgrade pip wheel setuptools && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir -r requirements-dev.txt
-
-# Copy package files
-COPY setup.py pyproject.toml /app/
+# Copy package metadata first (for better layer caching)
+COPY setup.py pyproject.toml README.md MANIFEST.in /app/
 COPY smrforge/ /app/smrforge/
 
-# Install package in development mode (will be overridden by volume mount)
-RUN pip install -e .
+# Install Python dependencies
+RUN pip install --upgrade pip wheel setuptools
+
+# Install SMRForge with dev dependencies from setup.py
+# Note: This will be overridden by volume mount in docker-compose, but ensures
+# the image has all dependencies available even without volume mounts
+RUN pip install --no-cache-dir -e ".[dev]"
 
 # Create data/output directories
 RUN mkdir -p /app/data /app/output
