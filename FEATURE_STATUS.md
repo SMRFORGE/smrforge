@@ -63,6 +63,21 @@ These modules are fully implemented, tested, and ready for production use:
 - ✅ **Convenience Functions** (`smrforge.convenience`) - One-liner APIs
 - ✅ **SimpleReactor** - High-level reactor wrapper
 
+### Visualization
+- ✅ **Geometry Visualization** (`smrforge.visualization.geometry`)
+  - 2D core layout plots (top view, side views)
+  - Flux distribution overlays
+  - Power distribution visualization
+  - Temperature distribution plots
+  - Support for prismatic and pebble bed cores
+  - Test coverage: 83.5%
+
+### Utilities
+- ✅ **Utilities Module** (`smrforge.utils`)
+  - Logging framework and configuration
+  - Logo access functions
+  - Structured logging throughout package
+
 ---
 
 ## 🟡 Experimental Features (In Development)
@@ -110,21 +125,12 @@ These modules are placeholders with no implementation:
   - **Use Case**: General reactor design import/export
   - **Recommendation**: Use JSON/Pydantic serialization (already available via models)
 
-### Visualization
-- ✅ **Geometry Visualization** (`smrforge.visualization.geometry`)
-  - **Status**: Implemented and tested (83.5% coverage)
-  - **Features**:
-    - 2D core layout plots (top view, side views)
-    - Flux distribution overlays
-    - Power distribution visualization
-    - Temperature distribution plots
-    - Support for prismatic and pebble bed cores
-  - **Use Case**: Plotting geometry, flux, power, and temperature distributions
 
 ### Control Systems
 - ❌ **Control Module** (`smrforge.control`) - Empty stub
   - **Status**: Not implemented
-  - **Use Case**: Reactor control, protection systems
+  - **Note**: Control rod geometry is available via `smrforge.geometry.control_rods` (see Geometry section)
+  - **Use Case**: Reactor control systems, protection systems, control logic
   - **Recommendation**: Implement as needed for specific use cases
 
 ### Economics
@@ -133,11 +139,6 @@ These modules are placeholders with no implementation:
   - **Use Case**: Cost analysis, LCOE calculations
   - **Recommendation**: Implement as needed for specific use cases
 
-### Utilities
-- ❌ **Utils Module** (`smrforge.utils`) - Empty stub
-  - **Status**: Not implemented
-  - **Use Case**: Helper functions
-  - **Recommendation**: Add utilities as needed
 
 ---
 
@@ -159,6 +160,9 @@ These modules are placeholders with no implementation:
 - Validation models and validators
 - Preset reactor designs
 - Convenience functions
+- Geometry modules (core, import/export, control rods, mesh generation, assembly management)
+- Visualization module
+- Utilities (logging, logo access)
 
 ### Experimental API (May Change)
 - Monte Carlo solver interface
@@ -186,12 +190,16 @@ If you're using features that are marked as experimental or not implemented:
 - **v0.1.0 (Current)**: Alpha release
   - Core neutronics stable
   - Validation framework stable
-  - Most other features experimental or stubs
+  - Geometry modules stable (core, import/export, control rods, mesh generation, assembly management)
+  - Visualization module stable
+  - Utilities stable (logging)
+  - Many features now stable (previously experimental or stubs)
 
 - **v1.0.0 (Planned)**: Production release
   - All stable features finalized
   - Experimental features either stabilized or removed
   - Stub modules either implemented or removed
+  - Performance optimization and validation
 
 ---
 
