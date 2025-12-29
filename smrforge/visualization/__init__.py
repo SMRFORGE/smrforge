@@ -1,22 +1,34 @@
 """
-Visualization and plotting tools
+Visualization and plotting tools for reactor analysis.
 
-⚠️ EXPERIMENTAL / NOT IMPLEMENTED ⚠️
-
-This module is currently a placeholder with no implementation.
-For visualization needs, use:
-- matplotlib directly for plotting
-- numpy arrays from solver results for data
-
-Planned features:
-- Flux distribution plots
-- Power distribution visualization
-- Geometry visualization
-- 3D reactor visualization
-
-See FEATURE_STATUS.md for current status.
+This module provides visualization capabilities for:
+- Geometry visualization (2D and 3D)
+- Flux and power distribution plots
+- Temperature distribution visualization
 """
 
-__all__ = []
+try:
+    from smrforge.visualization.geometry import (
+        plot_core_layout,
+        plot_flux_on_geometry,
+        plot_power_distribution,
+        plot_temperature_distribution,
+    )
 
-# TODO: Implement visualization tools if needed
+    _VISUALIZATION_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import visualization module: {e}", ImportWarning)
+    _VISUALIZATION_AVAILABLE = False
+
+__all__ = []
+if _VISUALIZATION_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_core_layout",
+            "plot_flux_on_geometry",
+            "plot_power_distribution",
+            "plot_temperature_distribution",
+        ]
+    )
