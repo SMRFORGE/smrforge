@@ -1323,12 +1323,23 @@ class NuclearDataCache:
                 error_msg += f"Local ENDF directory checked: {self.local_endf_dir}\n"
             error_msg += f"Tried {len(urls)} URL(s), last error: {last_error}\n"
             error_msg += "\nPossible solutions:\n"
-            error_msg += "1. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
+            error_msg += "1. Use local ENDF data (recommended for Docker):\n"
+            error_msg += "   - Mount your ENDF directory in docker-compose.yml:\n"
+            error_msg += "     volumes:\n"
+            error_msg += "       - ~/ENDF-Data:/app/endf-data:ro\n"
+            error_msg += "   - Or download bulk ENDF files and organize them\n"
+            error_msg += "   - See BULK_ENDF_STORAGE.md for details\n"
+            error_msg += "2. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
             error_msg += f"   {filepath}\n"
             if self.local_endf_dir:
-                error_msg += f"2. Ensure file exists in local directory: {self.local_endf_dir}/neutrons-version.VIII.1/\n"
-            error_msg += "3. Use SANDY's download functionality if available\n"
-            error_msg += "4. Check network connectivity and try again"
+                error_msg += f"3. Ensure file exists in local directory: {self.local_endf_dir}\n"
+            else:
+                error_msg += "3. Set local_endf_dir when creating NuclearDataCache:\n"
+                error_msg += "   cache = NuclearDataCache(local_endf_dir=Path('/app/endf-data'))\n"
+            error_msg += "4. Use SANDY's download functionality if available\n"
+            error_msg += "5. Check network connectivity and try again\n"
+            error_msg += "\nNote: Automatic downloads may fail due to repository URL changes.\n"
+            error_msg += "      Using local ENDF data is more reliable, especially in Docker."
             raise requests.RequestException(error_msg) from last_error
 
         return filepath
@@ -1450,12 +1461,23 @@ class NuclearDataCache:
                     error_msg += f"Local ENDF directory checked: {self.local_endf_dir}\n"
                 error_msg += f"Tried {len(urls)} URL(s), last error: {last_error}\n"
                 error_msg += "\nPossible solutions:\n"
-                error_msg += "1. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
+                error_msg += "1. Use local ENDF data (recommended for Docker):\n"
+                error_msg += "   - Mount your ENDF directory in docker-compose.yml:\n"
+                error_msg += "     volumes:\n"
+                error_msg += "       - ~/ENDF-Data:/app/endf-data:ro\n"
+                error_msg += "   - Or download bulk ENDF files and organize them\n"
+                error_msg += "   - See BULK_ENDF_STORAGE.md for details\n"
+                error_msg += "2. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
                 error_msg += f"   {filepath}\n"
                 if self.local_endf_dir:
-                    error_msg += f"2. Ensure file exists in local directory: {self.local_endf_dir}/neutrons-version.VIII.1/\n"
-                error_msg += "3. Use SANDY's download functionality if available\n"
-                error_msg += "4. Check network connectivity and try again"
+                    error_msg += f"3. Ensure file exists in local directory: {self.local_endf_dir}\n"
+                else:
+                    error_msg += "3. Set local_endf_dir when creating NuclearDataCache:\n"
+                    error_msg += "   cache = NuclearDataCache(local_endf_dir=Path('/app/endf-data'))\n"
+                error_msg += "4. Use SANDY's download functionality if available\n"
+                error_msg += "5. Check network connectivity and try again\n"
+                error_msg += "\nNote: Automatic downloads may fail due to repository URL changes.\n"
+                error_msg += "      Using local ENDF data is more reliable, especially in Docker."
                 raise httpx.HTTPError(error_msg) from last_error
             finally:
                 if use_temporary_client:
@@ -1876,11 +1898,31 @@ class NuclearDataCache:
         
         # Try IAEA formats (multiple patterns)
         iaea_base = "https://www-nds.iaea.org"
-        urls.extend([
-            f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
-            f"{iaea_base}/exfor/endf/{library.value}/{nuclide_name}.endf",
-            f"{iaea_base}/fendl/{library.value}/{nuclide_name}.endf",
-        ])
+        # Try different IAEA URL patterns
+        if library.value in library_map:
+            # For ENDF/B libraries, try version-specific paths
+            if library == Library.ENDF_B_VIII:
+                urls.extend([
+                    f"{iaea_base}/public/download-endf/ENDF-B-VIII.0/{nuclide_name}.endf",
+                    f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
+                ])
+            elif library == Library.ENDF_B_VIII_1:
+                urls.extend([
+                    f"{iaea_base}/public/download-endf/ENDF-B-VIII.1/{nuclide_name}.endf",
+                    f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
+                ])
+        else:
+            # For other libraries (JEFF, JENDL)
+            urls.extend([
+                f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
+            ])
+        
+        # Note: exfor and fendl paths are less reliable, so we try them last
+        # These are commented out as they often return 404
+        # urls.extend([
+        #     f"{iaea_base}/exfor/endf/{library.value}/{nuclide_name}.endf",
+        #     f"{iaea_base}/fendl/{library.value}/{nuclide_name}.endf",
+        # ])
         
         return urls
     
