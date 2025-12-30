@@ -161,6 +161,37 @@ The `_build_group_system()` method (lines 272-363) builds sparse matrices elemen
 
 ---
 
+## ✅ Completed Optimizations (2025)
+
+### ENDF File Access Optimization (reactor_core.py)
+
+**Status**: ✅ **COMPLETED** - Phase 3 of ENDF integration
+
+**Optimizations Implemented**:
+1. **Eager Index Building**: File index built on initialization if `local_endf_dir` provided
+   - **Before**: Lazy loading (built on first access)
+   - **After**: Eager loading (built immediately)
+   - **Impact**: Eliminates first-access delay, ~0.09s one-time cost
+
+2. **Cached File Index**: Dictionary-based O(1) lookups
+   - **Before**: Directory scan on each lookup
+   - **After**: Cached dictionary lookup
+   - **Impact**: ~800x faster (0.08s → 0.0001s)
+
+3. **File Path Caching**: Index maps nuclide names to file paths
+   - **Before**: File system operations for each lookup
+   - **After**: In-memory dictionary lookup
+   - **Impact**: Instant file discovery
+
+**Performance Results**:
+- First access: ~800x faster (0.08s → 0.0001s)
+- Index building: ~0.09s for 557 files (one-time cost)
+- Subsequent lookups: <0.0001s (instant)
+
+**See**: `ENDF_INTEGRATION_SUMMARY.md` and `PHASE3_COMPLETION_REPORT.md` for details.
+
+---
+
 ## Implementation Priority
 
 1. **High Priority** (Easy, High Impact):

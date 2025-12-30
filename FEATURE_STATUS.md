@@ -12,6 +12,13 @@ These modules are fully implemented, tested, and ready for production use:
 - ✅ **Core Constants** (`smrforge.core.constants`) - Physical constants and nuclear data
 - ✅ **Materials Database** (`smrforge.core.materials_database`) - Material properties
 - ✅ **Resonance Self-Shielding** (`smrforge.core.resonance_selfshield`) - Resonance treatment
+- ✅ **Nuclear Data Cache** (`smrforge.core.reactor_core.NuclearDataCache`) - ENDF file management
+  - Supports ENDF/B-VIII.0, ENDF/B-VIII.1, JEFF-3.3, JENDL-5.0
+  - Local ENDF directory integration for offline use
+  - Automatic file discovery and caching
+  - Multi-URL download with fallback
+  - Version fallback (VIII.1 → VIII.0)
+  - Fast O(1) file lookups via cached index
 
 ### Neutronics
 - ✅ **Multi-Group Diffusion Solver** (`smrforge.neutronics.solver.MultiGroupDiffusion`)

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import asyncio
 import numpy as np
@@ -145,19 +145,34 @@ class NuclearDataCache:
         Args:
             cache_dir: Optional path to cache directory. Defaults to
                 ``~/.smrforge/nucdata`` if not provided.
-            local_endf_dir: Optional path to local ENDF-B-VIII.1 directory.
-                If provided, the cache will look for ENDF files in this directory
-                before attempting to download. Expected structure:
-                ``{local_endf_dir}/neutrons-version.VIII.1/n-ZZZ_Element_AAA.endf``
+            local_endf_dir: Optional path to local ENDF directory for bulk storage.
+                If provided, the cache will recursively scan this directory for ENDF files
+                before attempting to download. Supports flexible directory structures:
+                
+                **Standard structure:**
+                - ``{local_endf_dir}/neutrons-version.VIII.1/n-ZZZ_Element_AAA.endf``
+                - ``{local_endf_dir}/neutrons-version.VIII.0/n-ZZZ_Element_AAA.endf``
+                
+                **Bulk download structure (automatically detected):**
+                - Flat directories: ``{local_endf_dir}/*.endf``
+                - Nested directories: ``{local_endf_dir}/**/*.endf``
+                - Alternative naming: ``U235.endf``, ``u235.endf``, etc.
+                
+                The system automatically discovers files regardless of directory structure.
+                Use ``get_standard_endf_directory()`` to get the recommended directory path.
         
         Example:
             >>> cache = NuclearDataCache()
             >>> # Or specify custom cache location
             >>> cache = NuclearDataCache(cache_dir=Path("/tmp/nucdata"))
-            >>> # Or use local ENDF files
+            >>> # Or use local ENDF files (flexible structure)
             >>> cache = NuclearDataCache(
-            ...     local_endf_dir=Path("C:/Users/user/Downloads/ENDF-B-VIII.1")
+            ...     local_endf_dir=Path("C:/Users/user/ENDF-Data")
             ... )
+            >>> # Or use standard directory
+            >>> from smrforge.core.reactor_core import get_standard_endf_directory
+            >>> std_dir = get_standard_endf_directory()
+            >>> cache = NuclearDataCache(local_endf_dir=std_dir)
         """
         self.cache_dir = cache_dir or Path.home() / ".smrforge" / "nucdata"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -1450,13 +1465,18 @@ class NuclearDataCache:
 
     def _build_local_file_index(self) -> Dict[str, Path]:
         """
-        Build index of available local ENDF files.
+        Build index of available local ENDF files with flexible directory scanning.
         
-        Scans the local ENDF directory and creates a mapping from nuclide names
-        to file paths. This index is cached to avoid repeated directory scans.
+        Scans the local ENDF directory recursively and creates a mapping from nuclide names
+        to file paths. Supports various directory structures from bulk downloads:
+        - Standard structure: neutrons-version.VIII.1/n-*.endf
+        - Flat directories: *.endf files directly in root
+        - Nested structures: files in subdirectories
+        - Multiple library versions in same directory
         
         Returns:
             Dictionary mapping nuclide names (e.g., "U235") to file paths.
+            If multiple files exist for the same nuclide, the first one found is used.
         """
         if self._local_file_index is not None:
             return self._local_file_index
@@ -1466,37 +1486,146 @@ class NuclearDataCache:
             return self._local_file_index
         
         index: Dict[str, Path] = {}
+        scanned_files = set()  # Track files to avoid duplicates
         
-        # Scan neutrons sublibrary (most common)
-        neutrons_dir = self.local_endf_dir / "neutrons-version.VIII.1"
-        if neutrons_dir.exists():
-            for endf_file in neutrons_dir.glob("n-*.endf"):
-                try:
-                    # Validate file exists and is readable
-                    if not endf_file.exists() or not endf_file.is_file():
+        # Method 1: Scan standard structure (neutrons-version.VIII.1/, neutrons-version.VIII.0/, etc.)
+        for version_dir in self.local_endf_dir.glob("neutrons-version.*"):
+            if version_dir.is_dir():
+                for endf_file in version_dir.glob("n-*.endf"):
+                    if endf_file in scanned_files:
                         continue
-                    
-                    # Parse filename to nuclide
-                    nuclide = self._endf_filename_to_nuclide(endf_file.name)
+                    scanned_files.add(endf_file)
+                    nuclide = self._add_file_to_index(endf_file, index)
                     if nuclide:
-                        # Validate nuclide matches filename (additional check)
-                        expected_filename = self._nuclide_to_endf_filename(nuclide)
-                        if expected_filename == endf_file.name:
-                            # Optional: Quick validation of file format (check header)
-                            if self._validate_endf_file(endf_file):
-                                index[nuclide.name] = endf_file
-                            else:
-                                logger.warning(f"Skipping invalid ENDF file: {endf_file.name}")
-                        else:
-                            logger.warning(f"Filename mismatch for {endf_file.name}")
-                except (ValueError, KeyError, IOError) as e:
-                    # Skip files that don't match expected format or can't be read
-                    logger.debug(f"Skipping file {endf_file.name}: {e}")
+                        logger.debug(f"Found {nuclide.name} in {version_dir.name}")
+        
+        # Method 2: Scan recursively for all .endf files (handles bulk downloads)
+        for endf_file in self.local_endf_dir.rglob("*.endf"):
+            if endf_file in scanned_files:
+                continue
+            scanned_files.add(endf_file)
+            nuclide = self._add_file_to_index(endf_file, index)
+            if nuclide:
+                logger.debug(f"Found {nuclide.name} at {endf_file.relative_to(self.local_endf_dir)}")
+        
+        # Method 3: Also check for alternative naming (U235.endf, u235.endf, etc.)
+        for pattern in ["*.endf", "*.ENDF", "*.Endf"]:
+            for endf_file in self.local_endf_dir.rglob(pattern):
+                if endf_file in scanned_files:
                     continue
+                # Skip if already processed as n-*.endf
+                if endf_file.name.startswith("n-"):
+                    continue
+                scanned_files.add(endf_file)
+                nuclide = self._add_file_to_index(endf_file, index, allow_alternative_names=True)
+                if nuclide:
+                    logger.debug(f"Found {nuclide.name} with alternative naming: {endf_file.name}")
         
         self._local_file_index = index
-        logger.info(f"Built local ENDF file index: {len(index)} files found")
+        logger.info(f"Built local ENDF file index: {len(index)} files found in {self.local_endf_dir}")
         return index
+    
+    def _add_file_to_index(self, endf_file: Path, index: Dict[str, Path], allow_alternative_names: bool = False) -> Optional[Nuclide]:
+        """
+        Add an ENDF file to the index if valid.
+        
+        Args:
+            endf_file: Path to ENDF file.
+            index: Dictionary to add file to (nuclide name -> path).
+            allow_alternative_names: If True, try to parse alternative filename formats.
+        
+        Returns:
+            Nuclide instance if file was added, None otherwise.
+        """
+        try:
+            # Validate file exists and is readable
+            if not endf_file.exists() or not endf_file.is_file():
+                return None
+            
+            # Parse filename to nuclide
+            nuclide = None
+            
+            # Try standard ENDF filename format first
+            nuclide = self._endf_filename_to_nuclide(endf_file.name)
+            
+            # If standard format failed and alternative names allowed, try parsing
+            if nuclide is None and allow_alternative_names:
+                nuclide = self._parse_alternative_endf_filename(endf_file.name)
+            
+            if nuclide:
+                # Validate nuclide matches filename (if standard format)
+                if endf_file.name.startswith("n-"):
+                    expected_filename = self._nuclide_to_endf_filename(nuclide)
+                    if expected_filename != endf_file.name:
+                        logger.debug(f"Filename mismatch: expected {expected_filename}, got {endf_file.name}")
+                        # Still add it, but log the mismatch
+                
+                # Quick validation of file format (check header)
+                if self._validate_endf_file(endf_file):
+                    # Only add if not already in index (first file wins)
+                    if nuclide.name not in index:
+                        index[nuclide.name] = endf_file
+                        return nuclide
+                    else:
+                        logger.debug(f"Skipping duplicate {nuclide.name}: {endf_file.name} (already have {index[nuclide.name].name})")
+                else:
+                    logger.warning(f"Skipping invalid ENDF file: {endf_file.name}")
+            
+            return None
+        except (ValueError, KeyError, IOError) as e:
+            # Skip files that don't match expected format or can't be read
+            logger.debug(f"Skipping file {endf_file.name}: {e}")
+            return None
+    
+    @staticmethod
+    def _parse_alternative_endf_filename(filename: str) -> Optional[Nuclide]:
+        """
+        Parse alternative ENDF filename formats (e.g., U235.endf, u235.endf).
+        
+        Args:
+            filename: Filename to parse (without path).
+        
+        Returns:
+            Nuclide instance if parsing succeeds, None otherwise.
+        """
+        import re
+        from .constants import SYMBOL_TO_Z
+        
+        # Remove .endf extension
+        base = filename.rsplit('.', 1)[0].lower()
+        
+        # Pattern 1: ElementSymbolMass (e.g., u235, U235, u235m1)
+        # Match: [a-z]+(\d+)(m\d+)?
+        match = re.match(r"^([a-z]+)(\d+)(m\d+)?$", base)
+        if match:
+            symbol_str, a_str, meta = match.groups()
+            symbol = symbol_str.capitalize()  # U, not u
+            
+            if symbol in SYMBOL_TO_Z:
+                try:
+                    Z = SYMBOL_TO_Z[symbol]
+                    A = int(a_str)
+                    m = 0
+                    if meta:
+                        m = int(meta[1:]) if len(meta) > 1 else 1
+                    return Nuclide(Z=Z, A=A, m=m)
+                except (ValueError, KeyError):
+                    pass
+        
+        # Pattern 2: ZAAM format (e.g., 92235, 922350 for U-235)
+        # Match: (\d{2})(\d{3})(\d)?
+        match = re.match(r"^(\d{2})(\d{3})(\d)?$", base)
+        if match:
+            z_str, a_str, m_str = match.groups()
+            try:
+                Z = int(z_str)
+                A = int(a_str)
+                m = int(m_str) if m_str else 0
+                return Nuclide(Z=Z, A=A, m=m)
+            except (ValueError, KeyError):
+                pass
+        
+        return None
     
     @staticmethod
     def _validate_endf_file(filepath: Path) -> bool:
@@ -1726,23 +1855,31 @@ class NuclearDataCache:
         # Try NNDC formats for ENDF/B libraries
         if library.value in library_map:
             nndc_version = library_map[library.value]
-            # Try various NNDC URL formats
+            # Try various NNDC URL formats (multiple patterns as repository structure may vary)
             urls.extend([
                 f"https://www.nndc.bnl.gov/endf/{nndc_version}/endf/{nuclide_name}.endf",
                 f"https://www.nndc.bnl.gov/endf/{nndc_version}/data/endf/{nuclide_name}.endf",
+                f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/{nuclide_name}.endf",
             ])
             
             # Add version-specific download paths
             if library == Library.ENDF_B_VIII_1:
-                urls.append(f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.1/{nuclide_name}.endf")
+                urls.extend([
+                    f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.1/{nuclide_name}.endf",
+                    f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/ENDF-B-VIII.1/{nuclide_name}.endf",
+                ])
             elif library == Library.ENDF_B_VIII:
-                urls.append(f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.0/{nuclide_name}.endf")
+                urls.extend([
+                    f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.0/{nuclide_name}.endf",
+                    f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/ENDF-B-VIII.0/{nuclide_name}.endf",
+                ])
         
-        # Try IAEA formats
+        # Try IAEA formats (multiple patterns)
         iaea_base = "https://www-nds.iaea.org"
         urls.extend([
             f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
             f"{iaea_base}/exfor/endf/{library.value}/{nuclide_name}.endf",
+            f"{iaea_base}/fendl/{library.value}/{nuclide_name}.endf",
         ])
         
         return urls
@@ -2378,3 +2515,249 @@ if __name__ == "__main__":
         (pl.col("nuclide") == "U235") & (pl.col("reaction") == "fission")
     )
     print(u235_fission)
+
+
+# ============================================================================
+# Bulk ENDF Storage Utilities
+# ============================================================================
+
+def get_standard_endf_directory() -> Path:
+    """
+    Get the standard directory path for storing bulk ENDF files.
+    
+    Returns the recommended location for users to store bulk-downloaded ENDF files.
+    This directory can be used with NuclearDataCache's local_endf_dir parameter.
+    
+    Returns:
+        Path to standard ENDF storage directory:
+        - Windows: ``%USERPROFILE%\\ENDF-Data``
+        - Unix/Mac: ``~/ENDF-Data``
+    
+    Example:
+        >>> from smrforge.core.reactor_core import get_standard_endf_directory
+        >>> endf_dir = get_standard_endf_directory()
+        >>> print(f"Store ENDF files in: {endf_dir}")
+        >>> # Download bulk ENDF files to this directory
+        >>> cache = NuclearDataCache(local_endf_dir=endf_dir)
+    """
+    return Path.home() / "ENDF-Data"
+
+
+def organize_bulk_endf_downloads(
+    source_dir: Path,
+    target_dir: Optional[Path] = None,
+    library_version: str = "VIII.1",
+    create_structure: bool = True,
+) -> Dict[str, int]:
+    """
+    Organize bulk-downloaded ENDF files into standard directory structure.
+    
+    Scans a directory containing bulk-downloaded ENDF files (from NNDC, IAEA, etc.)
+    and organizes them into the standard structure:
+    ``{target_dir}/neutrons-version.{version}/n-ZZZ_Element_AAA.endf``
+    
+    This function is useful after downloading ENDF files in bulk, as it:
+    - Discovers files regardless of their current directory structure
+    - Validates files are proper ENDF format
+    - Organizes them into the standard structure
+    - Creates a mapping index for fast lookup
+    
+    Args:
+        source_dir: Directory containing bulk-downloaded ENDF files.
+            Files can be in any subdirectory structure.
+        target_dir: Target directory for organized files. Defaults to
+            ``get_standard_endf_directory()`` if not provided.
+        library_version: Library version string (e.g., "VIII.1", "VIII.0").
+            Used to create versioned subdirectory.
+        create_structure: If True, creates the target directory structure.
+            If False, only scans and reports what would be organized.
+    
+    Returns:
+        Dictionary with organization statistics:
+        - "files_found": Number of ENDF files found in source
+        - "files_organized": Number of files successfully organized
+        - "files_skipped": Number of files skipped (invalid or duplicate)
+        - "nuclides_indexed": Number of unique nuclides found
+    
+    Example:
+        >>> from pathlib import Path
+        >>> from smrforge.core.reactor_core import organize_bulk_endf_downloads
+        >>> 
+        >>> # Organize files downloaded to Downloads folder
+        >>> stats = organize_bulk_endf_downloads(
+        ...     source_dir=Path("C:/Users/user/Downloads/ENDF-B-VIII.1"),
+        ...     library_version="VIII.1"
+        ... )
+        >>> print(f"Organized {stats['files_organized']} files")
+    """
+    if target_dir is None:
+        target_dir = get_standard_endf_directory()
+    
+    target_dir = Path(target_dir)
+    neutrons_dir = target_dir / f"neutrons-version.{library_version}"
+    
+    if create_structure:
+        neutrons_dir.mkdir(parents=True, exist_ok=True)
+    
+    source_dir = Path(source_dir)
+    if not source_dir.exists():
+        raise ValueError(f"Source directory does not exist: {source_dir}")
+    
+    stats = {
+        "files_found": 0,
+        "files_organized": 0,
+        "files_skipped": 0,
+        "nuclides_indexed": 0,
+    }
+    
+    index: Dict[str, Path] = {}
+    
+    # Scan source directory recursively for all .endf files
+    logger.info(f"Scanning {source_dir} for ENDF files...")
+    for endf_file in source_dir.rglob("*.endf"):
+        stats["files_found"] += 1
+        
+        # Parse filename to nuclide
+        nuclide = NuclearDataCache._endf_filename_to_nuclide(endf_file.name)
+        
+        # Try alternative naming if standard format fails
+        if nuclide is None:
+            nuclide = NuclearDataCache._parse_alternative_endf_filename(endf_file.name)
+        
+        if nuclide is None:
+            logger.debug(f"Skipping unparseable filename: {endf_file.name}")
+            stats["files_skipped"] += 1
+            continue
+        
+        # Validate file
+        if not NuclearDataCache._validate_endf_file(endf_file):
+            logger.warning(f"Skipping invalid ENDF file: {endf_file.name}")
+            stats["files_skipped"] += 1
+            continue
+        
+        # Check for duplicates
+        if nuclide.name in index:
+            logger.debug(f"Duplicate {nuclide.name}: {endf_file.name} (keeping {index[nuclide.name].name})")
+            stats["files_skipped"] += 1
+            continue
+        
+        # Organize file
+        if create_structure:
+            # Use standard ENDF filename format
+            standard_filename = NuclearDataCache._nuclide_to_endf_filename(nuclide)
+            target_file = neutrons_dir / standard_filename
+            
+            # Copy file (don't move, in case user wants to keep original)
+            try:
+                import shutil
+                shutil.copy2(endf_file, target_file)
+                logger.debug(f"Organized {nuclide.name}: {endf_file.name} -> {target_file.name}")
+                index[nuclide.name] = target_file
+                stats["files_organized"] += 1
+            except (IOError, OSError) as e:
+                logger.error(f"Failed to copy {endf_file.name}: {e}")
+                stats["files_skipped"] += 1
+                continue
+        else:
+            # Just index without copying
+            index[nuclide.name] = endf_file
+            stats["files_organized"] += 1
+    
+    stats["nuclides_indexed"] = len(index)
+    
+    if create_structure:
+        logger.info(
+            f"Organized {stats['files_organized']} ENDF files into {neutrons_dir}\n"
+            f"  Found: {stats['files_found']}, Skipped: {stats['files_skipped']}, "
+            f"Unique nuclides: {stats['nuclides_indexed']}"
+        )
+    else:
+        logger.info(
+            f"Would organize {stats['files_organized']} ENDF files\n"
+            f"  Found: {stats['files_found']}, Would skip: {stats['files_skipped']}, "
+            f"Unique nuclides: {stats['nuclides_indexed']}"
+        )
+    
+    return stats
+
+
+def scan_endf_directory(endf_dir: Path) -> Dict[str, Any]:
+    """
+    Scan an ENDF directory and return statistics about available files.
+    
+    Useful for checking what files are available in a bulk download directory
+    before using it with NuclearDataCache.
+    
+    Args:
+        endf_dir: Directory to scan for ENDF files.
+    
+    Returns:
+        Dictionary with scan results:
+        - "total_files": Total number of .endf files found
+        - "valid_files": Number of valid ENDF files
+        - "nuclides": List of nuclide names found
+        - "library_versions": Set of library versions detected
+        - "directory_structure": Description of directory structure found
+    
+    Example:
+        >>> from pathlib import Path
+        >>> from smrforge.core.reactor_core import scan_endf_directory
+        >>> 
+        >>> results = scan_endf_directory(Path("C:/Users/user/Downloads/ENDF-B-VIII.1"))
+        >>> print(f"Found {results['valid_files']} valid ENDF files")
+        >>> print(f"Nuclides: {', '.join(results['nuclides'][:10])}")
+    """
+    endf_dir = Path(endf_dir)
+    if not endf_dir.exists():
+        raise ValueError(f"Directory does not exist: {endf_dir}")
+    
+    results = {
+        "total_files": 0,
+        "valid_files": 0,
+        "nuclides": [],
+        "library_versions": set(),
+        "directory_structure": "unknown",
+    }
+    
+    # Detect directory structure
+    if (endf_dir / "neutrons-version.VIII.1").exists():
+        results["directory_structure"] = "standard"
+        results["library_versions"].add("VIII.1")
+    elif (endf_dir / "neutrons-version.VIII.0").exists():
+        results["directory_structure"] = "standard"
+        results["library_versions"].add("VIII.0")
+    else:
+        # Check for version directories
+        for version_dir in endf_dir.glob("neutrons-version.*"):
+            if version_dir.is_dir():
+                version = version_dir.name.replace("neutrons-version.", "")
+                results["library_versions"].add(version)
+                results["directory_structure"] = "standard"
+        
+        if results["directory_structure"] == "unknown":
+            # Check if files are in root or nested
+            root_files = list(endf_dir.glob("*.endf"))
+            nested_files = list(endf_dir.rglob("*.endf"))
+            if len(root_files) > 0:
+                results["directory_structure"] = "flat"
+            elif len(nested_files) > len(root_files):
+                results["directory_structure"] = "nested"
+    
+    # Scan for files
+    nuclide_set = set()
+    for endf_file in endf_dir.rglob("*.endf"):
+        results["total_files"] += 1
+        
+        # Parse nuclide
+        nuclide = NuclearDataCache._endf_filename_to_nuclide(endf_file.name)
+        if nuclide is None:
+            nuclide = NuclearDataCache._parse_alternative_endf_filename(endf_file.name)
+        
+        if nuclide and NuclearDataCache._validate_endf_file(endf_file):
+            results["valid_files"] += 1
+            nuclide_set.add(nuclide.name)
+    
+    results["nuclides"] = sorted(list(nuclide_set))
+    results["library_versions"] = sorted(list(results["library_versions"]))
+    
+    return results

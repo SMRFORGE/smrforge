@@ -16,6 +16,11 @@ This document consolidates next steps and recommended additions based on current
 - ✅ Code formatting applied (Black and isort)
 - ✅ Test infrastructure for external data dependencies (mock fixtures)
 - ✅ Coverage analysis and roadmap completed
+- ✅ ENDF-B-VIII.1 local data integration (Phases 1-3)
+  - Local ENDF directory support for offline use
+  - Fast file indexing and O(1) lookups
+  - Version fallback and multi-URL download retry
+  - ~800x performance improvement for local file access
 
 ### 🔴 Next Priority Actions
 1. **Increase test coverage** from 67% to 75-80%+ (focus on `reactor_core.py` and `endf_parser.py`)

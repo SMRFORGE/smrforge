@@ -12,6 +12,9 @@ try:
         Library,
         NuclearDataCache,
         Nuclide,
+        get_standard_endf_directory,
+        organize_bulk_endf_downloads,
+        scan_endf_directory,
     )
 
     _CORE_DATA_AVAILABLE = True
@@ -51,6 +54,9 @@ if _CORE_DATA_AVAILABLE:
             "DecayData",
             "Nuclide",
             "Library",
+            "get_standard_endf_directory",
+            "organize_bulk_endf_downloads",
+            "scan_endf_directory",
         ]
     )
 

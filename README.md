@@ -12,6 +12,14 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 
 ### ✅ Stable & Production Ready
 - **Neutronics**: Multi-group diffusion solver with power iteration and Arnoldi methods
+- **Nuclear Data**: ENDF file parsing with automatic downloads, bulk storage, and caching
+  - **Automatic downloads enabled by default** - files downloaded automatically when needed
+  - **Bulk storage support** - organize and index bulk-downloaded files from NNDC/IAEA
+  - **Flexible file discovery** - automatically finds files regardless of directory structure
+  - Supports ENDF/B-VIII.0, ENDF/B-VIII.1, JEFF-3.3, JENDL-5.0
+  - Multiple URL fallbacks (NNDC, IAEA) with automatic retry
+  - Local ENDF directory integration for offline use and faster access
+  - Automatic version fallback (e.g., VIII.1 → VIII.0)
 - **Geometry**: Prismatic and pebble bed core geometries with mesh generation
 - **Geometry Tools**: Import/export (JSON, OpenMC XML, Serpent), control rod geometry, assembly management
 - **Visualization**: 2D core layouts, flux/power distribution plots
@@ -135,9 +143,16 @@ print(f"Power: {results['power_thermal_mw']:.1f} MWth")
 import smrforge as smr
 from smrforge.neutronics.solver import MultiGroupDiffusion
 from smrforge.presets.htgr import ValarAtomicsReactor
+from pathlib import Path
 
 # Create reactor from preset
 reactor = ValarAtomicsReactor()
+
+# Optional: Use local ENDF data for faster, offline access
+from smrforge.core.reactor_core import NuclearDataCache
+cache = NuclearDataCache(
+    local_endf_dir=Path("C:/path/to/ENDF-B-VIII.1")  # Local ENDF directory
+)
 
 # Run neutronics analysis
 solver = MultiGroupDiffusion(geometry, xs_data, options)
