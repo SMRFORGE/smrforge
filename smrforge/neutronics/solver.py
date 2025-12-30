@@ -401,13 +401,32 @@ class MultiGroupDiffusion:
         """
         # Fission rate: [nz, nr, 1]
         fission_rate = np.sum(self.nu_sigma_f_map * self.flux, axis=2, keepdims=True)
+        
+        # Ensure fission rate is non-zero (handle edge case where nu_sigma_f is very small)
+        max_fission_rate = np.max(fission_rate)
+        if max_fission_rate < 1e-10:
+            # If fission rate is too small, use a minimum value based on flux
+            # This handles cases where cross-sections are very small (e.g., from fallback)
+            total_flux = np.sum(self.flux)
+            if total_flux > 0:
+                # Use a small fraction of total flux as minimum source
+                min_fission_rate = total_flux * 1e-12
+            else:
+                min_fission_rate = 1e-10
+            logger.warning(
+                f"Fission rate very small (max={max_fission_rate:.2e}), "
+                f"using minimum source term"
+            )
+            fission_rate = np.maximum(fission_rate, min_fission_rate)
 
         # chi is [n_materials, ng]
         # Get chi for each cell: [nz, nr, ng]
         chi_map = self.xs.chi[self.material_map, :]
 
         # Broadcast multiplication: [nz, nr, ng]
-        self.source = chi_map * fission_rate / k_eff
+        # Avoid division by zero or very small k_eff
+        k_eff_safe = max(k_eff, 1e-6)
+        self.source = chi_map * fission_rate / k_eff_safe
 
     def _update_scattering_source(self, g: int) -> None:
         """
