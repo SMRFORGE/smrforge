@@ -348,40 +348,50 @@ def convert_nuclide_to_material_xs(
     sigma_s[1, :, :] *= reflector_density
     
     # Ensure minimum absorption to avoid numerical issues
-    # If absorption is zero but total is non-zero, use a small fraction of total
-    # This handles cases where capture/fission data might be missing
+    # This is critical: absorption must be non-zero for k_eff calculation
     import warnings
     fallback_used = False
+    fallback_count = 0
+    
     for m in range(n_materials):
         for g in range(n_groups):
-            if sigma_a[m, g] <= 0:  # Use <= to catch very small values
-                if sigma_t[m, g] > 0:
+            # Check if absorption is zero or very small
+            if sigma_a[m, g] <= 1e-10:  # Use small threshold to catch near-zero values
+                if sigma_t[m, g] > 1e-10:
+                    # Total exists but absorption is zero - use fraction of total
                     # Use 1% of total as minimum absorption (conservative estimate)
-                    sigma_a[m, g] = max(sigma_a[m, g], 0.01 * sigma_t[m, g])
-                    if sigma_a[m, g] > 0:
-                        fallback_used = True
-                else:
-                    # Both sigma_a and sigma_t are zero - set minimum values
-                    # Use a very small but non-zero value based on material density
-                    if m == 0:  # Fuel
-                        min_abs = 1e-6 * fuel_density
-                        min_tot = 1e-4 * fuel_density  # Set total to reasonable value
-                    else:  # Reflector
-                        min_abs = 1e-6 * reflector_density
-                        min_tot = 1e-4 * reflector_density
-                    sigma_t[m, g] = max(sigma_t[m, g], min_tot)
+                    min_abs = 0.01 * sigma_t[m, g]
                     sigma_a[m, g] = max(sigma_a[m, g], min_abs)
                     fallback_used = True
+                    fallback_count += 1
+                else:
+                    # Both sigma_a and sigma_t are zero or very small
+                    # Set minimum values based on material density
+                    if m == 0:  # Fuel
+                        # For fuel: minimum based on typical UO2 values
+                        # Typical UO2: sigma_a ~ 0.1-0.5 barns, density ~ 0.002 atoms/barn-cm
+                        min_abs = 1e-4 * fuel_density  # ~0.2e-6 1/cm minimum
+                        min_tot = 1e-2 * fuel_density  # ~0.2e-4 1/cm minimum
+                    else:  # Reflector (graphite)
+                        # Graphite has very small capture: ~3.4 mbarn = 0.0034 barns
+                        min_abs = 1e-5 * reflector_density  # ~0.85e-6 1/cm minimum
+                        min_tot = 1e-3 * reflector_density  # ~0.85e-4 1/cm minimum
+                    
+                    # Only set if truly zero (don't override small but valid values)
+                    if sigma_t[m, g] < min_tot:
+                        sigma_t[m, g] = min_tot
+                    if sigma_a[m, g] < min_abs:
+                        sigma_a[m, g] = min_abs
+                    fallback_used = True
+                    fallback_count += 1
     
     if fallback_used:
-        warning_msg = (
+        warnings.warn(
             f"Some absorption cross-sections were zero and have been set to minimum values. "
+            f"Affected: {fallback_count} groups. "
             f"This may indicate missing capture/fission data in ENDF files. "
-            f"Affected: {len(fallback_details)} groups. "
-            f"Results may be less accurate. "
-            f"Details: {fallback_details[:5]}{'...' if len(fallback_details) > 5 else ''}"
+            f"Results may be less accurate."
         )
-        warnings.warn(warning_msg)
     
     # Validate results before returning
     if np.any(sigma_t < 0):
