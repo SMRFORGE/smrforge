@@ -51,6 +51,7 @@ class Library(Enum):
     """
 
     ENDF_B_VIII = "endfb8.0"
+    ENDF_B_VIII_1 = "endfb8.1"  # ENDF/B-VIII.1 (August 2024)
     JEFF_33 = "jeff3.3"
     JENDL_5 = "jendl5.0"
 
@@ -137,21 +138,38 @@ class NuclearDataCache:
         root: Zarr root group for persistent storage.
     """
 
-    def __init__(self, cache_dir: Optional[Path] = None):
+    def __init__(self, cache_dir: Optional[Path] = None, local_endf_dir: Optional[Path] = None):
         """
         Initialize nuclear data cache.
         
         Args:
             cache_dir: Optional path to cache directory. Defaults to
                 ``~/.smrforge/nucdata`` if not provided.
+            local_endf_dir: Optional path to local ENDF-B-VIII.1 directory.
+                If provided, the cache will look for ENDF files in this directory
+                before attempting to download. Expected structure:
+                ``{local_endf_dir}/neutrons-version.VIII.1/n-ZZZ_Element_AAA.endf``
         
         Example:
             >>> cache = NuclearDataCache()
             >>> # Or specify custom cache location
             >>> cache = NuclearDataCache(cache_dir=Path("/tmp/nucdata"))
+            >>> # Or use local ENDF files
+            >>> cache = NuclearDataCache(
+            ...     local_endf_dir=Path("C:/Users/user/Downloads/ENDF-B-VIII.1")
+            ... )
         """
         self.cache_dir = cache_dir or Path.home() / ".smrforge" / "nucdata"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Local ENDF directory (e.g., ENDF-B-VIII.1)
+        self.local_endf_dir = Path(local_endf_dir) if local_endf_dir else None
+        self._local_file_index: Optional[Dict[str, Path]] = None  # Lazy-loaded index
+        
+        # Build index on initialization if local directory provided (Phase 3 optimization)
+        if self.local_endf_dir and self.local_endf_dir.exists():
+            # Eagerly build index for faster first access
+            self._build_local_file_index()
 
         # In-memory cache for hot data
         self._memory_cache: Dict = {}
@@ -1231,7 +1249,28 @@ class NuclearDataCache:
         filepath = endf_dir / filename
 
         if not filepath.exists():
-            # Try multiple URL sources and formats
+            # First, try to find file in local ENDF directory
+            local_file = self._find_local_endf_file(nuclide, library)
+            if local_file and local_file.exists():
+                # Validate file before copying (Phase 3: validation)
+                if not self._validate_endf_file(local_file):
+                    logger.warning(f"Local file {local_file.name} failed validation, trying download")
+                else:
+                    # Copy or symlink from local directory to cache
+                    try:
+                        # On Windows, try to create a hard link (more reliable than symlinks)
+                        import os
+                        if hasattr(os, 'link'):  # Unix
+                            os.link(str(local_file), str(filepath))
+                        else:  # Windows - just copy (hard links require admin)
+                            import shutil
+                            shutil.copy2(str(local_file), str(filepath))
+                        logger.info(f"Copied local ENDF file: {local_file} -> {filepath}")
+                        return filepath
+                    except (OSError, IOError) as e:
+                        logger.warning(f"Failed to copy local file {local_file}: {e}. Trying download.")
+            
+            # If local file not found, try downloading
             urls = self._get_endf_urls(nuclide, library)
             last_error = None
             
@@ -1251,14 +1290,30 @@ class NuclearDataCache:
                     last_error = e
                     continue
             
-            # All URLs failed
+            # If download failed, try version fallback (e.g., VIII.1 → VIII.0)
+            fallback_library = self._get_library_fallback(library)
+            if fallback_library:
+                logger.info(f"Trying fallback library {fallback_library.value} for {nuclide.name}")
+                try:
+                    return self._ensure_endf_file(nuclide, fallback_library)
+                except requests.RequestException:
+                    # Fallback also failed, continue with error message
+                    pass
+            
+            # All URLs and fallbacks failed
             error_msg = f"Failed to download ENDF file for {nuclide.name} from {library.value}.\n"
+            if fallback_library:
+                error_msg += f"Also tried fallback library {fallback_library.value}.\n"
+            if self.local_endf_dir:
+                error_msg += f"Local ENDF directory checked: {self.local_endf_dir}\n"
             error_msg += f"Tried {len(urls)} URL(s), last error: {last_error}\n"
             error_msg += "\nPossible solutions:\n"
             error_msg += "1. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
             error_msg += f"   {filepath}\n"
-            error_msg += "2. Use SANDY's download functionality if available\n"
-            error_msg += "3. Check network connectivity and try again"
+            if self.local_endf_dir:
+                error_msg += f"2. Ensure file exists in local directory: {self.local_endf_dir}/neutrons-version.VIII.1/\n"
+            error_msg += "3. Use SANDY's download functionality if available\n"
+            error_msg += "4. Check network connectivity and try again"
             raise requests.RequestException(error_msg) from last_error
 
         return filepath
@@ -1321,7 +1376,23 @@ class NuclearDataCache:
         filepath = endf_dir / filename
 
         if not filepath.exists():
-            # Try multiple URL sources and formats
+            # First, try to find file in local ENDF directory
+            local_file = self._find_local_endf_file(nuclide, library)
+            if local_file and local_file.exists():
+                # Validate file before copying (Phase 3: validation)
+                if not self._validate_endf_file(local_file):
+                    logger.warning(f"Local file {local_file.name} failed validation, trying download")
+                else:
+                    # Copy from local directory to cache
+                    try:
+                        import shutil
+                        shutil.copy2(str(local_file), str(filepath))
+                        logger.info(f"Copied local ENDF file: {local_file} -> {filepath}")
+                        return filepath
+                    except (OSError, IOError) as e:
+                        logger.warning(f"Failed to copy local file {local_file}: {e}. Trying download.")
+            
+            # If local file not found, try downloading
             urls = self._get_endf_urls(nuclide, library)
             last_error = None
             
@@ -1346,20 +1417,276 @@ class NuclearDataCache:
                         last_error = e
                         continue
                 
-                # All URLs failed
+                # If download failed, try version fallback (e.g., VIII.1 → VIII.0)
+                fallback_library = self._get_library_fallback(library)
+                if fallback_library:
+                    logger.info(f"Trying fallback library {fallback_library.value} for {nuclide.name}")
+                    try:
+                        return await self._ensure_endf_file_async(nuclide, fallback_library, client)
+                    except httpx.HTTPError:
+                        # Fallback also failed, continue with error message
+                        pass
+                
+                # All URLs and fallbacks failed
                 error_msg = f"Failed to download ENDF file for {nuclide.name} from {library.value}.\n"
+                if fallback_library:
+                    error_msg += f"Also tried fallback library {fallback_library.value}.\n"
+                if self.local_endf_dir:
+                    error_msg += f"Local ENDF directory checked: {self.local_endf_dir}\n"
                 error_msg += f"Tried {len(urls)} URL(s), last error: {last_error}\n"
                 error_msg += "\nPossible solutions:\n"
                 error_msg += "1. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
                 error_msg += f"   {filepath}\n"
-                error_msg += "2. Use SANDY's download functionality if available\n"
-                error_msg += "3. Check network connectivity and try again"
+                if self.local_endf_dir:
+                    error_msg += f"2. Ensure file exists in local directory: {self.local_endf_dir}/neutrons-version.VIII.1/\n"
+                error_msg += "3. Use SANDY's download functionality if available\n"
+                error_msg += "4. Check network connectivity and try again"
                 raise httpx.HTTPError(error_msg) from last_error
             finally:
                 if use_temporary_client:
                     await client.aclose()
 
         return filepath
+
+    def _build_local_file_index(self) -> Dict[str, Path]:
+        """
+        Build index of available local ENDF files.
+        
+        Scans the local ENDF directory and creates a mapping from nuclide names
+        to file paths. This index is cached to avoid repeated directory scans.
+        
+        Returns:
+            Dictionary mapping nuclide names (e.g., "U235") to file paths.
+        """
+        if self._local_file_index is not None:
+            return self._local_file_index
+        
+        if not self.local_endf_dir or not self.local_endf_dir.exists():
+            self._local_file_index = {}
+            return self._local_file_index
+        
+        index: Dict[str, Path] = {}
+        
+        # Scan neutrons sublibrary (most common)
+        neutrons_dir = self.local_endf_dir / "neutrons-version.VIII.1"
+        if neutrons_dir.exists():
+            for endf_file in neutrons_dir.glob("n-*.endf"):
+                try:
+                    # Validate file exists and is readable
+                    if not endf_file.exists() or not endf_file.is_file():
+                        continue
+                    
+                    # Parse filename to nuclide
+                    nuclide = self._endf_filename_to_nuclide(endf_file.name)
+                    if nuclide:
+                        # Validate nuclide matches filename (additional check)
+                        expected_filename = self._nuclide_to_endf_filename(nuclide)
+                        if expected_filename == endf_file.name:
+                            # Optional: Quick validation of file format (check header)
+                            if self._validate_endf_file(endf_file):
+                                index[nuclide.name] = endf_file
+                            else:
+                                logger.warning(f"Skipping invalid ENDF file: {endf_file.name}")
+                        else:
+                            logger.warning(f"Filename mismatch for {endf_file.name}")
+                except (ValueError, KeyError, IOError) as e:
+                    # Skip files that don't match expected format or can't be read
+                    logger.debug(f"Skipping file {endf_file.name}: {e}")
+                    continue
+        
+        self._local_file_index = index
+        logger.info(f"Built local ENDF file index: {len(index)} files found")
+        return index
+    
+    @staticmethod
+    def _validate_endf_file(filepath: Path) -> bool:
+        """
+        Validate that a file is a valid ENDF format file.
+        
+        Performs quick validation by checking the file header for ENDF markers.
+        This is a lightweight check that doesn't parse the entire file.
+        
+        Args:
+            filepath: Path to the ENDF file to validate.
+        
+        Returns:
+            True if file appears to be valid ENDF format, False otherwise.
+        
+        Note:
+            This is a quick validation. Full validation would require parsing
+            the entire ENDF file structure, which is expensive.
+        """
+        try:
+            if not filepath.exists() or not filepath.is_file():
+                return False
+            
+            # Check file size (ENDF files should be at least a few KB)
+            if filepath.stat().st_size < 1000:  # Less than 1 KB is suspicious
+                return False
+            
+            # Read first 200 bytes to check for ENDF markers
+            with open(filepath, 'rb') as f:
+                header = f.read(200)
+            
+            # ENDF files typically start with:
+            # - "  -1" (ENDF-6 format marker)
+            # - "ENDF" somewhere in header
+            # - Or specific numeric format
+            if len(header) < 10:
+                return False
+            
+            # Check for ENDF markers
+            has_endf_marker = (
+                header[:4] == b'  -1' or
+                b'ENDF' in header[:100] or
+                b'ENDF/B' in header[:100]
+            )
+            
+            return has_endf_marker
+        except (IOError, OSError) as e:
+            logger.debug(f"Error validating ENDF file {filepath}: {e}")
+            return False
+
+    def _find_local_endf_file(self, nuclide: Nuclide, library: Library) -> Optional[Path]:
+        """
+        Find ENDF file in local directory with version fallback support.
+        
+        If requesting ENDF/B-VIII.1 and file not found, automatically falls back
+        to ENDF/B-VIII.0. This provides backward compatibility when VIII.1 files
+        are not available.
+        
+        Args:
+            nuclide: Nuclide instance.
+            library: Library enum. Supports ENDF/B-VIII.0 and VIII.1 for local files.
+        
+        Returns:
+            Path to local ENDF file if found, None otherwise.
+        """
+        if not self.local_endf_dir:
+            return None
+        
+        # Only support ENDF/B libraries for local files currently
+        if library not in (Library.ENDF_B_VIII, Library.ENDF_B_VIII_1):
+            return None
+        
+        # Build index if not already built
+        index = self._build_local_file_index()
+        
+        # Look up nuclide in index
+        file_path = index.get(nuclide.name)
+        
+        # If not found and requesting VIII.1, try fallback to VIII.0
+        if file_path is None and library == Library.ENDF_B_VIII_1:
+            logger.debug(f"VIII.1 file not found for {nuclide.name}, trying VIII.0 fallback")
+            # Note: Local files are from VIII.1, but we can check cache for VIII.0
+            # For now, local directory only has VIII.1, so fallback happens in _ensure_endf_file
+            pass
+        
+        return file_path
+    
+    @staticmethod
+    def _get_library_fallback(library: Library) -> Optional[Library]:
+        """
+        Get fallback library version if requested version is not available.
+        
+        Provides version fallback chain: VIII.1 → VIII.0
+        
+        Args:
+            library: Requested library version.
+        
+        Returns:
+            Fallback library version, or None if no fallback available.
+        
+        Example:
+            >>> NuclearDataCache._get_library_fallback(Library.ENDF_B_VIII_1)
+            Library.ENDF_B_VIII
+            >>> NuclearDataCache._get_library_fallback(Library.ENDF_B_VIII)
+            None
+        """
+        fallback_map = {
+            Library.ENDF_B_VIII_1: Library.ENDF_B_VIII,  # VIII.1 → VIII.0
+        }
+        return fallback_map.get(library)
+
+    @staticmethod
+    def _endf_filename_to_nuclide(filename: str) -> Optional[Nuclide]:
+        """
+        Parse ENDF filename to Nuclide.
+        
+        Converts ENDF filename format (e.g., "n-092_U_235.endf") to Nuclide instance.
+        
+        Args:
+            filename: ENDF filename (e.g., "n-092_U_235.endf" or "n-013_Al_026m1.endf").
+        
+        Returns:
+            Nuclide instance if parsing succeeds, None otherwise.
+        
+        Example:
+            >>> NuclearDataCache._endf_filename_to_nuclide("n-092_U_235.endf")
+            Nuclide(Z=92, A=235, m=0)
+            >>> NuclearDataCache._endf_filename_to_nuclide("n-013_Al_026m1.endf")
+            Nuclide(Z=13, A=26, m=1)
+        """
+        import re
+        from .constants import SYMBOL_TO_Z
+        
+        # Pattern: n-ZZZ_Element_AAA[mM]?.endf
+        # Examples: n-092_U_235.endf, n-013_Al_026m1.endf
+        pattern = r"^n-(\d+)_([A-Z][a-z]?)_(\d+)([mM]\d?)?\.endf$"
+        match = re.match(pattern, filename)
+        
+        if not match:
+            return None
+        
+        z_str, element, a_str, meta = match.groups()
+        
+        try:
+            Z = int(z_str)
+            A = int(a_str)
+            m = 0
+            
+            # Handle metastable states
+            if meta:
+                m_str = meta[1:] if len(meta) > 1 else "1"
+                m = int(m_str) if m_str else 1
+            
+            # Verify element symbol matches Z
+            if element not in SYMBOL_TO_Z or SYMBOL_TO_Z[element] != Z:
+                return None
+            
+            return Nuclide(Z=Z, A=A, m=m)
+        except (ValueError, KeyError):
+            return None
+
+    @staticmethod
+    def _nuclide_to_endf_filename(nuclide: Nuclide) -> str:
+        """
+        Convert Nuclide to ENDF filename format.
+        
+        Converts Nuclide instance to ENDF filename format (e.g., "n-092_U_235.endf").
+        
+        Args:
+            nuclide: Nuclide instance.
+        
+        Returns:
+            ENDF filename string (e.g., "n-092_U_235.endf" or "n-013_Al_026m1.endf").
+        
+        Example:
+            >>> u235 = Nuclide(Z=92, A=235, m=0)
+            >>> NuclearDataCache._nuclide_to_endf_filename(u235)
+            'n-092_U_235.endf'
+            >>> al26m = Nuclide(Z=13, A=26, m=1)
+            >>> NuclearDataCache._nuclide_to_endf_filename(al26m)
+            'n-013_Al_026m1.endf'
+        """
+        from .constants import ELEMENT_SYMBOLS
+        
+        symbol = ELEMENT_SYMBOLS[nuclide.Z]
+        z_str = f"{nuclide.Z:03d}"
+        a_str = f"{nuclide.A:03d}"
+        meta_suffix = f"m{nuclide.m}" if nuclide.m > 0 else ""
+        
+        return f"n-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
 
     @staticmethod
     def _get_endf_urls(nuclide: Nuclide, library: Library) -> list[str]:
@@ -1392,7 +1719,7 @@ class NuclearDataCache:
         # Map library values to NNDC directory names
         library_map = {
             "endfb8.0": "b8.0",
-            "endfb8.1": "b8.1",
+            "endfb8.1": "b8.1",  # ENDF/B-VIII.1
             "endfb7.1": "b7.1",
         }
         
@@ -1403,8 +1730,13 @@ class NuclearDataCache:
             urls.extend([
                 f"https://www.nndc.bnl.gov/endf/{nndc_version}/endf/{nuclide_name}.endf",
                 f"https://www.nndc.bnl.gov/endf/{nndc_version}/data/endf/{nuclide_name}.endf",
-                f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.0/{nuclide_name}.endf",
             ])
+            
+            # Add version-specific download paths
+            if library == Library.ENDF_B_VIII_1:
+                urls.append(f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.1/{nuclide_name}.endf")
+            elif library == Library.ENDF_B_VIII:
+                urls.append(f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.0/{nuclide_name}.endf")
         
         # Try IAEA formats
         iaea_base = "https://www-nds.iaea.org"
