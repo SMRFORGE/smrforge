@@ -12,10 +12,10 @@ This file demonstrates key features and workflows in SMRForge, including:
 import numpy as np
 from pathlib import Path
 
-from smrforge.geometry.core_geometry import PrismaticCore, GeometryExporter
+from smrforge.geometry import PrismaticCore, GeometryExporter
 from smrforge.geometry.importers import GeometryImporter
 from smrforge.neutronics.solver import MultiGroupDiffusion
-from smrforge.thermal.hydraulics import ChannelThermalHydraulics, ChannelGeometry
+from smrforge.thermal import ChannelThermalHydraulics, ChannelGeometry
 from smrforge.validation.models import CrossSectionData, SolverOptions
 
 

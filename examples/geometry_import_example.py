@@ -8,7 +8,7 @@ using the SMRForge geometry importers module.
 import json
 from pathlib import Path
 
-from smrforge.geometry.core_geometry import GeometryExporter, PrismaticCore, PebbleBedCore
+from smrforge.geometry import GeometryExporter, PrismaticCore, PebbleBedCore
 from smrforge.geometry.importers import GeometryImporter
 
 

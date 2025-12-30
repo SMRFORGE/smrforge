@@ -6,7 +6,7 @@ for plotting reactor geometry, flux distributions, power, and temperature.
 """
 
 import numpy as np
-from smrforge.geometry.core_geometry import PrismaticCore, PebbleBedCore
+from smrforge.geometry import PrismaticCore, PebbleBedCore
 from smrforge.visualization.geometry import (
     plot_core_layout,
     plot_flux_on_geometry,

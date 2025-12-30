@@ -13,7 +13,7 @@ from rich.panel import Panel
 import matplotlib.pyplot as plt
 
 # Import SMRForge modules
-from smrforge.presets.htgr_designs import ValarAtomicsReactor
+from smrforge.presets.htgr import ValarAtomicsReactor
 from smrforge.safety.transients import (
     LOFCTransient, ATWSTransient, TransientConditions, TransientType
 )

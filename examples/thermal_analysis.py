@@ -7,7 +7,7 @@ coolant channel, including temperature and pressure distributions.
 """
 
 import numpy as np
-from smrforge.thermal.hydraulics import (
+from smrforge.thermal import (
     ChannelThermalHydraulics,
     ChannelGeometry,
 )
