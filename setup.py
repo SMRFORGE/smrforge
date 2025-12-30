@@ -41,8 +41,6 @@ setup(
         "polars>=0.19.0",
         # Terminal formatting
         "rich>=13.0.0",
-        # HTTP requests (for nuclear data downloads)
-        "requests>=2.25.0",
     ],
     extras_require={
         "dev": [
@@ -93,6 +91,11 @@ setup(
         "Operating System :: OS Independent",
     ],
     keywords="nuclear reactor simulation SMR neutronics thermal-hydraulics",
+    entry_points={
+        "console_scripts": [
+            "smrforge-setup-endf=smrforge.core.endf_setup:setup_endf_data_interactive",
+        ],
+    },
     project_urls={
         "Bug Reports": "https://github.com/cmwhalen/smrforge/issues",
         "Source": "https://github.com/cmwhalen/smrforge",

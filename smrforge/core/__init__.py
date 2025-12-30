@@ -22,6 +22,16 @@ except ImportError:
     _CORE_DATA_AVAILABLE = False
 
 try:
+    from smrforge.core.endf_setup import (
+        setup_endf_data_interactive,
+        validate_endf_setup,
+    )
+
+    _ENDF_SETUP_AVAILABLE = True
+except ImportError:
+    _ENDF_SETUP_AVAILABLE = False
+
+try:
     from smrforge.core.resonance_selfshield import (
         BondarenkoMethod,
         EquivalenceTheory,
@@ -57,6 +67,14 @@ if _CORE_DATA_AVAILABLE:
             "get_standard_endf_directory",
             "organize_bulk_endf_downloads",
             "scan_endf_directory",
+        ]
+    )
+
+if _ENDF_SETUP_AVAILABLE:
+    __all__.extend(
+        [
+            "setup_endf_data_interactive",
+            "validate_endf_setup",
         ]
     )
 

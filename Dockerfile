@@ -57,5 +57,8 @@ RUN mkdir -p /app/data /app/output /app/endf-data
 ENV SMRFORGE_ENDF_DIR=/app/endf-data
 
 # Default command (can be overridden)
-CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!')"]
+# Note: ENDF files must be set up manually before use
+# Run: python -m smrforge.core.endf_setup
+# Or: smrforge-setup-endf
+CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print('Run: python -m smrforge.core.endf_setup to set up ENDF data')"]
 

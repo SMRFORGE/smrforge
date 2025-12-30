@@ -12,14 +12,15 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 
 ### ✅ Stable & Production Ready
 - **Neutronics**: Multi-group diffusion solver with power iteration and Arnoldi methods
-- **Nuclear Data**: ENDF file parsing with automatic downloads, bulk storage, and caching
-  - **Automatic downloads enabled by default** - files downloaded automatically when needed
+- **Nuclear Data**: ENDF file parsing with manual setup and bulk storage
+  - **Interactive setup wizard** - step-by-step guide for setting up ENDF files
+  - **Manual file placement** - easy directory-based setup with validation
   - **Bulk storage support** - organize and index bulk-downloaded files from NNDC/IAEA
   - **Flexible file discovery** - automatically finds files regardless of directory structure
   - Supports ENDF/B-VIII.0, ENDF/B-VIII.1, JEFF-3.3, JENDL-5.0
-  - Multiple URL fallbacks (NNDC, IAEA) with automatic retry
   - Local ENDF directory integration for offline use and faster access
   - Automatic version fallback (e.g., VIII.1 → VIII.0)
+  - **Setup required**: Run `python -m smrforge.core.endf_setup` to configure ENDF files
 - **Geometry**: Prismatic and pebble bed core geometries with mesh generation
 - **Geometry Tools**: Import/export (JSON, OpenMC XML, Serpent), control rod geometry, assembly management
 - **Visualization**: 2D core layouts, flux/power distribution plots
@@ -137,6 +138,21 @@ print(f"k-eff: {results['k_eff']:.6f}")
 print(f"Power: {results['power_thermal_mw']:.1f} MWth")
 ```
 
+### Setting Up ENDF Data
+
+**IMPORTANT**: ENDF files must be set up before use. Run the setup wizard:
+
+```bash
+python -m smrforge.core.endf_setup
+```
+
+Or use the command-line tool:
+```bash
+smrforge-setup-endf
+```
+
+The wizard will guide you through downloading and configuring ENDF files.
+
 ### Advanced Usage
 
 ```python
@@ -145,14 +161,14 @@ from smrforge.neutronics.solver import MultiGroupDiffusion
 from smrforge.presets.htgr import ValarAtomicsReactor
 from pathlib import Path
 
-# Create reactor from preset
-reactor = ValarAtomicsReactor()
-
-# Optional: Use local ENDF data for faster, offline access
+# Set up ENDF data (required)
 from smrforge.core.reactor_core import NuclearDataCache
 cache = NuclearDataCache(
-    local_endf_dir=Path("C:/path/to/ENDF-B-VIII.1")  # Local ENDF directory
+    local_endf_dir=Path("C:/path/to/ENDF-B-VIII.1")  # Your ENDF directory
 )
+
+# Create reactor from preset
+reactor = ValarAtomicsReactor()
 
 # Run neutronics analysis
 solver = MultiGroupDiffusion(geometry, xs_data, options)
@@ -183,6 +199,7 @@ Full documentation available at: **[https://smrforge.readthedocs.io](https://smr
 ### Additional Resources
 
 - **Tutorial**: See [`TUTORIAL.md`](TUTORIAL.md) for a beginner-friendly step-by-step guide
+- **ENDF Setup**: See [`ENDF_SETUP_GUIDE.md`](ENDF_SETUP_GUIDE.md) for ENDF data setup instructions (required before use)
 - **Installation**: See [`INSTALLATION.md`](INSTALLATION.md) for detailed installation instructions
 - **Usage Guide**: See [`USAGE.md`](USAGE.md) for usage examples and quick reference
 - **Docker**: See [`DOCKER.md`](DOCKER.md) for Docker usage and troubleshooting

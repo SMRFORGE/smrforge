@@ -18,7 +18,7 @@ services:
       # Uncomment and set path to your ENDF data directory:
       # For Windows (adjust path as needed):
       # - C:/Users/YourName/ENDF-Data:/app/endf-data:ro
-      # - C:/Users/YourName/Downloads/ENDF-B-VIII.1:/app/endf-data:ro
+      # - C:/Users/cmwhale/Downloads/ENDF-B-VIII.1:/app/endf-data:ro
       # For Linux/Mac:
       # - ~/ENDF-Data:/app/endf-data:ro
       # - /path/to/ENDF-B-VIII.1:/app/endf-data:ro

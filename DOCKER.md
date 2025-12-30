@@ -186,17 +186,25 @@ print(f'Organized {stats[\"files_organized\"]} files')
 "
 ```
 
-### Automatic Downloads
+### Setup Wizard (Recommended)
 
-If ENDF files are not found locally, SMRForge will automatically download them from NNDC/IAEA. Downloaded files are cached in `/app/.smrforge/nucdata/` inside the container.
+**IMPORTANT**: ENDF files must be set up manually. Use the interactive setup wizard:
 
-**Note**: For persistent caching across container restarts, consider mounting the cache directory:
-```yaml
-volumes:
-  - ~/.smrforge:/root/.smrforge:rw  # Persistent cache
+```bash
+# Run setup wizard inside container
+docker compose exec smrforge python -m smrforge.core.endf_setup
+
+# Or use command-line tool (if installed)
+docker compose exec smrforge smrforge-setup-endf
 ```
 
-See `BULK_ENDF_STORAGE.md` for detailed information on bulk ENDF storage.
+The wizard will:
+- Guide you through locating or downloading ENDF files
+- Validate all files
+- Organize files into standard structure
+- Test the setup
+
+See `BULK_ENDF_STORAGE.md` and `DOCKER_ENDF_QUICKSTART.md` for detailed information.
 
 ## Environment Variables
 

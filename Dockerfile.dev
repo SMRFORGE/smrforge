@@ -52,5 +52,7 @@ RUN mkdir -p /app/data /app/output /app/endf-data
 ENV SMRFORGE_ENDF_DIR=/app/endf-data
 
 # Default to bash shell for interactive development
+# Note: ENDF files must be set up manually before use
+# Run: python -m smrforge.core.endf_setup
 CMD ["/bin/bash"]
 

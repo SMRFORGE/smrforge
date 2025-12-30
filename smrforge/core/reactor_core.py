@@ -19,16 +19,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import asyncio
 import numpy as np
 import polars as pl  # Much faster than pandas
-import requests
 import zarr  # Modern, fast alternative to HDF5
 from numba import njit, prange
-
-try:
-    import httpx
-    HTTPX_AVAILABLE = True
-except ImportError:
-    HTTPX_AVAILABLE = False
-    httpx = None
 
 from ..utils.logging import get_logger, log_cache_operation, log_nuclear_data_fetch
 
@@ -129,11 +121,26 @@ class NuclearDataCache:
     
     Much faster than HDF5 with better compression and chunking. Provides
     two-level caching: in-memory cache for hot data and persistent Zarr
-    storage for cross-section data. Automatically fetches ENDF files when
-    needed and supports multiple backends (SANDY, built-in parser).
+    storage for cross-section data. Uses local ENDF files (must be set up
+    manually) and supports multiple backends (SANDY, built-in parser).
+    
+    **ENDF File Setup Required:**
+    ENDF files must be set up manually before use. Run the setup wizard:
+    
+    .. code-block:: python
+    
+        from smrforge.core.endf_setup import setup_endf_data_interactive
+        setup_endf_data_interactive()
+    
+    Or from command line:
+    
+    .. code-block:: bash
+    
+        python -m smrforge.core.endf_setup
     
     Attributes:
         cache_dir: Directory for persistent cache storage.
+        local_endf_dir: Optional path to local ENDF data directory.
         _memory_cache: In-memory dictionary cache for frequently accessed data.
         root: Zarr root group for persistent storage.
     """
@@ -1228,34 +1235,31 @@ class NuclearDataCache:
 
     def _ensure_endf_file(self, nuclide: Nuclide, library: Library) -> Path:
         """
-        Download ENDF file if not present in cache (synchronous version).
+        Ensure ENDF file is available in cache (from local directory only).
         
         Checks if the ENDF file for the specified nuclide and library exists
-        in the cache directory. If not, downloads it from IAEA Nuclear Data
-        Services and saves it locally. This is a blocking operation that
-        will wait for the download to complete.
+        in the cache directory. If not, copies it from the local ENDF directory
+        if available. Does NOT download files automatically - users must set up
+        ENDF files manually using the setup wizard.
         
         Args:
             nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
             library: Nuclear data library enum (e.g., Library.ENDF_B_VIII).
         
         Returns:
-            Path to the ENDF file (either existing or newly downloaded).
+            Path to the ENDF file in cache.
             The file is stored in: ``{cache_dir}/endf/{library}/{nuclide.name}.endf``
         
         Raises:
-            requests.RequestException: If download fails (network error, HTTP error, etc.).
-                Common cases include 404 (file not found) or network timeouts.
+            FileNotFoundError: If ENDF file is not found in cache or local directory.
+                Provides instructions for setting up ENDF files.
             IOError: If file cannot be written to cache directory (permissions, disk full, etc.).
         
         Example:
-            >>> cache = NuclearDataCache()
+            >>> cache = NuclearDataCache(local_endf_dir=Path("~/ENDF-Data"))
             >>> u235 = Nuclide(Z=92, A=235, m=0)
             >>> endf_path = cache._ensure_endf_file(u235, Library.ENDF_B_VIII)
             >>> assert endf_path.exists()
-            >>> # Subsequent calls return cached file immediately
-            >>> endf_path2 = cache._ensure_endf_file(u235, Library.ENDF_B_VIII)
-            >>> assert endf_path == endf_path2
         """
         endf_dir = self.cache_dir / "endf" / library.value
         endf_dir.mkdir(parents=True, exist_ok=True)
@@ -1264,226 +1268,85 @@ class NuclearDataCache:
         filepath = endf_dir / filename
 
         if not filepath.exists():
-            # First, try to find file in local ENDF directory
+            # Try to find file in local ENDF directory
             local_file = self._find_local_endf_file(nuclide, library)
+            
+            # Try fallback library version if not found
+            if local_file is None:
+                fallback_library = self._get_library_fallback(library)
+                if fallback_library:
+                    logger.debug(f"Trying fallback library {fallback_library.value} for {nuclide.name}")
+                    local_file = self._find_local_endf_file(nuclide, fallback_library)
+            
             if local_file and local_file.exists():
-                # Validate file before copying (Phase 3: validation)
+                # Validate file before copying
                 if not self._validate_endf_file(local_file):
-                    logger.warning(f"Local file {local_file.name} failed validation, trying download")
-                else:
-                    # Copy or symlink from local directory to cache
-                    try:
-                        # On Windows, try to create a hard link (more reliable than symlinks)
-                        import os
-                        if hasattr(os, 'link'):  # Unix
-                            os.link(str(local_file), str(filepath))
-                        else:  # Windows - just copy (hard links require admin)
-                            import shutil
-                            shutil.copy2(str(local_file), str(filepath))
-                        logger.info(f"Copied local ENDF file: {local_file} -> {filepath}")
-                        return filepath
-                    except (OSError, IOError) as e:
-                        logger.warning(f"Failed to copy local file {local_file}: {e}. Trying download.")
-            
-            # If local file not found, try downloading
-            urls = self._get_endf_urls(nuclide, library)
-            last_error = None
-            
-            for url in urls:
+                    raise ValueError(
+                        f"Local ENDF file failed validation: {local_file}\n"
+                        f"File may be corrupted or not a valid ENDF file."
+                    )
+                
+                # Copy from local directory to cache
                 try:
-                    response = requests.get(url, timeout=30, allow_redirects=True)
-                    response.raise_for_status()
-                    # Verify it's actually an ENDF file (starts with ENDF header)
-                    content = response.content
-                    if len(content) > 0 and (content[:4] == b'  -1' or b'ENDF' in content[:100]):
-                        filepath.write_bytes(content)
-                        return filepath
-                    else:
-                        # Not a valid ENDF file, try next URL
-                        continue
-                except requests.RequestException as e:
-                    last_error = e
-                    continue
-            
-            # If download failed, try version fallback (e.g., VIII.1 → VIII.0)
-            fallback_library = self._get_library_fallback(library)
-            if fallback_library:
-                logger.info(f"Trying fallback library {fallback_library.value} for {nuclide.name}")
-                try:
-                    return self._ensure_endf_file(nuclide, fallback_library)
-                except requests.RequestException:
-                    # Fallback also failed, continue with error message
-                    pass
-            
-            # All URLs and fallbacks failed
-            error_msg = f"Failed to download ENDF file for {nuclide.name} from {library.value}.\n"
-            if fallback_library:
-                error_msg += f"Also tried fallback library {fallback_library.value}.\n"
-            if self.local_endf_dir:
-                error_msg += f"Local ENDF directory checked: {self.local_endf_dir}\n"
-            error_msg += f"Tried {len(urls)} URL(s), last error: {last_error}\n"
-            error_msg += "\nPossible solutions:\n"
-            error_msg += "1. Use local ENDF data (recommended for Docker):\n"
-            error_msg += "   - Mount your ENDF directory in docker-compose.yml:\n"
-            error_msg += "     volumes:\n"
-            error_msg += "       - ~/ENDF-Data:/app/endf-data:ro\n"
-            error_msg += "   - Or download bulk ENDF files and organize them\n"
-            error_msg += "   - See BULK_ENDF_STORAGE.md for details\n"
-            error_msg += "2. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
-            error_msg += f"   {filepath}\n"
-            if self.local_endf_dir:
-                error_msg += f"3. Ensure file exists in local directory: {self.local_endf_dir}\n"
+                    import shutil
+                    shutil.copy2(str(local_file), str(filepath))
+                    logger.info(f"Copied local ENDF file: {local_file} -> {filepath}")
+                    return filepath
+                except (OSError, IOError) as e:
+                    raise IOError(
+                        f"Failed to copy local ENDF file {local_file} to cache: {e}\n"
+                        f"Check file permissions and disk space."
+                    ) from e
             else:
-                error_msg += "3. Set local_endf_dir when creating NuclearDataCache:\n"
-                error_msg += "   cache = NuclearDataCache(local_endf_dir=Path('/app/endf-data'))\n"
-            error_msg += "4. Use SANDY's download functionality if available\n"
-            error_msg += "5. Check network connectivity and try again\n"
-            error_msg += "\nNote: Automatic downloads may fail due to repository URL changes.\n"
-            error_msg += "      Using local ENDF data is more reliable, especially in Docker."
-            raise requests.RequestException(error_msg) from last_error
+                # File not found - provide helpful error message
+                error_msg = f"ENDF file not found for {nuclide.name} ({library.value}).\n\n"
+                error_msg += "ENDF files must be set up manually. To set up ENDF data:\n\n"
+                error_msg += "1. Run the setup wizard:\n"
+                error_msg += "   from smrforge.core.endf_setup import setup_endf_data_interactive\n"
+                error_msg += "   setup_endf_data_interactive()\n\n"
+                error_msg += "   Or from command line:\n"
+                error_msg += "   python -m smrforge.core.endf_setup\n\n"
+                error_msg += "2. Download ENDF files manually:\n"
+                error_msg += "   - Visit https://www.nndc.bnl.gov/endf/\n"
+                error_msg += "   - Download ENDF/B-VIII.1 or ENDF/B-VIII.0\n"
+                error_msg += "   - Extract to a directory\n"
+                error_msg += "   - Run the setup wizard to configure\n\n"
+                if self.local_endf_dir:
+                    error_msg += f"3. Current local_endf_dir: {self.local_endf_dir}\n"
+                    error_msg += f"   Ensure ENDF files are in this directory.\n\n"
+                else:
+                    error_msg += "3. Set local_endf_dir when creating NuclearDataCache:\n"
+                    error_msg += "   cache = NuclearDataCache(local_endf_dir=Path('path/to/ENDF-Data'))\n\n"
+                error_msg += f"4. Expected file location: {filepath}\n"
+                error_msg += "   You can manually place the file here if you have it.\n"
+                
+                raise FileNotFoundError(error_msg)
 
         return filepath
 
     async def _ensure_endf_file_async(
-        self, nuclide: Nuclide, library: Library, client: Optional["httpx.AsyncClient"] = None
+        self, nuclide: Nuclide, library: Library, client: Optional[Any] = None
     ) -> Path:
         """
-        Download ENDF file if not present in cache (async version).
+        Ensure ENDF file is available in cache (async version, from local directory only).
         
-        Async version that supports parallel downloads. If client is provided,
-        uses it; otherwise creates a temporary client that is automatically
-        closed after use. This allows multiple downloads to proceed concurrently
-        without blocking.
+        Async version that supports parallel file operations. Note: This does NOT
+        download files - it only copies from local ENDF directory to cache.
         
         Args:
             nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
             library: Nuclear data library enum (e.g., Library.ENDF_B_VIII).
-            client: Optional httpx.AsyncClient for making requests. If None,
-                creates a temporary client that is closed after the download.
-                Providing a client allows reuse across multiple downloads for
-                better performance.
+            client: Not used (kept for API compatibility).
         
         Returns:
-            Path to the ENDF file (either existing or newly downloaded).
-            The file is stored in: ``{cache_dir}/endf/{library}/{nuclide.name}.endf``
+            Path to the ENDF file in cache.
         
         Raises:
-            httpx.HTTPError: If download fails (network error, HTTP error, etc.).
-                Common cases include 404 (file not found) or network timeouts.
-            IOError: If file cannot be written to cache directory (permissions, disk full, etc.).
-            RuntimeError: If httpx is not available (HTTPX_AVAILABLE is False).
-        
-        Example:
-            >>> import asyncio
-            >>> cache = NuclearDataCache()
-            >>> u235 = Nuclide(Z=92, A=235, m=0)
-            >>> # Single download
-            >>> endf_path = asyncio.run(
-            ...     cache._ensure_endf_file_async(u235, Library.ENDF_B_VIII)
-            ... )
-            >>> 
-            >>> # Parallel downloads with shared client
-            >>> async def download_multiple():
-            ...     async with httpx.AsyncClient() as client:
-            ...         u235_path = await cache._ensure_endf_file_async(u235, Library.ENDF_B_VIII, client)
-            ...         u238_path = await cache._ensure_endf_file_async(
-            ...             Nuclide(Z=92, A=238), Library.ENDF_B_VIII, client
-            ...         )
-            ...     return u235_path, u238_path
-            >>> paths = asyncio.run(download_multiple())
+            FileNotFoundError: If ENDF file is not found. See _ensure_endf_file for details.
         """
-        if not HTTPX_AVAILABLE:
-            raise RuntimeError("httpx is required for async file downloads. Install with: pip install httpx")
-        
-        endf_dir = self.cache_dir / "endf" / library.value
-        endf_dir.mkdir(parents=True, exist_ok=True)
-
-        filename = f"{nuclide.name}.endf"
-        filepath = endf_dir / filename
-
-        if not filepath.exists():
-            # First, try to find file in local ENDF directory
-            local_file = self._find_local_endf_file(nuclide, library)
-            if local_file and local_file.exists():
-                # Validate file before copying (Phase 3: validation)
-                if not self._validate_endf_file(local_file):
-                    logger.warning(f"Local file {local_file.name} failed validation, trying download")
-                else:
-                    # Copy from local directory to cache
-                    try:
-                        import shutil
-                        shutil.copy2(str(local_file), str(filepath))
-                        logger.info(f"Copied local ENDF file: {local_file} -> {filepath}")
-                        return filepath
-                    except (OSError, IOError) as e:
-                        logger.warning(f"Failed to copy local file {local_file}: {e}. Trying download.")
-            
-            # If local file not found, try downloading
-            urls = self._get_endf_urls(nuclide, library)
-            last_error = None
-            
-            use_temporary_client = client is None
-            if use_temporary_client:
-                client = httpx.AsyncClient(timeout=30.0)
-            
-            try:
-                for url in urls:
-                    try:
-                        response = await client.get(url, follow_redirects=True)
-                        response.raise_for_status()
-                        # Verify it's actually an ENDF file
-                        content = response.content
-                        if len(content) > 0 and (content[:4] == b'  -1' or b'ENDF' in content[:100]):
-                            filepath.write_bytes(content)
-                            return filepath
-                        else:
-                            # Not a valid ENDF file, try next URL
-                            continue
-                    except httpx.HTTPError as e:
-                        last_error = e
-                        continue
-                
-                # If download failed, try version fallback (e.g., VIII.1 → VIII.0)
-                fallback_library = self._get_library_fallback(library)
-                if fallback_library:
-                    logger.info(f"Trying fallback library {fallback_library.value} for {nuclide.name}")
-                    try:
-                        return await self._ensure_endf_file_async(nuclide, fallback_library, client)
-                    except httpx.HTTPError:
-                        # Fallback also failed, continue with error message
-                        pass
-                
-                # All URLs and fallbacks failed
-                error_msg = f"Failed to download ENDF file for {nuclide.name} from {library.value}.\n"
-                if fallback_library:
-                    error_msg += f"Also tried fallback library {fallback_library.value}.\n"
-                if self.local_endf_dir:
-                    error_msg += f"Local ENDF directory checked: {self.local_endf_dir}\n"
-                error_msg += f"Tried {len(urls)} URL(s), last error: {last_error}\n"
-                error_msg += "\nPossible solutions:\n"
-                error_msg += "1. Use local ENDF data (recommended for Docker):\n"
-                error_msg += "   - Mount your ENDF directory in docker-compose.yml:\n"
-                error_msg += "     volumes:\n"
-                error_msg += "       - ~/ENDF-Data:/app/endf-data:ro\n"
-                error_msg += "   - Or download bulk ENDF files and organize them\n"
-                error_msg += "   - See BULK_ENDF_STORAGE.md for details\n"
-                error_msg += "2. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
-                error_msg += f"   {filepath}\n"
-                if self.local_endf_dir:
-                    error_msg += f"3. Ensure file exists in local directory: {self.local_endf_dir}\n"
-                else:
-                    error_msg += "3. Set local_endf_dir when creating NuclearDataCache:\n"
-                    error_msg += "   cache = NuclearDataCache(local_endf_dir=Path('/app/endf-data'))\n"
-                error_msg += "4. Use SANDY's download functionality if available\n"
-                error_msg += "5. Check network connectivity and try again\n"
-                error_msg += "\nNote: Automatic downloads may fail due to repository URL changes.\n"
-                error_msg += "      Using local ENDF data is more reliable, especially in Docker."
-                raise httpx.HTTPError(error_msg) from last_error
-            finally:
-                if use_temporary_client:
-                    await client.aclose()
-
-        return filepath
+        # Async version just calls sync version (no actual async operations needed)
+        # since we're not downloading
+        return self._ensure_endf_file(nuclide, library)
 
     def _build_local_file_index(self) -> Dict[str, Path]:
         """
@@ -2083,14 +1946,14 @@ class CrossSectionTable:
         group_structure: np.ndarray,
         temperature: float = 900.0,
         weighting_flux: Optional[np.ndarray] = None,
-        client: Optional["httpx.AsyncClient"] = None,
+        client: Optional[Any] = None,
     ) -> pl.DataFrame:
         """
         Generate multi-group cross sections with optimal performance (async version).
         
         Async version that supports parallel fetching of cross-section data for
-        all nuclide/reaction combinations. This provides significant speedup
-        (3-10x) when fetching data that requires network requests or file I/O.
+        all nuclide/reaction combinations. This provides speedup when fetching
+        data from local files in parallel.
         
         Fetches continuous-energy cross sections in parallel, collapses them to
         the specified group structure using flux weighting, and stores the results
@@ -2108,8 +1971,7 @@ class CrossSectionTable:
             weighting_flux: Optional 1D array of flux values for flux-weighting
                 during group collapse. Must match the energy structure of the
                 continuous-energy data. If None, uses 1/E weighting.
-            client: Optional httpx.AsyncClient for async file downloads.
-                If None, creates a temporary client.
+            client: Not used (kept for API compatibility).
         
         Returns:
             Polars DataFrame with columns:
