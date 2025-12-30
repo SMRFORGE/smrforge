@@ -29,7 +29,8 @@ from smrforge.core import constants
 
 # Expose key classes at package level
 try:
-    from smrforge.neutronics.solver import MultiGroupDiffusion, NeutronicsSolver
+    from smrforge.neutronics.solver import MultiGroupDiffusion
+    from smrforge.neutronics import NeutronicsSolver  # Alias defined in neutronics/__init__.py
 
     _NEUTRONICS_AVAILABLE = True
 except ImportError as e:

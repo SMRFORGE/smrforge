@@ -90,7 +90,7 @@ class MultiGroupDiffusion:
 
         Compute power distribution::
 
-            power = solver.compute_power_distribution(total_power_mw=10.0)
+            power = solver.compute_power_distribution(total_power=10e6)  # 10 MW in Watts
             print(f"Max power density: {np.max(power):.2e} W/cm³")
     """
 
