@@ -1812,12 +1812,16 @@ class CrossSectionTable:
         _cache: NuclearDataCache instance for fetching nuclear data.
     """
 
-    def __init__(self):
+    def __init__(self, cache: Optional[NuclearDataCache] = None):
         """
         Initialize cross-section table.
         
         Creates an empty table. Use generate_multigroup() to populate it
         with cross-section data.
+        
+        Args:
+            cache: Optional NuclearDataCache instance. If not provided, creates
+                a new cache without local_endf_dir.
         
         Example:
             >>> table = CrossSectionTable()
@@ -1825,9 +1829,13 @@ class CrossSectionTable:
             >>> reactions = ["fission", "capture"]
             >>> groups = np.logspace(7, -1, 70)  # 70-group structure
             >>> df = table.generate_multigroup(nuclides, reactions, groups)
+            
+        Example with custom cache:
+            >>> cache = NuclearDataCache(local_endf_dir=Path('/path/to/endf'))
+            >>> table = CrossSectionTable(cache=cache)
         """
         self.data: Optional[pl.DataFrame] = None
-        self._cache = NuclearDataCache()
+        self._cache = cache if cache is not None else NuclearDataCache()
 
     def generate_multigroup(
         self,
@@ -1893,24 +1901,36 @@ class CrossSectionTable:
         xs_values = np.empty(n_total, dtype=np.float64)
 
         idx = 0
+        skipped_reactions = []  # Track reactions that don't exist for certain nuclides
         for nuclide in nuclides:
             for reaction in reactions:
                 # Get continuous energy data
-                energy, xs = self._cache.get_cross_section(
-                    nuclide, reaction, temperature
-                )
+                try:
+                    energy, xs = self._cache.get_cross_section(
+                        nuclide, reaction, temperature
+                    )
+                except (ImportError, FileNotFoundError, ValueError) as e:
+                    # Reaction doesn't exist for this nuclide (e.g., fission for O16)
+                    # Skip it and continue with other reactions
+                    skipped_reactions.append(f"{nuclide.name}/{reaction}")
+                    logger.debug(
+                        f"Skipping {nuclide.name}/{reaction}: {type(e).__name__}: {e}"
+                    )
+                    continue
 
                 # Validate data before collapsing
                 if energy is None or xs is None:
-                    raise ValueError(
-                        f"Failed to get cross-section data for {nuclide.name}/{reaction} "
-                        f"at {temperature}K"
+                    skipped_reactions.append(f"{nuclide.name}/{reaction}")
+                    logger.warning(
+                        f"Skipping {nuclide.name}/{reaction}: No data available"
                     )
+                    continue
                 if len(energy) == 0 or len(xs) == 0:
-                    raise ValueError(
-                        f"Empty cross-section data for {nuclide.name}/{reaction} "
-                        f"at {temperature}K"
+                    skipped_reactions.append(f"{nuclide.name}/{reaction}")
+                    logger.warning(
+                        f"Skipping {nuclide.name}/{reaction}: Empty data"
                     )
+                    continue
                 if len(energy) != len(xs):
                     raise ValueError(
                         f"Mismatched energy and cross-section array lengths for "
@@ -1929,6 +1949,13 @@ class CrossSectionTable:
                     groups[idx] = g
                     xs_values[idx] = xs_val
                     idx += 1
+        
+        # Log skipped reactions if any
+        if skipped_reactions:
+            logger.info(
+                f"Skipped {len(skipped_reactions)} reaction(s) not available for "
+                f"certain nuclides: {', '.join(skipped_reactions)}"
+            )
 
         # Create DataFrame from arrays (much faster than list of dicts)
         self.data = pl.DataFrame({

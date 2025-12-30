@@ -140,18 +140,26 @@ print(f"Power: {results['power_thermal_mw']:.1f} MWth")
 
 ### Setting Up ENDF Data
 
-**IMPORTANT**: ENDF files must be set up before use. Run the setup wizard:
+**IMPORTANT**: ENDF files must be downloaded and set up manually before use.
 
-```bash
-python -m smrforge.core.endf_setup
-```
+**📖 See [`ENDF_MANUAL_SETUP.md`](ENDF_MANUAL_SETUP.md) for complete step-by-step instructions:**
+- Downloading ENDF files from NNDC/IAEA
+- Setting up files for local Python scripts
+- Mounting files in Docker containers
+- Verification and troubleshooting
 
-Or use the command-line tool:
-```bash
-smrforge-setup-endf
-```
+**Quick start options:**
 
-The wizard will guide you through downloading and configuring ENDF files.
+1. **Interactive setup wizard** (recommended for first-time setup):
+   ```bash
+   python -m smrforge.core.endf_setup
+   ```
+   Or: `smrforge-setup-endf`
+
+2. **Manual setup** (see [`ENDF_MANUAL_SETUP.md`](ENDF_MANUAL_SETUP.md)):
+   - Download ENDF/B-VIII.1 from https://www.nndc.bnl.gov/endf/
+   - Extract to a directory
+   - Point `NuclearDataCache` to the directory
 
 ### Advanced Usage
 
@@ -199,7 +207,7 @@ Full documentation available at: **[https://smrforge.readthedocs.io](https://smr
 ### Additional Resources
 
 - **Tutorial**: See [`TUTORIAL.md`](TUTORIAL.md) for a beginner-friendly step-by-step guide
-- **ENDF Setup**: See [`ENDF_SETUP_GUIDE.md`](ENDF_SETUP_GUIDE.md) for ENDF data setup instructions (required before use)
+- **ENDF Setup**: See [`ENDF_MANUAL_SETUP.md`](ENDF_MANUAL_SETUP.md) for complete ENDF data setup guide (required before use)
 - **Installation**: See [`INSTALLATION.md`](INSTALLATION.md) for detailed installation instructions
 - **Usage Guide**: See [`USAGE.md`](USAGE.md) for usage examples and quick reference
 - **Docker**: See [`DOCKER.md`](DOCKER.md) for Docker usage and troubleshooting

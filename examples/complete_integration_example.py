@@ -195,7 +195,7 @@ class HTGRAnalysisPipeline:
         ]
         
         # Generate multi-group cross sections
-        xs_table = CrossSectionTable()
+        xs_table = CrossSectionTable(cache=cache)
         
         # 8-group structure optimized for HTGR
         from smrforge.core.constants import GROUP_STRUCTURES
@@ -211,8 +211,18 @@ class HTGRAnalysisPipeline:
             temperature=T_fuel
         )
         
+        print(f"Generated cross-section table with {len(xs_df)} entries")
+        print(f"Available nuclides: {xs_df['nuclide'].unique().to_list()}")
+        print(f"Available reactions: {xs_df['reaction'].unique().to_list()}")
+        
         # Apply resonance self-shielding
-        shielding = ResonanceSelfShielding()
+        # Note: ResonanceSelfShielding may require additional setup
+        try:
+            shielding = ResonanceSelfShielding()
+        except Exception as e:
+            print(f"Warning: Resonance self-shielding initialization failed: {e}")
+            print("Continuing without self-shielding...")
+            shielding = None
         
         triso_geometry = {
             'kernel_radius': 212.5e-4,  # cm
@@ -226,9 +236,14 @@ class HTGRAnalysisPipeline:
             'O16': 0.0050,
         }
         
-        shielded_xs = shielding.htgr_fuel_shielding(
-            fuel_composition, triso_geometry, T_fuel
-        )
+        if shielding is not None:
+            shielded_xs = shielding.htgr_fuel_shielding(
+                fuel_composition, triso_geometry, T_fuel
+            )
+        else:
+            # Use unshielded cross-sections if self-shielding is not available
+            shielded_xs = xs_df
+            print("Using unshielded cross-sections (self-shielding not available)")
         
         # Get processed XS data (simplified - would combine with xs_table)
         self.xs_data = self.reactor.get_cross_sections()
