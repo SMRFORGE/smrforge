@@ -323,6 +323,20 @@ class MultiGroupDiffusion:
     def _power_iteration(self) -> Tuple[float, np.ndarray]:
         """Power iteration eigenvalue solver."""
         k_old = self.k_eff
+        
+        # Ensure initial flux is non-zero and properly scaled
+        # If flux is all zeros or very small, initialize to uniform distribution
+        if np.max(self.flux) < 1e-10:
+            self.flux = np.ones_like(self.flux)
+            logger.warning("Initial flux was zero, reinitializing to uniform distribution")
+        
+        # Normalize initial flux
+        max_flux = np.max(self.flux)
+        if max_flux > 0:
+            self.flux = self.flux / max_flux
+        else:
+            self.flux = np.ones_like(self.flux)
+            logger.warning("Initial flux normalization failed, using uniform distribution")
 
         for iteration in range(self.options.max_iterations):
             self._update_fission_source(k_old)
@@ -330,6 +344,21 @@ class MultiGroupDiffusion:
             for g in range(self.ng):
                 self._update_scattering_source(g)
                 self.flux[:, :, g] = self._solve_group(g)
+            
+            # Check if flux became zero (shouldn't happen, but handle gracefully)
+            max_flux = np.max(self.flux)
+            if max_flux < 1e-10:
+                logger.error(f"Flux became zero at iteration {iteration}")
+                # Reinitialize flux to uniform distribution
+                self.flux = np.ones_like(self.flux)
+                # Try to continue with a better initial guess
+                if iteration == 0:
+                    # First iteration failed - likely source term issue
+                    raise RuntimeError(
+                        "Flux became zero on first iteration. "
+                        "Check that fission cross-sections (nu_sigma_f) are non-zero "
+                        "and that source terms are properly initialized."
+                    )
 
             k_new = self._compute_k_eff()
 
@@ -339,7 +368,7 @@ class MultiGroupDiffusion:
             if iteration % 10 == 0 or error < self.options.tolerance:
                 logger.debug(
                     f"Iteration {iteration:4d}: k_eff = {k_new:.8f}, "
-                    f"error = {error:.2e}"
+                    f"error = {error:.2e}, max_flux = {max_flux:.3e}"
                 )
 
             if error < self.options.tolerance:
@@ -347,7 +376,13 @@ class MultiGroupDiffusion:
                 return k_new, self.flux
 
             k_old = k_new
-            self.flux /= np.max(self.flux)
+            # Normalize flux (avoid division by zero)
+            if max_flux > 1e-10:
+                self.flux = self.flux / max_flux
+            else:
+                # If flux is too small, reinitialize
+                self.flux = np.ones_like(self.flux)
+                logger.warning(f"Flux too small at iteration {iteration}, reinitializing")
 
         logger.error(
             f"Failed to converge in {self.options.max_iterations} iterations. "
