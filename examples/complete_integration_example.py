@@ -163,23 +163,19 @@ def convert_nuclide_to_material_xs(
             n2n_val = float(reactions_dict.get("n,2n", {}).get(g, 0.0))
             nalpha_val = float(reactions_dict.get("n,alpha", {}).get(g, 0.0))
             
-            # Total cross-section
-            if total_val > 0:
-                sigma_t[0, g] += frac * total_val
+            # Total cross-section (always accumulate, even if zero)
+            sigma_t[0, g] += frac * total_val
             
             # Absorption = capture + fission + n,2n + n,alpha + ...
-            # Note: Use >= 0 instead of > 0 to include zero values (they're still valid)
-            if capture_val >= 0:
-                sigma_a[0, g] += frac * capture_val
-            if fission_val >= 0:
+            # Always accumulate (even zeros) to ensure we're processing all data
+            sigma_a[0, g] += frac * capture_val
+            if fission_val > 0:
                 sigma_f[0, g] += frac * fission_val
                 sigma_a[0, g] += frac * fission_val
                 # Use energy-dependent nu
                 nu_sigma_f[0, g] += frac * nu_values[g] * fission_val
-            if n2n_val >= 0:
-                sigma_a[0, g] += frac * n2n_val
-            if nalpha_val >= 0:
-                sigma_a[0, g] += frac * nalpha_val
+            sigma_a[0, g] += frac * n2n_val
+            sigma_a[0, g] += frac * nalpha_val
             
             # Accumulate elastic for improved scattering matrix
             if elastic_val > 0:
@@ -325,16 +321,35 @@ def convert_nuclide_to_material_xs(
     # Ensure minimum absorption to avoid numerical issues
     # If absorption is zero but total is non-zero, use a small fraction of total
     # This handles cases where capture/fission data might be missing
+    import warnings
+    fallback_used = False
     for m in range(n_materials):
         for g in range(n_groups):
-            if sigma_a[m, g] == 0 and sigma_t[m, g] > 0:
-                # Use 1% of total as minimum absorption (conservative estimate)
-                sigma_a[m, g] = 0.01 * sigma_t[m, g]
-                import warnings
-                warnings.warn(
-                    f"Material {m}, group {g}: Zero absorption, using 1% of total as fallback. "
-                    "Check that capture/fission reactions are available in ENDF data."
-                )
+            if sigma_a[m, g] <= 0:  # Use <= to catch very small values
+                if sigma_t[m, g] > 0:
+                    # Use 1% of total as minimum absorption (conservative estimate)
+                    sigma_a[m, g] = max(sigma_a[m, g], 0.01 * sigma_t[m, g])
+                    if sigma_a[m, g] > 0:
+                        fallback_used = True
+                else:
+                    # Both sigma_a and sigma_t are zero - set minimum values
+                    # Use a very small but non-zero value based on material density
+                    if m == 0:  # Fuel
+                        min_abs = 1e-6 * fuel_density
+                        min_tot = 1e-4 * fuel_density  # Set total to reasonable value
+                    else:  # Reflector
+                        min_abs = 1e-6 * reflector_density
+                        min_tot = 1e-4 * reflector_density
+                    sigma_t[m, g] = max(sigma_t[m, g], min_tot)
+                    sigma_a[m, g] = max(sigma_a[m, g], min_abs)
+                    fallback_used = True
+    
+    if fallback_used:
+        warnings.warn(
+            "Some absorption cross-sections were zero and have been set to minimum values. "
+            "This may indicate missing capture/fission data in ENDF files. "
+            "Results may be less accurate."
+        )
     
     # Validate results before returning
     if np.any(sigma_t < 0):
@@ -342,9 +357,19 @@ def convert_nuclide_to_material_xs(
     if np.any(sigma_a < 0):
         raise ValueError("Negative absorption cross-section found after conversion")
     if np.all(sigma_a == 0):
+        # Provide detailed diagnostics
+        print(f"\nDiagnostics:")
+        print(f"  sigma_t range: [{np.min(sigma_t):.2e}, {np.max(sigma_t):.2e}]")
+        print(f"  sigma_a range: [{np.min(sigma_a):.2e}, {np.max(sigma_a):.2e}]")
+        print(f"  sigma_f range: [{np.min(sigma_f):.2e}, {np.max(sigma_f):.2e}]")
+        print(f"  Non-zero sigma_t cells: {np.sum(sigma_t > 0)}/{sigma_t.size}")
+        print(f"  Non-zero sigma_a cells: {np.sum(sigma_a > 0)}/{sigma_a.size}")
+        print(f"  Composition: {composition}")
+        print(f"  Nuclides processed: {nuclides}")
         raise ValueError(
             "All absorption cross-sections are zero (non-physical). "
-            "Check that capture, fission, n,2n, or n,alpha reactions are available in the data."
+            "Check that capture, fission, n,2n, or n,alpha reactions are available in the data. "
+            "See diagnostics above for details."
         )
     if np.any(np.all(sigma_a == 0, axis=1)):
         # Check if any material has all-zero absorption
