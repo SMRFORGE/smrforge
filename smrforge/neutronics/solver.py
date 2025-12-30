@@ -529,7 +529,25 @@ class MultiGroupDiffusion:
         absorption_rate = np.sum(self.sigma_a_map * self.flux)
 
         if absorption_rate == 0:
-            raise RuntimeError("Zero absorption rate - non-physical solution")
+            # Provide detailed diagnostics
+            max_flux = np.max(self.flux)
+            min_flux = np.min(self.flux)
+            max_sigma_a = np.max(self.sigma_a_map)
+            min_sigma_a = np.min(self.sigma_a_map)
+            non_zero_sigma_a = np.sum(self.sigma_a_map > 0)
+            total_cells = self.sigma_a_map.size
+            
+            error_msg = (
+                "Zero absorption rate - non-physical solution.\n"
+                f"  Flux range: [{min_flux:.2e}, {max_flux:.2e}]\n"
+                f"  sigma_a range: [{min_sigma_a:.2e}, {max_sigma_a:.2e}]\n"
+                f"  Non-zero sigma_a cells: {non_zero_sigma_a}/{total_cells}\n"
+                "  Possible causes:\n"
+                "  1. Absorption cross-sections are all zero (check cross-section data)\n"
+                "  2. Flux is all zero (check initial conditions and source)\n"
+                "  3. Material map is incorrect (all cells mapped to non-absorbing material)"
+            )
+            raise RuntimeError(error_msg)
 
         k_eff = fission_rate / absorption_rate
 

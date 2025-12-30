@@ -112,7 +112,11 @@ def convert_nuclide_to_material_xs(
     
     # Get nuclide cross-sections from DataFrame
     # Optimize: Pivot DataFrame once instead of filtering multiple times
-    nuclides = [nuc for nuc in composition.keys() if nuc is not None]
+    # Filter out None values and ensure all nuclides are valid strings
+    nuclides = [nuc for nuc in composition.keys() if nuc is not None and isinstance(nuc, str)]
+    
+    if len(nuclides) == 0:
+        raise ValueError("No valid nuclides found in composition (all None or invalid)")
     
     # Store elastic cross-sections for improved scattering matrix computation
     fuel_elastic_mg = np.zeros(n_groups)
@@ -164,16 +168,17 @@ def convert_nuclide_to_material_xs(
                 sigma_t[0, g] += frac * total_val
             
             # Absorption = capture + fission + n,2n + n,alpha + ...
-            if capture_val > 0:
+            # Note: Use >= 0 instead of > 0 to include zero values (they're still valid)
+            if capture_val >= 0:
                 sigma_a[0, g] += frac * capture_val
-            if fission_val > 0:
+            if fission_val >= 0:
                 sigma_f[0, g] += frac * fission_val
                 sigma_a[0, g] += frac * fission_val
                 # Use energy-dependent nu
                 nu_sigma_f[0, g] += frac * nu_values[g] * fission_val
-            if n2n_val > 0:
+            if n2n_val >= 0:
                 sigma_a[0, g] += frac * n2n_val
-            if nalpha_val > 0:
+            if nalpha_val >= 0:
                 sigma_a[0, g] += frac * nalpha_val
             
             # Accumulate elastic for improved scattering matrix
@@ -317,11 +322,37 @@ def convert_nuclide_to_material_xs(
     sigma_a[1, :] *= reflector_density
     sigma_s[1, :, :] *= reflector_density
     
+    # Ensure minimum absorption to avoid numerical issues
+    # If absorption is zero but total is non-zero, use a small fraction of total
+    # This handles cases where capture/fission data might be missing
+    for m in range(n_materials):
+        for g in range(n_groups):
+            if sigma_a[m, g] == 0 and sigma_t[m, g] > 0:
+                # Use 1% of total as minimum absorption (conservative estimate)
+                sigma_a[m, g] = 0.01 * sigma_t[m, g]
+                import warnings
+                warnings.warn(
+                    f"Material {m}, group {g}: Zero absorption, using 1% of total as fallback. "
+                    "Check that capture/fission reactions are available in ENDF data."
+                )
+    
     # Validate results before returning
     if np.any(sigma_t < 0):
         raise ValueError("Negative total cross-section found after conversion")
     if np.any(sigma_a < 0):
         raise ValueError("Negative absorption cross-section found after conversion")
+    if np.all(sigma_a == 0):
+        raise ValueError(
+            "All absorption cross-sections are zero (non-physical). "
+            "Check that capture, fission, n,2n, or n,alpha reactions are available in the data."
+        )
+    if np.any(np.all(sigma_a == 0, axis=1)):
+        # Check if any material has all-zero absorption
+        zero_materials = [m for m in range(n_materials) if np.all(sigma_a[m, :] == 0)]
+        raise ValueError(
+            f"Material(s) {zero_materials} have zero absorption cross-sections. "
+            "This will cause k_eff calculation to fail. Check cross-section data."
+        )
     if np.any(sigma_a > sigma_t + 1e-6):  # Small tolerance for floating point
         raise ValueError("Absorption exceeds total cross-section (non-physical)")
     if np.any(sigma_f > sigma_a + 1e-6):
