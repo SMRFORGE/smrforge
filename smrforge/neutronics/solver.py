@@ -361,8 +361,61 @@ class MultiGroupDiffusion:
                     )
 
             k_new = self._compute_k_eff()
+            
+            # Check for NaN or invalid values
+            if np.isnan(k_new) or np.isinf(k_new):
+                logger.error(
+                    f"k_eff became invalid (NaN/Inf) at iteration {iteration}. "
+                    f"k_old={k_old:.6f}, k_new={k_new}, max_flux={max_flux:.3e}"
+                )
+                # Provide diagnostics
+                logger.error(
+                    f"Flux stats: min={np.min(self.flux):.3e}, max={np.max(self.flux):.3e}, "
+                    f"mean={np.mean(self.flux):.3e}, has_nan={np.any(np.isnan(self.flux))}"
+                )
+                logger.error(
+                    f"Source stats: min={np.min(self.source):.3e}, max={np.max(self.source):.3e}, "
+                    f"has_nan={np.any(np.isnan(self.source))}"
+                )
+                raise RuntimeError(
+                    f"k_eff calculation produced invalid value (NaN/Inf) at iteration {iteration}. "
+                    f"This usually indicates numerical instability. Check cross-section data and "
+                    f"ensure all values are physically reasonable."
+                )
+            
+            # Check for NaN in flux
+            if np.any(np.isnan(self.flux)) or np.any(np.isinf(self.flux)):
+                logger.error(
+                    f"Flux contains NaN/Inf at iteration {iteration}. "
+                    f"k_eff={k_new:.6f}, max_flux={max_flux:.3e}"
+                )
+                raise RuntimeError(
+                    f"Flux became invalid (NaN/Inf) at iteration {iteration}. "
+                    f"This indicates numerical instability in the solver. "
+                    f"Check cross-section data and mesh quality."
+                )
 
-            error = abs(k_new - k_old) / k_old
+            # Calculate error (handle division by zero)
+            if k_old > 1e-10:
+                error = abs(k_new - k_old) / k_old
+            else:
+                # If k_old is very small, use absolute error
+                error = abs(k_new - k_old)
+                if error < self.options.tolerance:
+                    # If absolute error is small and k_old is near zero, consider converged
+                    logger.info(f"Converged in {iteration+1} iterations (k_eff near zero)")
+                    return k_new, self.flux
+
+            # Check if error is NaN
+            if np.isnan(error) or np.isinf(error):
+                logger.error(
+                    f"Error calculation produced NaN/Inf at iteration {iteration}. "
+                    f"k_old={k_old:.6f}, k_new={k_new:.6f}"
+                )
+                raise RuntimeError(
+                    f"Convergence error calculation failed (NaN/Inf) at iteration {iteration}. "
+                    f"k_old={k_old:.6f}, k_new={k_new:.6f}"
+                )
 
             # Log every 10 iterations or when converged
             if iteration % 10 == 0 or error < self.options.tolerance:
