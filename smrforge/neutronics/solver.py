@@ -412,18 +412,33 @@ class MultiGroupDiffusion:
         return flux_2d
 
     def _build_group_system(self, g: int) -> Tuple[csr_matrix, np.ndarray]:
-        """Build sparse matrix for single group."""
+        """
+        Build sparse matrix for single group.
+        
+        Optimized with pre-computed values and efficient array operations.
+        Uses COO format construction which is faster than element-by-element CSR.
+        """
         n = self.nz * self.nr
 
-        nnz = n * 5
-        row = np.zeros(nnz, dtype=int)
-        col = np.zeros(nnz, dtype=int)
-        data = np.zeros(nnz)
+        # Pre-allocate arrays for COO format (more efficient than CSR for construction)
+        # Maximum 5 non-zeros per row (diagonal + 4 neighbors)
+        nnz_max = n * 5
+        row = np.zeros(nnz_max, dtype=int)
+        col = np.zeros(nnz_max, dtype=int)
+        data = np.zeros(nnz_max)
         b = np.zeros(n)
+
+        # Pre-compute axial areas (reused for all radial cells at same axial level)
+        # A_axial[ir] = area between r_mesh[ir] and r_mesh[ir+1]
+        A_axial_precomputed = np.pi * (self.r_mesh[1:] ** 2 - self.r_mesh[:-1] ** 2)
 
         idx = 0
 
         for iz in range(self.nz):
+            # Pre-compute dz values for this axial level
+            dz_down = self.dz[iz] if iz > 0 else self.dz[iz]
+            dz_up = self.dz[iz] if iz < self.nz - 1 else self.dz[iz]
+            
             for ir in range(self.nr):
                 i = iz * self.nr + ir
 
@@ -432,21 +447,20 @@ class MultiGroupDiffusion:
                 S = self.source[iz, ir, g]
 
                 r = self.r_centers[ir]
-                dr_left = self.dr[ir] if ir > 0 else self.dr[ir]
-                dr_right = self.dr[ir] if ir < self.nr - 1 else self.dr[ir]
-                dz_down = self.dz[iz] if iz > 0 else self.dz[iz]
-                dz_up = self.dz[iz] if iz < self.nz - 1 else self.dz[iz]
+                dr = self.dr[ir]
+                dz = self.dz[iz]
 
-                V = 2 * np.pi * r * self.dr[ir] * self.dz[iz]
+                # Cell volume (reused)
+                V = 2 * np.pi * r * dr * dz
 
                 diag = sigma_r * V
 
-                # Radial leakage
+                # Radial leakage (left neighbor)
                 if ir > 0:
                     r_left = self.r_mesh[ir]
-                    A_left = 2 * np.pi * r_left * self.dz[iz]
+                    A_left = 2 * np.pi * r_left * dz
                     D_left = 0.5 * (D + self.D_map[iz, ir - 1, g])
-                    coef_left = D_left * A_left / dr_left
+                    coef_left = D_left * A_left / dr
 
                     diag += coef_left
                     row[idx] = i
@@ -454,11 +468,12 @@ class MultiGroupDiffusion:
                     data[idx] = -coef_left
                     idx += 1
 
+                # Radial leakage (right neighbor)
                 if ir < self.nr - 1:
                     r_right = self.r_mesh[ir + 1]
-                    A_right = 2 * np.pi * r_right * self.dz[iz]
+                    A_right = 2 * np.pi * r_right * dz
                     D_right = 0.5 * (D + self.D_map[iz, ir + 1, g])
-                    coef_right = D_right * A_right / dr_right
+                    coef_right = D_right * A_right / dr
 
                     diag += coef_right
                     row[idx] = i
@@ -466,10 +481,9 @@ class MultiGroupDiffusion:
                     data[idx] = -coef_right
                     idx += 1
 
-                # Axial leakage
-                A_axial = np.pi * (self.r_mesh[ir + 1] ** 2 - self.r_mesh[ir] ** 2)
-
+                # Axial leakage (bottom neighbor)
                 if iz > 0:
+                    A_axial = A_axial_precomputed[ir]  # Use pre-computed value
                     D_bottom = 0.5 * (D + self.D_map[iz - 1, ir, g])
                     coef_bottom = D_bottom * A_axial / dz_down
 
@@ -479,7 +493,9 @@ class MultiGroupDiffusion:
                     data[idx] = -coef_bottom
                     idx += 1
 
+                # Axial leakage (top neighbor)
                 if iz < self.nz - 1:
+                    A_axial = A_axial_precomputed[ir]  # Use pre-computed value
                     D_top = 0.5 * (D + self.D_map[iz + 1, ir, g])
                     coef_top = D_top * A_axial / dz_up
 
@@ -489,6 +505,7 @@ class MultiGroupDiffusion:
                     data[idx] = -coef_top
                     idx += 1
 
+                # Diagonal element
                 row[idx] = i
                 col[idx] = i
                 data[idx] = diag
@@ -496,10 +513,12 @@ class MultiGroupDiffusion:
 
                 b[i] = S * V
 
+        # Trim arrays to actual size and construct sparse matrix
         row = row[:idx]
         col = col[:idx]
         data = data[:idx]
 
+        # Use COO format for construction, then convert to CSR (faster for scipy)
         A = csr_matrix((data, (row, col)), shape=(n, n))
 
         return A, b
