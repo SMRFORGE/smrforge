@@ -157,7 +157,34 @@ class HTGRAnalysisPipeline:
     def _prepare_nuclear_data(self):
         """Prepare cross section data with self-shielding."""
         # Initialize nuclear data cache
-        cache = NuclearDataCache()
+        # Check for local ENDF directory (useful for Docker or offline use)
+        import os
+        from pathlib import Path
+        
+        # Try to find local ENDF directory
+        local_endf_dir = None
+        
+        # Check environment variable first
+        if os.getenv('SMRFORGE_ENDF_DIR'):
+            local_endf_dir = Path(os.getenv('SMRFORGE_ENDF_DIR'))
+        # Check standard locations
+        elif (Path('/app/endf-data').exists()):
+            # Docker container with mounted ENDF data
+            local_endf_dir = Path('/app/endf-data')
+        elif (Path.home() / 'ENDF-Data').exists():
+            # Standard local directory
+            local_endf_dir = Path.home() / 'ENDF-Data'
+        elif (Path('C:/Users/cmwha/Downloads/ENDF-B-VIII.1').exists()):
+            # User's specific directory (if exists)
+            local_endf_dir = Path('C:/Users/cmwha/Downloads/ENDF-B-VIII.1')
+        
+        # Initialize cache with local directory if found
+        if local_endf_dir and local_endf_dir.exists():
+            print(f"Using local ENDF directory: {local_endf_dir}")
+            cache = NuclearDataCache(local_endf_dir=local_endf_dir)
+        else:
+            print("No local ENDF directory found, will attempt automatic downloads")
+            cache = NuclearDataCache()
         
         # Define fuel composition
         fuel_nuclides = [

@@ -16,8 +16,11 @@ services:
       # - ./smrforge:/app/smrforge:ro
       # Optional: mount local ENDF data directory for bulk storage
       # Uncomment and set path to your ENDF data directory:
+      # For Windows (adjust path as needed):
+      # - C:/Users/YourName/ENDF-Data:/app/endf-data:ro
+      # - C:/Users/YourName/Downloads/ENDF-B-VIII.1:/app/endf-data:ro
+      # For Linux/Mac:
       # - ~/ENDF-Data:/app/endf-data:ro
-      # Or mount a specific ENDF directory:
       # - /path/to/ENDF-B-VIII.1:/app/endf-data:ro
     working_dir: /app
     environment:
@@ -44,8 +47,11 @@ services:
       - ./examples:/app/examples:ro
       # Optional: mount local ENDF data directory for bulk storage
       # Uncomment and set path to your ENDF data directory:
+      # For Windows (adjust path as needed):
+      # - C:/Users/YourName/ENDF-Data:/app/endf-data:ro
+      # - C:/Users/YourName/Downloads/ENDF-B-VIII.1:/app/endf-data:ro
+      # For Linux/Mac:
       # - ~/ENDF-Data:/app/endf-data:ro
-      # Or mount a specific ENDF directory:
       # - /path/to/ENDF-B-VIII.1:/app/endf-data:ro
     working_dir: /app
     environment:
