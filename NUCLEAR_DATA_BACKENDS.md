@@ -119,29 +119,28 @@ ENDF-B-VIII.1/
 
 ## How It Works
 
-**Automatic downloads are enabled by default!** The system will automatically download ENDF files when needed.
+**ENDF files must be set up manually by the user.** The system does NOT automatically download files.
 
 When cross-section data is needed:
 
-1. **Check cache first**: Data is cached in Zarr format for fast access (no download needed if cached)
+1. **Check cache first**: Data is cached in Zarr format for fast access (no file I/O needed if cached)
 2. **Check local directory**: If `local_endf_dir` provided, scan for local files (fast O(1) lookup)
-3. **Automatic download**: If local file not found, automatically attempts download from multiple sources:
-   - NNDC (National Nuclear Data Center) - multiple URL formats
-   - IAEA Nuclear Data Services - multiple URL formats
-   - Tries multiple URLs until one succeeds
-   - Falls back to older library versions if needed (e.g., VIII.1 → VIII.0)
+   - Optimized bulk file scanning for large directories
+   - Supports various directory structures from bulk downloads
+   - Automatic file discovery regardless of directory layout
+3. **Version fallback**: If file not found, automatically tries older library versions (e.g., VIII.1 → VIII.0)
 4. **Try SANDY**: If data not cached and SANDY available, use it for parsing
 5. **Try simple parser**: If SANDY not available, use built-in parser for common reactions
-6. **Error if all fail**: Clear error message with installation instructions and manual download links
+6. **Error if all fail**: Clear error message with setup wizard instructions
 
-### Automatic Download Features
+### Manual Setup Features
 
-- **No configuration needed**: Works out of the box
-- **Multiple URL fallbacks**: Tries 5-7 different URL patterns per nuclide
-- **Version fallback**: Automatically tries older library versions if newer ones fail
-- **Content validation**: Verifies downloaded files are valid ENDF format
-- **Caching**: Downloads are cached locally for future use
-- **Error handling**: Clear error messages with solutions if downloads fail
+- **Setup wizard**: Interactive tool to guide users through ENDF file setup
+- **Bulk download support**: Optimized scanning for bulk-downloaded files
+- **Flexible structure**: Automatically discovers files regardless of directory layout
+- **Version fallback**: Automatically tries older library versions if newer ones not found
+- **Content validation**: Verifies files are valid ENDF format before use
+- **Fast indexing**: O(1) file lookups after initial scan
 
 ## Installation Recommendations
 

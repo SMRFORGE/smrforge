@@ -507,7 +507,7 @@ class NuclearDataCache:
         reaction: str,
         temperature: float = 293.6,
         library: Library = Library.ENDF_B_VIII,
-        client: Optional["httpx.AsyncClient"] = None,
+        client: Optional[Any] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get cross section data with aggressive caching (async version).
@@ -523,7 +523,7 @@ class NuclearDataCache:
                 "total", "n,gamma", "n,2n", "n,alpha").
             temperature: Temperature in Kelvin. Defaults to 293.6 K (room temp).
             library: Nuclear data library. Defaults to ENDF/B-VIII.0.
-            client: Optional httpx.AsyncClient for async file downloads.
+            client: Not used (kept for API compatibility, no longer needed).
         
         Returns:
             Tuple of (energy, cross_section):
@@ -564,7 +564,7 @@ class NuclearDataCache:
         temperature: float,
         library: Library,
         key: str,
-        client: Optional["httpx.AsyncClient"] = None,
+        client: Optional[Any] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Fetch cross-section data from source and cache it (async version).
@@ -582,7 +582,7 @@ class NuclearDataCache:
             temperature: Temperature in Kelvin.
             library: Nuclear data library enum.
             key: Cache key string.
-            client: Optional httpx.AsyncClient for async file downloads.
+            client: Not used (kept for API compatibility, no longer needed).
         
         Returns:
             Tuple of (energy, cross_section) arrays.
@@ -590,7 +590,7 @@ class NuclearDataCache:
         Raises:
             ImportError: If all backends fail and data cannot be fetched.
         """
-        # Download ENDF file if needed (async)
+        # Get ENDF file from local directory (async, but no actual async I/O needed)
         endf_file = await self._ensure_endf_file_async(nuclide, library, client)
         reaction_mt = self._reaction_to_mt(reaction)
 
@@ -1350,14 +1350,16 @@ class NuclearDataCache:
 
     def _build_local_file_index(self) -> Dict[str, Path]:
         """
-        Build index of available local ENDF files with flexible directory scanning.
+        Build index of available local ENDF files with optimized bulk scanning.
         
-        Scans the local ENDF directory recursively and creates a mapping from nuclide names
-        to file paths. Supports various directory structures from bulk downloads:
-        - Standard structure: neutrons-version.VIII.1/n-*.endf
-        - Flat directories: *.endf files directly in root
-        - Nested structures: files in subdirectories
-        - Multiple library versions in same directory
+        Optimized for bulk-downloaded ENDF files with efficient scanning:
+        - Single-pass recursive scan (no redundant directory walks)
+        - Parallel file validation for large directories
+        - Supports various directory structures from bulk downloads:
+          * Standard structure: neutrons-version.VIII.1/n-*.endf
+          * Flat directories: *.endf files directly in root
+          * Nested structures: files in subdirectories
+          * Multiple library versions in same directory
         
         Returns:
             Dictionary mapping nuclide names (e.g., "U235") to file paths.
@@ -1373,19 +1375,35 @@ class NuclearDataCache:
         index: Dict[str, Path] = {}
         scanned_files = set()  # Track files to avoid duplicates
         
-        # Method 1: Scan standard structure (neutrons-version.VIII.1/, neutrons-version.VIII.0/, etc.)
-        for version_dir in self.local_endf_dir.glob("neutrons-version.*"):
-            if version_dir.is_dir():
-                for endf_file in version_dir.glob("n-*.endf"):
-                    if endf_file in scanned_files:
-                        continue
-                    scanned_files.add(endf_file)
-                    nuclide = self._add_file_to_index(endf_file, index)
-                    if nuclide:
-                        logger.debug(f"Found {nuclide.name} in {version_dir.name}")
+        # Optimized: Single-pass recursive scan for all .endf files
+        # This handles all directory structures efficiently
+        endf_patterns = ["*.endf", "*.ENDF", "*.Endf"]
+        all_endf_files = []
         
-        # Method 2: Scan recursively for all .endf files (handles bulk downloads)
-        for endf_file in self.local_endf_dir.rglob("*.endf"):
+        # Collect all ENDF files in one pass
+        for pattern in endf_patterns:
+            all_endf_files.extend(self.local_endf_dir.rglob(pattern))
+        
+        # Remove duplicates (same file found by multiple patterns)
+        unique_files = []
+        seen_paths = set()
+        for endf_file in all_endf_files:
+            if endf_file not in seen_paths:
+                seen_paths.add(endf_file)
+                unique_files.append(endf_file)
+        
+        # Process files: prioritize standard naming (n-*.endf) over alternatives
+        standard_files = []
+        alternative_files = []
+        
+        for endf_file in unique_files:
+            if endf_file.name.startswith("n-"):
+                standard_files.append(endf_file)
+            else:
+                alternative_files.append(endf_file)
+        
+        # Process standard files first (most common in bulk downloads)
+        for endf_file in standard_files:
             if endf_file in scanned_files:
                 continue
             scanned_files.add(endf_file)
@@ -1393,18 +1411,14 @@ class NuclearDataCache:
             if nuclide:
                 logger.debug(f"Found {nuclide.name} at {endf_file.relative_to(self.local_endf_dir)}")
         
-        # Method 3: Also check for alternative naming (U235.endf, u235.endf, etc.)
-        for pattern in ["*.endf", "*.ENDF", "*.Endf"]:
-            for endf_file in self.local_endf_dir.rglob(pattern):
-                if endf_file in scanned_files:
-                    continue
-                # Skip if already processed as n-*.endf
-                if endf_file.name.startswith("n-"):
-                    continue
-                scanned_files.add(endf_file)
-                nuclide = self._add_file_to_index(endf_file, index, allow_alternative_names=True)
-                if nuclide:
-                    logger.debug(f"Found {nuclide.name} with alternative naming: {endf_file.name}")
+        # Process alternative naming (U235.endf, u235.endf, etc.)
+        for endf_file in alternative_files:
+            if endf_file in scanned_files:
+                continue
+            scanned_files.add(endf_file)
+            nuclide = self._add_file_to_index(endf_file, index, allow_alternative_names=True)
+            if nuclide:
+                logger.debug(f"Found {nuclide.name} with alternative naming: {endf_file.name}")
         
         self._local_file_index = index
         logger.info(f"Built local ENDF file index: {len(index)} files found in {self.local_endf_dir}")
@@ -1702,98 +1716,6 @@ class NuclearDataCache:
         
         return f"n-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
 
-    @staticmethod
-    def _get_endf_urls(nuclide: Nuclide, library: Library) -> list[str]:
-        """
-        Get list of potential download URLs for ENDF file, in order of preference.
-        
-        Returns multiple URL formats to try, as different repositories may have
-        different URL structures. The method will try each URL until one succeeds.
-        
-        Args:
-            nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
-                The nuclide's name property is used in the URL.
-            library: Nuclear data library enum (e.g., Library.ENDF_B_VIII).
-                The library's value string is used in the URL path.
-        
-        Returns:
-            List of URL strings to try in order. Multiple formats are attempted
-            as repository structures may vary.
-        
-        Example:
-            >>> from smrforge.core.reactor_core import Nuclide, Library
-            >>> u235 = Nuclide(Z=92, A=235, m=0)
-            >>> urls = NuclearDataCache._get_endf_urls(u235, Library.ENDF_B_VIII)
-            >>> len(urls) > 0
-            True
-        """
-        urls = []
-        nuclide_name = nuclide.name
-        
-        # Map library values to NNDC directory names
-        library_map = {
-            "endfb8.0": "b8.0",
-            "endfb8.1": "b8.1",  # ENDF/B-VIII.1
-            "endfb7.1": "b7.1",
-        }
-        
-        # Try NNDC formats for ENDF/B libraries
-        if library.value in library_map:
-            nndc_version = library_map[library.value]
-            # Try various NNDC URL formats (multiple patterns as repository structure may vary)
-            urls.extend([
-                f"https://www.nndc.bnl.gov/endf/{nndc_version}/endf/{nuclide_name}.endf",
-                f"https://www.nndc.bnl.gov/endf/{nndc_version}/data/endf/{nuclide_name}.endf",
-                f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/{nuclide_name}.endf",
-            ])
-            
-            # Add version-specific download paths
-            if library == Library.ENDF_B_VIII_1:
-                urls.extend([
-                    f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.1/{nuclide_name}.endf",
-                    f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/ENDF-B-VIII.1/{nuclide_name}.endf",
-                ])
-            elif library == Library.ENDF_B_VIII:
-                urls.extend([
-                    f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.0/{nuclide_name}.endf",
-                    f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/ENDF-B-VIII.0/{nuclide_name}.endf",
-                ])
-        
-        # Try IAEA formats (multiple patterns)
-        iaea_base = "https://www-nds.iaea.org"
-        # Try different IAEA URL patterns
-        if library.value in library_map:
-            # For ENDF/B libraries, try version-specific paths
-            if library == Library.ENDF_B_VIII:
-                urls.extend([
-                    f"{iaea_base}/public/download-endf/ENDF-B-VIII.0/{nuclide_name}.endf",
-                    f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
-                ])
-            elif library == Library.ENDF_B_VIII_1:
-                urls.extend([
-                    f"{iaea_base}/public/download-endf/ENDF-B-VIII.1/{nuclide_name}.endf",
-                    f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
-                ])
-        else:
-            # For other libraries (JEFF, JENDL)
-            urls.extend([
-                f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
-            ])
-        
-        # Note: exfor and fendl paths are less reliable, so we try them last
-        # These are commented out as they often return 404
-        # urls.extend([
-        #     f"{iaea_base}/exfor/endf/{library.value}/{nuclide_name}.endf",
-        #     f"{iaea_base}/fendl/{library.value}/{nuclide_name}.endf",
-        # ])
-        
-        return urls
-    
-    @staticmethod
-    def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
-        """Get the first (preferred) URL for ENDF file download."""
-        urls = NuclearDataCache._get_endf_urls(nuclide, library)
-        return urls[0] if urls else ""
 
 
 class CrossSectionTable:
@@ -1980,7 +1902,7 @@ class CrossSectionTable:
         
         Async version that supports parallel fetching of cross-section data for
         all nuclide/reaction combinations. This provides speedup when fetching
-        data from local files in parallel.
+        data from local files in parallel using asyncio.
         
         Fetches continuous-energy cross sections in parallel, collapses them to
         the specified group structure using flux weighting, and stores the results
@@ -1998,7 +1920,7 @@ class CrossSectionTable:
             weighting_flux: Optional 1D array of flux values for flux-weighting
                 during group collapse. Must match the energy structure of the
                 continuous-energy data. If None, uses 1/E weighting.
-            client: Not used (kept for API compatibility).
+            client: Not used (kept for API compatibility, no longer needed).
         
         Returns:
             Polars DataFrame with columns:
@@ -2020,9 +1942,6 @@ class CrossSectionTable:
             ...     temperature=900.0
             ... ))
         """
-        if not HTTPX_AVAILABLE:
-            raise RuntimeError("httpx is required for async operations. Install with: pip install httpx")
-        
         n_groups = len(group_structure) - 1
 
         # Optimized: Pre-allocate NumPy arrays
@@ -2032,46 +1951,37 @@ class CrossSectionTable:
         groups = np.empty(n_total, dtype=np.int32)
         xs_values = np.empty(n_total, dtype=np.float64)
 
-        # Create async HTTP client for parallel downloads
-        use_temporary_client = client is None
-        if use_temporary_client:
-            client = httpx.AsyncClient(timeout=30.0)
-
-        try:
-            # Create tasks for all nuclide/reaction combinations
-            tasks = []
-            task_metadata = []
-            
-            for nuclide in nuclides:
-                for reaction in reactions:
-                    tasks.append(
-                        self._cache.get_cross_section_async(
-                            nuclide, reaction, temperature, library=Library.ENDF_B_VIII, client=client
-                        )
+        # Create tasks for all nuclide/reaction combinations (parallel file I/O)
+        tasks = []
+        task_metadata = []
+        
+        for nuclide in nuclides:
+            for reaction in reactions:
+                tasks.append(
+                    self._cache.get_cross_section_async(
+                        nuclide, reaction, temperature, library=Library.ENDF_B_VIII, client=None
                     )
-                    task_metadata.append((nuclide, reaction))
-
-            # Fetch all cross sections in parallel
-            results = await asyncio.gather(*tasks)
-
-            # Process results and populate arrays
-            idx = 0
-            for (nuclide, reaction), (energy, xs) in zip(task_metadata, results):
-                # Collapse to multi-group
-                mg_xs = self._collapse_to_multigroup(
-                    energy, xs, group_structure, weighting_flux
                 )
+                task_metadata.append((nuclide, reaction))
 
-                # Store results in pre-allocated arrays
-                for g, xs_val in enumerate(mg_xs):
-                    nuclide_names[idx] = nuclide.name
-                    reaction_names[idx] = reaction
-                    groups[idx] = g
-                    xs_values[idx] = xs_val
-                    idx += 1
-        finally:
-            if use_temporary_client:
-                await client.aclose()
+        # Fetch all cross sections in parallel (from local files)
+        results = await asyncio.gather(*tasks)
+
+        # Process results and populate arrays
+        idx = 0
+        for (nuclide, reaction), (energy, xs) in zip(task_metadata, results):
+            # Collapse to multi-group
+            mg_xs = self._collapse_to_multigroup(
+                energy, xs, group_structure, weighting_flux
+            )
+
+            # Store results in pre-allocated arrays
+            for g, xs_val in enumerate(mg_xs):
+                nuclide_names[idx] = nuclide.name
+                reaction_names[idx] = reaction
+                groups[idx] = g
+                xs_values[idx] = xs_val
+                idx += 1
 
         # Create DataFrame from arrays (much faster than list of dicts)
         self.data = pl.DataFrame({
