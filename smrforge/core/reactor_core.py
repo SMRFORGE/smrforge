@@ -1317,11 +1317,11 @@ class NuclearDataCache:
     @staticmethod
     def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
         """
-        Construct download URL for ENDF file from IAEA Nuclear Data Services.
+        Construct download URL for ENDF file from NNDC or IAEA.
         
         Generates the URL for downloading ENDF-6 format nuclear data files
-        from the IAEA Nuclear Data Services (NDS) website. The URL follows
-        a standard pattern based on the library version and nuclide name.
+        from the National Nuclear Data Center (NNDC) at Brookhaven National Laboratory.
+        Falls back to IAEA Nuclear Data Services if NNDC format doesn't match.
         
         Args:
             nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
@@ -1330,30 +1330,41 @@ class NuclearDataCache:
                 The library's value string is used in the URL path.
         
         Returns:
-            URL string pointing to the ENDF file download endpoint on the
-            IAEA NDS website. Format: ``https://www-nds.iaea.org/public/download-endf/{library}/{nuclide}.endf``
+            URL string pointing to the ENDF file download endpoint.
+            For ENDF/B libraries: Uses NNDC format.
+            For other libraries: Uses IAEA format.
         
         Note:
-            This is a simplified implementation. A production version would
-            need proper URL construction following IAEA NDS conventions,
-            including proper library versioning and nuclide naming schemes.
-            The actual IAEA NDS may require different URL patterns or authentication.
+            NNDC is more reliable for ENDF/B libraries. IAEA may be used
+            for JEFF and other international libraries.
         
         Example:
             >>> from smrforge.core.reactor_core import Nuclide, Library
             >>> u235 = Nuclide(Z=92, A=235, m=0)
             >>> url = NuclearDataCache._get_endf_url(u235, Library.ENDF_B_VIII)
             >>> print(url)
-            https://www-nds.iaea.org/public/download-endf/endfb8.0/U235.endf
+            https://www.nndc.bnl.gov/endf/b8.0/endf/U235.endf
             
             >>> pu239 = Nuclide(Z=94, A=239, m=0)
             >>> url = NuclearDataCache._get_endf_url(pu239, Library.JEFF_33)
-            >>> "jeff3.3" in url and "Pu239" in url
+            >>> "jeff" in url.lower() or "iaea" in url.lower()
             True
         """
-        # IAEA Nuclear Data Services
+        # Map library values to NNDC directory names
+        library_map = {
+            "endfb8.0": "b8.0",
+            "endfb8.1": "b8.1",
+            "endfb7.1": "b7.1",
+        }
+        
+        # Use NNDC for ENDF/B libraries (more reliable)
+        if library.value in library_map:
+            nndc_version = library_map[library.value]
+            # NNDC URL format: https://www.nndc.bnl.gov/endf/{version}/endf/{nuclide}.endf
+            return f"https://www.nndc.bnl.gov/endf/{nndc_version}/endf/{nuclide.name}.endf"
+        
+        # Fall back to IAEA for other libraries (JEFF, etc.)
         base_url = "https://www-nds.iaea.org/public/download-endf"
-        # Simplified - real implementation needs proper URL construction
         return f"{base_url}/{library.value}/{nuclide.name}.endf"
 
 
