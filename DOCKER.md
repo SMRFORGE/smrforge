@@ -9,28 +9,30 @@ This guide explains how to use SMRForge with Docker Desktop, including setup, us
   - macOS: [Download Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/)
   - Linux: Install Docker Engine and Docker Compose
 
+**Note**: This guide uses `docker compose` (with a space) which is the syntax for Docker Compose v2. If you're using Docker Compose v1, replace `docker compose` with `docker-compose` (with a hyphen) in all commands.
+
 ## Quick Start
 
 ### Option 1: Using Docker Compose (Recommended)
 
 1. **Build and start the container:**
    ```bash
-   docker-compose up -d smrforge
+   docker compose up -d smrforge
    ```
 
 2. **Run commands interactively:**
    ```bash
-   docker-compose exec smrforge python -c "import smrforge as smr; print(smr.__version__)"
+   docker compose exec smrforge python -c "import smrforge as smr; print(smr.__version__)"
    ```
 
 3. **Run an example:**
    ```bash
-   docker-compose exec smrforge python examples/complete_integration_example.py
+   docker compose exec smrforge python examples/complete_integration_example.py
    ```
 
 4. **Access interactive Python shell:**
    ```bash
-   docker-compose exec smrforge python
+   docker compose exec smrforge python
    ```
 
 ### Option 2: Using Docker Directly
@@ -54,10 +56,10 @@ For development with live code editing:
 
 ```bash
 # Start development container
-docker-compose up -d smrforge-dev
+docker compose up -d smrforge-dev
 
 # Access bash shell
-docker-compose exec smrforge-dev bash
+docker compose exec smrforge-dev bash
 
 # Inside container, you can:
 # - Edit code (changes reflect immediately via volume mount)
@@ -78,8 +80,8 @@ docker run --rm \
   -v $(pwd)/output:/app/output \
   smrforge:latest python my_analysis.py
 
-# Method 2: Using docker-compose
-docker-compose run --rm smrforge python /app/examples/complete_integration_example.py
+# Method 2: Using docker compose
+docker compose run --rm smrforge python /app/examples/complete_integration_example.py
 ```
 
 ### Jupyter Notebooks (Optional)
@@ -101,7 +103,7 @@ To use Jupyter notebooks, add to `docker-compose.yml`:
 
 Then run:
 ```bash
-docker-compose up smrforge-jupyter
+docker compose up smrforge-jupyter
 # Access at http://localhost:8888
 ```
 
@@ -109,13 +111,13 @@ docker-compose up smrforge-jupyter
 
 ```bash
 # Install dev dependencies first
-docker-compose run --rm smrforge pip install -e ".[dev]"
+docker compose run --rm smrforge pip install -e ".[dev]"
 
 # Run tests
-docker-compose run --rm smrforge pytest tests/
+docker compose run --rm smrforge pytest tests/
 
 # Run with coverage
-docker-compose run --rm smrforge pytest --cov=smrforge tests/
+docker compose run --rm smrforge pytest --cov=smrforge tests/
 ```
 
 ## Directory Structure
@@ -151,8 +153,8 @@ This usually happens when a package fails to build. Common causes:
 
 1. **Missing system dependencies** - The Dockerfile includes all necessary dependencies, but try rebuilding with no cache:
    ```bash
-   docker-compose build --no-cache smrforge
-   docker-compose up -d smrforge
+   docker compose build --no-cache smrforge
+   docker compose up -d smrforge
    ```
 
 2. **Package installation failures** - If optional packages fail to install, the container will still build. SMRForge includes a built-in ENDF parser and works without optional dependencies.
@@ -175,8 +177,8 @@ sudo chown -R $USER:$USER data output
 
 Make sure the container has the latest code:
 ```bash
-docker-compose build --no-cache smrforge
-docker-compose up -d smrforge
+docker compose build --no-cache smrforge
+docker compose up -d smrforge
 ```
 
 #### Issue: Slow performance
@@ -229,7 +231,7 @@ docker system df
 To speed up rebuilds:
 
 1. The Dockerfile uses layer caching (requirements installed before code copy)
-2. Use BuildKit: `DOCKER_BUILDKIT=1 docker-compose build`
+2. Use BuildKit: `DOCKER_BUILDKIT=1 docker compose build`
 3. Use multi-stage builds for smaller final image
 
 ### Verifying Installation
@@ -237,14 +239,14 @@ To speed up rebuilds:
 After successful build, verify packages:
 
 ```bash
-docker-compose exec smrforge python -c "import smrforge; print('OK')"
-docker-compose exec smrforge python -c "import numpy, scipy, matplotlib, pandas; print('Core packages OK')"
-docker-compose exec smrforge python -c "import sandy; print('SANDY OK')" || echo "SANDY not installed (optional)"
+docker compose exec smrforge python -c "import smrforge; print('OK')"
+docker compose exec smrforge python -c "import numpy, scipy, matplotlib, pandas; print('Core packages OK')"
+docker compose exec smrforge python -c "import sandy; print('SANDY OK')" || echo "SANDY not installed (optional)"
 ```
 
 ### Getting More Help
 
-1. Check the full build log: `docker-compose build 2>&1 | tee build.log`
+1. Check the full build log: `docker compose build 2>&1 | tee build.log`
 2. Run interactively to debug: `docker run -it --rm smrforge:latest bash`
 3. Check package-specific documentation
 4. Open an issue with the full error message
@@ -253,13 +255,13 @@ docker-compose exec smrforge python -c "import sandy; print('SANDY OK')" || echo
 
 ```bash
 # Stop containers
-docker-compose down
+docker compose down
 
 # Remove containers and volumes
-docker-compose down -v
+docker compose down -v
 
 # Remove images
-docker-compose down --rmi all
+docker compose down --rmi all
 
 # Full cleanup (containers, images, volumes)
 docker system prune -a
@@ -314,10 +316,10 @@ See the `examples/` directory for sample scripts that work with Docker:
 
 ```bash
 # Run complete integration example
-docker-compose run --rm smrforge python examples/complete_integration_example.py
+docker compose run --rm smrforge python examples/complete_integration_example.py
 
 # Run safety/UQ example
-docker-compose run --rm smrforge python examples/integrated_safety_uq.py
+docker compose run --rm smrforge python examples/integrated_safety_uq.py
 ```
 
 ---

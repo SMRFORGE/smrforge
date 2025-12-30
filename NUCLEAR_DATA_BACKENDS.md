@@ -68,7 +68,7 @@ The Dockerfile does not require any nuclear data backends. At runtime:
 
 1. **Option 1**: Install SANDY in the running container:
    ```bash
-   docker-compose exec smrforge pip install sandy
+   docker compose exec smrforge pip install sandy
    ```
 
 2. **Option 2**: Use pre-populated cache data mounted as a volume

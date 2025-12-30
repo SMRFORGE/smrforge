@@ -2,7 +2,7 @@
 # Includes development dependencies and build tools
 #
 # Build: docker build -f Dockerfile.dev -t smrforge:dev .
-# Or use: docker-compose up smrforge-dev
+# Or use: docker compose up smrforge-dev
 
 FROM python:3.11-slim
 
@@ -39,7 +39,7 @@ COPY smrforge/ /app/smrforge/
 RUN pip install --upgrade pip wheel setuptools
 
 # Install SMRForge with dev dependencies from setup.py
-# Note: This will be overridden by volume mount in docker-compose, but ensures
+# Note: This will be overridden by volume mount in docker compose, but ensures
 # the image has all dependencies available even without volume mounts
 RUN pip install --no-cache-dir -e ".[dev]"
 

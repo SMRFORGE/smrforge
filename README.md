@@ -104,10 +104,10 @@ git clone https://github.com/cmwhalen/smrforge.git
 cd smrforge
 
 # Build and run with Docker Compose
-docker-compose up -d smrforge
+docker compose up -d smrforge
 
 # Run commands
-docker-compose exec smrforge python -c "import smrforge as smr; print(smr.__version__)"
+docker compose exec smrforge python -c "import smrforge as smr; print(smr.__version__)"
 ```
 
 For detailed Docker usage and troubleshooting, see [`DOCKER.md`](DOCKER.md).
