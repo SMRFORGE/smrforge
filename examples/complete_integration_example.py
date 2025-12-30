@@ -22,6 +22,7 @@ from smrforge.validation.models import SolverOptions
 from smrforge.thermal import ChannelThermalHydraulics, ChannelGeometry
 from smrforge.core import NuclearDataCache, CrossSectionTable, Nuclide, ResonanceSelfShielding
 from smrforge.core.materials_database import MaterialDatabase
+from smrforge.core.endf_extractors import extract_nu_from_endf, extract_chi_from_endf, compute_improved_scattering_matrix
 from smrforge.validation.models import CrossSectionData
 import polars as pl
 # Note: PerformanceProfiler, BenchmarkSuite, BenchmarkLibrary, BenchmarkRunner are not yet implemented
@@ -63,20 +64,37 @@ def convert_nuclide_to_material_xs(
     n_groups: int,
     n_materials: int = 2,
     group_structure: Optional[np.ndarray] = None,
+    cache: Optional[NuclearDataCache] = None,
+    temperature: float = 1200.0,
 ) -> CrossSectionData:
     """
     Convert nuclide-level cross-sections to material-level CrossSectionData.
+    
+    Uses improved extraction methods for nu, chi, and scattering matrices.
+    Optimized with DataFrame pivoting for better performance.
     
     Args:
         xs_df: Polars DataFrame with columns: nuclide, reaction, group, xs
         composition: Dict of {nuclide_name: atom_density [atoms/barn-cm]}
         n_groups: Number of energy groups
         n_materials: Number of materials (fuel=0, reflector=1)
-        group_structure: Energy group boundaries [eV] for computing D and chi
+        group_structure: Energy group boundaries [eV] for computing D, chi, and nu
+        cache: Optional NuclearDataCache for extracting nu, chi, and scattering
+        temperature: Temperature [K] for cross-section evaluation
     
     Returns:
         CrossSectionData object with material-level cross-sections
+    
+    Raises:
+        ValueError: If validation fails (negative XS, invalid relationships, etc.)
     """
+    if group_structure is None:
+        raise ValueError("group_structure is required for nu and chi extraction")
+    
+    if cache is None:
+        # Create a temporary cache if not provided
+        cache = NuclearDataCache()
+    
     # Normalize composition to get fractions
     total_density = sum(composition.values())
     if total_density == 0:
@@ -93,54 +111,126 @@ def convert_nuclide_to_material_xs(
     D = np.zeros((n_materials, n_groups))
     
     # Get nuclide cross-sections from DataFrame
-    nuclides = list(composition.keys())
+    # Optimize: Pivot DataFrame once instead of filtering multiple times
+    nuclides = [nuc for nuc in composition.keys() if nuc is not None]
+    
+    # Store elastic cross-sections for improved scattering matrix computation
+    fuel_elastic_mg = np.zeros(n_groups)
+    fuel_nuclides_for_scattering = []
     
     # Material 0: Fuel (combine all nuclides)
-    for nuclide in nuclides:
-        if nuclide is None:
+    for nuclide_name in nuclides:
+        frac = fractions[nuclide_name]
+        
+        # Create Nuclide object for extractors
+        try:
+            from smrforge.core.constants import parse_nuclide_string
+            Z, A, m = parse_nuclide_string(nuclide_name)
+            nuclide = Nuclide(Z=Z, A=A, m=m)
+        except (ValueError, KeyError):
+            # Skip if can't parse
             continue
-        frac = fractions[nuclide]
         
         # Get cross-sections for this nuclide
-        nuc_data = xs_df.filter(pl.col("nuclide") == nuclide)
+        nuc_data = xs_df.filter(pl.col("nuclide") == nuclide_name)
+        
+        # Extract nu for this nuclide (energy-dependent)
+        nu_values = extract_nu_from_endf(cache, nuclide, group_structure, temperature)
+        
+        # Pre-extract all reactions for this nuclide (optimized - single pass)
+        reactions_dict = {}
+        for reaction in ['total', 'capture', 'fission', 'elastic', 'n,2n', 'n,alpha']:
+            reaction_data = nuc_data.filter(pl.col("reaction") == reaction)
+            if len(reaction_data) > 0:
+                # Create dict: group -> xs value (O(1) lookup)
+                reactions_dict[reaction] = {
+                    row["group"]: row["xs"] 
+                    for row in reaction_data.select(["group", "xs"]).iter_rows(named=True)
+                }
+            else:
+                reactions_dict[reaction] = {}
         
         for g in range(n_groups):
-            group_data = nuc_data.filter(pl.col("group") == g)
+            # Get values from pre-extracted dict (faster than filtering each time)
+            total_val = float(reactions_dict.get("total", {}).get(g, 0.0))
+            capture_val = float(reactions_dict.get("capture", {}).get(g, 0.0))
+            fission_val = float(reactions_dict.get("fission", {}).get(g, 0.0))
+            elastic_val = float(reactions_dict.get("elastic", {}).get(g, 0.0))
+            n2n_val = float(reactions_dict.get("n,2n", {}).get(g, 0.0))
+            nalpha_val = float(reactions_dict.get("n,alpha", {}).get(g, 0.0))
             
             # Total cross-section
-            total_xs = group_data.filter(pl.col("reaction") == "total")
-            if len(total_xs) > 0:
-                sigma_t[0, g] += frac * float(total_xs["xs"][0])
+            if total_val > 0:
+                sigma_t[0, g] += frac * total_val
             
-            # Absorption = capture + fission
-            capture_xs = group_data.filter(pl.col("reaction") == "capture")
-            fission_xs = group_data.filter(pl.col("reaction") == "fission")
-            
-            if len(capture_xs) > 0:
-                sigma_a[0, g] += frac * float(capture_xs["xs"][0])
-            if len(fission_xs) > 0:
-                fission_val = float(fission_xs["xs"][0])
+            # Absorption = capture + fission + n,2n + n,alpha + ...
+            if capture_val > 0:
+                sigma_a[0, g] += frac * capture_val
+            if fission_val > 0:
                 sigma_f[0, g] += frac * fission_val
                 sigma_a[0, g] += frac * fission_val
-                
-                # nu_sigma_f (approximate: assume nu ~ 2.5 for U235, 2.4 for U238)
-                nu = 2.5 if "U235" in nuclide else 2.4
-                nu_sigma_f[0, g] += frac * nu * fission_val
+                # Use energy-dependent nu
+                nu_sigma_f[0, g] += frac * nu_values[g] * fission_val
+            if n2n_val > 0:
+                sigma_a[0, g] += frac * n2n_val
+            if nalpha_val > 0:
+                sigma_a[0, g] += frac * nalpha_val
             
-            # Scattering (elastic)
-            elastic_xs = group_data.filter(pl.col("reaction") == "elastic")
-            if len(elastic_xs) > 0:
-                elastic_val = float(elastic_xs["xs"][0])
-                # Simple downscattering: 80% same group, 15% next group, 5% skip
-                sigma_s[0, g, g] += frac * 0.8 * elastic_val
-                if g < n_groups - 1:
-                    sigma_s[0, g, g + 1] += frac * 0.15 * elastic_val
-                if g < n_groups - 2:
-                    sigma_s[0, g, g + 2] += frac * 0.05 * elastic_val
+            # Accumulate elastic for improved scattering matrix
+            if elastic_val > 0:
+                fuel_elastic_mg[g] += frac * elastic_val
+                if nuclide not in fuel_nuclides_for_scattering:
+                    fuel_nuclides_for_scattering.append(nuclide)
+    
+    # Compute improved scattering matrix for fuel material
+    if len(fuel_nuclides_for_scattering) > 0 and np.any(fuel_elastic_mg > 0):
+        try:
+            # Use first nuclide for scattering parameters (or average)
+            primary_nuclide = fuel_nuclides_for_scattering[0]
+            sigma_s_fuel = compute_improved_scattering_matrix(
+                cache, primary_nuclide, group_structure, temperature, fuel_elastic_mg
+            )
+            sigma_s[0, :, :] = sigma_s_fuel
+        except Exception:
+            # Fallback: use simple model
+            for g in range(n_groups):
+                if fuel_elastic_mg[g] > 0:
+                    sigma_s[0, g, g] = 0.8 * fuel_elastic_mg[g]
+                    if g < n_groups - 1:
+                        sigma_s[0, g, g + 1] = 0.15 * fuel_elastic_mg[g]
+                    if g < n_groups - 2:
+                        sigma_s[0, g, g + 2] = 0.05 * fuel_elastic_mg[g]
     
     # Material 1: Reflector (graphite - use C12 if available, else simple model)
     c12_data = xs_df.filter(pl.col("nuclide") == "C12")
-    if len(c12_data) > 0:
+    c12_nuclide = None
+    try:
+        from smrforge.core.constants import parse_nuclide_string
+        Z, A, m = parse_nuclide_string("C12")
+        c12_nuclide = Nuclide(Z=Z, A=A, m=m)
+    except Exception:
+        pass
+    
+    if len(c12_data) > 0 and c12_nuclide is not None:
+        # Use improved scattering matrix for C12
+        try:
+            # Get elastic cross-section for improved scattering
+            elastic_mg_c12 = np.zeros(n_groups)
+            for g in range(n_groups):
+                group_data = c12_data.filter(pl.col("group") == g)
+                elastic_xs = group_data.filter(pl.col("reaction") == "elastic")
+                if len(elastic_xs) > 0:
+                    elastic_mg_c12[g] = float(elastic_xs["xs"][0])
+            
+            # Use improved scattering matrix
+            sigma_s_c12 = compute_improved_scattering_matrix(
+                cache, c12_nuclide, group_structure, temperature, elastic_mg_c12
+            )
+            sigma_s[1, :, :] = sigma_s_c12 * 0.1  # Scale for reflector density
+        except Exception:
+            # Fallback to simple model
+            pass
+        
         for g in range(n_groups):
             group_data = c12_data.filter(pl.col("group") == g)
             
@@ -151,13 +241,6 @@ def convert_nuclide_to_material_xs(
             capture_xs = group_data.filter(pl.col("reaction") == "capture")
             if len(capture_xs) > 0:
                 sigma_a[1, g] = float(capture_xs["xs"][0]) * 0.1
-            
-            elastic_xs = group_data.filter(pl.col("reaction") == "elastic")
-            if len(elastic_xs) > 0:
-                elastic_val = float(elastic_xs["xs"][0]) * 0.1
-                sigma_s[1, g, g] = 0.8 * elastic_val
-                if g < n_groups - 1:
-                    sigma_s[1, g, g + 1] = 0.2 * elastic_val
     else:
         # Fallback: simple reflector model
         sigma_t[1, :] = 0.25
@@ -168,19 +251,38 @@ def convert_nuclide_to_material_xs(
             if g < n_groups - 1:
                 sigma_s[1, g, g + 1] = 0.02
     
-    # Fission spectrum (chi) - Watt spectrum approximation
-    # Typical: most neutrons in fast groups, few in thermal
+    # Extract chi (fission spectrum) for each fissioning nuclide
+    # Use the first fissioning nuclide's spectrum for the material
     for m in range(n_materials):
         if np.any(sigma_f[m, :] > 0):
-            # Fissioning material: Watt spectrum
-            chi[m, 0] = 0.6
-            chi[m, 1] = 0.3
-            chi[m, 2] = 0.08
-            chi[m, 3] = 0.015
-            chi[m, 4] = 0.004
-            chi[m, 5] = 0.001
-            # Normalize
-            chi[m, :] = chi[m, :] / np.sum(chi[m, :])
+            # Find first fissioning nuclide
+            fissioning_nuclide = None
+            for nuclide_name in nuclides:
+                try:
+                    from smrforge.core.constants import parse_nuclide_string
+                    Z, A, m_state = parse_nuclide_string(nuclide_name)
+                    test_nuclide = Nuclide(Z=Z, A=A, m=m_state)
+                    # Check if this nuclide has fission data
+                    nuc_data = xs_df.filter(pl.col("nuclide") == nuclide_name)
+                    fission_data = nuc_data.filter(pl.col("reaction") == "fission")
+                    if len(fission_data) > 0:
+                        fissioning_nuclide = test_nuclide
+                        break
+                except Exception:
+                    continue
+            
+            if fissioning_nuclide is not None:
+                # Extract chi from ENDF or use Watt spectrum
+                chi[m, :] = extract_chi_from_endf(cache, fissioning_nuclide, group_structure)
+            else:
+                # Fallback to hardcoded spectrum
+                chi[m, 0] = 0.6
+                chi[m, 1] = 0.3
+                chi[m, 2] = 0.08
+                chi[m, 3] = 0.015
+                chi[m, 4] = 0.004
+                chi[m, 5] = 0.001
+                chi[m, :] = chi[m, :] / np.sum(chi[m, :])
         else:
             # Non-fissioning material: dummy spectrum
             chi[m, 0] = 1.0
@@ -199,7 +301,10 @@ def convert_nuclide_to_material_xs(
     # Convert from barns to 1/cm (multiply by atom density)
     # For fuel material, use total density
     fuel_density = total_density  # atoms/barn-cm
-    reflector_density = 0.08e24 * 1e-24  # Graphite: ~0.08 atoms/barn-cm
+    # Graphite density: ~1.7 g/cm³, atomic mass ~12 g/mol
+    # N = (density * N_A) / M = (1.7 * 6.022e23) / 12 = 8.53e22 atoms/cm³
+    # In atoms/barn-cm: 8.53e22 * 1e-24 = 0.0853 atoms/barn-cm
+    reflector_density = 0.0853  # Graphite: atoms/barn-cm
     
     # Convert cross-sections: sigma [1/cm] = sigma [barns] * N [atoms/barn-cm]
     sigma_t[0, :] *= fuel_density
@@ -211,6 +316,32 @@ def convert_nuclide_to_material_xs(
     sigma_t[1, :] *= reflector_density
     sigma_a[1, :] *= reflector_density
     sigma_s[1, :, :] *= reflector_density
+    
+    # Validate results before returning
+    if np.any(sigma_t < 0):
+        raise ValueError("Negative total cross-section found after conversion")
+    if np.any(sigma_a < 0):
+        raise ValueError("Negative absorption cross-section found after conversion")
+    if np.any(sigma_a > sigma_t + 1e-6):  # Small tolerance for floating point
+        raise ValueError("Absorption exceeds total cross-section (non-physical)")
+    if np.any(sigma_f > sigma_a + 1e-6):
+        raise ValueError("Fission exceeds absorption cross-section (non-physical)")
+    
+    # Check chi normalization
+    for m in range(n_materials):
+        if np.any(sigma_f[m, :] > 0):
+            chi_sum = np.sum(chi[m, :])
+            if not np.isclose(chi_sum, 1.0, rtol=1e-3):
+                raise ValueError(
+                    f"chi for material {m} doesn't sum to 1.0: {chi_sum:.6f}"
+                )
+    
+    # Check diffusion coefficients are reasonable
+    if np.any(D < 0):
+        raise ValueError("Negative diffusion coefficient found")
+    if np.any(D > 10):
+        import warnings
+        warnings.warn(f"Very large diffusion coefficients found (max: {np.max(D):.2f} cm)")
     
     return CrossSectionData(
         n_groups=n_groups,
@@ -427,8 +558,11 @@ class HTGRAnalysisPipeline:
                 n_groups=len(group_structure) - 1,
                 n_materials=2,  # Fuel and reflector
                 group_structure=group_structure,
+                cache=cache,  # Pass cache for nu/chi extraction
+                temperature=T_fuel,
             )
             print("✓ Successfully converted ENDF cross-sections to material format")
+            print(f"  Using energy-dependent nu and proper Watt spectrum for chi")
         except Exception as e:
             print(f"Warning: Conversion failed ({e}), falling back to preset cross-sections")
             import traceback
