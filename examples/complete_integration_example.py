@@ -123,6 +123,7 @@ def convert_nuclide_to_material_xs(
     fuel_nuclides_for_scattering = []
     
     # Material 0: Fuel (combine all nuclides)
+    nuclides_processed = []
     for nuclide_name in nuclides:
         frac = fractions[nuclide_name]
         
@@ -135,8 +136,15 @@ def convert_nuclide_to_material_xs(
             # Skip if can't parse
             continue
         
+        nuclides_processed.append(nuclide_name)
+        
         # Get cross-sections for this nuclide
         nuc_data = xs_df.filter(pl.col("nuclide") == nuclide_name)
+        
+        if len(nuc_data) == 0:
+            import warnings
+            warnings.warn(f"No cross-section data found for {nuclide_name} in DataFrame")
+            continue
         
         # Extract nu for this nuclide (energy-dependent)
         nu_values = extract_nu_from_endf(cache, nuclide, group_structure, temperature)
@@ -154,6 +162,9 @@ def convert_nuclide_to_material_xs(
             else:
                 reactions_dict[reaction] = {}
         
+        # Track if we found any data for this nuclide
+        nuclide_has_data = False
+        
         for g in range(n_groups):
             # Get values from pre-extracted dict (faster than filtering each time)
             total_val = float(reactions_dict.get("total", {}).get(g, 0.0))
@@ -163,11 +174,15 @@ def convert_nuclide_to_material_xs(
             n2n_val = float(reactions_dict.get("n,2n", {}).get(g, 0.0))
             nalpha_val = float(reactions_dict.get("n,alpha", {}).get(g, 0.0))
             
+            # Track if we have any non-zero data
+            if total_val > 0 or capture_val > 0 or fission_val > 0:
+                nuclide_has_data = True
+            
             # Total cross-section (always accumulate, even if zero)
             sigma_t[0, g] += frac * total_val
             
             # Absorption = capture + fission + n,2n + n,alpha + ...
-            # Always accumulate (even zeros) to ensure we're processing all data
+            # Always accumulate to ensure we're processing all data
             sigma_a[0, g] += frac * capture_val
             if fission_val > 0:
                 sigma_f[0, g] += frac * fission_val
@@ -182,6 +197,20 @@ def convert_nuclide_to_material_xs(
                 fuel_elastic_mg[g] += frac * elastic_val
                 if nuclide not in fuel_nuclides_for_scattering:
                     fuel_nuclides_for_scattering.append(nuclide)
+        
+        if not nuclide_has_data:
+            import warnings
+            warnings.warn(
+                f"No cross-section data found for {nuclide_name} in any energy group. "
+                f"Check that ENDF file exists and contains the requested reactions."
+            )
+    
+    # Ensure we processed at least some nuclides
+    if len(nuclides_processed) == 0:
+        raise ValueError(
+            f"No valid nuclides processed. Check that nuclides in composition "
+            f"({list(composition.keys())}) match nuclides in xs_df."
+        )
     
     # Compute improved scattering matrix for fuel material
     if len(fuel_nuclides_for_scattering) > 0 and np.any(fuel_elastic_mg > 0):
@@ -345,11 +374,14 @@ def convert_nuclide_to_material_xs(
                     fallback_used = True
     
     if fallback_used:
-        warnings.warn(
-            "Some absorption cross-sections were zero and have been set to minimum values. "
-            "This may indicate missing capture/fission data in ENDF files. "
-            "Results may be less accurate."
+        warning_msg = (
+            f"Some absorption cross-sections were zero and have been set to minimum values. "
+            f"This may indicate missing capture/fission data in ENDF files. "
+            f"Affected: {len(fallback_details)} groups. "
+            f"Results may be less accurate. "
+            f"Details: {fallback_details[:5]}{'...' if len(fallback_details) > 5 else ''}"
         )
+        warnings.warn(warning_msg)
     
     # Validate results before returning
     if np.any(sigma_t < 0):
