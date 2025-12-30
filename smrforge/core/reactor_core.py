@@ -1231,11 +1231,35 @@ class NuclearDataCache:
         filepath = endf_dir / filename
 
         if not filepath.exists():
-            # Download from NNDC or IAEA
-            url = self._get_endf_url(nuclide, library)
-            response = requests.get(url)
-            response.raise_for_status()
-            filepath.write_bytes(response.content)
+            # Try multiple URL sources and formats
+            urls = self._get_endf_urls(nuclide, library)
+            last_error = None
+            
+            for url in urls:
+                try:
+                    response = requests.get(url, timeout=30, allow_redirects=True)
+                    response.raise_for_status()
+                    # Verify it's actually an ENDF file (starts with ENDF header)
+                    content = response.content
+                    if len(content) > 0 and (content[:4] == b'  -1' or b'ENDF' in content[:100]):
+                        filepath.write_bytes(content)
+                        return filepath
+                    else:
+                        # Not a valid ENDF file, try next URL
+                        continue
+                except requests.RequestException as e:
+                    last_error = e
+                    continue
+            
+            # All URLs failed
+            error_msg = f"Failed to download ENDF file for {nuclide.name} from {library.value}.\n"
+            error_msg += f"Tried {len(urls)} URL(s), last error: {last_error}\n"
+            error_msg += "\nPossible solutions:\n"
+            error_msg += "1. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
+            error_msg += f"   {filepath}\n"
+            error_msg += "2. Use SANDY's download functionality if available\n"
+            error_msg += "3. Check network connectivity and try again"
+            raise requests.RequestException(error_msg) from last_error
 
         return filepath
 
@@ -1297,17 +1321,40 @@ class NuclearDataCache:
         filepath = endf_dir / filename
 
         if not filepath.exists():
-            # Download from NNDC or IAEA
-            url = self._get_endf_url(nuclide, library)
+            # Try multiple URL sources and formats
+            urls = self._get_endf_urls(nuclide, library)
+            last_error = None
             
             use_temporary_client = client is None
             if use_temporary_client:
                 client = httpx.AsyncClient(timeout=30.0)
             
             try:
-                response = await client.get(url)
-                response.raise_for_status()
-                filepath.write_bytes(response.content)
+                for url in urls:
+                    try:
+                        response = await client.get(url, follow_redirects=True)
+                        response.raise_for_status()
+                        # Verify it's actually an ENDF file
+                        content = response.content
+                        if len(content) > 0 and (content[:4] == b'  -1' or b'ENDF' in content[:100]):
+                            filepath.write_bytes(content)
+                            return filepath
+                        else:
+                            # Not a valid ENDF file, try next URL
+                            continue
+                    except httpx.HTTPError as e:
+                        last_error = e
+                        continue
+                
+                # All URLs failed
+                error_msg = f"Failed to download ENDF file for {nuclide.name} from {library.value}.\n"
+                error_msg += f"Tried {len(urls)} URL(s), last error: {last_error}\n"
+                error_msg += "\nPossible solutions:\n"
+                error_msg += "1. Download manually from https://www.nndc.bnl.gov/endf/ and place in:\n"
+                error_msg += f"   {filepath}\n"
+                error_msg += "2. Use SANDY's download functionality if available\n"
+                error_msg += "3. Check network connectivity and try again"
+                raise httpx.HTTPError(error_msg) from last_error
             finally:
                 if use_temporary_client:
                     await client.aclose()
@@ -1315,13 +1362,12 @@ class NuclearDataCache:
         return filepath
 
     @staticmethod
-    def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
+    def _get_endf_urls(nuclide: Nuclide, library: Library) -> list[str]:
         """
-        Construct download URL for ENDF file from NNDC or IAEA.
+        Get list of potential download URLs for ENDF file, in order of preference.
         
-        Generates the URL for downloading ENDF-6 format nuclear data files
-        from the National Nuclear Data Center (NNDC) at Brookhaven National Laboratory.
-        Falls back to IAEA Nuclear Data Services if NNDC format doesn't match.
+        Returns multiple URL formats to try, as different repositories may have
+        different URL structures. The method will try each URL until one succeeds.
         
         Args:
             nuclide: Nuclide instance (e.g., Nuclide(Z=92, A=235) for U235).
@@ -1330,26 +1376,19 @@ class NuclearDataCache:
                 The library's value string is used in the URL path.
         
         Returns:
-            URL string pointing to the ENDF file download endpoint.
-            For ENDF/B libraries: Uses NNDC format.
-            For other libraries: Uses IAEA format.
-        
-        Note:
-            NNDC is more reliable for ENDF/B libraries. IAEA may be used
-            for JEFF and other international libraries.
+            List of URL strings to try in order. Multiple formats are attempted
+            as repository structures may vary.
         
         Example:
             >>> from smrforge.core.reactor_core import Nuclide, Library
             >>> u235 = Nuclide(Z=92, A=235, m=0)
-            >>> url = NuclearDataCache._get_endf_url(u235, Library.ENDF_B_VIII)
-            >>> print(url)
-            https://www.nndc.bnl.gov/endf/b8.0/endf/U235.endf
-            
-            >>> pu239 = Nuclide(Z=94, A=239, m=0)
-            >>> url = NuclearDataCache._get_endf_url(pu239, Library.JEFF_33)
-            >>> "jeff" in url.lower() or "iaea" in url.lower()
+            >>> urls = NuclearDataCache._get_endf_urls(u235, Library.ENDF_B_VIII)
+            >>> len(urls) > 0
             True
         """
+        urls = []
+        nuclide_name = nuclide.name
+        
         # Map library values to NNDC directory names
         library_map = {
             "endfb8.0": "b8.0",
@@ -1357,15 +1396,30 @@ class NuclearDataCache:
             "endfb7.1": "b7.1",
         }
         
-        # Use NNDC for ENDF/B libraries (more reliable)
+        # Try NNDC formats for ENDF/B libraries
         if library.value in library_map:
             nndc_version = library_map[library.value]
-            # NNDC URL format: https://www.nndc.bnl.gov/endf/{version}/endf/{nuclide}.endf
-            return f"https://www.nndc.bnl.gov/endf/{nndc_version}/endf/{nuclide.name}.endf"
+            # Try various NNDC URL formats
+            urls.extend([
+                f"https://www.nndc.bnl.gov/endf/{nndc_version}/endf/{nuclide_name}.endf",
+                f"https://www.nndc.bnl.gov/endf/{nndc_version}/data/endf/{nuclide_name}.endf",
+                f"https://www.nndc.bnl.gov/endf/{nndc_version}/downloads/endf/ENDF-B-VIII.0/{nuclide_name}.endf",
+            ])
         
-        # Fall back to IAEA for other libraries (JEFF, etc.)
-        base_url = "https://www-nds.iaea.org/public/download-endf"
-        return f"{base_url}/{library.value}/{nuclide.name}.endf"
+        # Try IAEA formats
+        iaea_base = "https://www-nds.iaea.org"
+        urls.extend([
+            f"{iaea_base}/public/download-endf/{library.value}/{nuclide_name}.endf",
+            f"{iaea_base}/exfor/endf/{library.value}/{nuclide_name}.endf",
+        ])
+        
+        return urls
+    
+    @staticmethod
+    def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
+        """Get the first (preferred) URL for ENDF file download."""
+        urls = NuclearDataCache._get_endf_urls(nuclide, library)
+        return urls[0] if urls else ""
 
 
 class CrossSectionTable:
