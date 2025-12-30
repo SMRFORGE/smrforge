@@ -564,7 +564,7 @@ class HTGRAnalysisPipeline:
         
         xs_df = xs_table.generate_multigroup(
             nuclides=fuel_nuclides,
-            reactions=['total', 'fission', 'capture', 'elastic'],
+            reactions=['total', 'fission', 'capture', 'elastic', 'n,2n', 'n,alpha'],
             group_structure=group_structure,
             temperature=T_fuel
         )
@@ -572,6 +572,16 @@ class HTGRAnalysisPipeline:
         print(f"Generated cross-section table with {len(xs_df)} entries")
         print(f"Available nuclides: {xs_df['nuclide'].unique().to_list()}")
         print(f"Available reactions: {xs_df['reaction'].unique().to_list()}")
+        
+        # Diagnostic: Check if we have capture/fission data
+        capture_data = xs_df.filter(pl.col("reaction") == "capture")
+        fission_data = xs_df.filter(pl.col("reaction") == "fission")
+        print(f"Capture data entries: {len(capture_data)}")
+        print(f"Fission data entries: {len(fission_data)}")
+        if len(capture_data) > 0:
+            print(f"Capture XS range: [{capture_data['xs'].min():.2e}, {capture_data['xs'].max():.2e}] barns")
+        if len(fission_data) > 0:
+            print(f"Fission XS range: [{fission_data['xs'].min():.2e}, {fission_data['xs'].max():.2e}] barns")
         
         # Apply resonance self-shielding
         # Note: ResonanceSelfShielding may require additional setup
