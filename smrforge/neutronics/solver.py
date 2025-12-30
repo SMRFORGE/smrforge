@@ -437,14 +437,33 @@ class MultiGroupDiffusion:
                 self.flux = np.ones_like(self.flux)
                 logger.warning(f"Flux too small at iteration {iteration}, reinitializing")
 
+        # Provide detailed diagnostics on failure
         logger.error(
             f"Failed to converge in {self.options.max_iterations} iterations. "
             f"Final error: {error:.2e}, tolerance: {self.options.tolerance}"
         )
-        raise RuntimeError(
-            f"Failed to converge in {self.options.max_iterations} iterations. "
-            f"Final error: {error:.2e}, tolerance: {self.options.tolerance}"
+        logger.error(
+            f"Final state: k_eff={k_old:.6f}, max_flux={np.max(self.flux):.3e}, "
+            f"min_flux={np.min(self.flux):.3e}, flux_has_nan={np.any(np.isnan(self.flux))}"
         )
+        logger.error(
+            f"Source: min={np.min(self.source):.3e}, max={np.max(self.source):.3e}, "
+            f"has_nan={np.any(np.isnan(self.source))}"
+        )
+        
+        error_msg = (
+            f"Failed to converge in {self.options.max_iterations} iterations. "
+            f"Final error: {error:.2e}, tolerance: {self.options.tolerance}. "
+            f"Final k_eff: {k_old:.6f}. "
+        )
+        if np.any(np.isnan(self.flux)):
+            error_msg += "Flux contains NaN values - check cross-section data."
+        elif np.max(self.flux) < 1e-10:
+            error_msg += "Flux is too small - check source terms and cross-sections."
+        else:
+            error_msg += "Consider increasing max_iterations or checking cross-section data."
+        
+        raise RuntimeError(error_msg)
 
     def _update_fission_source(self, k_eff: float) -> None:
         """
