@@ -48,8 +48,13 @@ RUN pip install --no-cache-dir -e .
 # Copy examples (optional - can be mounted as volume instead)
 COPY examples/ /app/examples/
 
-# Create a directory for data/output
-RUN mkdir -p /app/data /app/output
+# Create directories for data/output and ENDF storage
+# ENDF data can be mounted as volume or stored in container
+RUN mkdir -p /app/data /app/output /app/endf-data
+
+# Set environment variable for standard ENDF directory
+# Users can override this or mount their own ENDF directory
+ENV SMRFORGE_ENDF_DIR=/app/endf-data
 
 # Default command (can be overridden)
 CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!')"]

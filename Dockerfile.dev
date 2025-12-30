@@ -43,8 +43,13 @@ RUN pip install --upgrade pip wheel setuptools
 # the image has all dependencies available even without volume mounts
 RUN pip install --no-cache-dir -e ".[dev]"
 
-# Create data/output directories
-RUN mkdir -p /app/data /app/output
+# Create directories for data/output and ENDF storage
+# ENDF data can be mounted as volume or stored in container
+RUN mkdir -p /app/data /app/output /app/endf-data
+
+# Set environment variable for standard ENDF directory
+# Users can override this or mount their own ENDF directory
+ENV SMRFORGE_ENDF_DIR=/app/endf-data
 
 # Default to bash shell for interactive development
 CMD ["/bin/bash"]

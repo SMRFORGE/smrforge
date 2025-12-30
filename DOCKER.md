@@ -127,11 +127,76 @@ The Docker setup mounts the following directories:
 - `/app/data` - Input data files (mapped to `./data/` on host)
 - `/app/output` - Output files (mapped to `./output/` on host)
 - `/app/examples` - Example scripts (read-only)
+- `/app/endf-data` - ENDF nuclear data files (optional, see ENDF Data Storage below)
 
 Create these directories on your host if they don't exist:
 ```bash
 mkdir -p data output
 ```
+
+## ENDF Data Storage
+
+SMRForge supports bulk ENDF file storage for faster, offline access to nuclear data. You can mount your local ENDF data directory into the container.
+
+### Using Local ENDF Data
+
+1. **Mount your ENDF directory** in `docker-compose.yml`:
+   ```yaml
+   volumes:
+     # Mount local ENDF data directory
+     - ~/ENDF-Data:/app/endf-data:ro
+     # Or mount a specific ENDF directory:
+     # - /path/to/ENDF-B-VIII.1:/app/endf-data:ro
+   ```
+
+2. **Use in your code**:
+   ```python
+   from pathlib import Path
+   from smrforge.core.reactor_core import NuclearDataCache, Nuclide, Library
+   
+   # Use mounted ENDF directory
+   cache = NuclearDataCache(
+       local_endf_dir=Path("/app/endf-data")
+   )
+   
+   # Files are automatically discovered
+   u235 = Nuclide(Z=92, A=235, m=0)
+   energy, xs = cache.get_cross_section(u235, "fission", library=Library.ENDF_B_VIII_1)
+   ```
+
+### Organizing Bulk Downloads
+
+If you've downloaded ENDF files in bulk, organize them inside the container:
+
+```bash
+# Access container
+docker compose exec smrforge-dev bash
+
+# Inside container, organize bulk downloads
+python -c "
+from pathlib import Path
+from smrforge.core.reactor_core import organize_bulk_endf_downloads
+
+stats = organize_bulk_endf_downloads(
+    source_dir=Path('/app/endf-data/raw'),
+    target_dir=Path('/app/endf-data'),
+    library_version='VIII.1'
+)
+print(f'Organized {stats[\"files_organized\"]} files')
+"
+```
+
+### Automatic Downloads
+
+If ENDF files are not found locally, SMRForge will automatically download them from NNDC/IAEA. Downloaded files are cached in `/app/.smrforge/nucdata/` inside the container.
+
+**Note**: For persistent caching across container restarts, consider mounting the cache directory:
+```yaml
+volumes:
+  - ~/.smrforge:/root/.smrforge:rw  # Persistent cache
+```
+
+See `BULK_ENDF_STORAGE.md` for detailed information on bulk ENDF storage.
 
 ## Environment Variables
 
@@ -141,6 +206,8 @@ You can set environment variables in `docker-compose.yml`:
 environment:
   - PYTHONUNBUFFERED=1
   - SMRFORGE_DATA_PATH=/app/data/nuclear_data
+  # Optional: set custom ENDF directory path
+  - SMRFORGE_ENDF_DIR=/app/endf-data
 ```
 
 ## Troubleshooting

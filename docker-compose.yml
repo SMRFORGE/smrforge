@@ -14,9 +14,16 @@ services:
       - ./examples:/app/examples:ro
       # Optional: mount source code for development
       # - ./smrforge:/app/smrforge:ro
+      # Optional: mount local ENDF data directory for bulk storage
+      # Uncomment and set path to your ENDF data directory:
+      # - ~/ENDF-Data:/app/endf-data:ro
+      # Or mount a specific ENDF directory:
+      # - /path/to/ENDF-B-VIII.1:/app/endf-data:ro
     working_dir: /app
     environment:
       - PYTHONUNBUFFERED=1
+      # Optional: set custom ENDF directory path
+      # - SMRFORGE_ENDF_DIR=/app/endf-data
     # Keep container running for exec commands
     stdin_open: true
     tty: true
@@ -35,9 +42,16 @@ services:
       - ./data:/app/data:rw
       - ./output:/app/output:rw
       - ./examples:/app/examples:ro
+      # Optional: mount local ENDF data directory for bulk storage
+      # Uncomment and set path to your ENDF data directory:
+      # - ~/ENDF-Data:/app/endf-data:ro
+      # Or mount a specific ENDF directory:
+      # - /path/to/ENDF-B-VIII.1:/app/endf-data:ro
     working_dir: /app
     environment:
       - PYTHONUNBUFFERED=1
+      # Optional: set custom ENDF directory path
+      # - SMRFORGE_ENDF_DIR=/app/endf-data
     stdin_open: true
     tty: true
     # Install dev dependencies on startup
