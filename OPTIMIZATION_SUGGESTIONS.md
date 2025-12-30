@@ -188,7 +188,7 @@ The `_build_group_system()` method (lines 272-363) builds sparse matrices elemen
 - Index building: ~0.09s for 557 files (one-time cost)
 - Subsequent lookups: <0.0001s (instant)
 
-**See**: `ENDF_INTEGRATION_SUMMARY.md` and `PHASE3_COMPLETION_REPORT.md` for details.
+**See**: [`ENDF_DOCUMENTATION.md`](ENDF_DOCUMENTATION.md) for complete documentation on ENDF integration and improvements.
 
 ---
 

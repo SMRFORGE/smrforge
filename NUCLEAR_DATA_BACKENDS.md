@@ -88,7 +88,7 @@ print(f"Found {results['valid_files']} valid ENDF files")
 print(f"Directory structure: {results['directory_structure']}")
 ```
 
-**See**: `BULK_ENDF_STORAGE.md` for detailed guide on bulk storage and organization.
+**See**: [`ENDF_DOCUMENTATION.md`](ENDF_DOCUMENTATION.md) for complete documentation on bulk storage, organization, setup, and usage.
 
 ### Expected Directory Structure
 
@@ -115,7 +115,7 @@ ENDF-B-VIII.1/
 - **File lookup**: <0.0001s (instant, cached dictionary)
 - **File copying**: Fast (files typically 50-500 KB)
 
-**See**: `ENDF_INTEGRATION_SUMMARY.md` for detailed documentation.
+**See**: [`ENDF_DOCUMENTATION.md`](ENDF_DOCUMENTATION.md) for complete documentation.
 
 ## How It Works
 

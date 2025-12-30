@@ -2,7 +2,7 @@
 
 ## Status: ✅ COMPLETE
 
-All Phase 3 requirements from `ENDF_INTEGRATION_PLAN.md` have been successfully implemented and tested.
+All Phase 3 requirements from the ENDF integration plan have been successfully implemented and tested. See [`ENDF_DOCUMENTATION.md`](ENDF_DOCUMENTATION.md) for current documentation.
 
 ## Implementation Checklist
 

@@ -204,7 +204,7 @@ The wizard will:
 - Organize files into standard structure
 - Test the setup
 
-See `BULK_ENDF_STORAGE.md` and `DOCKER_ENDF_QUICKSTART.md` for detailed information.
+See [`ENDF_DOCUMENTATION.md`](ENDF_DOCUMENTATION.md) for complete documentation on ENDF data setup, bulk storage, and Docker integration.
 
 ## Environment Variables
 
