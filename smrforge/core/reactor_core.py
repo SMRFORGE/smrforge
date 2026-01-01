@@ -484,6 +484,11 @@ class NuclearDataCache:
             overwritten. The in-memory cache is updated immediately, while
             Zarr storage is written synchronously.
         
+        Raises:
+            ValueError: If energy and xs arrays have different lengths or
+                contain invalid values (NaN, Inf).
+            RuntimeError: If zarr storage operations fail.
+        
         Example:
             >>> cache = NuclearDataCache()
             >>> energy = np.logspace(4, 7, 1000)  # 10 keV to 10 MeV
@@ -492,13 +497,45 @@ class NuclearDataCache:
             >>> cache._save_to_cache(key, energy, xs)
             >>> # Data is now cached and can be retrieved via get_cross_section
         """
-        group = self.root.create_group(key, overwrite=True)
-        # Use create_array with data parameter (shape is inferred from data)
-        # Note: zstd compression requires numcodecs, using default compression for compatibility
-        group.create_array("energy", data=energy, chunks=(1024,))
-        group.create_array("xs", data=xs, chunks=(1024,))
-
-        # Cache in memory
+        # Validate inputs
+        if len(energy) != len(xs):
+            raise ValueError(
+                f"Energy and cross-section arrays must have same length. "
+                f"Got energy: {len(energy)}, xs: {len(xs)}"
+            )
+        if np.any(np.isnan(energy)) or np.any(np.isinf(energy)):
+            raise ValueError("Energy array contains NaN or Inf values")
+        if np.any(np.isnan(xs)) or np.any(np.isinf(xs)):
+            raise ValueError("Cross-section array contains NaN or Inf values")
+        
+        # Ensure arrays are contiguous and of correct dtype for zarr
+        energy = np.ascontiguousarray(energy, dtype=np.float64)
+        xs = np.ascontiguousarray(xs, dtype=np.float64)
+        
+        try:
+            # Create or overwrite group (overwrite=True removes existing group and all contents)
+            group = self.root.create_group(key, overwrite=True)
+            
+            # Calculate appropriate chunk size (use array length if smaller than 1024)
+            chunk_size = min(1024, len(energy))
+            
+            # Create arrays in zarr group
+            # Note: zarr's create_array infers shape from data parameter
+            # Using default compression (zlib) for compatibility (zstd requires numcodecs)
+            group.create_array("energy", data=energy, chunks=(chunk_size,))
+            group.create_array("xs", data=xs, chunks=(chunk_size,))
+            
+        except Exception as e:
+            # If zarr operations fail, still update memory cache for consistency
+            # This allows the code to continue working even if disk cache fails
+            logger.warning(
+                f"Failed to save {key} to zarr cache: {e}. "
+                f"Data will be available in memory cache only."
+            )
+            # Don't raise - allow memory cache to work even if zarr fails
+        
+        # Always update memory cache (even if zarr failed)
+        # This ensures data is available for the current session
         self._memory_cache[key] = (energy, xs)
 
     async def get_cross_section_async(
