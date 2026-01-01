@@ -38,6 +38,11 @@ This document consolidates next steps and recommended additions based on current
   - Verified all critical imports work correctly
   - Updated docstrings for accuracy
   - All examples verified and working
+- ✅ ENDF file types analysis completed
+  - Analyzed 15 data types in ENDF-B-VIII.1 bulk download
+  - Identified high-priority gaps: thermal scattering laws, fission yields
+  - Documented capability gaps and implementation roadmap
+  - Fixed zarr API usage in `_save_to_cache` method
 
 ### 🔴 Next Priority Actions
 1. **Increase test coverage** from 67% to 75-80%+ (focus on `reactor_core.py` and `endf_parser.py`)
@@ -47,8 +52,13 @@ This document consolidates next steps and recommended additions based on current
    - Ensure ENDF data quality is sufficient for realistic k_eff calculations
    - Verify cross-section conversion accuracy
    - Test with various ENDF library versions
+5. **Implement thermal scattering law support** (High Priority - ENDF Gap)
+   - Parse thermal scattering files (`thermal_scatt-version.VIII.1`)
+   - Integrate S(α,β) data with neutronics solver
+   - Support for H2O, D2O, graphite, UO2, and other moderators
+   - Critical for accurate thermal reactor calculations
 
-**Focus:** Quality assurance and developer experience improvements before beta release.
+**Focus:** Quality assurance, developer experience improvements, and extended ENDF data support before beta release.
 
 ---
 
@@ -109,8 +119,8 @@ pytest --cov=smrforge --cov-report=html --cov-report=term-missing
 
 **Action Items:**
 - ✅ Test infrastructure for external data dependencies (mock fixtures) - DONE
+- ✅ Fix zarr API usage in `_save_to_cache` - DONE
 - 🔴 Create realistic mock ENDF files (`tests/data/sample_U235.endf`)
-- 🟠 Fix zarr API usage in `_save_to_cache`
 - 🟡 Test `_parse_mf3_section` fully (97 lines - largest gap)
 - 🟡 Test `_simple_endf_parse` fully (57 lines)
 - Add edge case and error handling tests
@@ -167,7 +177,31 @@ pytest --cov=smrforge --cov-report=html --cov-report=term-missing
 
 ## 🟡 MEDIUM PRIORITY - Feature Enhancements
 
-### 4. Visualization Module (1-2 weeks) 📊
+### 4. Implement Fission Yields and Decay Data Support (2-3 weeks) ⚛️
+
+**Status:** Identified as high-priority gap in ENDF analysis
+
+**What to add:**
+- Fission yield parser for `nfy-version.VIII.1` files
+- Decay data parser for `decay-version.VIII.1` files
+- Basic burnup solver framework
+- Integration with neutronics for coupled calculations
+
+**Features:**
+- Parse independent and cumulative fission product yields
+- Parse decay constants, modes, and product yields
+- Track fission product buildup over time
+- Calculate decay heat and radioactivity inventory
+
+**Impact:** Enables fuel burnup/depletion analysis (currently impossible)
+
+**Priority:** Medium-High - Required for burnup calculations
+
+**See `ENDF_FILE_TYPES_ANALYSIS.md` for detailed analysis.**
+
+---
+
+### 5. Visualization Module (1-2 weeks) 📊
 
 **Status:** Currently a stub module
 
@@ -193,7 +227,7 @@ def plot_temperature_distribution(temp, geometry, **kwargs)
 
 ---
 
-### 5. I/O Utilities Module (1 week) 💾
+### 6. I/O Utilities Module (1 week) 💾
 
 **Status:** Currently a stub (though Pydantic serialization works)
 
@@ -218,7 +252,7 @@ def import_from_serpent(filepath: Path) -> ReactorSpecification
 
 ---
 
-### 6. Enhanced Convenience API (3-5 days) 🚀
+### 7. Enhanced Convenience API (3-5 days) 🚀
 
 **Status:** Basic convenience functions exist and work
 
@@ -242,7 +276,7 @@ def sensitivity_analysis(reactor, parameters):
 
 ## 🟢 LOW PRIORITY - Future Enhancements
 
-### 7. Complete Type Hints (Ongoing) 🔍
+### 8. Complete Type Hints (Ongoing) 🔍
 
 **Status:** Partial - some modules have type hints, others don't
 
@@ -255,7 +289,7 @@ def sensitivity_analysis(reactor, parameters):
 
 ---
 
-### 8. Additional Stub Modules (Future) 📦
+### 9. Additional Stub Modules (Future) 📦
 
 These modules are currently stubs and are **NOT blocking** production:
 
@@ -287,13 +321,14 @@ These modules are currently stubs and are **NOT blocking** production:
 **Total:** ~1-2 weeks of focused work
 
 ### Next 2-3 Weeks (Medium Priority)
-4. Visualization module (start implementation)
-5. I/O utilities (if needed)
-6. Enhanced convenience API (if needed)
+4. Thermal scattering law support (start implementation)
+5. Fission yields and decay data support (planning and initial implementation)
+6. Visualization module (start implementation)
+7. I/O utilities (if needed)
 
 ### Ongoing (Low Priority)
-7. Complete type hints (gradual)
-8. Implement stub modules (as needed)
+8. Complete type hints (gradual)
+9. Implement stub modules (as needed)
 
 ---
 
@@ -317,10 +352,15 @@ These modules are currently stubs and are **NOT blocking** production:
 - ✅ Code formatting applied (Black and isort)
 - ✅ Solver robustness improvements (NaN detection, error handling)
 - ✅ Example code verified and fixed
+- ✅ ENDF file types analysis completed
+- ✅ Zarr API usage fixed in `_save_to_cache`
 - ⚠️ Deploy documentation to GitHub Pages/Read the Docs
 - ⚠️ Validate ENDF-based workflows end-to-end
+- ⚠️ Implement thermal scattering law support (critical for thermal reactors)
 
 ### 📝 Optional Enhancements (Medium/Low Priority)
+- Thermal scattering law support (High Priority - ENDF gap)
+- Fission yields and decay data support (Medium-High Priority - burnup capability)
 - Visualization module
 - I/O utilities module
 - Enhanced convenience functions
@@ -361,10 +401,20 @@ These modules are currently stubs and are **NOT blocking** production:
 ## 💡 Key Takeaways
 
 1. **Core package is functional** - All essential features work
-2. **Focus on polish** - Documentation and code quality improvements
-3. **Optional features are truly optional** - Stub modules don't block usage
-4. **Good foundation** - Testing, CI/CD, and logging are in place
-5. **Next phase** - Focus on user experience and documentation
+2. **ENDF support analyzed** - Identified 15 data types, only neutrons currently supported
+3. **Critical gaps identified** - Thermal scattering laws and fission yields are high priority
+4. **Focus on polish** - Documentation and code quality improvements
+5. **Extended capabilities** - Thermal scattering and burnup support needed for full reactor analysis
+6. **Good foundation** - Testing, CI/CD, and logging are in place
+7. **Next phase** - Focus on user experience, documentation, and extended ENDF data support
+
+---
+
+## 📚 Related Documentation
+
+- **ENDF File Types Analysis:** See `ENDF_FILE_TYPES_ANALYSIS.md` for comprehensive analysis of all 15 ENDF data types
+- **ENDF Documentation:** See `ENDF_DOCUMENTATION.md` for setup and usage guide
+- **Testing Coverage:** See `TESTING_AND_COVERAGE.md` for detailed test coverage roadmap
 
 ---
 
