@@ -1,8 +1,8 @@
 # SMRForge Development Roadmap
 
-**Last Updated:** 2025  
+**Last Updated:** January 2025  
 **Current Version:** 0.1.0 (Alpha)  
-**Status:** Core functionality complete, focusing on polish and documentation
+**Status:** Core functionality complete, ENDF capabilities analyzed, focusing on polish and extended data support
 
 This document consolidates next steps and recommended additions based on current package state.
 
