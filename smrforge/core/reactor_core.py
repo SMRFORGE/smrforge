@@ -1685,6 +1685,49 @@ class NuclearDataCache:
         
         return None
     
+    def _find_local_tsl_file(self, material_name: str, library: Library = Library.ENDF_B_VIII_1) -> Optional[Path]:
+        """
+        Find thermal scattering law file in local directory.
+        
+        Looks for files matching pattern: tsl-*.endf or thermal-*.endf
+        in thermal_scatt-version.VIII.1/ subdirectory.
+        
+        Args:
+            material_name: Material name (e.g., "H_in_H2O", "C_in_graphite").
+            library: Library enum (currently only ENDF/B-VIII.1 supported).
+        
+        Returns:
+            Path to local TSL file if found, None otherwise.
+        """
+        if not self.local_endf_dir:
+            return None
+        
+        # Look for thermal_scatt-version.VIII.1 directory
+        tsl_dir = self.local_endf_dir / "thermal_scatt-version.VIII.1"
+        if not tsl_dir.exists():
+            return None
+        
+        # Try various filename patterns
+        patterns = [
+            f"tsl-{material_name}.endf",
+            f"thermal-{material_name}.endf",
+            f"ts-{material_name}.endf",
+            f"{material_name}.endf",
+        ]
+        
+        for pattern in patterns:
+            tsl_file = tsl_dir / pattern
+            if tsl_file.exists() and self._validate_endf_file(tsl_file):
+                return tsl_file
+        
+        # Also try case-insensitive search
+        for endf_file in tsl_dir.glob("*.endf"):
+            if material_name.lower() in endf_file.name.lower():
+                if self._validate_endf_file(endf_file):
+                    return endf_file
+        
+        return None
+    
     def _find_local_fission_yield_file(self, nuclide: Nuclide, library: Library) -> Optional[Path]:
         """
         Find fission yield data file in local directory.
@@ -2542,6 +2585,61 @@ def get_fission_yield_data(
         return yield_data
     except (ImportError, Exception) as e:
         logger.warning(f"Could not load fission yield data for {nuclide.name}: {e}")
+        return None
+
+
+def get_thermal_scattering_data(
+    material_name: str,
+    cache: Optional[NuclearDataCache] = None,
+    library: Library = Library.ENDF_B_VIII_1,
+) -> Optional[Any]:
+    """
+    Get thermal scattering law data for a material.
+    
+    Loads and parses thermal scattering law (S(α,β)) data from ENDF files.
+    This data is essential for accurate thermal reactor calculations, especially
+    for moderator materials like H2O, graphite, and D2O.
+    
+    Args:
+        material_name: Material name (e.g., "H_in_H2O", "C_in_graphite", "D_in_D2O").
+            Use get_tsl_material_name() from thermal_scattering_parser to map common names.
+        cache: Optional NuclearDataCache instance. If not provided, creates a new one.
+        library: Library version (currently only ENDF/B-VIII.1 supported).
+    
+    Returns:
+        ScatteringLawData instance with S(α,β) data, or None if not found.
+    
+    Example:
+        >>> from smrforge.core.reactor_core import get_thermal_scattering_data
+        >>> from smrforge.core.thermal_scattering_parser import get_tsl_material_name
+        >>> 
+        >>> # Map material name
+        >>> tsl_name = get_tsl_material_name("H2O")
+        >>> # Get TSL data
+        >>> tsl_data = get_thermal_scattering_data(tsl_name)
+        >>> if tsl_data:
+        ...     print(f"Material: {tsl_data.material_name}")
+        ...     print(f"Temperature: {tsl_data.temperature} K")
+    """
+    if cache is None:
+        cache = NuclearDataCache()
+    
+    try:
+        from .thermal_scattering_parser import ThermalScatteringParser
+        
+        # Find TSL file
+        tsl_file = cache._find_local_tsl_file(material_name, library)
+        if tsl_file is None:
+            logger.debug(f"TSL file not found for {material_name}")
+            return None
+        
+        # Parse TSL data
+        parser = ThermalScatteringParser()
+        tsl_data = parser.parse_file(tsl_file)
+        
+        return tsl_data
+    except (ImportError, Exception) as e:
+        logger.debug(f"Could not load TSL data for {material_name}: {e}")
         return None
 
 
