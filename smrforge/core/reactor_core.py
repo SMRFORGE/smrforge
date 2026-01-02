@@ -1689,8 +1689,8 @@ class NuclearDataCache:
         """
         Find thermal scattering law file in local directory.
         
-        Looks for files matching pattern: tsl-*.endf or thermal-*.endf
-        in thermal_scatt-version.VIII.1/ subdirectory.
+        Uses the TSL file index for fast lookup. If index is not built yet,
+        builds it automatically. Falls back to direct file search if needed.
         
         Args:
             material_name: Material name (e.g., "H_in_H2O", "C_in_graphite").
@@ -1699,13 +1699,30 @@ class NuclearDataCache:
         Returns:
             Path to local TSL file if found, None otherwise.
         """
+        # First try using the index (fast)
+        tsl_file = self.get_tsl_file(material_name)
+        if tsl_file:
+            return tsl_file
+        
+        # Fallback: direct search (for backward compatibility)
         if not self.local_endf_dir:
             return None
         
         # Look for thermal_scatt-version.VIII.1 directory
         tsl_dir = self.local_endf_dir / "thermal_scatt-version.VIII.1"
         if not tsl_dir.exists():
-            return None
+            # Try alternative naming
+            alt_dirs = [
+                self.local_endf_dir / "thermal_scatt",
+                self.local_endf_dir / "thermal-scatt-version.VIII.1",
+                self.local_endf_dir / "tsl-version.VIII.1",
+            ]
+            for alt_dir in alt_dirs:
+                if alt_dir.exists():
+                    tsl_dir = alt_dir
+                    break
+            else:
+                return None
         
         # Try various filename patterns
         patterns = [
@@ -1727,6 +1744,109 @@ class NuclearDataCache:
                     return endf_file
         
         return None
+    
+    def _build_tsl_file_index(self) -> Dict[str, Path]:
+        """
+        Build index of available thermal scattering law files.
+        
+        Scans thermal_scatt-version.VIII.1/ directory for TSL files and
+        indexes them by material name. Supports various filename patterns:
+        - tsl-*.endf
+        - thermal-*.endf
+        - ts-*.endf
+        - *.endf (in TSL directory)
+        
+        Returns:
+            Dictionary mapping material names (e.g., "H_in_H2O") to file paths.
+        """
+        if self._tsl_file_index is not None:
+            return self._tsl_file_index
+        
+        index: Dict[str, Path] = {}
+        
+        if not self.local_endf_dir or not self.local_endf_dir.exists():
+            self._tsl_file_index = index
+            return index
+        
+        # Look for thermal_scatt-version.VIII.1 directory
+        tsl_dir = self.local_endf_dir / "thermal_scatt-version.VIII.1"
+        if not tsl_dir.exists():
+            # Also try alternative naming
+            alt_dirs = [
+                self.local_endf_dir / "thermal_scatt",
+                self.local_endf_dir / "thermal-scatt-version.VIII.1",
+                self.local_endf_dir / "tsl-version.VIII.1",
+            ]
+            for alt_dir in alt_dirs:
+                if alt_dir.exists():
+                    tsl_dir = alt_dir
+                    break
+            else:
+                self._tsl_file_index = index
+                return index
+        
+        # Scan for TSL files
+        tsl_patterns = ["*.endf", "*.ENDF", "*.Endf"]
+        all_tsl_files = []
+        for pattern in tsl_patterns:
+            all_tsl_files.extend(tsl_dir.glob(pattern))
+        
+        # Remove duplicates
+        unique_files = []
+        seen_paths = set()
+        for tsl_file in all_tsl_files:
+            if tsl_file not in seen_paths:
+                seen_paths.add(tsl_file)
+                unique_files.append(tsl_file)
+        
+        # Parse material names from filenames
+        from .thermal_scattering_parser import ThermalScatteringParser
+        parser = ThermalScatteringParser()
+        
+        for tsl_file in unique_files:
+            if not self._validate_endf_file(tsl_file):
+                continue
+            
+            # Extract material name from filename
+            material_name = parser._extract_material_name(tsl_file.name)
+            
+            # Normalize material name (handle variations)
+            material_name_lower = material_name.lower()
+            
+            # Check if we already have this material (first file wins)
+            if material_name_lower not in index:
+                index[material_name_lower] = tsl_file
+                logger.debug(f"Found TSL material '{material_name}' at {tsl_file.relative_to(self.local_endf_dir)}")
+            else:
+                logger.debug(f"Skipping duplicate TSL material '{material_name}': {tsl_file.name}")
+        
+        self._tsl_file_index = index
+        logger.info(f"Built TSL file index: {len(index)} materials found in {tsl_dir}")
+        return index
+    
+    def list_available_tsl_materials(self) -> List[str]:
+        """
+        List all available thermal scattering law materials.
+        
+        Returns:
+            List of material names (e.g., ["H_in_H2O", "C_in_graphite"]).
+        """
+        index = self._build_tsl_file_index()
+        return list(index.keys())
+    
+    def get_tsl_file(self, material_name: str) -> Optional[Path]:
+        """
+        Get TSL file path for a material (uses index for fast lookup).
+        
+        Args:
+            material_name: Material name (e.g., "H_in_H2O", "C_in_graphite").
+        
+        Returns:
+            Path to TSL file if found, None otherwise.
+        """
+        index = self._build_tsl_file_index()
+        material_name_lower = material_name.lower()
+        return index.get(material_name_lower)
     
     def _find_local_fission_yield_file(self, nuclide: Nuclide, library: Library) -> Optional[Path]:
         """
