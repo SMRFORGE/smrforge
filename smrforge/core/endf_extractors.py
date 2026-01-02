@@ -4,15 +4,15 @@ ENDF Data Extraction Utilities
 Helper functions for extracting specialized data from ENDF files:
 - nu (neutrons per fission)
 - chi (fission spectrum)
-- Scattering matrices
+- Scattering matrices (with TSL support)
 """
 
 import numpy as np
 from typing import Optional, Dict
-from pathlib import Path
 
-from .reactor_core import NuclearDataCache, Nuclide
+from .reactor_core import NuclearDataCache, Nuclide, get_thermal_scattering_data
 from .constants import FISSION_SPECTRUM_PARAMS, watt_spectrum
+from .thermal_scattering_parser import get_tsl_material_name, ThermalScatteringParser
 
 
 def extract_nu_from_endf(
@@ -90,10 +90,10 @@ def extract_chi_from_endf(
     group_structure: np.ndarray,
 ) -> np.ndarray:
     """
-    Extract chi (fission spectrum) from ENDF file or use proper Watt spectrum.
+    Extract chi (fission spectrum) from ENDF file or use Watt spectrum approximation.
     
     Currently uses Watt spectrum with nuclide-specific parameters.
-    Future: Parse MF=5 from ENDF files.
+    Future: Parse MF=5, MT=18 (fission spectrum) from ENDF files.
     
     Args:
         cache: NuclearDataCache instance (for potential future ENDF parsing)
@@ -153,13 +153,16 @@ def compute_improved_scattering_matrix(
     group_structure: np.ndarray,
     temperature: float,
     elastic_mg: Optional[np.ndarray] = None,
+    material_name: Optional[str] = None,
+    use_tsl: bool = True,
 ) -> np.ndarray:
     """
-    Compute improved scattering matrix from elastic cross-section.
+    Compute improved scattering matrix from elastic cross-section with TSL support.
     
-    Uses energy-dependent downscattering model:
+    For thermal groups, uses thermal scattering law (TSL) data when available.
+    For fast groups, uses energy-dependent downscattering model:
     - Fast groups: more downscattering (70% same, 25% next, 5% skip)
-    - Thermal groups: mostly same group (90% same, 10% next)
+    - Thermal groups: TSL-corrected or mostly same group (90% same, 10% next)
     
     Args:
         cache: NuclearDataCache instance
@@ -168,6 +171,8 @@ def compute_improved_scattering_matrix(
         temperature: Temperature [K]
         elastic_mg: Pre-computed multi-group elastic cross-section [n_groups]
             If None, will compute from continuous-energy data
+        material_name: Optional material name for TSL lookup (e.g., "H2O", "graphite")
+        use_tsl: If True, attempt to use TSL data for thermal groups
     
     Returns:
         Scattering matrix [n_groups, n_groups]
@@ -192,24 +197,60 @@ def compute_improved_scattering_matrix(
             # Fallback: use simple model
             elastic_mg = np.ones(n_groups) * 5.0  # Default 5 barns
     
-    # Compute scattering matrix with energy-dependent model
+    # Try to get TSL data if material name provided and TSL enabled
+    tsl_data = None
+    if use_tsl and material_name:
+        try:
+            tsl_material_name = get_tsl_material_name(material_name)
+            if tsl_material_name:
+                tsl_data = get_thermal_scattering_data(tsl_material_name, cache=cache)
+        except Exception:
+            pass  # Fallback to standard scattering
+    
+    # Compute scattering matrix
+    parser = ThermalScatteringParser()
+    
     for g in range(n_groups):
-        # Determine if this is a fast or thermal group
         group_center = (group_structure[g] + group_structure[g + 1]) / 2
-        is_fast = group_center > 1e5  # Above 100 keV
+        is_thermal = group_center < 1.0  # Below 1 eV (thermal range)
         
-        if is_fast:
-            # Fast groups: more downscattering
-            sigma_s[g, g] = 0.7 * elastic_mg[g]
-            if g < n_groups - 1:
-                sigma_s[g, g + 1] = 0.25 * elastic_mg[g]
-            if g < n_groups - 2:
-                sigma_s[g, g + 2] = 0.05 * elastic_mg[g]
+        if is_thermal and tsl_data is not None:
+            # Use TSL for thermal groups
+            # Compute scattering from group g to all groups
+            for g_out in range(n_groups):
+                if g_out <= g:  # Only downscattering (thermal groups)
+                    E_in = group_center
+                    E_out = (group_structure[g_out] + group_structure[g_out + 1]) / 2
+                    
+                    # Compute TSL cross-section
+                    xs_tsl = parser.compute_thermal_scattering_xs(
+                        tsl_data, E_in, E_out, temperature
+                    )
+                    
+                    # Weight by group width
+                    group_width = group_structure[g] - group_structure[g + 1]
+                    sigma_s[g, g_out] = xs_tsl * group_width
         else:
-            # Thermal groups: mostly same group
-            sigma_s[g, g] = 0.9 * elastic_mg[g]
-            if g < n_groups - 1:
-                sigma_s[g, g + 1] = 0.1 * elastic_mg[g]
+            # Use standard model for fast groups or when TSL not available
+            is_fast = group_center > 1e5  # Above 100 keV
+            
+            if is_fast:
+                # Fast groups: more downscattering
+                sigma_s[g, g] = 0.7 * elastic_mg[g]
+                if g < n_groups - 1:
+                    sigma_s[g, g + 1] = 0.25 * elastic_mg[g]
+                if g < n_groups - 2:
+                    sigma_s[g, g + 2] = 0.05 * elastic_mg[g]
+            else:
+                # Thermal/epithermal groups: mostly same group
+                sigma_s[g, g] = 0.9 * elastic_mg[g]
+                if g < n_groups - 1:
+                    sigma_s[g, g + 1] = 0.1 * elastic_mg[g]
+    
+    # Normalize rows to ensure conservation
+    for g in range(n_groups):
+        row_sum = np.sum(sigma_s[g, :])
+        if row_sum > 0:
+            sigma_s[g, :] = sigma_s[g, :] * elastic_mg[g] / row_sum
     
     return sigma_s
-

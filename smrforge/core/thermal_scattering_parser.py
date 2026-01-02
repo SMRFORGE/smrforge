@@ -32,36 +32,55 @@ class ScatteringLawData:
     Attributes:
         material_name: Name of the bound material (e.g., "H_in_H2O", "C_in_graphite")
         zaid: ZAID identifier (Z*1000 + A)
-        temperature: Temperature [K]
+        temperature: Temperature [K] (primary temperature)
+        temperatures: List of available temperatures [K] (for multi-temperature support)
         alpha_values: Momentum transfer values α
         beta_values: Energy transfer values β
-        s_alpha_beta: Scattering law S(α,β) [n_alpha, n_beta]
+        s_alpha_beta: Scattering law S(α,β) [n_alpha, n_beta] or [n_temp, n_alpha, n_beta] for multi-temp
         bound_atom_mass: Mass of bound atom [amu]
         coherent_scattering: True if coherent scattering, False if incoherent
+        multi_temperature: True if data contains multiple temperatures
     """
     
     material_name: str
     zaid: int
-    temperature: float  # K
-    alpha_values: np.ndarray  # Momentum transfer
-    beta_values: np.ndarray  # Energy transfer
-    s_alpha_beta: np.ndarray  # [n_alpha, n_beta]
-    bound_atom_mass: float  # amu
-    coherent_scattering: bool
+    temperature: float  # K (primary/current temperature)
+    temperatures: Optional[np.ndarray] = None  # [n_temp] Available temperatures
+    alpha_values: np.ndarray = None  # Momentum transfer
+    beta_values: np.ndarray = None  # Energy transfer
+    s_alpha_beta: np.ndarray = None  # [n_alpha, n_beta] or [n_temp, n_alpha, n_beta]
+    bound_atom_mass: float = 1.008  # amu
+    coherent_scattering: bool = False
+    multi_temperature: bool = False
     
-    def get_s(self, alpha: float, beta: float) -> float:
+    def get_s(self, alpha: float, beta: float, temperature: Optional[float] = None) -> float:
         """
-        Interpolate S(α,β) at given α and β values.
+        Interpolate S(α,β) at given α and β values, with optional temperature interpolation.
         
         Args:
             alpha: Momentum transfer parameter
             beta: Energy transfer parameter
+            temperature: Optional temperature [K] for multi-temperature interpolation.
+                If None, uses self.temperature.
         
         Returns:
             Interpolated S(α,β) value
         """
-        # Simple bilinear interpolation
-        # Find indices
+        if temperature is None:
+            temperature = self.temperature
+        
+        # Get S(α,β) data for the requested temperature
+        if self.multi_temperature and self.temperatures is not None:
+            # Multi-temperature: interpolate in temperature first
+            s_data = self._interpolate_temperature(temperature)
+        else:
+            # Single temperature: use current data
+            s_data = self.s_alpha_beta
+        
+        if s_data is None or self.alpha_values is None or self.beta_values is None:
+            return 0.0
+        
+        # Bilinear interpolation in α and β
         alpha_idx = np.searchsorted(self.alpha_values, alpha)
         beta_idx = np.searchsorted(self.beta_values, beta)
         
@@ -74,7 +93,7 @@ class ScatteringLawData:
             abs(self.alpha_values[alpha_idx] - alpha) < 1e-10):
             if (beta_idx < len(self.beta_values) and 
                 abs(self.beta_values[beta_idx] - beta) < 1e-10):
-                return self.s_alpha_beta[alpha_idx, beta_idx]
+                return s_data[alpha_idx, beta_idx]
         
         # Bilinear interpolation
         alpha_low = max(0, alpha_idx - 1)
@@ -83,7 +102,7 @@ class ScatteringLawData:
         beta_high = min(beta_idx, len(self.beta_values) - 1)
         
         if alpha_low == alpha_high and beta_low == beta_high:
-            return self.s_alpha_beta[alpha_low, beta_low]
+            return s_data[alpha_low, beta_low]
         
         # Interpolate
         alpha_frac = (alpha - self.alpha_values[alpha_low]) / (
@@ -95,10 +114,10 @@ class ScatteringLawData:
             if beta_high > beta_low else 1.0
         )
         
-        s00 = self.s_alpha_beta[alpha_low, beta_low]
-        s01 = self.s_alpha_beta[alpha_low, beta_high] if beta_high > beta_low else s00
-        s10 = self.s_alpha_beta[alpha_high, beta_low] if alpha_high > alpha_low else s00
-        s11 = self.s_alpha_beta[alpha_high, beta_high] if (alpha_high > alpha_low and beta_high > beta_low) else s00
+        s00 = s_data[alpha_low, beta_low]
+        s01 = s_data[alpha_low, beta_high] if beta_high > beta_low else s00
+        s10 = s_data[alpha_high, beta_low] if alpha_high > alpha_low else s00
+        s11 = s_data[alpha_high, beta_high] if (alpha_high > alpha_low and beta_high > beta_low) else s00
         
         return (
             s00 * (1 - alpha_frac) * (1 - beta_frac) +
@@ -106,6 +125,46 @@ class ScatteringLawData:
             s10 * alpha_frac * (1 - beta_frac) +
             s11 * alpha_frac * beta_frac
         )
+    
+    def _interpolate_temperature(self, temperature: float) -> np.ndarray:
+        """
+        Interpolate S(α,β) to requested temperature.
+        
+        Args:
+            temperature: Requested temperature [K]
+        
+        Returns:
+            S(α,β) array at requested temperature [n_alpha, n_beta]
+        """
+        if not self.multi_temperature or self.temperatures is None:
+            return self.s_alpha_beta
+        
+        # Find temperature indices
+        temp_idx = np.searchsorted(self.temperatures, temperature)
+        temp_idx = max(0, min(temp_idx, len(self.temperatures) - 1))
+        
+        # If exact match, return that temperature's data
+        if (temp_idx < len(self.temperatures) and 
+            abs(self.temperatures[temp_idx] - temperature) < 1.0):  # Within 1 K
+            return self.s_alpha_beta[temp_idx, :, :]
+        
+        # Linear interpolation between temperatures
+        temp_low = max(0, temp_idx - 1)
+        temp_high = min(temp_idx, len(self.temperatures) - 1)
+        
+        if temp_low == temp_high:
+            return self.s_alpha_beta[temp_low, :, :]
+        
+        # Interpolate
+        temp_frac = (temperature - self.temperatures[temp_low]) / (
+            self.temperatures[temp_high] - self.temperatures[temp_low]
+            if temp_high > temp_low else 1.0
+        )
+        
+        s_low = self.s_alpha_beta[temp_low, :, :]
+        s_high = self.s_alpha_beta[temp_high, :, :]
+        
+        return s_low + temp_frac * (s_high - s_low)
 
 
 class ThermalScatteringParser:

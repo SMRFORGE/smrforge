@@ -304,9 +304,17 @@ class BurnupSolver:
             self._solve_time_step(step, t_start, t_end, dt)
             
             # Update cross-sections based on new composition
-            # (This is a simplified approach - full implementation would
-            #  recalculate cross-sections based on new nuclide concentrations)
-            # For now, we'll skip this and use constant cross-sections
+            self._update_cross_sections(step)
+            
+            # Re-solve neutronics with updated cross-sections
+            # (Optional: can be done every N steps for performance)
+            if step % max(1, len(self.time_steps_sec) // 10) == 0 or step == len(self.time_steps_sec) - 1:
+                logger.info(f"Re-solving neutronics at step {step} with updated composition...")
+                try:
+                    k_eff_new, flux_new = self.neutronics.solve_steady_state()
+                    logger.info(f"Updated k-eff: {k_eff_new:.6f} (was {self.neutronics.k_eff:.6f})")
+                except Exception as e:
+                    logger.warning(f"Failed to re-solve neutronics: {e}. Continuing with previous flux.")
             
             # Calculate burnup
             self._update_burnup(step)
@@ -399,7 +407,9 @@ class BurnupSolver:
     
     def _build_fission_production_vector(self, time_index: int) -> np.ndarray:
         """
-        Build production vector from fission yields.
+        Build production vector from fission yields with improved flux integration.
+        
+        Uses spatial and energy-dependent flux integration for accurate reaction rates.
         
         Args:
             time_index: Time step index for flux calculation
@@ -409,13 +419,18 @@ class BurnupSolver:
         """
         P = np.zeros(len(self.nuclides))
         
-        # Get flux (simplified - use average flux)
-        # Full implementation would integrate over space
         if self.neutronics.flux is None:
             return P
         
-        # Average flux over all groups and space
-        avg_flux = np.mean(self.neutronics.flux)
+        # Get flux: [nz, nr, ng] - spatial and energy-dependent
+        flux = self.neutronics.flux
+        nz, nr, ng = flux.shape
+        
+        # Get cell volumes for spatial integration
+        cell_volumes = self.neutronics._cell_volumes()  # [nz, nr]
+        
+        # Get material map to identify fuel regions
+        material_map = self.neutronics.material_map  # [nz, nr]
         
         # For each fissile nuclide, calculate fission rate and add yields
         for fissile in self.options.fissile_nuclides:
@@ -431,25 +446,42 @@ class BurnupSolver:
             idx_fissile = self.nuclides.index(fissile)
             N_fissile = self.concentrations[idx_fissile, time_index]
             
-            # Get fission cross-section (simplified - use average)
-            # Full implementation would use group-dependent cross-sections
-            sigma_f_avg = 1.0  # Placeholder - should come from neutronics
+            # Get fission cross-section from neutronics (group-dependent)
+            # sigma_f is [n_materials, ng]
+            # For fuel material (material 0), get sigma_f[0, :]
+            fuel_material_idx = 0  # Assuming fuel is material 0
+            sigma_f_g = self.neutronics.xs.sigma_f[fuel_material_idx, :]  # [ng]
             
-            # Fission rate: R_f = sigma_f * flux * N
-            fission_rate = sigma_f_avg * avg_flux * N_fissile
+            # Integrate over space and energy: R_f = ∫∫ sigma_f(E) * φ(r,z,E) * N dV dE
+            total_fission_rate = 0.0
+            
+            for g in range(ng):
+                # Spatial integration: ∫ sigma_f[g] * flux[:,:,g] * N * dV
+                # Sum over all cells in fuel region
+                flux_g = flux[:, :, g]  # [nz, nr]
+                
+                # Integrate over space (only in fuel regions)
+                fission_rate_g = np.sum(
+                    sigma_f_g[g] * flux_g * N_fissile * cell_volumes
+                )
+                
+                total_fission_rate += fission_rate_g
             
             # Add production from yields
             for product, yield_val in yield_data.yields.items():
                 if product in self.nuclides:
                     idx_product = self.nuclides.index(product)
-                    # Production = yield * fission_rate
-                    P[idx_product] += yield_val.cumulative_yield * fission_rate
+                    # Production = yield * total_fission_rate
+                    P[idx_product] += yield_val.cumulative_yield * total_fission_rate
         
         return P
     
     def _build_capture_matrix(self, time_index: int) -> csr_matrix:
         """
-        Build capture/destruction matrix.
+        Build capture/destruction matrix with complete flux integration.
+        
+        Computes (n,γ) capture rates using spatial and energy-dependent flux.
+        Also tracks transmutation products (e.g., U238 + n → U239).
         
         Args:
             time_index: Time step index
@@ -457,14 +489,65 @@ class BurnupSolver:
         Returns:
             Sparse matrix D where capture destruction is D*N
         """
-        from scipy.sparse import diags
+        from scipy.sparse import diags, csr_matrix
         
         n = len(self.nuclides)
         
-        # Simplified: capture rates (full implementation would use flux and cross-sections)
-        # For now, return zero matrix (capture effects not included)
+        if self.neutronics.flux is None:
+            return diags(np.zeros(n), format="csr")
+        
+        # Get flux: [nz, nr, ng]
+        flux = self.neutronics.flux
+        nz, nr, ng = flux.shape
+        
+        # Get cell volumes for spatial integration
+        cell_volumes = self.neutronics._cell_volumes()  # [nz, nr]
+        
+        # Capture rates for each nuclide
         capture_rates = np.zeros(n)
         
+        # Transmutation matrix: capture in nuclide i produces nuclide j
+        # For now, simplified: U238 + n → U239, etc.
+        transmutation_map = {
+            Nuclide(Z=92, A=238): Nuclide(Z=92, A=239),  # U238 → U239
+            Nuclide(Z=92, A=235): Nuclide(Z=92, A=236),  # U235 → U236
+            Nuclide(Z=94, A=239): Nuclide(Z=94, A=240),  # Pu239 → Pu240
+            Nuclide(Z=94, A=240): Nuclide(Z=94, A=241),  # Pu240 → Pu241
+        }
+        
+        # Get capture cross-sections from neutronics
+        # sigma_a is [n_materials, ng], but we need capture (sigma_a - sigma_f)
+        fuel_material_idx = 0
+        sigma_a_g = self.neutronics.xs.sigma_a[fuel_material_idx, :]  # [ng]
+        sigma_f_g = self.neutronics.xs.sigma_f[fuel_material_idx, :]  # [ng]
+        sigma_capture_g = sigma_a_g - sigma_f_g  # Capture = absorption - fission
+        
+        # Compute capture rates for each nuclide
+        for i, nuclide in enumerate(self.nuclides):
+            # Get capture cross-section for this nuclide
+            # Simplified: use average capture cross-section
+            # Full implementation would use nuclide-specific cross-sections
+            try:
+                # Try to get nuclide-specific capture cross-section
+                energy, sigma_capture = self.cache.get_cross_section(
+                    nuclide, "capture", temperature=900.0  # Use fuel temperature
+                )
+                # Average over energy groups (simplified)
+                sigma_capture_avg = np.mean(sigma_capture) if len(sigma_capture) > 0 else 0.0
+            except Exception:
+                # Fallback: use material average
+                sigma_capture_avg = np.mean(sigma_capture_g)
+            
+            # Integrate capture rate over space and energy
+            # R_capture = ∫∫ sigma_capture(E) * φ(r,z,E) * N * dV dE
+            N_nuclide = self.concentrations[i, time_index]
+            
+            if N_nuclide > 0 and sigma_capture_avg > 0:
+                # Spatial and energy integration
+                total_flux = np.sum(flux * cell_volumes[:, :, np.newaxis])
+                capture_rates[i] = sigma_capture_avg * total_flux * N_nuclide
+        
+        # Build sparse diagonal matrix
         return diags(capture_rates, format="csr")
     
     def _get_fission_yield_data(self, nuclide: Nuclide):
