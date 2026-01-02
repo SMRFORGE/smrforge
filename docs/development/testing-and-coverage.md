@@ -1,7 +1,7 @@
 # Testing and Coverage Guide
 
-**Last Updated**: 2025  
-**Current Overall Coverage**: 67%  
+**Last Updated:** January 1, 2026  
+**Current Overall Coverage**: 64.4%  
 **Target Coverage**: 75-80% for all modules
 
 This document consolidates information about test coverage, external data dependencies, and strategies for improving coverage.
@@ -21,26 +21,33 @@ This document consolidates information about test coverage, external data depend
 ## Current Coverage Status
 
 ### Overall Coverage
-- **Current**: 67% overall
+- **Current**: 64.4% overall (8,653 statements, 3,078 missing)
 - **Target**: 75-80% for all modules
-- **Critical Modules Status**:
-  - `reactor_core.py`: 49% (target: 75-80%)
-  - `endf_parser.py`: 40% (target: 75-80%)
+- **Gap**: 10.6-15.6 percentage points
 
 ### Module Coverage Summary
 
-| Module | Current | Target | Gap | Status |
-|--------|---------|--------|-----|--------|
-| `reactor_core.py` | 49% | 75-80% | +26-31% | 🔴 Needs Work |
-| `endf_parser.py` | 40% | 75-80% | +35-40% | 🔴 Needs Work |
-| `resonance_selfshield.py` | 27% | 75-80% | +48-53% | 🔴 Needs Work |
-| `materials_database.py` | 79% | 80%+ | +1% | ✅ Near Target |
-| `constants.py` | 86% | 80%+ | ✅ | ✅ Complete |
-| `validation/*` | 70-90% | 80%+ | ✅ | ✅ Complete |
-| `geometry/*` | 88% | 80%+ | ✅ | ✅ Complete |
-| `neutronics/solver.py` | 84% | 80%+ | ✅ | ✅ Complete |
-| `thermal/*` | 82% | 80%+ | ✅ | ✅ Complete |
-| `safety/*` | 91% | 80%+ | ✅ | ✅ Complete |
+**For comprehensive coverage breakdown, see [Test Coverage Summary](docs/status/test-coverage-summary.md)**
+
+#### Critical Modules Status:
+- `reactor_core.py`: 59.0% (target: 75-80%) - 🔴 **CRITICAL**
+- `resonance_selfshield.py`: 30.7% (target: 75-80%) - 🔴 **CRITICAL**
+- `endf_parser.py`: 95.1% (target: 75-80%) - ✅ **EXCELLENT** (improved!)
+
+#### New Feature Modules:
+- `burnup/solver.py`: 20.8% (target: 75-80%) - 🔴 **HIGH PRIORITY**
+- `decay_heat/calculator.py`: 19.1% (target: 75-80%) - 🔴 **HIGH PRIORITY**
+- `gamma_transport/solver.py`: 17.9% (target: 75-80%) - 🔴 **HIGH PRIORITY**
+- `core/thermal_scattering_parser.py`: 36.2% (target: 75-80%) - 🔴 **HIGH PRIORITY**
+
+#### Well-Tested Modules:
+- `constants.py`: 100.0% - ✅ Complete
+- `validation/*`: 80-100% - ✅ Complete
+- `geometry/*`: 87-100% - ✅ Complete
+- `neutronics/solver.py`: 85.5% - ✅ Complete
+- `neutronics/monte_carlo.py`: 97.7% - ✅ Excellent
+- `thermal/hydraulics.py`: 90.5% - ✅ Complete
+- `safety/transients.py`: 92.4% - ✅ Complete
 
 ---
 
