@@ -1649,6 +1649,78 @@ class NuclearDataCache:
         
         return file_path
     
+    def _find_local_decay_file(self, nuclide: Nuclide, library: Library) -> Optional[Path]:
+        """
+        Find decay data file in local directory.
+        
+        Looks for files matching pattern: dec-ZZZ_Element_AAA.endf
+        in decay-version.VIII.1/ subdirectory.
+        
+        Args:
+            nuclide: Nuclide instance.
+            library: Library enum (currently only ENDF/B-VIII.1 supported).
+        
+        Returns:
+            Path to local decay file if found, None otherwise.
+        """
+        if not self.local_endf_dir:
+            return None
+        
+        # Look for decay-version.VIII.1 directory
+        decay_dir = self.local_endf_dir / "decay-version.VIII.1"
+        if not decay_dir.exists():
+            return None
+        
+        # Build expected filename: dec-ZZZ_Element_AAA.endf
+        from .constants import ELEMENT_SYMBOLS
+        symbol = ELEMENT_SYMBOLS[nuclide.Z]
+        z_str = f"{nuclide.Z:03d}"
+        a_str = f"{nuclide.A:03d}"
+        meta_suffix = f"m{nuclide.m}" if nuclide.m > 0 else ""
+        filename = f"dec-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
+        
+        decay_file = decay_dir / filename
+        if decay_file.exists() and self._validate_endf_file(decay_file):
+            return decay_file
+        
+        return None
+    
+    def _find_local_fission_yield_file(self, nuclide: Nuclide, library: Library) -> Optional[Path]:
+        """
+        Find fission yield data file in local directory.
+        
+        Looks for files matching pattern: nfy-ZZZ_Element_AAA.endf
+        in nfy-version.VIII.1/ subdirectory.
+        
+        Args:
+            nuclide: Nuclide instance (fissile nuclide).
+            library: Library enum (currently only ENDF/B-VIII.1 supported).
+        
+        Returns:
+            Path to local fission yield file if found, None otherwise.
+        """
+        if not self.local_endf_dir:
+            return None
+        
+        # Look for nfy-version.VIII.1 directory
+        nfy_dir = self.local_endf_dir / "nfy-version.VIII.1"
+        if not nfy_dir.exists():
+            return None
+        
+        # Build expected filename: nfy-ZZZ_Element_AAA.endf
+        from .constants import ELEMENT_SYMBOLS
+        symbol = ELEMENT_SYMBOLS[nuclide.Z]
+        z_str = f"{nuclide.Z:03d}"
+        a_str = f"{nuclide.A:03d}"
+        meta_suffix = f"m{nuclide.m}" if nuclide.m > 0 else ""
+        filename = f"nfy-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
+        
+        nfy_file = nfy_dir / filename
+        if nfy_file.exists() and self._validate_endf_file(nfy_file):
+            return nfy_file
+        
+        return None
+    
     @staticmethod
     def _get_library_fallback(library: Library) -> Optional[Library]:
         """
@@ -2337,11 +2409,39 @@ class DecayData:
             if data is unavailable.
         
         Note:
-            This is a placeholder implementation. A production version would
-            query ENDF decay data files (MF=8) or pre-computed decay tables.
+            Now uses ENDF decay data parser if available.
         """
-        # Use cached data or pre-computed tables
-        # Placeholder implementation
+        # Check cache first
+        if nuclide in self._decay_constants:
+            # We have decay constant, convert to half-life
+            lambda_decay = self._decay_constants[nuclide]
+            if lambda_decay > 0:
+                return np.log(2) / lambda_decay
+            return 1e20  # Stable
+        
+        # Try to load from ENDF file
+        try:
+            from .decay_parser import ENDFDecayParser
+            
+            # Try to find decay file
+            decay_file = self._cache._find_local_decay_file(nuclide, Library.ENDF_B_VIII_1)
+            if decay_file is None:
+                # Fallback to placeholder
+                return 1e10
+            
+            # Parse decay data
+            parser = ENDFDecayParser()
+            decay_data = parser.parse_file(decay_file)
+            
+            if decay_data:
+                # Cache the decay constant
+                self._decay_constants[nuclide] = decay_data.decay_constant
+                return decay_data.half_life
+        
+        except (ImportError, Exception) as e:
+            logger.debug(f"Could not load decay data for {nuclide.name}: {e}")
+        
+        # Fallback: placeholder
         return 1e10  # seconds
 
     def _get_daughters(self, parent: Nuclide) -> List[Tuple[Nuclide, float]]:
@@ -2356,13 +2456,90 @@ class DecayData:
             ratios sum to 1.0 for all decay modes.
         
         Note:
-            This is a placeholder implementation. A production version would
-            query ENDF decay data files (MF=8) to get decay modes and
-            branching ratios for each decay channel.
+            Now uses ENDF decay data parser if available.
         """
-        # Query decay data
-        # Placeholder implementation
-        return []
+        # Check if we have cached branching ratios
+        daughters_list = []
+        for (p, d), br in self._branching_ratios.items():
+            if p == parent:
+                daughters_list.append((d, br))
+        
+        if daughters_list:
+            return daughters_list
+        
+        # Try to load from ENDF file
+        try:
+            from .decay_parser import ENDFDecayParser
+            
+            # Try to find decay file
+            decay_file = self._cache._find_local_decay_file(parent, Library.ENDF_B_VIII_1)
+            if decay_file is None:
+                return []
+            
+            # Parse decay data
+            parser = ENDFDecayParser()
+            decay_data = parser.parse_file(decay_file)
+            
+            if decay_data:
+                # Cache branching ratios
+                for daughter, br in decay_data.daughters.items():
+                    self._branching_ratios[(parent, daughter)] = br
+                    daughters_list.append((daughter, br))
+        
+        except (ImportError, Exception) as e:
+            logger.debug(f"Could not load decay daughters for {parent.name}: {e}")
+        
+        return daughters_list
+
+
+def get_fission_yield_data(
+    nuclide: Nuclide,
+    cache: Optional[NuclearDataCache] = None,
+    library: Library = Library.ENDF_B_VIII_1,
+) -> Optional[Any]:
+    """
+    Get fission yield data for a fissile nuclide.
+    
+    Loads and parses fission product yield data from ENDF files.
+    Returns independent and cumulative yields for all fission products.
+    
+    Args:
+        nuclide: Fissile nuclide (e.g., U235, Pu239).
+        cache: Optional NuclearDataCache instance. If not provided, creates a new one.
+        library: Library version (currently only ENDF/B-VIII.1 supported).
+    
+    Returns:
+        FissionYieldData instance with yield information, or None if not found.
+    
+    Example:
+        >>> from smrforge.core.reactor_core import Nuclide, get_fission_yield_data
+        >>> u235 = Nuclide(Z=92, A=235)
+        >>> yield_data = get_fission_yield_data(u235)
+        >>> if yield_data:
+        ...     cs137 = Nuclide(Z=55, A=137)
+        ...     yield_cs137 = yield_data.get_yield(cs137)
+        ...     print(f"Cs-137 yield: {yield_cs137:.4f}")
+    """
+    if cache is None:
+        cache = NuclearDataCache()
+    
+    try:
+        from .fission_yield_parser import ENDFFissionYieldParser, FissionYieldData
+        
+        # Find fission yield file
+        nfy_file = cache._find_local_fission_yield_file(nuclide, library)
+        if nfy_file is None:
+            logger.debug(f"Fission yield file not found for {nuclide.name}")
+            return None
+        
+        # Parse yield data
+        parser = ENDFFissionYieldParser()
+        yield_data = parser.parse_file(nfy_file)
+        
+        return yield_data
+    except (ImportError, Exception) as e:
+        logger.warning(f"Could not load fission yield data for {nuclide.name}: {e}")
+        return None
 
 
 # Example usage
