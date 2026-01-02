@@ -78,6 +78,31 @@ except ImportError as e:
     )
     _CONVENIENCE_AVAILABLE = False
 
+# Additional convenience utilities
+try:
+    from smrforge.convenience_utils import (
+        create_simple_core,
+        create_simple_solver,
+        create_simple_xs_data,
+        create_simple_burnup_solver,
+        create_nuclide_list,
+        get_nuclide,
+        get_material,
+        list_materials,
+        quick_burnup_calculation,
+        quick_decay_heat,
+        quick_keff_calculation,
+        quick_mesh_extraction,
+        quick_plot_core,
+        quick_plot_mesh,
+        run_complete_analysis,
+    )
+
+    _CONVENIENCE_UTILS_AVAILABLE = True
+except ImportError as e:
+    _CONVENIENCE_UTILS_AVAILABLE = False
+    # Don't warn - these are optional convenience functions
+
 __all__ = [
     "__version__",
     "__version_info__",
@@ -115,3 +140,62 @@ if _CONVENIENCE_AVAILABLE:
             "SimpleReactor",
         ]
     )
+
+# Add convenience utilities if available
+if _CONVENIENCE_UTILS_AVAILABLE:
+    __all__.extend(
+        [
+            "create_simple_core",
+            "create_simple_solver",
+            "create_simple_xs_data",
+            "create_simple_burnup_solver",
+            "create_nuclide_list",
+            "get_nuclide",
+            "get_material",
+            "list_materials",
+            "quick_burnup_calculation",
+            "quick_decay_heat",
+            "quick_keff_calculation",
+            "quick_mesh_extraction",
+            "quick_plot_core",
+            "quick_plot_mesh",
+            "run_complete_analysis",
+        ]
+    )
+
+# Decay heat and gamma transport (always available)
+try:
+    from smrforge.decay_heat import DecayHeatCalculator, DecayHeatResult
+    from smrforge.gamma_transport import GammaTransportSolver, GammaTransportOptions
+
+    __all__.extend(
+        [
+            "DecayHeatCalculator",
+            "DecayHeatResult",
+            "GammaTransportSolver",
+            "GammaTransportOptions",
+        ]
+    )
+except ImportError:
+    pass
+
+# Photon and gamma production parsers (always available)
+try:
+    from smrforge.core.photon_parser import ENDFPhotonParser, PhotonCrossSection
+    from smrforge.core.gamma_production_parser import (
+        ENDFGammaProductionParser,
+        GammaProductionData,
+        GammaProductionSpectrum,
+    )
+
+    __all__.extend(
+        [
+            "ENDFPhotonParser",
+            "PhotonCrossSection",
+            "ENDFGammaProductionParser",
+            "GammaProductionData",
+            "GammaProductionSpectrum",
+        ]
+    )
+except ImportError:
+    pass

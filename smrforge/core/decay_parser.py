@@ -29,6 +29,33 @@ class DecayMode:
 
 
 @dataclass
+class GammaSpectrum:
+    """Gamma-ray emission spectrum."""
+    
+    energy: np.ndarray  # Gamma energy [MeV]
+    intensity: np.ndarray  # Emission intensity [photons/decay]
+    total_energy: float  # Total gamma energy per decay [MeV]
+    
+    def get_energy_spectrum(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Get energy spectrum (energy, intensity)."""
+        return self.energy, self.intensity
+
+
+@dataclass
+class BetaSpectrum:
+    """Beta emission spectrum."""
+    
+    energy: np.ndarray  # Beta energy [MeV]
+    intensity: np.ndarray  # Emission intensity [betas/decay]
+    endpoint_energy: float  # Maximum beta energy [MeV]
+    average_energy: float  # Average beta energy [MeV]
+    
+    def get_energy_spectrum(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Get energy spectrum (energy, intensity)."""
+        return self.energy, self.intensity
+
+
+@dataclass
 class DecayData:
     """Decay data for a single nuclide."""
     
@@ -38,6 +65,8 @@ class DecayData:
     is_stable: bool  # True if nuclide is stable
     decay_modes: List[DecayMode]  # List of decay modes
     daughters: Dict[Nuclide, float]  # Map daughter -> total branching ratio
+    gamma_spectrum: Optional[GammaSpectrum] = None  # Gamma-ray emission spectrum
+    beta_spectrum: Optional[BetaSpectrum] = None  # Beta emission spectrum
     
     def __post_init__(self):
         """Calculate decay constant from half-life."""
@@ -46,6 +75,18 @@ class DecayData:
         else:
             self.decay_constant = 0.0
             self.is_stable = True
+    
+    def get_total_gamma_energy(self) -> float:
+        """Get total gamma energy per decay [MeV]."""
+        if self.gamma_spectrum:
+            return self.gamma_spectrum.total_energy
+        return 0.0
+    
+    def get_total_beta_energy(self) -> float:
+        """Get total beta energy per decay [MeV]."""
+        if self.beta_spectrum:
+            return self.beta_spectrum.average_energy
+        return 0.0
 
 
 class ENDFDecayParser:
@@ -110,6 +151,12 @@ class ENDFDecayParser:
             decay_modes = self._parse_decay_modes(lines, nuclide)
             daughters = self._build_daughters_dict(decay_modes)
             
+            # Parse gamma-ray spectrum (MF=8, MT=460)
+            gamma_spectrum = self._parse_gamma_spectrum(lines)
+            
+            # Parse beta spectrum (MF=8, MT=455)
+            beta_spectrum = self._parse_beta_spectrum(lines)
+            
             # Determine if stable (very long half-life or no decay modes)
             is_stable = half_life > 1e20 or len(decay_modes) == 0
             
@@ -120,6 +167,8 @@ class ENDFDecayParser:
                 is_stable=is_stable,
                 decay_modes=decay_modes,
                 daughters=daughters,
+                gamma_spectrum=gamma_spectrum,
+                beta_spectrum=beta_spectrum,
             )
         except Exception as e:
             # Log error but return None to allow graceful fallback

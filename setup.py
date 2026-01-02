@@ -57,6 +57,7 @@ setup(
         ],
         "viz": [
             "plotly>=5.0",
+            "pyvista>=0.40.0",
             "dash>=2.0",
         ],
         "nuclear-data": [
@@ -72,6 +73,7 @@ setup(
             # Install all optional dependencies
             "sandy",
             "plotly>=5.0",
+            "pyvista>=0.40.0",
             "dash>=2.0",
             "SALib>=1.4.0",
             "seaborn>=0.12.0",

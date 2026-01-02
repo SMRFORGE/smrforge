@@ -453,19 +453,16 @@ class BurnupSolver:
             sigma_f_g = self.neutronics.xs.sigma_f[fuel_material_idx, :]  # [ng]
             
             # Integrate over space and energy: R_f = ∫∫ sigma_f(E) * φ(r,z,E) * N dV dE
-            total_fission_rate = 0.0
-            
-            for g in range(ng):
-                # Spatial integration: ∫ sigma_f[g] * flux[:,:,g] * N * dV
-                # Sum over all cells in fuel region
-                flux_g = flux[:, :, g]  # [nz, nr]
-                
-                # Integrate over space (only in fuel regions)
-                fission_rate_g = np.sum(
-                    sigma_f_g[g] * flux_g * N_fissile * cell_volumes
-                )
-                
-                total_fission_rate += fission_rate_g
+            # Optimized: vectorize over energy groups
+            # flux is [nz, nr, ng], sigma_f_g is [ng]
+            # Result: [nz, nr, ng] -> sum over all dimensions
+            fission_rate_per_group = (
+                sigma_f_g[np.newaxis, np.newaxis, :] *  # [1, 1, ng]
+                flux *  # [nz, nr, ng]
+                N_fissile *  # scalar
+                cell_volumes[:, :, np.newaxis]  # [nz, nr, 1]
+            )
+            total_fission_rate = np.sum(fission_rate_per_group)
             
             # Add production from yields
             for product, yield_val in yield_data.yields.items():
@@ -540,10 +537,13 @@ class BurnupSolver:
             
             # Integrate capture rate over space and energy
             # R_capture = ∫∫ sigma_capture(E) * φ(r,z,E) * N * dV dE
+            # Optimized: vectorize spatial and energy integration
             N_nuclide = self.concentrations[i, time_index]
             
             if N_nuclide > 0 and sigma_capture_avg > 0:
-                # Spatial and energy integration
+                # Spatial and energy integration (vectorized)
+                # flux is [nz, nr, ng], cell_volumes is [nz, nr]
+                # Sum over all dimensions: total flux integrated over space and energy
                 total_flux = np.sum(flux * cell_volumes[:, :, np.newaxis])
                 capture_rates[i] = sigma_capture_avg * total_flux * N_nuclide
         

@@ -188,6 +188,7 @@ class NuclearDataCache:
         self.local_endf_dir = Path(local_endf_dir) if local_endf_dir else None
         self._local_file_index: Optional[Dict[str, Path]] = None  # Lazy-loaded index
         self._tsl_file_index: Optional[Dict[str, Path]] = None  # TSL material name -> file path
+        self._photon_file_index: Optional[Dict[str, Path]] = None  # Element symbol -> file path
         
         # Build index on initialization if local directory provided (Phase 3 optimization)
         if self.local_endf_dir and self.local_endf_dir.exists():
@@ -1884,6 +1885,200 @@ class NuclearDataCache:
             return nfy_file
         
         return None
+    
+    def _find_local_photon_file(self, element: str, library: Library = Library.ENDF_B_VIII_1) -> Optional[Path]:
+        """
+        Find photon atomic data file in local directory.
+        
+        Looks for files matching pattern: p-ZZZ_Element.endf or p-ZZZ_Element_AAA.endf
+        in photoat-version.VIII.1/ subdirectory.
+        
+        Args:
+            element: Element symbol (e.g., "H", "U", "Fe").
+            library: Library enum (currently only ENDF/B-VIII.1 supported).
+        
+        Returns:
+            Path to local photon file if found, None otherwise.
+        """
+        if not self.local_endf_dir:
+            return None
+        
+        # Look for photoat-version.VIII.1 directory
+        photoat_dir = self.local_endf_dir / "photoat-version.VIII.1"
+        if not photoat_dir.exists():
+            return None
+        
+        # Build index if not already built
+        index = self._build_photon_file_index()
+        
+        # Look up element in index (case-insensitive)
+        element_lower = element.lower()
+        return index.get(element_lower)
+    
+    def _build_photon_file_index(self) -> Dict[str, Path]:
+        """
+        Build index of available photon atomic data files.
+        
+        Scans photoat-version.VIII.1/ directory for photon files and
+        indexes them by element symbol.
+        
+        Returns:
+            Dictionary mapping element symbols (e.g., "h", "u") to file paths.
+        """
+        if self._photon_file_index is not None:
+            return self._photon_file_index
+        
+        index: Dict[str, Path] = {}
+        
+        if not self.local_endf_dir or not self.local_endf_dir.exists():
+            self._photon_file_index = index
+            return index
+        
+        # Look for photoat-version.VIII.1 directory
+        photoat_dir = self.local_endf_dir / "photoat-version.VIII.1"
+        if not photoat_dir.exists():
+            self._photon_file_index = index
+            return index
+        
+        # Scan for photon files (p-*.endf)
+        photon_patterns = ["p-*.endf", "p-*.ENDF", "p-*.Endf"]
+        all_photon_files = []
+        for pattern in photon_patterns:
+            all_photon_files.extend(photoat_dir.glob(pattern))
+        
+        # Remove duplicates
+        unique_files = []
+        seen_paths = set()
+        for photon_file in all_photon_files:
+            if photon_file not in seen_paths:
+                seen_paths.add(photon_file)
+                unique_files.append(photon_file)
+        
+        # Parse element from filenames
+        from .photon_parser import ENDFPhotonParser
+        parser = ENDFPhotonParser()
+        
+        for photon_file in unique_files:
+            if not self._validate_endf_file(photon_file):
+                continue
+            
+            # Extract element from filename
+            element_info = parser._parse_filename(photon_file.name)
+            if element_info is None:
+                continue
+            
+            element, Z = element_info
+            element_lower = element.lower()
+            
+            # Check if we already have this element (first file wins)
+            if element_lower not in index:
+                index[element_lower] = photon_file
+                logger.debug(f"Found photon file for '{element}' (Z={Z}) at {photon_file.relative_to(self.local_endf_dir)}")
+            else:
+                logger.debug(f"Skipping duplicate photon file for '{element}': {photon_file.name}")
+        
+        self._photon_file_index = index
+        logger.info(f"Built photon file index: {len(index)} elements found in {photoat_dir}")
+        return index
+    
+    def list_available_photon_elements(self) -> List[str]:
+        """
+        List all available photon atomic data elements.
+        
+        Returns:
+            List of element symbols (e.g., ["H", "U", "Fe"]).
+        """
+        index = self._build_photon_file_index()
+        return list(index.keys())
+    
+    def get_photon_file(self, element: str) -> Optional[Path]:
+        """
+        Get photon file path for an element (uses index for fast lookup).
+        
+        Args:
+            element: Element symbol (e.g., "H", "U", "Fe").
+        
+        Returns:
+            Path to photon file if found, None otherwise.
+        """
+        index = self._build_photon_file_index()
+        element_lower = element.lower()
+        return index.get(element_lower)
+    
+    def get_photon_cross_section(self, element: str, energy: Optional[float] = None) -> Optional["PhotonCrossSection"]:
+        """
+        Get photon cross-section data for an element.
+        
+        Args:
+            element: Element symbol (e.g., "H", "U", "Fe").
+            energy: Optional energy [MeV] for interpolation. If None, returns full data.
+        
+        Returns:
+            PhotonCrossSection instance or None if not found.
+        """
+        photon_file = self.get_photon_file(element)
+        if photon_file is None:
+            return None
+        
+        from .photon_parser import ENDFPhotonParser
+        parser = ENDFPhotonParser()
+        photon_data = parser.parse_file(photon_file)
+        
+        return photon_data
+    
+    def _find_local_gamma_production_file(self, nuclide: Nuclide, library: Library = Library.ENDF_B_VIII_1) -> Optional[Path]:
+        """
+        Find gamma production data file in local directory.
+        
+        Looks for files matching pattern: gammas-ZZZ_Element_AAA.endf
+        in gammas-version.VIII.1/ subdirectory.
+        
+        Args:
+            nuclide: Nuclide instance.
+            library: Library enum (currently only ENDF/B-VIII.1 supported).
+        
+        Returns:
+            Path to local gamma production file if found, None otherwise.
+        """
+        if not self.local_endf_dir:
+            return None
+        
+        # Look for gammas-version.VIII.1 directory
+        gammas_dir = self.local_endf_dir / "gammas-version.VIII.1"
+        if not gammas_dir.exists():
+            return None
+        
+        # Build expected filename: gammas-ZZZ_Element_AAA.endf
+        from .constants import ELEMENT_SYMBOLS
+        symbol = ELEMENT_SYMBOLS[nuclide.Z]
+        z_str = f"{nuclide.Z:03d}"
+        a_str = f"{nuclide.A:03d}"
+        meta_suffix = f"m{nuclide.m}" if nuclide.m > 0 else ""
+        filename = f"gammas-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
+        
+        gamma_file = gammas_dir / filename
+        if gamma_file.exists() and self._validate_endf_file(gamma_file):
+            return gamma_file
+        
+        return None
+    
+    def get_gamma_production_data(self, nuclide: Nuclide) -> Optional["GammaProductionData"]:
+        """
+        Get gamma production data for a nuclide.
+        
+        Args:
+            nuclide: Nuclide instance.
+        
+        Returns:
+            GammaProductionData instance or None if not found.
+        """
+        gamma_file = self._find_local_gamma_production_file(nuclide, Library.ENDF_B_VIII_1)
+        if gamma_file is None:
+            return None
+        
+        from .gamma_production_parser import ENDFGammaProductionParser
+        parser = ENDFGammaProductionParser()
+        return parser.parse_file(gamma_file)
     
     @staticmethod
     def _get_library_fallback(library: Library) -> Optional[Library]:

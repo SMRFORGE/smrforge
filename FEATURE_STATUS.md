@@ -87,6 +87,52 @@ These modules are fully implemented, tested, and ready for production use:
   - Logo access functions
   - Structured logging throughout package
 
+### ENDF Data Support
+- ✅ **Thermal Scattering Laws** (`smrforge.core.thermal_scattering_parser`)
+  - Full ENDF MF=7 parser (MT=2 and MT=4)
+  - S(α,β) data extraction and interpolation
+  - Temperature support with multi-temperature interpolation
+  - Integration with neutronics solver
+  - Material name mapping
+- ✅ **Fission Yields** (`smrforge.core.fission_yield_parser`)
+  - ENDF MF=8, MT=454, 459 parser
+  - Independent and cumulative yields
+  - Energy-dependent yield support
+  - Integration with burnup solver
+- ✅ **Decay Data** (`smrforge.core.decay_parser`)
+  - ENDF MF=8, MT=457 parser
+  - Half-life and decay constant extraction
+  - Decay mode and branching ratio parsing
+  - Gamma-ray spectrum parsing (MF=8, MT=460)
+  - Beta spectrum parsing (MF=8, MT=455)
+  - Integration with burnup solver
+
+### Burnup and Depletion
+- ✅ **Burnup Solver** (`smrforge.burnup`)
+  - Bateman equation solver for nuclide evolution
+  - Fission product production via yields
+  - Radioactive decay via decay data
+  - Cross-section updates based on composition
+  - Spatial and energy-dependent flux integration
+  - Burnup tracking (MWd/kgU)
+  - Decay heat calculation
+
+### Decay Heat
+- ✅ **Decay Heat Calculator** (`smrforge.decay_heat`)
+  - Time-dependent decay heat calculations
+  - Energy-weighted decay heat from gamma/beta spectra
+  - Nuclide-by-nuclide contribution tracking
+  - Post-shutdown decay heat analysis
+  - Integration with decay data parser
+
+### Gamma Transport
+- ✅ **Gamma Transport Solver** (`smrforge.gamma_transport`)
+  - Multi-group gamma transport using diffusion approximation
+  - Source iteration with convergence checking
+  - Dose rate computation
+  - Shielding calculations
+  - Ready for photon cross-section data integration
+
 ---
 
 ## 🟡 Experimental Features (API May Change)

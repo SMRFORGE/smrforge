@@ -67,6 +67,33 @@ try:
 except ImportError:
     _MESH_GENERATION_AVAILABLE = False
 
+# Import 3D mesh support if available
+try:
+    from smrforge.geometry.mesh_3d import (
+        Mesh3D,
+        Surface,
+        combine_meshes,
+        extract_cylinder_mesh,
+        extract_hexagonal_prism_mesh,
+        extract_sphere_mesh,
+    )
+    from smrforge.geometry.mesh_extraction import (
+        add_flux_to_mesh,
+        add_power_to_mesh,
+        extract_block_mesh,
+        extract_coolant_channel_mesh,
+        extract_core_surface_mesh,
+        extract_core_volume_mesh,
+        extract_fuel_channel_mesh,
+        extract_material_boundaries,
+        extract_pebble_bed_volume_mesh,
+        extract_pebble_mesh,
+    )
+
+    _MESH_3D_AVAILABLE = True
+except ImportError:
+    _MESH_3D_AVAILABLE = False
+
 __all__ = []
 if _GEOMETRY_AVAILABLE:
     __all__.extend(
@@ -111,5 +138,27 @@ if _MESH_GENERATION_AVAILABLE:
             "MeshQuality",
             "MeshType",
             "compute_mesh_gradient",
+        ]
+    )
+
+if _MESH_3D_AVAILABLE:
+    __all__.extend(
+        [
+            "Mesh3D",
+            "Surface",
+            "combine_meshes",
+            "extract_cylinder_mesh",
+            "extract_hexagonal_prism_mesh",
+            "extract_sphere_mesh",
+            "extract_block_mesh",
+            "extract_fuel_channel_mesh",
+            "extract_coolant_channel_mesh",
+            "extract_pebble_mesh",
+            "extract_core_surface_mesh",
+            "extract_core_volume_mesh",
+            "extract_pebble_bed_volume_mesh",
+            "extract_material_boundaries",
+            "add_flux_to_mesh",
+            "add_power_to_mesh",
         ]
     )
