@@ -1,0 +1,207 @@
+# SMRForge Documentation Index
+
+**Last Updated:** January 1, 2026
+
+This document provides a comprehensive index of all SMRForge documentation files.
+
+**Note:** Documentation has been reorganized into a structured directory layout. See [Documentation Reorganization Plan](DOCUMENTATION_REORGANIZATION_PLAN.md) for details.
+
+---
+
+## 📚 Core Documentation (Root)
+
+### Essential Files
+- **[README.md](README.md)** - Main project overview and quick start
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guidelines for contributing
+- **[LICENSE](LICENSE)** - License information
+
+---
+
+## 📖 User Guides (`docs/guides/`)
+
+### Getting Started
+- **[Installation Guide](docs/guides/installation.md)** - Installation instructions for all platforms
+- **[Tutorial](docs/guides/tutorial.md)** - Step-by-step tutorial for beginners
+- **[Usage Guide](docs/guides/usage.md)** - Usage guide with examples
+
+### Additional Guides
+- **[Docker Guide](docs/guides/docker.md)** - Docker usage and troubleshooting
+- **[Help System](docs/guides/help-system.md)** - Interactive help system documentation
+
+---
+
+## 🔧 Technical Documentation (`docs/technical/`)
+
+### Nuclear Data
+- **[ENDF Documentation](docs/technical/endf-documentation.md)** - Complete ENDF file usage guide
+- **[Nuclear Data Backends](docs/technical/nuclear-data-backends.md)** - Nuclear data backend alternatives
+- **[ENDF Codebase Improvements](docs/technical/endf-codebase-improvements.md)** - ENDF-related codebase improvements
+- **[ENDF Improvements Implemented](docs/technical/endf-improvements-implemented.md)** - Implemented ENDF improvements
+
+### System Documentation
+- **[Logging Usage](docs/technical/logging-usage.md)** - Logging system usage
+- **[Coupling Reduction](docs/technical/coupling-reduction.md)** - Architecture and coupling reduction notes
+
+---
+
+## 💻 Development Documentation (`docs/development/`)
+
+### Development Guidelines
+- **[Code Style Guide](docs/development/code-style.md)** - Code formatting and style guide
+- **[Release Process](docs/development/release-process.md)** - Release procedures
+- **[Testing and Coverage](docs/development/testing-and-coverage.md)** - Testing documentation
+- **[Coverage Exclusions](docs/development/coverage-exclusions.md)** - Test coverage exclusions
+- **[Coverage Inventory](docs/development/coverage-inventory.md)** - Coverage inventory
+
+---
+
+## 🗺️ Roadmaps (`docs/roadmaps/`)
+
+### Planning Documents
+- **[Development Roadmap](docs/roadmaps/development-roadmap.md)** - Main development roadmap and priorities
+- **[Next Steps](docs/roadmaps/next-steps.md)** - Immediate next steps and recommendations
+- **[Next Work Options](docs/roadmaps/next-work-options.md)** - Options for future work
+- **[Implementation Priority Analysis](docs/roadmaps/implementation-priority-analysis.md)** - Priority analysis
+- **[Optimization Suggestions](docs/roadmaps/optimization-suggestions.md)** - Optimization suggestions
+
+---
+
+## 📊 Status Documents (`docs/status/`)
+
+### Status Reports
+- **[Feature Status](docs/status/feature-status.md)** - Implementation status of all features
+- **[Production Readiness Status](docs/status/production-readiness-status.md)** - Production readiness assessment
+- **[Missing Features Analysis](docs/status/missing-features-analysis.md)** - Analysis of missing features
+- **[Test Coverage Summary](docs/status/test-coverage-summary.md)** - Test coverage analysis
+- **[SMRForge Fact Sheet](docs/status/smrforge-fact-sheet.md)** - Comprehensive feature overview
+
+---
+
+## 🚀 Implementation Summaries (`docs/implementation/`)
+
+### Recent Implementations
+- **[Help System](docs/implementation/help-system.md)** - Help system implementation
+- **[Optimization](docs/implementation/optimization.md)** - Performance optimizations
+- **[Convenience Methods](docs/implementation/convenience-methods.md)** - Convenience functions
+- **[Visualization](docs/implementation/visualization.md)** - 3D visualization implementation
+- **[Mesh 3D](docs/implementation/mesh-3d.md)** - 3D mesh support
+- **[Photon Gamma Integration](docs/implementation/photon-gamma-integration.md)** - Photon and gamma transport
+- **[Thermal Scattering](docs/implementation/thermal-scattering.md)** - Thermal scattering laws
+- **[Burnup Solver](docs/implementation/burnup-solver.md)** - Burnup solver implementation
+- **[Fission Yields Decay](docs/implementation/fission-yields-decay.md)** - Fission yields and decay data
+
+### Complete Summaries
+- **[Complete Summary](docs/implementation/complete-summary.md)** - Complete implementation summary
+- **[Status High Medium](docs/implementation/status-high-medium.md)** - High/medium priority status
+- **[Options 1 2 4 6](docs/implementation/options-1-2-4-6.md)** - Options 1, 2, 4, 6 summary
+- **[Feature Implementation Summary](docs/implementation/feature-implementation-summary.md)** - Feature implementation overview
+- **[Next Steps Complete](docs/implementation/next-steps-complete.md)** - Next steps completion
+
+See [Implementation Summaries Index](docs/implementation/README.md) for a complete list.
+
+---
+
+## ✅ Validation Documents (`docs/validation/`)
+
+- **[Validation Summary](docs/validation/validation-summary.md)** - Validation framework summary
+- **[ENDF Workflow Validation](docs/validation/endf-workflow-validation.md)** - ENDF workflow validation
+- **[ENDF File Types Analysis](docs/validation/endf-file-types-analysis.md)** - Analysis of ENDF-B-VIII.1 file types
+
+---
+
+## 📐 Visualization Documents (`docs/visualization/`)
+
+- **[Readiness Assessment](docs/visualization/readiness-assessment.md)** - Visualization readiness
+- **[Advanced Requirements](docs/visualization/advanced-requirements.md)** - Advanced visualization requirements
+
+---
+
+## 📦 Archive (`docs/archive/`)
+
+### Historical Documents
+- **[Phase 1 Completion Report](docs/archive/phase1-completion-report.md)** - Phase 1 completion
+- **[Phase 2 Completion Report](docs/archive/phase2-completion-report.md)** - Phase 2 completion
+- **[Phase 3 Completion Report](docs/archive/phase3-completion-report.md)** - Phase 3 completion
+- **[Documentation Consolidation Summary](docs/archive/documentation-consolidation-summary.md)** - Documentation consolidation history
+- **[Documentation Update 2026-01-01](docs/archive/documentation-update-2026-01-01.md)** - Documentation update summary
+
+---
+
+## 📝 Documentation Management
+
+- **[Documentation Reorganization Plan](DOCUMENTATION_REORGANIZATION_PLAN.md)** - Reorganization plan and structure
+- **[Documentation README](docs/README.md)** - Documentation directory overview
+
+---
+
+## 📅 Document Update Policy
+
+**All documentation files should include:**
+- **Date:** Original creation date
+- **Last Updated:** Most recent update date (format: Month Day, Year)
+
+**When updating documents:**
+1. Update the "Last Updated" field to the current date
+2. Keep the original "Date" field unchanged
+3. Document significant changes in the document or CHANGELOG.md
+
+---
+
+## 🔗 External Documentation
+
+### Sphinx Documentation
+- Located in `docs/` directory (Sphinx structure)
+- Generated API reference
+- See `docs/README.md` for generation instructions
+
+### Online Resources
+- ReadTheDocs: [smrforge.readthedocs.io](https://smrforge.readthedocs.io)
+- GitHub Pages: (if configured)
+
+---
+
+## 📊 Documentation Statistics
+
+- **Total Documentation Files:** ~50+ markdown files
+- **Core Documentation:** 4 files (root)
+- **User Guides:** 5 files
+- **Technical Documentation:** 6 files
+- **Development Documentation:** 5 files
+- **Roadmaps:** 5 files
+- **Status Documents:** 5 files
+- **Implementation Summaries:** 14+ files
+- **Validation Documents:** 3 files
+- **Visualization Documents:** 2 files
+- **Archive:** 5+ files
+
+---
+
+## 🎯 Quick Reference
+
+### For New Users
+1. Start with [README.md](README.md)
+2. Follow [Installation Guide](docs/guides/installation.md)
+3. Read [Tutorial](docs/guides/tutorial.md)
+4. Explore [Usage Guide](docs/guides/usage.md)
+
+### For Developers
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md)
+2. Follow [Code Style Guide](docs/development/code-style.md)
+3. Check [Development Roadmap](docs/roadmaps/development-roadmap.md)
+4. Review [Feature Status](docs/status/feature-status.md)
+
+### For Contributors
+1. Review [CONTRIBUTING.md](CONTRIBUTING.md)
+2. Check [Release Process](docs/development/release-process.md)
+3. See [CHANGELOG.md](CHANGELOG.md) for recent changes
+
+---
+
+## 📝 Notes
+
+- All dates in documentation use format: **Month Day, Year** (e.g., January 1, 2026)
+- Documents are updated when features are implemented or information changes
+- Historical implementation summaries are kept in `docs/archive/` for reference
+- For the most current status, see [Feature Status](docs/status/feature-status.md) and [Development Roadmap](docs/roadmaps/development-roadmap.md)
+- Documentation structure follows the organization plan in [Documentation Reorganization Plan](DOCUMENTATION_REORGANIZATION_PLAN.md)

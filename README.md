@@ -51,7 +51,7 @@ These Rust implementations provide significant performance improvements without 
 - **Control Systems**: Stub module (control rod geometry available via `geometry.control_rods`)
 - **Economics**: Stub module
 
-**See `FEATURE_STATUS.md` for detailed status of all features.**
+**See `docs/status/feature-status.md` for detailed status of all features.**
 
 ## Installation
 
@@ -103,7 +103,7 @@ cd smrforge
 uv pip install -e . --python 3.10
 ```
 
-**Note**: This library works with standard Python installations using pip, uv, or conda. See [`INSTALLATION.md`](INSTALLATION.md) for more details.
+**Note**: This library works with standard Python installations using pip, uv, or conda. See [`docs/guides/installation.md`](docs/guides/installation.md) for more details.
 
 #### Using Docker
 
@@ -119,7 +119,7 @@ docker compose up -d smrforge
 docker compose exec smrforge python -c "import smrforge as smr; print(smr.__version__)"
 ```
 
-For detailed Docker usage and troubleshooting, see [`DOCKER.md`](DOCKER.md).
+For detailed Docker usage and troubleshooting, see [`docs/guides/docker.md`](docs/guides/docker.md).
 
 ## Quick Start
 
@@ -142,7 +142,7 @@ print(f"Power: {results['power_thermal_mw']:.1f} MWth")
 
 **IMPORTANT**: ENDF files must be downloaded and set up manually before use.
 
-**📖 See [`ENDF_DOCUMENTATION.md`](ENDF_DOCUMENTATION.md) for complete documentation:**
+**📖 See [`docs/technical/endf-documentation.md`](docs/technical/endf-documentation.md) for complete documentation:**
 - Quick start guide
 - Downloading ENDF files from NNDC/IAEA
 - Setting up files for local Python scripts
@@ -159,7 +159,7 @@ print(f"Power: {results['power_thermal_mw']:.1f} MWth")
    ```
    Or: `smrforge-setup-endf`
 
-2. **Manual setup** (see [`ENDF_DOCUMENTATION.md`](ENDF_DOCUMENTATION.md)):
+2. **Manual setup** (see [`docs/technical/endf-documentation.md`](docs/technical/endf-documentation.md)):
    - Download ENDF/B-VIII.1 from https://www.nndc.bnl.gov/endf/
    - Extract to a directory
    - Point `NuclearDataCache` to the directory
@@ -189,9 +189,9 @@ k_eff, flux = solver.solve_steady_state()
 power_dist = solver.compute_power_distribution(total_power=10e6)
 ```
 
-See [`USAGE.md`](USAGE.md) for more examples and the [`examples/`](examples/) directory for complete scripts.
+See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`examples/`](examples/) directory for complete scripts.
 
-**New to SMRForge?** Start with the **[Tutorial](TUTORIAL.md)** - a step-by-step guide for beginners!
+**New to SMRForge?** Start with the **[Tutorial](docs/guides/tutorial.md)** - a step-by-step guide for beginners!
 
 ## Documentation
 
@@ -211,12 +211,13 @@ See [`USAGE.md`](USAGE.md) for more examples and the [`examples/`](examples/) di
 
 ### Additional Resources
 
-- **Tutorial**: See [`TUTORIAL.md`](TUTORIAL.md) for a beginner-friendly step-by-step guide
-- **ENDF Setup**: See [`ENDF_DOCUMENTATION.md`](ENDF_DOCUMENTATION.md) for complete ENDF data setup guide (required before use)
-- **Installation**: See [`INSTALLATION.md`](INSTALLATION.md) for detailed installation instructions
-- **Usage Guide**: See [`USAGE.md`](USAGE.md) for usage examples and quick reference
-- **Docker**: See [`DOCKER.md`](DOCKER.md) for Docker usage and troubleshooting
-- **Feature Status**: See [`FEATURE_STATUS.md`](FEATURE_STATUS.md) for module status
+- **📚 Documentation Index**: See [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) for a complete index of all documentation
+- **Tutorial**: See [`docs/guides/tutorial.md`](docs/guides/tutorial.md) for a beginner-friendly step-by-step guide
+- **ENDF Setup**: See [`docs/technical/endf-documentation.md`](docs/technical/endf-documentation.md) for complete ENDF data setup guide (required before use)
+- **Installation**: See [`docs/guides/installation.md`](docs/guides/installation.md) for detailed installation instructions
+- **Usage Guide**: See [`docs/guides/usage.md`](docs/guides/usage.md) for usage examples and quick reference
+- **Docker**: See [`docs/guides/docker.md`](docs/guides/docker.md) for Docker usage and troubleshooting
+- **Feature Status**: See [`docs/status/feature-status.md`](docs/status/feature-status.md) for module status
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development guidelines
 - **Changelog**: See [`CHANGELOG.md`](CHANGELOG.md) for version history
 

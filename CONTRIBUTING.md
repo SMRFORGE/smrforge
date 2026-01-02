@@ -1,5 +1,7 @@
 # Contributing to SMRForge
 
+**Last Updated:** January 1, 2026
+
 Thank you for your interest in contributing to SMRForge! This document provides guidelines and instructions for contributing.
 
 ## Code of Conduct
