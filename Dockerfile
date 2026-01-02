@@ -22,6 +22,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Install system dependencies
 # Scientific Python packages require various system libraries
+# Added libgl1-mesa-glx and libglib2.0-0 for pyvista visualization support
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
@@ -31,6 +32,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     liblapack-dev \
     libxml2-dev \
     libpng-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libxrender1 \
+    libfontconfig1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package metadata first (for better layer caching)
@@ -43,7 +48,12 @@ RUN pip install --upgrade pip wheel setuptools
 
 # Install SMRForge with all dependencies from setup.py
 # This ensures consistency with the package definition
+# Optionally install visualization extras: pip install -e ".[viz]"
 RUN pip install --no-cache-dir -e .
+
+# Optional: Install visualization dependencies for 3D mesh visualization
+# Uncomment the next line to include plotly and pyvista:
+# RUN pip install --no-cache-dir plotly>=5.0 pyvista>=0.40.0
 
 # Copy examples (optional - can be mounted as volume instead)
 COPY examples/ /app/examples/

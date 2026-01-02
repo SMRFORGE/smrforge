@@ -3,6 +3,12 @@
 #
 # Build: docker build -f Dockerfile.dev -t smrforge:dev .
 # Or use: docker compose up smrforge-dev
+#
+# Last Updated: January 1, 2026
+# - Added visualization dependencies support (plotly, pyvista)
+# - Added pytest-asyncio for async test support
+# - Added system libraries for 3D visualization
+# - Updated to support latest features and test requirements
 
 FROM python:3.11-slim
 
@@ -18,6 +24,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
 # Install system dependencies including development tools
+# Added libgl1-mesa-glx and libglib2.0-0 for pyvista visualization support
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gfortran \
@@ -26,6 +33,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libhdf5-dev \
     libblas-dev \
     liblapack-dev \
+    libxml2-dev \
+    libpng-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libxrender1 \
+    libfontconfig1 \
     git \
     vim \
     curl \
@@ -41,7 +54,16 @@ RUN pip install --upgrade pip wheel setuptools
 # Install SMRForge with dev dependencies from setup.py
 # Note: This will be overridden by volume mount in docker compose, but ensures
 # the image has all dependencies available even without volume mounts
+# Includes pytest, pytest-cov, black, flake8, mypy
 RUN pip install --no-cache-dir -e ".[dev]"
+
+# Optional: Install visualization dependencies for 3D mesh visualization
+# Uncomment the next line to include plotly and pyvista:
+# RUN pip install --no-cache-dir plotly>=5.0 pyvista>=0.40.0
+
+# Optional: Install pytest-asyncio for async test support
+# Uncomment the next line if you need async test support:
+# RUN pip install --no-cache-dir pytest-asyncio
 
 # Create directories for data/output and ENDF storage
 # ENDF data can be mounted as volume or stored in container
