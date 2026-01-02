@@ -179,6 +179,14 @@ try:
 except ImportError:
     pass
 
+# Help system (always available)
+try:
+    from smrforge.help import help
+
+    __all__.append("help")
+except ImportError:
+    pass
+
 # Photon and gamma production parsers (always available)
 try:
     from smrforge.core.photon_parser import ENDFPhotonParser, PhotonCrossSection
