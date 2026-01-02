@@ -99,7 +99,7 @@
 | Module | Coverage | Target | Gap | Priority | Impact |
 |--------|----------|--------|-----|----------|--------|
 | `core/reactor_core.py` | 59.0% | 75-80% | 16-21% | 🔴 **CRITICAL** | Core nuclear data handling |
-| `core/resonance_selfshield.py` | 30.7% | 75-80% | 44-49% | 🔴 **CRITICAL** | Resonance treatment |
+| `core/resonance_selfshield.py` | 72.4% | 75-80% | 2.6-7.6% | 🟡 **NEAR TARGET** | Resonance treatment |
 | `core/thermal_scattering_parser.py` | 36.2% | 75-80% | 39-44% | 🔴 **HIGH** | TSL parsing |
 | `core/material_mapping.py` | 41.0% | 75-80% | 34-39% | 🔴 **HIGH** | Material mapping |
 
@@ -344,5 +344,6 @@
 ## References
 
 - See [Testing and Coverage Guide](docs/development/testing-and-coverage.md) for detailed testing strategies
+- See [Critical Coverage Issues](docs/development/critical-coverage-issues.md) for detailed analysis of critical issues and solutions
 - See [Coverage Exclusions](docs/development/coverage-exclusions.md) for excluded code paths
 - See [Coverage Inventory](docs/development/coverage-inventory.md) for detailed module breakdowns

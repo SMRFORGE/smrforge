@@ -30,9 +30,9 @@ This document consolidates information about test coverage, external data depend
 **For comprehensive coverage breakdown, see [Test Coverage Summary](docs/status/test-coverage-summary.md)**
 
 #### Critical Modules Status:
-- `reactor_core.py`: 59.0% (target: 75-80%) - 🔴 **CRITICAL**
-- `resonance_selfshield.py`: 30.7% (target: 75-80%) - 🔴 **CRITICAL**
-- `endf_parser.py`: 95.1% (target: 75-80%) - ✅ **EXCELLENT** (improved!)
+- `reactor_core.py`: 59.0% (target: 75-80%) - 🔴 **CRITICAL** (205 lines uncovered)
+- `resonance_selfshield.py`: 72.4% (target: 75-80%) - 🟡 **NEAR TARGET** ✅ **IMPROVED** (was 30.7%, +41.7%)
+- `endf_parser.py`: 95.1% (target: 75-80%) - ✅ **EXCELLENT**
 
 #### New Feature Modules:
 - `burnup/solver.py`: 20.8% (target: 75-80%) - 🔴 **HIGH PRIORITY**
@@ -357,10 +357,23 @@ Task #2 (Fix Zarr API)
 
 ---
 
+## Critical Issues and Solutions
+
+For detailed analysis of critical issues preventing full test coverage, see:
+- **[Critical Coverage Issues](docs/development/critical-coverage-issues.md)** - Detailed breakdown with code examples and implementation steps
+
+Key issues addressed:
+1. ✅ **FIXED**: BondarenkoMethod initialization bug
+2. ⚠️ **IN PROGRESS**: Backend fallback chain testing (import patching complexity)
+3. ⚠️ **IN PROGRESS**: Async test support (pytest-asyncio integration)
+4. ⚠️ **TODO**: Mock ENDF file format improvements
+5. ✅ **WORKING**: Zarr cache mocking (workaround implemented)
+
 ## References
 
 - ENDF-6 Manual: Standard format for nuclear data files
 - IAEA Nuclear Data Services: https://www-nds.iaea.org
 - SANDY Library: Python library for ENDF file processing
 - Zarr Documentation: https://zarr.readthedocs.io/
+- [Critical Coverage Issues](docs/development/critical-coverage-issues.md) - Detailed issue analysis
 
