@@ -94,3 +94,7 @@ if os.environ.get("READTHEDOCS") == "True":
     # ReadTheDocs uses a specific build directory structure
     # Ensure proper path resolution
     pass
+
+# GitHub Pages settings
+# Ensure proper base URL for GitHub Pages
+html_baseurl = "https://cmwhalen.github.io/smrforge/"

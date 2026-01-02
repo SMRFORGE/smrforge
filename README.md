@@ -195,9 +195,11 @@ See [`USAGE.md`](USAGE.md) for more examples and the [`examples/`](examples/) di
 
 ## Documentation
 
-[![Documentation Status](https://readthedocs.org/projects/smrforge/badge/?version=latest)](https://smrforge.readthedocs.io/en/latest/?badge=latest)
+📚 **Full documentation available at:**
+- **GitHub Pages**: [https://cmwhalen.github.io/smrforge/](https://cmwhalen.github.io/smrforge/) (automatically deployed from main branch)
+- **Read the Docs**: [https://smrforge.readthedocs.io](https://smrforge.readthedocs.io) (alternative hosting)
 
-Full documentation available at: **[https://smrforge.readthedocs.io](https://smrforge.readthedocs.io)**
+[![Documentation Status](https://readthedocs.org/projects/smrforge/badge/?version=latest)](https://smrforge.readthedocs.io/en/latest/?badge=latest)
 
 ### Documentation Sections
 
@@ -297,5 +299,7 @@ MIT License - see [`LICENSE`](LICENSE) file for details.
 ## Contact
 
 - **GitHub Issues**: https://github.com/cmwhalen/smrforge/issues
-- **Documentation**: https://smrforge.readthedocs.io
+- **Documentation**: 
+  - GitHub Pages: https://cmwhalen.github.io/smrforge/
+  - Read the Docs: https://smrforge.readthedocs.io
 - **Repository**: https://github.com/cmwhalen/smrforge
