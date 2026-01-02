@@ -187,6 +187,7 @@ class NuclearDataCache:
         # Local ENDF directory (e.g., ENDF-B-VIII.1)
         self.local_endf_dir = Path(local_endf_dir) if local_endf_dir else None
         self._local_file_index: Optional[Dict[str, Path]] = None  # Lazy-loaded index
+        self._tsl_file_index: Optional[Dict[str, Path]] = None  # TSL material name -> file path
         
         # Build index on initialization if local directory provided (Phase 3 optimization)
         if self.local_endf_dir and self.local_endf_dir.exists():
