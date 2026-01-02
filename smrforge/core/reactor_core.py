@@ -2280,14 +2280,17 @@ class DecayData:
             branching ratios.
     """
 
-    def __init__(self):
+    def __init__(self, cache: Optional[NuclearDataCache] = None):
         """
         Initialize decay data handler.
         
         Creates empty caches for decay constants and branching ratios.
         Data is loaded on-demand when methods are called.
+        
+        Args:
+            cache: Optional NuclearDataCache instance. If not provided, creates a new one.
         """
-        self._cache = NuclearDataCache()
+        self._cache = cache if cache is not None else NuclearDataCache()
         self._decay_constants: Dict[Nuclide, float] = {}
         self._branching_ratios: Dict[Tuple[Nuclide, Nuclide], float] = {}
 
