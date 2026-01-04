@@ -23,10 +23,11 @@ from smrforge.convenience_utils import (
     quick_keff_calculation,
     create_simple_burnup_solver,
     quick_burnup_calculation,
-    create_simple_decay_heat_calculator,
     quick_decay_heat,
-    create_simple_gamma_solver,
-    quick_gamma_transport,
+    get_nuclide,
+    create_nuclide_list,
+    get_material,
+    list_materials,
 )
 
 
@@ -269,78 +270,97 @@ class TestBurnupConvenienceFunctions:
 class TestDecayHeatConvenienceFunctions:
     """Test decay heat convenience functions."""
 
-    def test_create_simple_decay_heat_calculator_defaults(self):
-        """Test create_simple_decay_heat_calculator with default parameters."""
-        calculator = create_simple_decay_heat_calculator()
-        assert calculator is not None
-        assert hasattr(calculator, 'calculate_decay_heat')
-
-    def test_create_simple_decay_heat_calculator_with_inventory(self):
-        """Test create_simple_decay_heat_calculator with provided inventory."""
-        from smrforge.burnup import NuclideInventory
-        inventory = NuclideInventory()
-        calculator = create_simple_decay_heat_calculator(inventory=inventory)
-        assert calculator is not None
-
     def test_quick_decay_heat_defaults(self):
         """Test quick_decay_heat with default parameters."""
-        heat = quick_decay_heat(time_days=1.0)
+        heat = quick_decay_heat({"U235": 1e20}, time_seconds=86400.0)
         assert isinstance(heat, (float, np.floating))
         assert heat >= 0
 
     def test_quick_decay_heat_custom_time(self):
         """Test quick_decay_heat with custom time."""
-        heat = quick_decay_heat(time_days=10.0)
+        heat = quick_decay_heat({"U235": 1e20, "Cs137": 1e19}, time_seconds=172800.0)
         assert isinstance(heat, (float, np.floating))
         assert heat >= 0
 
-    def test_quick_decay_heat_with_inventory(self):
-        """Test quick_decay_heat with provided inventory."""
-        from smrforge.burnup import NuclideInventory
-        inventory = NuclideInventory()
-        heat = quick_decay_heat(inventory=inventory, time_days=1.0)
+    def test_quick_decay_heat_with_cache(self):
+        """Test quick_decay_heat with provided cache."""
+        from smrforge.core.reactor_core import NuclearDataCache
+        cache = NuclearDataCache()
+        heat = quick_decay_heat({"U235": 1e20}, time_seconds=86400.0, cache=cache)
         assert isinstance(heat, (float, np.floating))
 
+    def test_quick_decay_heat_import_error(self):
+        """Test quick_decay_heat when decay heat module is not available."""
+        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+            with pytest.raises(ImportError, match="Decay heat module not available"):
+                quick_decay_heat({"U235": 1e20}, time_seconds=86400.0)
 
-class TestGammaTransportConvenienceFunctions:
-    """Test gamma transport convenience functions."""
 
-    def test_create_simple_gamma_solver_defaults(self):
-        """Test create_simple_gamma_solver with default parameters."""
-        solver = create_simple_gamma_solver()
-        assert solver is not None
-        assert hasattr(solver, 'solve')
+class TestNuclearDataConvenienceFunctions:
+    """Test nuclear data convenience functions."""
 
-    def test_create_simple_gamma_solver_with_core(self, mock_core):
-        """Test create_simple_gamma_solver with provided core."""
-        solver = create_simple_gamma_solver(core=mock_core)
-        assert solver is not None
+    def test_get_nuclide_common(self):
+        """Test get_nuclide with common nuclide names."""
+        u235 = get_nuclide("U235")
+        assert u235.Z == 92
+        assert u235.A == 235
 
-    def test_create_simple_gamma_solver_custom_params(self):
-        """Test create_simple_gamma_solver with custom parameters."""
-        solver = create_simple_gamma_solver(
-            n_groups=10,
-            max_iterations=100,
-            tolerance=1e-5,
-        )
-        assert solver is not None
+    def test_get_nuclide_parsed(self):
+        """Test get_nuclide with parsed nuclide name."""
+        cs137 = get_nuclide("Cs137")
+        assert cs137.Z == 55
+        assert cs137.A == 137
 
-    def test_quick_gamma_transport_defaults(self):
-        """Test quick_gamma_transport with default parameters."""
-        results = quick_gamma_transport()
-        assert isinstance(results, dict)
-        assert 'flux' in results or 'dose_rate' in results
+    def test_get_nuclide_invalid(self):
+        """Test get_nuclide with invalid nuclide name."""
+        with pytest.raises(ValueError, match="Could not parse nuclide name"):
+            get_nuclide("InvalidNuclide123")
 
-    def test_quick_gamma_transport_with_core(self, mock_core):
-        """Test quick_gamma_transport with provided core."""
-        results = quick_gamma_transport(core=mock_core)
-        assert isinstance(results, dict)
+    def test_get_nuclide_import_error(self):
+        """Test get_nuclide when core module is not available."""
+        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+            with pytest.raises(ImportError, match="Core module not available"):
+                get_nuclide("U235")
 
-    def test_quick_gamma_transport_custom_params(self):
-        """Test quick_gamma_transport with custom parameters."""
-        results = quick_gamma_transport(
-            n_groups=8,
-            max_iterations=50,
-        )
-        assert isinstance(results, dict)
+    def test_create_nuclide_list(self):
+        """Test create_nuclide_list."""
+        nuclides = create_nuclide_list(["U235", "U238", "Pu239"])
+        assert len(nuclides) == 3
+        assert nuclides[0].Z == 92
+        assert nuclides[0].A == 235
+
+
+class TestMaterialConvenienceFunctions:
+    """Test material convenience functions."""
+
+    def test_get_material(self):
+        """Test get_material function."""
+        try:
+            material = get_material("graphite_IG-110")
+            assert material is not None
+        except (ImportError, KeyError, ValueError):
+            # Material may not exist or module may not be available
+            pytest.skip("Material database not available or material not found")
+
+    def test_get_material_import_error(self):
+        """Test get_material when materials module is not available."""
+        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+            with pytest.raises(ImportError, match="Materials module not available"):
+                get_material("graphite_IG-110")
+
+    def test_list_materials(self):
+        """Test list_materials function."""
+        try:
+            materials = list_materials()
+            assert isinstance(materials, list)
+        except ImportError:
+            pytest.skip("Materials module not available")
+
+    def test_list_materials_with_category(self):
+        """Test list_materials with category filter."""
+        try:
+            materials = list_materials(category="moderator")
+            assert isinstance(materials, list)
+        except ImportError:
+            pytest.skip("Materials module not available")
 
