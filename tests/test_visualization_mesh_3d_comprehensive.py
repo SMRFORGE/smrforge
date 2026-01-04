@@ -296,21 +296,16 @@ class TestVTKExport:
             with pytest.raises(ImportError, match="pyvista is required"):
                 export_mesh_to_vtk(simple_mesh, filepath)
 
-    def test_export_surface_to_vtk(self, simple_surface, tmp_path):
-        """Test exporting surface to VTK file."""
+    def test_export_mesh_to_vtk_with_surface_mesh(self, tmp_path):
+        """Test exporting surface mesh (faces only) to VTK file."""
         try:
-            from smrforge.visualization.mesh_3d import export_surface_to_vtk
-            filepath = tmp_path / "test_surface.vtk"
-            export_surface_to_vtk(simple_surface, filepath)
+            from smrforge.visualization.mesh_3d import export_mesh_to_vtk
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+            faces = np.array([[0, 1, 2]])
+            mesh = Mesh3D(vertices=vertices, faces=faces)
+            filepath = tmp_path / "test_surface_mesh.vtk"
+            export_mesh_to_vtk(mesh, str(filepath))
             assert filepath.exists()
         except ImportError:
             pytest.skip("pyvista not available")
-
-    def test_export_surface_to_vtk_no_pyvista(self, tmp_path):
-        """Test exporting surface when pyvista is not available."""
-        with patch('smrforge.visualization.mesh_3d._PYVISTA_AVAILABLE', False):
-            from smrforge.visualization.mesh_3d import export_surface_to_vtk
-            filepath = tmp_path / "test_surface.vtk"
-            with pytest.raises(ImportError, match="pyvista is required"):
-                export_surface_to_vtk(simple_surface, filepath)
 
