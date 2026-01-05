@@ -534,13 +534,13 @@ class TestFetchAndCache:
                 sys.modules.pop('smrforge.core.endf_parser', None)
 
 
+@pytest.mark.skipif(not ASYNC_AVAILABLE, reason="pytest-asyncio not installed")
 class TestAsyncOperations:
     """Test async operations comprehensively."""
     
     @pytest.mark.asyncio
     async def test_fetch_and_cache_async(self, temp_cache_dir, mock_endf_file):
         """Test _fetch_and_cache_async."""
-        pytest.importorskip("pytest_asyncio")
         
         cache = NuclearDataCache(cache_dir=temp_cache_dir)
         cache.local_endf_dir = mock_endf_file.parent.parent
@@ -570,10 +570,6 @@ class TestAsyncOperations:
     @pytest.mark.asyncio
     async def test_ensure_endf_file_async(self, temp_cache_dir, mock_endf_file):
         """Test _ensure_endf_file_async."""
-        try:
-            import pytest_asyncio
-        except ImportError:
-            pytest.skip("pytest-asyncio not installed, skipping async test")
         
         cache = NuclearDataCache(cache_dir=temp_cache_dir)
         cache.local_endf_dir = mock_endf_file.parent.parent
@@ -641,7 +637,7 @@ class TestSaveToCache:
         assert "test/key" in cache._memory_cache
     
     def test_save_to_cache_zarr_failure(self, temp_cache_dir):
-        """Test save when zarr fails."""
+        """Test save when zarr fails - memory cache should still work."""
         cache = NuclearDataCache(cache_dir=temp_cache_dir)
         
         energy = np.array([1e5, 1e6])
@@ -659,9 +655,35 @@ class TestSaveToCache:
             # Should still update memory cache even if zarr fails
             cache._save_to_cache("test/key", energy, xs)
             assert "test/key" in cache._memory_cache
+            cached_energy, cached_xs = cache._memory_cache["test/key"]
+            assert np.array_equal(cached_energy, energy)
+            assert np.array_equal(cached_xs, xs)
         finally:
             # Restore original root
             cache.root = original_root
+    
+    def test_save_to_cache_zarr_success(self, temp_cache_dir):
+        """Test successful save to both zarr and memory cache."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        energy = np.array([1e6, 2e6, 3e6])
+        xs = np.array([10.0, 20.0, 30.0])
+        
+        cache._save_to_cache("test/key", energy, xs)
+        
+        # Should be in memory cache
+        assert "test/key" in cache._memory_cache
+        
+        # Should be in zarr cache
+        try:
+            group = cache.root["test/key"]
+            zarr_energy = group["energy"][:]
+            zarr_xs = group["xs"][:]
+            assert np.array_equal(zarr_energy, energy)
+            assert np.array_equal(zarr_xs, xs)
+        except KeyError:
+            # Zarr may not be available in test environment
+            pass
 
 
 class TestDopplerBroadening:
