@@ -429,6 +429,11 @@ class NuclearDataCache:
                 nuclide.name, reaction, temperature, "endf-parserpy", logger
             )
             endf_dict = parser.parsefile(str(endf_file))
+            
+            # Update file metadata cache with available MTs (performance optimization)
+            if 3 in endf_dict:
+                available_mts = set(endf_dict[3].keys())
+                self._update_file_metadata(endf_file, available_mts)
 
             # Extract MF=3 (cross sections), MT=reaction_mt
             if 3 in endf_dict and reaction_mt in endf_dict[3]:
@@ -552,9 +557,13 @@ class NuclearDataCache:
 
         # All backends failed - provide helpful error message
         available_backends = []
+        parser_info = ""
         try:
-            from endf_parserpy import EndfParserFactory
-            available_backends.append("endf-parserpy")
+            parser = self._get_parser()
+            if parser is not None:
+                available_backends.append("endf-parserpy")
+                if self._parser_type:
+                    parser_info = f" (using {self._parser_type} parser)"
         except ImportError:
             pass
         try:
@@ -566,10 +575,11 @@ class NuclearDataCache:
         error_msg = (
             f"Failed to parse cross-section data for {nuclide.name}/{reaction}. "
             f"No suitable backend available.\n\n"
-            f"Installed backends: {', '.join(available_backends) if available_backends else 'None'}\n\n"
+            f"Installed backends: {', '.join(available_backends) if available_backends else 'None'}{parser_info}\n\n"
             f"To enable cross-section fetching, install one of:\n"
             f"  - endf-parserpy (recommended): pip install endf-parserpy\n"
             f"    Official IAEA library, comprehensive ENDF-6 support\n"
+            f"    For best performance, ensure C++ parser is available\n"
             f"  - SANDY (alternative): pip install sandy\n"
             f"    Good for uncertainty quantification\n\n"
             f"Note: SMRForge includes a built-in ENDF parser, but it failed to parse this file.\n"
@@ -769,6 +779,11 @@ class NuclearDataCache:
                 nuclide.name, reaction, temperature, "endf-parserpy", logger
             )
             endf_dict = parser.parsefile(str(endf_file))
+            
+            # Update file metadata cache with available MTs (performance optimization)
+            if 3 in endf_dict:
+                available_mts = set(endf_dict[3].keys())
+                self._update_file_metadata(endf_file, available_mts)
 
             # Extract MF=3 (cross sections), MT=reaction_mt
             if 3 in endf_dict and reaction_mt in endf_dict[3]:
@@ -892,9 +907,13 @@ class NuclearDataCache:
 
         # All backends failed - provide helpful error message
         available_backends = []
+        parser_info = ""
         try:
-            from endf_parserpy import EndfParserFactory
-            available_backends.append("endf-parserpy")
+            parser = self._get_parser()
+            if parser is not None:
+                available_backends.append("endf-parserpy")
+                if self._parser_type:
+                    parser_info = f" (using {self._parser_type} parser)"
         except ImportError:
             pass
         try:
@@ -906,10 +925,11 @@ class NuclearDataCache:
         error_msg = (
             f"Failed to parse cross-section data for {nuclide.name}/{reaction}. "
             f"No suitable backend available.\n\n"
-            f"Installed backends: {', '.join(available_backends) if available_backends else 'None'}\n\n"
+            f"Installed backends: {', '.join(available_backends) if available_backends else 'None'}{parser_info}\n\n"
             f"To enable cross-section fetching, install one of:\n"
             f"  - endf-parserpy (recommended): pip install endf-parserpy\n"
             f"    Official IAEA library, comprehensive ENDF-6 support\n"
+            f"    For best performance, ensure C++ parser is available\n"
             f"  - SANDY (alternative): pip install sandy\n"
             f"    Good for uncertainty quantification\n\n"
             f"Note: SMRForge includes a built-in ENDF parser, but it failed to parse this file.\n"
