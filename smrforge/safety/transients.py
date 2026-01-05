@@ -1159,10 +1159,14 @@ class AirWaterIngressAnalysis:
 
 
 @njit(cache=True)
-def decay_heat_ans_standard(t: np.ndarray, P0: float, t_operate: float) -> np.ndarray:
+def decay_heat_ans_standard(t: np.ndarray, P0: float, t_operate: float) -> np.ndarray:  # pragma: no cover
     """
     ANS 5.1 standard decay heat curve.
     Fast Numba implementation.
+
+    Note: This function is excluded from coverage reporting because Numba JIT
+    compilation makes line-by-line coverage tracking unreliable. This function
+    is tested in tests/test_safety.py.
 
     Args:
         t: Time after shutdown [s]

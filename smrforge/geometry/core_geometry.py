@@ -585,15 +585,19 @@ class PebbleBedCore:
 
 
 @njit(parallel=True, cache=True)
-def compute_distance_matrix(positions: np.ndarray) -> np.ndarray:
+def compute_distance_matrix(positions: np.ndarray) -> np.ndarray:  # pragma: no cover
     """
     Fast distance matrix computation using Numba.
 
+    Note: This function is excluded from coverage reporting because Numba JIT
+    compilation makes line-by-line coverage tracking unreliable. This function
+    is tested in tests/test_geometry.py.
+
     Args:
-        positions: Nx3 array of positions
+        positions: Nx3 array of positions [cm]
 
     Returns:
-        NxN distance matrix
+        NxN distance matrix [cm]
     """
     n = positions.shape[0]
     dist = np.zeros((n, n))

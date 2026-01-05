@@ -759,10 +759,23 @@ class PorousMediaFlow:
 @njit(cache=True)
 def solve_tridiagonal_fast(
     a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray
-) -> np.ndarray:
+) -> np.ndarray:  # pragma: no cover
     """
     Fast tridiagonal solver using Thomas algorithm (Numba-accelerated).
     Solves: a[i]*x[i-1] + b[i]*x[i] + c[i]*x[i+1] = d[i]
+    
+    Note: This function is excluded from coverage reporting because Numba JIT
+    compilation makes line-by-line coverage tracking unreliable. This function
+    is tested in tests/test_thermal.py.
+    
+    Args:
+        a: Lower diagonal (a[0] is ignored, a[1..n-1] used)
+        b: Main diagonal
+        c: Upper diagonal (c[n-1] is ignored, c[0..n-2] used)
+        d: Right-hand side vector
+    
+    Returns:
+        Solution vector x
     """
     n = len(d)
     x = np.zeros(n)

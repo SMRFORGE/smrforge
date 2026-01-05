@@ -229,12 +229,25 @@ class BondarenkoMethod:
 @njit(cache=True)
 def _compute_subgroup_flux(
     sigma_sg: np.ndarray, w_sg: np.ndarray, sigma_t_background: float, source: float
-) -> np.ndarray:
+) -> np.ndarray:  # pragma: no cover
     """
     Compute subgroup fluxes using rational approximation.
     Ultra-fast with Numba.
 
     phi_sg = w_sg * S / (sigma_t_bg + sigma_sg)
+    
+    Note: This function is excluded from coverage reporting because Numba JIT
+    compilation makes line-by-line coverage tracking unreliable. This function
+    is tested in tests/test_resonance_selfshield_critical.py.
+    
+    Args:
+        sigma_sg: Subgroup cross-sections [barns]
+        w_sg: Subgroup weights (sum to 1.0)
+        sigma_t_background: Background total cross-section [barns]
+        source: Source strength [normalized]
+    
+    Returns:
+        Subgroup fluxes [normalized]
     """
     n_sg = len(sigma_sg)
     phi_sg = np.zeros(n_sg)
@@ -339,9 +352,13 @@ class EquivalenceTheory:
     @njit(cache=True)
     def dancoff_factor_hexagonal(
         pitch: float, particle_radius: float, packing_fraction: float
-    ) -> float:
+    ) -> float:  # pragma: no cover
         """
         Dancoff factor for hexagonal lattice of particles.
+
+        Note: This function is excluded from coverage reporting because Numba JIT
+        compilation makes line-by-line coverage tracking unreliable. This function
+        is tested in tests/test_resonance_selfshield_comprehensive.py.
 
         Args:
             pitch: Lattice pitch [cm]
@@ -365,11 +382,22 @@ class EquivalenceTheory:
 
     @staticmethod
     @njit(cache=True)
-    def escape_probability_sphere(sigma_t: float, radius: float) -> float:
+    def escape_probability_sphere(sigma_t: float, radius: float) -> float:  # pragma: no cover
         """
         Escape probability from sphere (Wigner rational approximation).
 
         P_esc = 1 / (1 + sigma_t * radius)
+        
+        Note: This function is excluded from coverage reporting because Numba JIT
+        compilation makes line-by-line coverage tracking unreliable. This function
+        is tested in tests/test_resonance_selfshield_comprehensive.py.
+        
+        Args:
+            sigma_t: Total cross-section [1/cm]
+            radius: Sphere radius [cm]
+        
+        Returns:
+            Escape probability (0-1)
         """
         tau = sigma_t * radius
 

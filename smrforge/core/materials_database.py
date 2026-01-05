@@ -943,10 +943,20 @@ class MaterialDatabase:
 
 # Fast Numba-accelerated property evaluations for solver
 @njit(cache=True)
-def graphite_conductivity_fast(T: np.ndarray, grade: int = 0) -> np.ndarray:
+def graphite_conductivity_fast(T: np.ndarray, grade: int = 0) -> np.ndarray:  # pragma: no cover
     """
     Ultra-fast graphite conductivity evaluation.
-    grade: 0=IG-110, 1=H-451, 2=NBG-18
+    
+    Note: This function is excluded from coverage reporting because Numba JIT
+    compilation makes line-by-line coverage tracking unreliable. This function
+    is tested in tests/test_materials_database.py.
+    
+    Args:
+        T: Temperature array [K]
+        grade: Graphite grade (0=IG-110, 1=H-451, 2=NBG-18)
+    
+    Returns:
+        Thermal conductivity array [W/m-K]
     """
     k = np.zeros_like(T)
 
@@ -970,10 +980,20 @@ def graphite_conductivity_fast(T: np.ndarray, grade: int = 0) -> np.ndarray:
 @njit(cache=True)
 def helium_properties_fast(
     T: np.ndarray, P: float = 7.0e6
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:  # pragma: no cover
     """
     Fast helium property evaluation.
-    Returns: density [kg/m³], viscosity [Pa-s], conductivity [W/m-K]
+    
+    Note: This function is excluded from coverage reporting because Numba JIT
+    compilation makes line-by-line coverage tracking unreliable. This function
+    is tested in tests/test_materials_database.py.
+    
+    Args:
+        T: Temperature array [K]
+        P: Pressure [Pa] (default: 7.0 MPa)
+    
+    Returns:
+        Tuple of (density [kg/m³], viscosity [Pa-s], conductivity [W/m-K])
     """
     n = len(T)
     rho = np.zeros(n)
