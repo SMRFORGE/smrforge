@@ -134,18 +134,26 @@ def check_test_files(jit_functions: List[Dict], tests_dir: Path) -> Dict[str, bo
             test_file_path = tests_dir / test_file_ref
             if test_file_path.exists():
                 # Check if function is tested in that file
-                test_content = test_file_path.read_text()
-                # Look for function name in test file
-                if func_name in test_content or func_name.replace('_', '') in test_content:
-                    test_file_found = True
+                try:
+                    test_content = test_file_path.read_text(encoding='utf-8')
+                    # Look for function name in test file
+                    if func_name in test_content or func_name.replace('_', '') in test_content:
+                        test_file_found = True
+                except UnicodeDecodeError:
+                    # Skip files with encoding issues
+                    pass
         
         # Also search for function name in test files
         if not test_file_found:
             for test_file in tests_dir.rglob('test_*.py'):
-                test_content = test_file.read_text()
-                if func_name in test_content:
-                    test_file_found = True
-                    break
+                try:
+                    test_content = test_file.read_text(encoding='utf-8')
+                    if func_name in test_content:
+                        test_file_found = True
+                        break
+                except UnicodeDecodeError:
+                    # Skip files with encoding issues
+                    continue
         
         results[func_name] = test_file_found
     
