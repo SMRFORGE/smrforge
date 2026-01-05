@@ -373,6 +373,16 @@ def mock_endf_file(temp_dir, mock_endf_file_content):
 
 
 @pytest.fixture
+def mock_endf_file_generated(tmp_path):
+    """Create a properly formatted mock ENDF file using the generator utility."""
+    from tests.test_utilities_endf import create_mock_endf_file_minimal
+    from smrforge.core.reactor_core import Nuclide
+    
+    u235 = Nuclide(Z=92, A=235)
+    return create_mock_endf_file_minimal(u235, "total", tmp_path)
+
+
+@pytest.fixture
 def realistic_endf_file(temp_dir):
     """Create a realistic mock ENDF file with proper format for testing _simple_endf_parse."""
     endf_path = temp_dir / "U235_realistic.endf"
