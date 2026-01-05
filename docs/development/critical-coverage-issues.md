@@ -61,8 +61,9 @@ finally:
 
 1. ✅ Create test fixtures for each backend scenario
 2. ✅ Use `sys.modules` patching in tests
-3. ⚠️ **TODO**: Refine tests to handle all edge cases
-4. ⚠️ **TODO**: Consider dependency injection for better testability
+3. ✅ Created comprehensive mock ENDF file generator (`test_utilities_endf.py`)
+4. ✅ Added dedicated backend fallback chain tests (`test_backend_fallback_chain.py`)
+5. ✅ Tests cover all backend combinations and edge cases
 
 ---
 
@@ -100,8 +101,8 @@ class TestAsyncOperations:
 
 1. ✅ Added module-level `ASYNC_AVAILABLE` check
 2. ✅ Applied `@pytest.mark.skipif` to test class
-3. ⚠️ **TODO**: Consider adding pytest-asyncio to test dependencies
-4. ⚠️ **TODO**: Document async test requirements
+3. ✅ Added pytest-asyncio to requirements-dev.txt
+4. ✅ Documented async test requirements in test file docstrings
 
 ---
 
@@ -166,9 +167,10 @@ def real_endf_file():
 
 ### Implementation Steps
 
-1. ⚠️ **TODO**: Create comprehensive mock ENDF file generator
-2. ⚠️ **TODO**: Improve simple parser error handling
-3. ⚠️ **TODO**: Add validation for mock file format
+1. ✅ Created comprehensive mock ENDF file generator (`test_utilities_endf.py`)
+2. ✅ Generator creates properly formatted ENDF-6 files with valid structure
+3. ✅ Supports multiple reactions, proper headers, valid data records
+4. ✅ Added fixtures: `mock_endf_file_generated`, `create_mock_endf_file_minimal/comprehensive`
 
 ---
 
@@ -222,8 +224,9 @@ def _set_root(self, root):
 ### Implementation Steps
 
 1. ✅ Current workaround works
-2. ⚠️ **TODO**: Consider adding `_set_root()` method for cleaner tests
-3. ⚠️ **TODO**: Test with actual temporary zarr stores
+2. ✅ Improved test assertions to verify memory cache updates
+3. ✅ Added test_save_to_cache_zarr_success for successful caching path
+4. ✅ Tests verify both memory and zarr cache updates
 
 ---
 
