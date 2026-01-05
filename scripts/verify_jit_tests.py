@@ -48,7 +48,11 @@ class JITFunctionVisitor(ast.NodeVisitor):
             
             # Read source to check for pragma and docstring
             if self.current_file:
-                source_lines = self.current_file.read_text().split('\n')
+                try:
+                    source_lines = self.current_file.read_text(encoding='utf-8').split('\n')
+                except UnicodeDecodeError:
+                    # Skip if encoding error
+                    return
                 func_start = line_no - 1
                 
                 # Check for # pragma: no cover
@@ -99,10 +103,16 @@ def find_jit_functions(root_dir: Path) -> List[Dict]:
         
         try:
             visitor.current_file = py_file
-            tree = ast.parse(py_file.read_text())
+            # Read with UTF-8 encoding, skip files with encoding errors
+            try:
+                content = py_file.read_text(encoding='utf-8')
+            except UnicodeDecodeError:
+                # Skip files with encoding issues
+                continue
+            tree = ast.parse(content)
             visitor.visit(tree)
-        except SyntaxError:
-            # Skip files with syntax errors
+        except (SyntaxError, UnicodeDecodeError):
+            # Skip files with syntax errors or encoding issues
             continue
     
     return visitor.jit_functions
@@ -152,14 +162,14 @@ def main():
         print(f"Error: smrforge directory not found at {smrforge_dir}")
         sys.exit(1)
     
-    print("🔍 Finding JIT functions...")
+    print("Finding JIT functions...")
     jit_functions = find_jit_functions(smrforge_dir)
     
     if not jit_functions:
-        print("✅ No JIT functions found (or all in test files)")
+        print("OK: No JIT functions found (or all in test files)")
         return 0
     
-    print(f"\n📊 Found {len(jit_functions)} JIT function(s):\n")
+    print(f"\nFound {len(jit_functions)} JIT function(s):\n")
     
     # Check test files
     test_results = check_test_files(jit_functions, tests_dir)
@@ -177,33 +187,33 @@ def main():
         
         # Check pragma
         if not func_info['has_pragma']:
-            status.append("❌ Missing # pragma: no cover")
+            status.append("[X] Missing # pragma: no cover")
             all_good = False
             issues.append(f"{func_name} ({file_path}:{line_no}) - Missing # pragma: no cover")
         else:
-            status.append("✅ Has # pragma: no cover")
+            status.append("[OK] Has # pragma: no cover")
         
         # Check docstring
         if not func_info['has_docstring']:
-            status.append("⚠️  Missing docstring")
+            status.append("[!] Missing docstring")
             issues.append(f"{func_name} ({file_path}:{line_no}) - Missing docstring")
         else:
-            status.append("✅ Has docstring")
+            status.append("[OK] Has docstring")
         
         # Check test file reference
         if not func_info['test_file_ref']:
-            status.append("⚠️  No test file reference in docstring")
+            status.append("[!] No test file reference in docstring")
             issues.append(f"{func_name} ({file_path}:{line_no}) - No test file reference in docstring")
         else:
-            status.append(f"✅ References test file: {func_info['test_file_ref']}")
+            status.append(f"[OK] References test file: {func_info['test_file_ref']}")
         
         # Check if test file exists
         if not test_results.get(func_name, False):
-            status.append("❌ Test file not found or function not tested")
+            status.append("[X] Test file not found or function not tested")
             all_good = False
             issues.append(f"{func_name} ({file_path}:{line_no}) - Test file not found or function not tested")
         else:
-            status.append("✅ Test file found")
+            status.append("[OK] Test file found")
         
         print(f"  {func_name} ({Path(file_path).relative_to(root_dir)}:{line_no})")
         for s in status:
@@ -213,13 +223,13 @@ def main():
     # Summary
     print("=" * 70)
     if all_good and not issues:
-        print("✅ All JIT functions are properly documented and tested!")
+        print("[OK] All JIT functions are properly documented and tested!")
         return 0
     else:
-        print(f"⚠️  Found {len(issues)} issue(s):\n")
+        print(f"[!] Found {len(issues)} issue(s):\n")
         for issue in issues:
             print(f"  - {issue}")
-        print("\n📝 See docs/development/jit_function_test_registry.md for details.")
+        print("\nSee docs/development/jit_function_test_registry.md for details.")
         return 1
 
 
