@@ -98,6 +98,52 @@ class TestBondarenkoMethodComprehensive:
         # Test known nuclides
         assert BondarenkoMethod._get_potential_xs("U235") == 10.0
         assert BondarenkoMethod._get_potential_xs("U238") == 9.0
+
+    def test_get_f_factor_u235_fission(self):
+        """Test get_f_factor for U235 fission reaction."""
+        method = BondarenkoMethod()
+        
+        # U235 fission should be available
+        f = method.get_f_factor("U235", "fission", sigma_0=100.0, T=1200.0)
+        assert 0 < f <= 1.0
+
+    def test_get_f_factor_pu239_fission(self):
+        """Test get_f_factor for Pu239 fission reaction."""
+        method = BondarenkoMethod()
+        
+        # Pu239 fission should be available
+        f = method.get_f_factor("Pu239", "fission", sigma_0=100.0, T=1200.0)
+        assert 0 < f <= 1.0
+
+    def test_get_f_factor_sigma_0_below_one(self):
+        """Test get_f_factor with sigma_0 < 1.0 (uses max(sigma_0, 1.0))."""
+        method = BondarenkoMethod()
+        
+        # Very small sigma_0 should be clamped to 1.0 in log space
+        f = method.get_f_factor("U238", "capture", sigma_0=0.01, T=1200.0)
+        assert 0 < f <= 1.0
+
+    def test_get_f_factor_temperature_clamping(self):
+        """Test get_f_factor with temperature outside range (clamped)."""
+        method = BondarenkoMethod()
+        
+        # Temperature below minimum (300K) should be clamped
+        f_low = method.get_f_factor("U238", "capture", sigma_0=100.0, T=100.0)
+        assert 0 < f_low <= 1.0
+        
+        # Temperature above maximum (2100K) should be clamped
+        f_high = method.get_f_factor("U238", "capture", sigma_0=100.0, T=3000.0)
+        assert 0 < f_high <= 1.0
+
+    def test_compute_background_xs_zero_geometry_factor(self):
+        """Test compute_background_xs with zero geometry_factor."""
+        method = BondarenkoMethod()
+        
+        composition = {"U235": 0.001, "U238": 0.002}
+        
+        # Zero geometry factor should not add geometry contribution
+        sigma_0 = method.compute_background_xs(composition, geometry_factor=0.0)
+        assert sigma_0 > 0
         assert BondarenkoMethod._get_potential_xs("C") == 4.8
         
         # Test unknown nuclide (should return default)
@@ -199,7 +245,58 @@ class TestEquivalenceTheoryComprehensive:
         )
         
         assert sigma_0_eff > 0
+
+    def test_effective_background_xs_zero_dancoff(self):
+        """Test effective_background_xs with zero dancoff factor."""
+        equiv = EquivalenceTheory()
+        
+        sigma_0_eff = equiv.effective_background_xs(
+            dancoff=0.0, escape_prob=0.5, sigma_moderator=0.385, N_fuel_to_mod=1.0
+        )
+        assert sigma_0_eff > 0
+
+    def test_effective_background_xs_zero_escape_prob(self):
+        """Test effective_background_xs with zero escape probability."""
+        equiv = EquivalenceTheory()
+        
+        sigma_0_eff = equiv.effective_background_xs(
+            dancoff=0.3, escape_prob=0.0, sigma_moderator=0.385, N_fuel_to_mod=1.0
+        )
+        assert sigma_0_eff >= 0
+
+    def test_effective_background_xs_high_dancoff(self):
+        """Test effective_background_xs with high dancoff factor."""
+        equiv = EquivalenceTheory()
+        
+        sigma_0_eff = equiv.effective_background_xs(
+            dancoff=0.9, escape_prob=0.5, sigma_moderator=0.385, N_fuel_to_mod=1.0
+        )
+        assert sigma_0_eff >= 0
     
+    def test_compute_triso_shielding_extreme_packing_fraction(self):
+        """Test compute_triso_shielding with extreme packing fraction values."""
+        equiv = EquivalenceTheory()
+        
+        # Very low packing fraction
+        result_low = equiv.compute_triso_shielding(
+            kernel_radius=212.5e-4,
+            buffer_thickness=100e-4,
+            packing_fraction=0.01,
+            N_graphite=0.08
+        )
+        assert "sigma_0_kernel" in result_low
+        assert "dancoff_factor" in result_low
+        
+        # Very high packing fraction
+        result_high = equiv.compute_triso_shielding(
+            kernel_radius=212.5e-4,
+            buffer_thickness=100e-4,
+            packing_fraction=0.9,
+            N_graphite=0.08
+        )
+        assert "sigma_0_kernel" in result_high
+        assert "dancoff_factor" in result_high
+
     def test_compute_triso_shielding(self):
         """Test complete TRISO shielding calculation."""
         theory = EquivalenceTheory()
@@ -451,4 +548,15 @@ class TestResonanceData:
         # U235 should have fission XS
         if "U235" in result:
             assert result["U235"]["fission"] > 0
+
+    def test_shield_multigroup_xs_single_value(self):
+        """Test shield_multigroup_xs with single value (1x1 array)."""
+        shielding = ResonanceSelfShielding()
+        
+        xs_inf = np.array([[100.0]])  # 1 group, 1 temperature
+        result = shielding.shield_multigroup_xs(
+            xs_inf, "U238", "capture", np.array([1200.0]), 100.0, method="bondarenko"
+        )
+        assert result.shape == (1, 1)
+        assert result[0, 0] > 0
 
