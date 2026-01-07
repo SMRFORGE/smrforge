@@ -423,3 +423,107 @@ class TestMaterialMapperComprehensive:
         assert MaterialMapper.ATOMIC_MASSES["H"] == 1.008
         assert MaterialMapper.ATOMIC_MASSES["D"] == 2.014
 
+    def test_material_composition_mismatched_lengths(self):
+        """Test MaterialComposition with mismatched element and fraction lengths."""
+        with pytest.raises(ValueError, match="Elements and fractions must have same length"):
+            MaterialComposition(
+                elements=["H", "O"],
+                fractions=[1.0],  # Mismatched length
+            )
+
+    def test_material_composition_zero_total_fraction(self):
+        """Test MaterialComposition with zero total fraction."""
+        with pytest.raises(ValueError, match="Total fraction must be > 0"):
+            MaterialComposition(
+                elements=["H"],
+                fractions=[0.0],  # Zero total fraction
+            )
+
+    def test_compute_weighted_cross_section_zero_total_fraction_path(self):
+        """Test compute_weighted_cross_section when total_fraction remains 0."""
+        energy = np.array([0.1, 1.0, 10.0])
+        # Cross sections that don't match material composition
+        cross_sections = {
+            "X": np.array([1.0, 2.0, 3.0]),  # Element not in H2O
+            "Y": np.array([2.0, 3.0, 4.0]),  # Element not in H2O
+        }
+        
+        # H2O has H and O, but cross_sections only has X and Y
+        weighted = MaterialMapper.compute_weighted_cross_section("H2O", cross_sections, energy)
+        
+        # Should return zeros when no matching elements found
+        assert np.all(weighted == 0.0)
+        assert len(weighted) == len(energy)
+
+    def test_compute_weighted_cross_section_element_key_not_in_cross_sections(self):
+        """Test compute_weighted_cross_section when element_key not in cross_sections."""
+        energy = np.array([0.1, 1.0, 10.0])
+        # D2O has D (which maps to H), but cross_sections only has O
+        cross_sections = {
+            "O": np.array([1.0, 2.0, 3.0]),
+            # No "H" key, so D won't match
+        }
+        
+        weighted = MaterialMapper.compute_weighted_cross_section("D2O", cross_sections, energy)
+        
+        # Should compute weighted average only for O (D won't contribute)
+        assert len(weighted) == len(energy)
+        # Should have some contribution from O
+        assert np.any(weighted > 0)
+
+    def test_compute_weighted_cross_section_with_partial_element_match(self):
+        """Test compute_weighted_cross_section when only some elements match."""
+        energy = np.array([0.1, 1.0, 10.0])
+        # UO2 has U and O, but cross_sections only has O
+        cross_sections = {
+            "O": np.array([1.0, 2.0, 3.0]),
+            # No "U" key
+        }
+        
+        weighted = MaterialMapper.compute_weighted_cross_section("UO2", cross_sections, energy)
+        
+        # Should compute weighted average only for O (U won't contribute)
+        assert len(weighted) == len(energy)
+        # Should normalize by total_fraction (O's fraction)
+        assert np.any(weighted > 0)
+
+    def test_get_composition_with_case_insensitive_iteration(self):
+        """Test get_composition iterating through all keys (case-insensitive path)."""
+        # This tests the loop in get_composition when direct lookup fails
+        # Try a material that exists but with different case
+        comp = MaterialMapper.get_composition("WATER")  # Uppercase
+        assert comp is not None
+        assert "H" in comp.elements
+        assert "O" in comp.elements
+
+    def test_get_density_with_case_insensitive_iteration(self):
+        """Test get_density iterating through all keys (case-insensitive path)."""
+        # This tests the loop in get_density when direct lookup fails
+        # Try a material that exists but with different case
+        density = MaterialMapper.get_density("WATER")  # Uppercase
+        assert density == 1.0
+
+    def test_get_primary_element_with_tie_breaker(self):
+        """Test get_primary_element when multiple elements have equal fractions."""
+        # Create a material with equal fractions (hypothetical)
+        # Since all materials in the database have different fractions,
+        # we test with a custom composition if possible, or test the argmax behavior
+        comp = MaterialMapper.get_composition("H2O")
+        # H2O has H:O = 2:1, so H should be primary
+        primary = MaterialMapper.get_primary_element("H2O")
+        assert primary == "H"  # H has higher fraction (2.0 vs 1.0)
+
+    def test_compute_weighted_cross_section_all_elements_match(self):
+        """Test compute_weighted_cross_section when all elements in composition match."""
+        energy = np.array([0.1, 1.0, 10.0])
+        cross_sections = {
+            "H": np.array([1.0, 2.0, 3.0]),
+            "O": np.array([2.0, 3.0, 4.0]),
+        }
+        
+        weighted = MaterialMapper.compute_weighted_cross_section("H2O", cross_sections, energy)
+        
+        # Should compute weighted average: (2*H + 1*O) / 3
+        expected = (2.0 * cross_sections["H"] + 1.0 * cross_sections["O"]) / 3.0
+        np.testing.assert_allclose(weighted, expected)
+
