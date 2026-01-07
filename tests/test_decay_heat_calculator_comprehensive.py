@@ -129,7 +129,8 @@ class TestDecayHeatCalculatorComprehensive:
         beta_spec = BetaSpectrum(
             energy=np.array([0.5, 1.0]),
             intensity=np.array([0.6, 0.4]),
-            total_energy=0.8,
+            endpoint_energy=1.0,
+            average_energy=0.8,
         )
         mock_decay_data.beta_spectrum = beta_spec
         mock_decay_data.get_total_beta_energy.return_value = 0.8
@@ -335,7 +336,10 @@ class TestDecayHeatCalculatorComprehensive:
         mock_parser = Mock(spec=ENDFDecayParser)
         mock_parser.parse_file.return_value = mock_decay_data
         
-        with patch('smrforge.decay_heat.calculator.ENDFDecayParser', return_value=mock_parser):
+        # Patch ENDFDecayParser where it's imported inside _get_decay_data
+        # Since ENDFDecayParser is imported locally inside _get_decay_data,
+        # we need to patch it at the source module level
+        with patch('smrforge.core.decay_parser.ENDFDecayParser', return_value=mock_parser):
             decay_data = calculator._get_decay_data(u235)
             
             assert decay_data is not None

@@ -13,8 +13,8 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from ..core.reactor_core import Nuclide, NuclearDataCache
-from ..core.decay_parser import DecayData
+from ..core.reactor_core import Nuclide, NuclearDataCache, DecayData
+from ..core.decay_parser import DecayData as ParsedDecayData
 from ..core.gamma_production_parser import GammaProductionData
 from ..utils.logging import get_logger
 
@@ -109,7 +109,13 @@ class DecayHeatCalculator:
             cache: Optional NuclearDataCache for accessing decay data
         """
         self.cache = cache if cache is not None else NuclearDataCache()
-        self.decay_data = DecayData(cache=self.cache)
+        # DecayData may or may not accept cache parameter
+        try:
+            self.decay_data = DecayData(cache=self.cache)
+        except TypeError:
+            # Fallback for compatibility
+            self.decay_data = DecayData()
+            self.decay_data._cache = self.cache
         self._decay_data_cache: Dict[Nuclide, Optional[DecayData]] = {}
     
     def calculate_decay_heat(
@@ -198,7 +204,7 @@ class DecayHeatCalculator:
             nuclide_contributions=nuclide_contributions,
         )
     
-    def _get_decay_data(self, nuclide: Nuclide) -> Optional[DecayData]:
+    def _get_decay_data(self, nuclide: Nuclide) -> Optional[ParsedDecayData]:
         """Get decay data for a nuclide (with caching)."""
         if nuclide in self._decay_data_cache:
             return self._decay_data_cache[nuclide]
@@ -223,9 +229,8 @@ class DecayHeatCalculator:
         lambda_decay = self.decay_data.get_decay_constant(nuclide)
         
         if lambda_decay > 0:
-            # Create minimal DecayData
-            from ..core.decay_parser import DecayData
-            decay_data = DecayData(
+            # Create minimal ParsedDecayData
+            decay_data = ParsedDecayData(
                 nuclide=nuclide,
                 half_life=half_life,
                 decay_constant=lambda_decay,
@@ -238,7 +243,7 @@ class DecayHeatCalculator:
         
         return None
     
-    def _get_gamma_energy_per_decay(self, nuclide: Nuclide, decay_info: DecayData) -> float:
+    def _get_gamma_energy_per_decay(self, nuclide: Nuclide, decay_info: ParsedDecayData) -> float:
         """
         Get gamma energy per decay, using gamma production data if available.
         
