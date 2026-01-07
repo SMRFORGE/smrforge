@@ -516,7 +516,7 @@ class TestReactorCoreEdgeCases:
                 assert parser is None or hasattr(parser, 'parsefile')
     
     def test_get_parser_factory_fallback(self, temp_cache_dir):
-        """Test _get_parser with factory fallback."""
+        """Test _get_parser with factory fallback when C++ parser not available."""
         cache = NuclearDataCache(cache_dir=temp_cache_dir)
         
         # Mock endf_parserpy to have factory but no C++ parser
@@ -524,11 +524,28 @@ class TestReactorCoreEdgeCases:
         mock_parser = MagicMock()
         mock_factory.create.return_value = mock_parser
         
-        with patch.dict('sys.modules', {'endf_parserpy': MagicMock(EndfParserFactory=mock_factory)}):
-            with patch('smrforge.core.reactor_core.EndfParserCpp', side_effect=ImportError()):
+        # Create mock module that has EndfParserFactory but raises ImportError for EndfParserCpp
+        mock_endf_parserpy = MagicMock()
+        mock_endf_parserpy.EndfParserFactory = mock_factory
+        
+        # Mock the import to raise ImportError when trying to import EndfParserCpp
+        def import_side_effect(name, globals=None, locals=None, fromlist=(), level=0):
+            # If trying to import EndfParserCpp from endf_parserpy, raise ImportError
+            if name == 'endf_parserpy' and fromlist and 'EndfParserCpp' in fromlist:
+                raise ImportError("cannot import name 'EndfParserCpp' from 'endf_parserpy'")
+            # Otherwise, return the mock module
+            if name == 'endf_parserpy':
+                return mock_endf_parserpy
+            # Default behavior for other imports - use builtins
+            import builtins
+            return builtins.__import__(name, globals, locals, fromlist, level)
+        
+        with patch('builtins.__import__', side_effect=import_side_effect):
+            with patch.dict('sys.modules', {'endf_parserpy': mock_endf_parserpy}, clear=False):
                 parser = cache._get_parser()
-                # May be None if import fails
-                assert parser is None or hasattr(parser, 'parsefile')
+                # Should fall back to factory-created parser
+                assert parser is not None
+                assert parser == mock_parser or hasattr(parser, 'parsefile')
     
     def test_get_parser_not_available(self, temp_cache_dir):
         """Test _get_parser when endf-parserpy is not available."""
