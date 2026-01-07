@@ -177,13 +177,31 @@ class ENDFGammaProductionParser:
             if len(line) < 75:
                 continue
             
+            # ENDF format: MF at columns 71-72 (0-indexed: 70-72), MT at columns 73-75 (0-indexed: 72-75)
+            # Some files may have "12 18" as a single string, need to split
             mf = line[70:72].strip()
+            if not mf and len(line) > 72:
+                # Try checking if "12" appears near the MF position
+                mf_section = line[66:78] if len(line) > 78 else line[66:]
+                if "12" in mf_section:
+                    # Try to extract MF from context
+                    parts = mf_section.strip().split()
+                    if len(parts) >= 2:
+                        mf = parts[0] if parts[0] == "12" else ""
+            
             if mf != "12":
                 continue
             
             mt_str = line[72:75].strip()
+            if not mt_str and len(line) > 75:
+                # Try alternative position or extract from context
+                mf_section = line[66:78] if len(line) > 78 else line[66:]
+                parts = mf_section.strip().split()
+                if len(parts) >= 2:
+                    mt_str = parts[1]
+            
             try:
-                mt = int(mt_str)
+                mt = int(mt_str) if mt_str else 0
             except ValueError:
                 continue
             
@@ -269,28 +287,45 @@ class ENDFGammaProductionParser:
                 continue
             
             # Check for end of section
+            # On continuation lines, MF/MT might be at non-standard positions
             # Check if this is a new section header (different MF)
             if len(data_line) >= 72:
+                # Try standard ENDF positions first
                 mf_check = data_line[70:72].strip()
-                mt_check = data_line[72:75].strip()
+                mt_check = data_line[72:75].strip() if len(data_line) > 75 else ""
+                
+                # If standard position is empty or has unexpected value, try alternative positions
+                # Some files have "MF MT" as a space-separated pair around position 66-73
+                if not mf_check or mf_check not in ["12", "13", "14", ""]:
+                    # Check if "12" or "13" or "14" appears near the end of the line
+                    line_end = data_line[66:78].strip() if len(data_line) > 78 else data_line[66:].strip()
+                    parts = line_end.split()
+                    if len(parts) >= 2:
+                        # Check if first part is MF number
+                        if parts[0] in ["12", "13", "14"]:
+                            mf_check = parts[0]
+                            if len(parts) >= 2:
+                                mt_check = parts[1]
                 
                 # Break if we encounter a different MF (not continuation of current MF)
+                # But allow empty MF (continuation lines may not have MF field)
                 if mf_check and mf_check not in ["12", "13", "14", ""]:
                     break
                 
                 # Check if this looks like a new section header (MF/MT header line)
                 # Section headers have ZAID (large number > 1e3) in first field
-                # and AWR in second field, and match MF/MT position
-                if mf_check in ["12", "13", "14"] and mt_check:
+                # and AWR in second field
+                # Only check for new section header if we're past the control record line
+                if mf_check in ["12", "13", "14"] and mt_check and j > start_idx + 1:
                     try:
                         first_field = data_line[0:11].strip()
                         if first_field:
                             import re
                             first_field_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', first_field)
                             first_val = float(first_field_clean)
-                            # If first field is large (> 1e3) and we're past the first data line,
+                            # If first field is large (> 1e3) and we're past the control record,
                             # this is likely a new section header
-                            if first_val > 1e3 and j > start_idx + 2:
+                            if first_val > 1e3:
                                 # Also check second field is reasonable AWR
                                 second_field = data_line[11:22].strip()
                                 if second_field:
@@ -318,16 +353,17 @@ class ENDFGammaProductionParser:
                             # Handle ENDF scientific notation (e.g., "1.000000+2" -> "1.000000E+2")
                             # Replace "+" or "-" that comes after digits (scientific notation marker)
                             import re
-                            energy_str = re.sub(r'([\d.]+)([+-])', r'\1E\2', energy_str)
-                            intensity_str = re.sub(r'([\d.]+)([+-])', r'\1E\2', intensity_str)
+                            energy_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', energy_str)
+                            intensity_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', intensity_str)
                             
-                            energy = float(energy_str)  # MeV
-                            intensity = float(intensity_str)  # gammas/reaction
+                            energy = float(energy_str_clean)  # MeV
+                            intensity = float(intensity_str_clean)  # gammas/reaction
                             
                             if energy > 0:
                                 energy_list.append(energy)
                                 intensity_list.append(intensity)
-            except (ValueError, IndexError):
+            except (ValueError, IndexError) as e:
+                # Continue parsing even if one pair fails
                 pass
             
             j += 1
