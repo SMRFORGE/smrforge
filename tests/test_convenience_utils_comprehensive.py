@@ -186,6 +186,14 @@ class TestNeutronicsConvenienceFunctions:
         xs_data = create_simple_xs_data(n_groups=2, n_materials=1)
         assert xs_data.n_materials == 1
 
+    def test_create_simple_xs_data_single_material(self):
+        """Test create_simple_xs_data with single material (edge case)."""
+        xs_data = create_simple_xs_data(n_groups=2, n_materials=1)
+        assert xs_data.n_materials == 1
+        # Verify that arrays are properly sliced
+        assert xs_data.sigma_t.shape == (1, 2)
+        assert xs_data.sigma_a.shape == (1, 2)
+
     def test_create_simple_xs_data_k_eff_target(self):
         """Test create_simple_xs_data with k_eff_target."""
         xs_data = create_simple_xs_data(n_groups=2, k_eff_target=1.05)
@@ -380,6 +388,38 @@ class TestNuclearDataConvenienceFunctions:
         assert len(nuclides) == 3
         assert nuclides[0].Z == 92
         assert nuclides[0].A == 235
+
+    def test_create_nuclide_list_empty(self):
+        """Test create_nuclide_list with empty list."""
+        nuclides = create_nuclide_list([])
+        assert len(nuclides) == 0
+
+    def test_get_nuclide_parsed_regex(self):
+        """Test get_nuclide with parsed nuclide name using regex (not in common map)."""
+        # Test with element that's in element_map but not in nuclide_map
+        h2 = get_nuclide("H2")
+        assert h2.Z == 1
+        assert h2.A == 2
+
+    def test_get_nuclide_metastable(self):
+        """Test get_nuclide with metastable state."""
+        # Test with metastable state (m1)
+        pu239m1 = get_nuclide("Pu239m1")
+        assert pu239m1.Z == 94
+        assert pu239m1.A == 239
+        assert pu239m1.m == 1
+
+    def test_get_nuclide_element_not_in_map(self):
+        """Test get_nuclide with element not in element_map."""
+        # Test with element that doesn't exist in element_map
+        with pytest.raises(ValueError, match="Could not parse nuclide name"):
+            get_nuclide("Ab123")  # Ab is not in the element_map
+
+    def test_get_nuclide_invalid_format(self):
+        """Test get_nuclide with invalid format (doesn't match regex)."""
+        # Test with format that doesn't match the regex pattern
+        with pytest.raises(ValueError, match="Could not parse nuclide name"):
+            get_nuclide("invalid_format")
 
 
 class TestMaterialConvenienceFunctions:
