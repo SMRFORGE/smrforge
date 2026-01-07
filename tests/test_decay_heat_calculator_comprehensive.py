@@ -311,4 +311,212 @@ class TestDecayHeatCalculatorComprehensive:
         
         assert len(result.times) == len(times)
         assert np.all(result.total_decay_heat >= 0)
+    
+    def test_get_decay_data_with_file_loading(self, mock_cache):
+        """Test _get_decay_data with file loading path."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        
+        # Mock file loading path
+        from smrforge.core.decay_parser import ENDFDecayParser, DecayData
+        
+        mock_decay_file = Mock()
+        mock_cache._find_local_decay_file.return_value = mock_decay_file
+        
+        mock_decay_data = Mock(spec=DecayData)
+        mock_decay_data.nuclide = u235
+        mock_decay_data.half_life = 7.04e8
+        mock_decay_data.decay_constant = np.log(2) / 7.04e8
+        mock_decay_data.is_stable = False
+        mock_decay_data.decay_modes = []
+        mock_decay_data.daughters = {}
+        
+        mock_parser = Mock(spec=ENDFDecayParser)
+        mock_parser.parse_file.return_value = mock_decay_data
+        
+        with patch('smrforge.decay_heat.calculator.ENDFDecayParser', return_value=mock_parser):
+            decay_data = calculator._get_decay_data(u235)
+            
+            assert decay_data is not None
+    
+    def test_get_decay_data_fallback(self, mock_cache):
+        """Test _get_decay_data fallback when file loading fails."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        
+        # Mock file loading to fail
+        mock_cache._find_local_decay_file.return_value = None
+        
+        # Mock decay_data methods to return values
+        calculator.decay_data.get_half_life = Mock(return_value=7.04e8)
+        calculator.decay_data.get_decay_constant = Mock(return_value=np.log(2) / 7.04e8)
+        
+        # Should use fallback path
+        decay_data = calculator._get_decay_data(u235)
+        
+        # Should return DecayData or None
+        assert decay_data is None or hasattr(decay_data, 'decay_constant')
+    
+    def test_get_decay_data_zero_decay_constant(self, mock_cache):
+        """Test _get_decay_data when decay constant is zero (stable nuclide)."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        
+        # Mock decay_data methods to return zero decay constant
+        calculator.decay_data.get_half_life = Mock(return_value=np.inf)
+        calculator.decay_data.get_decay_constant = Mock(return_value=0.0)
+        
+        # Should return None for stable nuclides
+        decay_data = calculator._get_decay_data(u235)
+        
+        assert decay_data is None
+    
+    def test_get_gamma_energy_per_decay_with_gamma_production(self, mock_cache, mock_decay_data):
+        """Test _get_gamma_energy_per_decay with gamma production data."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        
+        # Mock decay data with zero gamma energy (forces fallback)
+        mock_decay_data.get_total_gamma_energy.return_value = 0.0
+        
+        # Mock gamma production data
+        from smrforge.core.gamma_production_parser import GammaProductionSpectrum
+        gamma_spec = GammaProductionSpectrum(
+            reaction="fission",
+            energy=np.array([0.5, 1.0, 1.5]),
+            intensity=np.array([0.3, 0.5, 0.2]),
+            total_yield=1.5,
+            prompt=True,
+        )
+        
+        mock_gamma_prod = Mock()
+        mock_gamma_prod.prompt_spectra = {"fission": gamma_spec}
+        mock_cache.get_gamma_production_data.return_value = mock_gamma_prod
+        
+        gamma_energy = calculator._get_gamma_energy_per_decay(u235, mock_decay_data)
+        
+        assert gamma_energy > 0
+    
+    def test_get_gamma_energy_per_decay_fallback(self, mock_cache, mock_decay_data):
+        """Test _get_gamma_energy_per_decay with fallback estimation."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        
+        # Mock decay data with zero gamma energy
+        mock_decay_data.get_total_gamma_energy.return_value = 0.0
+        
+        # Mock gamma production data to fail
+        mock_cache.get_gamma_production_data.side_effect = Exception("No gamma data")
+        
+        # Should use fallback estimation
+        gamma_energy = calculator._get_gamma_energy_per_decay(u235, mock_decay_data)
+        
+        assert gamma_energy > 0
+        assert gamma_energy == 1.5  # Default estimate
+    
+    def test_calculate_gamma_source_with_decay_spectrum(self, mock_cache, mock_decay_data):
+        """Test gamma source calculation with decay gamma spectrum."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        concentrations = {u235: 1e20}
+        times = np.array([0, 3600])
+        energy_groups = np.logspace(-2, 1, 11)
+        
+        # Mock decay data with gamma spectrum
+        from smrforge.core.decay_parser import GammaSpectrum
+        gamma_spec = GammaSpectrum(
+            energy=np.array([0.5, 1.0, 1.5]),
+            intensity=np.array([0.3, 0.5, 0.2]),
+            total_energy=1.2,
+        )
+        mock_decay_data.gamma_spectrum = gamma_spec
+        
+        # Mock gamma production data to return None (forces decay spectrum path)
+        mock_cache.get_gamma_production_data.return_value = None
+        
+        with patch.object(calculator, '_get_decay_data', return_value=mock_decay_data):
+            gamma_source = calculator.calculate_gamma_source(
+                concentrations, times, energy_groups
+            )
+        
+        assert gamma_source.shape == (len(times), len(energy_groups) - 1)
+        assert np.all(gamma_source >= 0)
+    
+    def test_calculate_gamma_source_uniform_fallback(self, mock_cache, mock_decay_data):
+        """Test gamma source with uniform distribution fallback."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        concentrations = {u235: 1e20}
+        times = np.array([0, 3600])
+        energy_groups = np.logspace(-2, 1, 11)
+        
+        # Mock decay data without gamma spectrum
+        mock_decay_data.gamma_spectrum = None
+        mock_decay_data.get_total_gamma_energy.return_value = 1.5
+        
+        # Mock gamma production data to return None
+        mock_cache.get_gamma_production_data.return_value = None
+        
+        with patch.object(calculator, '_get_decay_data', return_value=mock_decay_data):
+            gamma_source = calculator.calculate_gamma_source(
+                concentrations, times, energy_groups
+            )
+        
+        assert gamma_source.shape == (len(times), len(energy_groups) - 1)
+        assert np.all(gamma_source >= 0)
+    
+    def test_calculate_gamma_source_zero_total_energy(self, mock_cache, mock_decay_data):
+        """Test gamma source when total gamma energy is zero."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        concentrations = {u235: 1e20}
+        times = np.array([0, 3600])
+        energy_groups = np.logspace(-2, 1, 11)
+        
+        # Mock decay data with zero gamma energy
+        mock_decay_data.gamma_spectrum = None
+        mock_decay_data.get_total_gamma_energy.return_value = 0.0
+        
+        # Mock gamma production data to return None
+        mock_cache.get_gamma_production_data.return_value = None
+        
+        with patch.object(calculator, '_get_decay_data', return_value=mock_decay_data):
+            gamma_source = calculator.calculate_gamma_source(
+                concentrations, times, energy_groups
+            )
+        
+        # Should still produce some source (default yield)
+        assert gamma_source.shape == (len(times), len(energy_groups) - 1)
+        assert np.all(gamma_source >= 0)
+    
+    def test_get_decay_data_caching(self, mock_cache):
+        """Test _get_decay_data caching behavior."""
+        calculator = DecayHeatCalculator(cache=mock_cache)
+        
+        u235 = Nuclide(Z=92, A=235)
+        
+        # Mock decay data
+        mock_decay_data = Mock(spec=DecayData)
+        mock_decay_data.nuclide = u235
+        mock_decay_data.decay_constant = np.log(2) / 7.04e8
+        
+        calculator.decay_data.get_half_life = Mock(return_value=7.04e8)
+        calculator.decay_data.get_decay_constant = Mock(return_value=np.log(2) / 7.04e8)
+        
+        # First call
+        decay_data1 = calculator._get_decay_data(u235)
+        
+        # Second call should use cache
+        decay_data2 = calculator._get_decay_data(u235)
+        
+        # Should be the same (cached)
+        assert decay_data1 is decay_data2
 

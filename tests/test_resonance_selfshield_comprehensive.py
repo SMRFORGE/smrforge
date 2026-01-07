@@ -349,4 +349,106 @@ class TestResonanceData:
         assert data.nuclide == "U238"
         assert len(data.energy) == 3
         assert len(data.gamma_n) == 3
+    
+    def test_htgr_fuel_shielding_non_fissile_only(self):
+        """Test HTGR fuel shielding with non-fissile nuclides only."""
+        shielding = ResonanceSelfShielding()
+        
+        fuel_composition = {
+            "U238": 0.0020,  # Non-fissile
+            "O16": 0.0050,
+        }
+        
+        triso_geometry = {
+            "kernel_radius": 212.5e-4,
+            "buffer_thickness": 100e-4,
+            "packing_fraction": 0.35,
+        }
+        
+        result = shielding.htgr_fuel_shielding(
+            fuel_composition, triso_geometry, 1200.0
+        )
+        
+        assert isinstance(result, dict)
+        for nuclide, xs_dict in result.items():
+            assert "capture" in xs_dict
+            assert "fission" in xs_dict
+            # Non-fissile should have zero fission XS
+            if "U235" not in nuclide and "Pu239" not in nuclide:
+                assert xs_dict["fission"] == 0.0
+    
+    def test_htgr_fuel_shielding_empty_composition(self):
+        """Test HTGR fuel shielding with empty composition."""
+        shielding = ResonanceSelfShielding()
+        
+        fuel_composition = {}
+        
+        triso_geometry = {
+            "kernel_radius": 212.5e-4,
+            "buffer_thickness": 100e-4,
+            "packing_fraction": 0.35,
+        }
+        
+        result = shielding.htgr_fuel_shielding(
+            fuel_composition, triso_geometry, 1200.0
+        )
+        
+        assert isinstance(result, dict)
+        assert len(result) == 0
+    
+    def test_shield_multigroup_xs_single_group_single_temp(self):
+        """Test multi-group shielding with single group and temperature."""
+        shielding = ResonanceSelfShielding()
+        
+        xs_inf = np.array([[100.0]])  # [1 group, 1 temp]
+        temperatures = np.array([1200.0])
+        sigma_0 = 100.0
+        
+        xs_shielded = shielding.shield_multigroup_xs(
+            xs_inf, "U238", "capture", temperatures, sigma_0, method="bondarenko"
+        )
+        
+        assert xs_shielded.shape == (1, 1)
+        assert xs_shielded[0, 0] > 0
+        assert xs_shielded[0, 0] <= xs_inf[0, 0]
+    
+    def test_shield_multigroup_xs_subgroup_single_group(self):
+        """Test multi-group shielding with subgroup method, single group."""
+        shielding = ResonanceSelfShielding()
+        
+        xs_inf = np.array([[100.0]])  # [1 group, 1 temp]
+        temperatures = np.array([1200.0])
+        sigma_0 = 100.0
+        
+        xs_shielded = shielding.shield_multigroup_xs(
+            xs_inf, "U238", "capture", temperatures, sigma_0, method="subgroup"
+        )
+        
+        assert xs_shielded.shape == (1, 1)
+        assert xs_shielded[0, 0] > 0
+    
+    def test_htgr_fuel_shielding_multiple_fissile(self):
+        """Test HTGR fuel shielding with multiple fissile nuclides."""
+        shielding = ResonanceSelfShielding()
+        
+        fuel_composition = {
+            "U235": 0.0005,  # Fissile
+            "Pu239": 0.0003,  # Fissile (should get fission XS if name matches pattern)
+            "U238": 0.0020,
+        }
+        
+        triso_geometry = {
+            "kernel_radius": 212.5e-4,
+            "buffer_thickness": 100e-4,
+            "packing_fraction": 0.35,
+        }
+        
+        result = shielding.htgr_fuel_shielding(
+            fuel_composition, triso_geometry, 1200.0
+        )
+        
+        assert isinstance(result, dict)
+        # U235 should have fission XS
+        if "U235" in result:
+            assert result["U235"]["fission"] > 0
 

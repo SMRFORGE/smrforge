@@ -179,4 +179,402 @@ class TestThermalScatteringParserComprehensive:
         
         # Should return None or handle gracefully
         assert result is None or isinstance(result, ScatteringLawData)
+    
+    def test_parse_file_empty_file(self, tmp_path):
+        """Test parsing empty file."""
+        parser = ThermalScatteringParser()
+        
+        filepath = tmp_path / "empty.endf"
+        filepath.write_text("")
+        
+        result = parser.parse_file(filepath)
+        
+        # Should return placeholder data or None
+        assert result is None or isinstance(result, ScatteringLawData)
+    
+    def test_parse_file_fallback_to_placeholder(self, tmp_path):
+        """Test fallback to placeholder when parsing fails."""
+        parser = ThermalScatteringParser()
+        
+        # Create file with no MF=7 sections
+        filepath = tmp_path / "tsl-test.endf"
+        filepath.write_text(" 1.001000+3 1.000000+0          0          0          0          0  3  1     \n")
+        
+        result = parser.parse_file(filepath)
+        
+        # Should return placeholder data
+        assert result is not None
+        assert isinstance(result, ScatteringLawData)
+        assert result.material_name is not None
+    
+    def test_parse_file_read_exception(self, tmp_path):
+        """Test exception handling during file read."""
+        parser = ThermalScatteringParser()
+        
+        # Create file that can't be read (mock permission error)
+        filepath = tmp_path / "readonly.endf"
+        filepath.write_text("test")
+        
+        # Mock open to raise exception
+        with patch('builtins.open', side_effect=Exception("Read error")):
+            result = parser.parse_file(filepath)
+            assert result is None
+    
+    def test_parse_mt2_section_exception(self):
+        """Test MT=2 section parsing with exception."""
+        parser = ThermalScatteringParser()
+        
+        # Invalid lines
+        lines = ["invalid line\n"]
+        
+        result = parser._parse_mt2_section(lines, 0)
+        assert result is None
+    
+    def test_parse_mt2_section_invalid_index(self):
+        """Test MT=2 section parsing with invalid start index."""
+        parser = ThermalScatteringParser()
+        
+        lines = [" 2.936000+2 1.001000+3          0          0          0          0  7  2     \n"]
+        
+        result = parser._parse_mt2_section(lines, 100)  # Index out of range
+        assert result is None
+    
+    def test_parse_mt4_section_exception(self):
+        """Test MT=4 section parsing with exception."""
+        parser = ThermalScatteringParser()
+        
+        # Invalid lines
+        lines = ["invalid line\n"]
+        
+        result = parser._parse_mt4_section(lines, 0)
+        assert result is None
+    
+    def test_parse_mt4_section_invalid_index(self):
+        """Test MT=4 section parsing with invalid start index."""
+        parser = ThermalScatteringParser()
+        
+        lines = [" 2.936000+2 1.001000+3          0          0          0          0  7  4     \n"]
+        
+        result = parser._parse_mt4_section(lines, 100)  # Index out of range
+        assert result is None
+    
+    def test_parse_mt4_section_no_data(self):
+        """Test MT=4 section parsing with no valid data."""
+        parser = ThermalScatteringParser()
+        
+        # Lines with MF=7 but no valid data
+        lines = [
+            " 2.936000+2 1.001000+3          0          0          0          0  7  4     \n",
+            "                                                                    -1  0  0   \n",
+        ]
+        
+        result = parser._parse_mt4_section(lines, 0)
+        # Should return None if no alpha values found
+        assert result is None or result[0] is not None
+    
+    def test_parse_endf_mf7_no_sections(self):
+        """Test parsing ENDF file with no MF=7 sections."""
+        parser = ThermalScatteringParser()
+        
+        lines = [
+            " 1.001000+3 1.000000+0          0          0          0          0  3  1     \n",
+        ]
+        
+        result = parser._parse_endf_mf7(lines, "test", Path("test.endf"))
+        assert result is None
+    
+    def test_parse_endf_mf7_mt2_fallback(self):
+        """Test parsing ENDF file with MT=2 when MT=4 not available."""
+        parser = ThermalScatteringParser()
+        
+        lines = [
+            " 2.936000+2 1.001000+3          0          0          0          0  7  2     \n",
+        ]
+        
+        result = parser._parse_endf_mf7(lines, "test", Path("test.endf"))
+        # Should return MT=2 data or None
+        assert result is None or isinstance(result, ScatteringLawData)
+    
+    def test_get_s_no_data(self):
+        """Test get_s when data is None."""
+        alpha = np.array([0.1, 1.0, 10.0])
+        beta = np.array([-5.0, 0.0, 5.0])
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            alpha_values=None,
+            beta_values=beta,
+            s_alpha_beta=np.ones((3, 3)),
+        )
+        
+        s_value = data.get_s(1.0, 0.0)
+        assert s_value == 0.0
+    
+    def test_get_s_exact_match(self):
+        """Test get_s with exact alpha and beta match."""
+        alpha = np.array([0.1, 1.0, 10.0])
+        beta = np.array([-5.0, 0.0, 5.0])
+        s_data = np.array([[1.0, 2.0, 1.0], [1.5, 2.5, 1.5], [1.0, 2.0, 1.0]])
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_data,
+        )
+        
+        # Test exact match
+        s_value = data.get_s(1.0, 0.0)
+        assert abs(s_value - 2.5) < 1e-10
+    
+    def test_get_s_extrapolation(self):
+        """Test get_s with values outside range."""
+        alpha = np.array([0.1, 1.0, 10.0])
+        beta = np.array([-5.0, 0.0, 5.0])
+        s_data = np.array([[1.0, 2.0, 1.0], [1.5, 2.5, 1.5], [1.0, 2.0, 1.0]])
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_data,
+        )
+        
+        # Test extrapolation (before start)
+        s_value = data.get_s(0.05, -10.0)
+        assert s_value >= 0
+        
+        # Test extrapolation (after end)
+        s_value = data.get_s(100.0, 10.0)
+        assert s_value >= 0
+    
+    def test_get_s_single_point(self):
+        """Test get_s with single point arrays."""
+        alpha = np.array([1.0])
+        beta = np.array([0.0])
+        s_data = np.array([[2.5]])
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_data,
+        )
+        
+        s_value = data.get_s(1.0, 0.0)
+        assert abs(s_value - 2.5) < 1e-10
+        
+        # Test interpolation at different point
+        s_value = data.get_s(0.5, 0.0)
+        assert s_value >= 0
+    
+    def test_get_s_temperature_interpolation(self):
+        """Test get_s with temperature interpolation."""
+        alpha = np.array([0.1, 1.0, 10.0])
+        beta = np.array([-5.0, 0.0, 5.0])
+        temperatures = np.array([293.6, 600.0, 900.0])
+        s_data = np.ones((3, 3, 3)) * np.array([1.0, 1.5, 2.0])[:, np.newaxis, np.newaxis]
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            temperatures=temperatures,
+            multi_temperature=True,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_data,
+        )
+        
+        # Test at intermediate temperature
+        s_value = data.get_s(1.0, 0.0, temperature=450.0)
+        assert s_value >= 0
+    
+    def test_get_s_temperature_exact_match(self):
+        """Test get_s with exact temperature match."""
+        alpha = np.array([0.1, 1.0, 10.0])
+        beta = np.array([-5.0, 0.0, 5.0])
+        temperatures = np.array([293.6, 600.0, 900.0])
+        s_data = np.ones((3, 3, 3)) * np.array([1.0, 1.5, 2.0])[:, np.newaxis, np.newaxis]
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            temperatures=temperatures,
+            multi_temperature=True,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_data,
+        )
+        
+        # Test at exact temperature
+        s_value = data.get_s(1.0, 0.0, temperature=600.0)
+        assert abs(s_value - 1.5) < 1e-6
+    
+    def test_interpolate_temperature_no_multi_temp(self):
+        """Test temperature interpolation when not multi-temperature."""
+        alpha = np.array([0.1, 1.0, 10.0])
+        beta = np.array([-5.0, 0.0, 5.0])
+        s_data = np.ones((3, 3))
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            multi_temperature=False,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_data,
+        )
+        
+        # Should return original data
+        result = data._interpolate_temperature(600.0)
+        assert np.array_equal(result, s_data)
+    
+    def test_interpolate_temperature_single_temp(self):
+        """Test temperature interpolation with single temperature point."""
+        alpha = np.array([0.1, 1.0, 10.0])
+        beta = np.array([-5.0, 0.0, 5.0])
+        temperatures = np.array([293.6])
+        s_data = np.ones((1, 3, 3))
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            temperatures=temperatures,
+            multi_temperature=True,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_data,
+        )
+        
+        result = data._interpolate_temperature(600.0)
+        assert result.shape == (3, 3)
+    
+    def test_compute_thermal_scattering_xs_zero_energy(self):
+        """Test thermal scattering cross-section with zero energy."""
+        parser = ThermalScatteringParser()
+        
+        alpha = np.logspace(-2, 2, 10)
+        beta = np.linspace(-10, 10, 20)
+        s_alpha_beta = np.ones((10, 20))
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_alpha_beta,
+            bound_atom_mass=1.008,
+        )
+        
+        # Zero energy should return zero
+        xs = parser.compute_thermal_scattering_xs(data, 0.0, 0.025, 293.6)
+        assert xs == 0.0
+    
+    def test_compute_thermal_scattering_xs_different_temperature(self):
+        """Test thermal scattering cross-section at different temperature."""
+        parser = ThermalScatteringParser()
+        
+        alpha = np.logspace(-2, 2, 10)
+        beta = np.linspace(-10, 10, 20)
+        s_alpha_beta = np.ones((10, 20))
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_alpha_beta,
+            bound_atom_mass=1.008,
+        )
+        
+        # Test at different temperature
+        xs = parser.compute_thermal_scattering_xs(data, 0.025, 0.025, 600.0)
+        assert xs >= 0
+    
+    def test_create_placeholder_data_various_materials(self):
+        """Test placeholder data creation for various materials."""
+        parser = ThermalScatteringParser()
+        
+        # Test H in H2O
+        data_h = parser._create_placeholder_data("H_in_H2O", Path("test.endf"))
+        assert data_h.zaid == 1001
+        assert not data_h.coherent_scattering
+        
+        # Test C in graphite
+        data_c = parser._create_placeholder_data("C_in_graphite", Path("test.endf"))
+        assert data_c.zaid == 6000
+        assert data_c.coherent_scattering
+        
+        # Test D in D2O
+        data_d = parser._create_placeholder_data("D_in_D2O", Path("test.endf"))
+        assert data_d.zaid == 1002
+        
+        # Test O in material
+        data_o = parser._create_placeholder_data("O_in_UO2", Path("test.endf"))
+        assert data_o.zaid == 8016
+        assert data_o.coherent_scattering
+        
+        # Test default
+        data_default = parser._create_placeholder_data("unknown", Path("test.endf"))
+        assert data_default.zaid == 1001
+    
+    def test_extract_material_name_various_patterns(self):
+        """Test material name extraction with various patterns."""
+        parser = ThermalScatteringParser()
+        
+        # Test various prefixes
+        assert parser._extract_material_name("tsl-H_in_H2O.endf") == "H in H2O"
+        assert parser._extract_material_name("thermal-H_in_H2O.endf") == "H in H2O"
+        assert parser._extract_material_name("ts-H_in_H2O.endf") == "H in H2O"
+        
+        # Test without prefix
+        assert parser._extract_material_name("H_in_H2O.endf") == "H_in_H2O"
+        
+        # Test uppercase
+        assert parser._extract_material_name("TSL-H_IN_H2O.ENDF") == "H in H2O"
+        
+        # Test unmapped material
+        result = parser._extract_material_name("tsl-unknown.endf")
+        assert result is not None
+        assert result == "unknown"
+    
+    def test_get_s_interpolation_edge_cases(self):
+        """Test get_s interpolation edge cases."""
+        alpha = np.array([0.1, 1.0, 10.0])
+        beta = np.array([-5.0, 0.0, 5.0])
+        s_data = np.array([[1.0, 2.0, 1.0], [1.5, 2.5, 1.5], [1.0, 2.0, 1.0]])
+        
+        data = ScatteringLawData(
+            material_name="test",
+            zaid=1001,
+            temperature=293.6,
+            alpha_values=alpha,
+            beta_values=beta,
+            s_alpha_beta=s_data,
+        )
+        
+        # Test at boundary values
+        s1 = data.get_s(0.1, -5.0)  # First alpha, first beta
+        assert s1 >= 0
+        
+        s2 = data.get_s(10.0, 5.0)  # Last alpha, last beta
+        assert s2 >= 0
+        
+        # Test with very close values (within tolerance)
+        s3 = data.get_s(1.0 + 1e-11, 0.0 + 1e-11)
+        assert abs(s3 - 2.5) < 1e-6
 
