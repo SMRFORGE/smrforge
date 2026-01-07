@@ -184,7 +184,7 @@ class TestGammaTransportSolverComprehensive:
         # Set flux
         solver.flux = np.ones((solver.nz, solver.nr, solver.ng)) * 1e10  # photons/cm²/s
         
-        dose_rate = solver.calculate_dose_rate()
+        dose_rate = solver.compute_dose_rate()
         
         assert dose_rate is not None
         assert dose_rate.shape == (solver.nz, solver.nr)
