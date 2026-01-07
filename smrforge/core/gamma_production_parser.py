@@ -268,13 +268,40 @@ class ENDFGammaProductionParser:
                 j += 1
                 continue
             
-            # Check for end of section (new MF section starts)
-            # Skip check if line is too short to have MF field
+            # Check for end of section
+            # Check if this is a new section header (different MF)
             if len(data_line) >= 72:
                 mf_check = data_line[70:72].strip()
-                # Only break if we encounter a different MF (not continuation of current MF)
+                mt_check = data_line[72:75].strip()
+                
+                # Break if we encounter a different MF (not continuation of current MF)
                 if mf_check and mf_check not in ["12", "13", "14", ""]:
                     break
+                
+                # Check if this looks like a new section header (MF/MT header line)
+                # Section headers have ZAID (large number > 1e3) in first field
+                # and AWR in second field, and match MF/MT position
+                if mf_check in ["12", "13", "14"] and mt_check:
+                    try:
+                        first_field = data_line[0:11].strip()
+                        if first_field:
+                            import re
+                            first_field_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', first_field)
+                            first_val = float(first_field_clean)
+                            # If first field is large (> 1e3) and we're past the first data line,
+                            # this is likely a new section header
+                            if first_val > 1e3 and j > start_idx + 2:
+                                # Also check second field is reasonable AWR
+                                second_field = data_line[11:22].strip()
+                                if second_field:
+                                    second_field_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', second_field)
+                                    second_val = float(second_field_clean)
+                                    # AWR is typically between 0.5 and 250
+                                    if 0.5 <= second_val <= 250:
+                                        # This looks like a new section header, break
+                                        break
+                    except (ValueError, IndexError):
+                        pass
             
             # Check for end marker
             if data_line.strip().endswith("-1"):
