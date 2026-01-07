@@ -207,10 +207,37 @@ class ENDFPhotonParser:
             if len(line) < 75:
                 continue
             
-            mf = line[70:72].strip()
-            mt_str = line[72:75].strip()
+            # ENDF format: MF at columns 71-72 (0-indexed: 70-72), MT at columns 73-75 (0-indexed: 72-75)
+            # Some files may have slightly different formatting with 3-digit MTs spanning positions
+            # Check standard positions first
+            mf = line[70:72].strip() if len(line) >= 72 else ""
+            mt_str = line[72:75].strip() if len(line) >= 75 else ""
             
-            if mf == "23" and mt_str == str(mt):
+            # For 3-digit MTs (like 501, 502, 516), check if they span across positions 71-74
+            # Standard ENDF uses 2-digit MT, but photon files use 3-digit MTs
+            # If standard position doesn't give expected values, try alternative positions
+            # Some files have "MF MT" as a space-separated pair around position 66-73
+            if mf != "23" or not mt_str or not mt_str.isdigit():
+                line_end = line[66:78].strip() if len(line) > 78 else line[66:].strip()
+                parts = line_end.split()
+                if len(parts) >= 2:
+                    # Check if first part is "23"
+                    if parts[0] == "23":
+                        mf = "23"
+                    # Extract MT from second part (handles 3-digit MTs like 501)
+                    if len(parts) >= 2:
+                        mt_str = parts[1].strip()
+                    # Also try direct extraction from positions 71-74 for 3-digit MTs as fallback
+                    elif len(line) >= 74:
+                        mt_str = line[71:74].strip()
+            
+            # Try to match MT (handle both string comparison and int conversion)
+            try:
+                mt_match = mt_str == str(mt) or (mt_str and int(mt_str) == mt)
+            except (ValueError, TypeError):
+                mt_match = False
+            
+            if mf == "23" and mt_match:
                 # Parse data
                 energy_list = []
                 xs_list = []
@@ -223,7 +250,20 @@ class ENDFPhotonParser:
                         continue
                     
                     # Check for end of section
-                    mf_check = data_line[70:72].strip()
+                    # On continuation lines, MF/MT might be at non-standard positions
+                    mf_check = data_line[70:72].strip() if len(data_line) >= 72 else ""
+                    
+                    # If standard position is empty or has unexpected value, try alternative positions
+                    # Some files have "MF MT" as a space-separated pair around position 66-73
+                    if not mf_check or (mf_check != "23" and mf_check != ""):
+                        # Check if "23" appears near the end of the line
+                        line_end = data_line[66:78].strip() if len(data_line) > 78 else data_line[66:].strip()
+                        parts = line_end.split()
+                        if len(parts) >= 2:
+                            # Check if first part is MF number
+                            if parts[0] == "23":
+                                mf_check = "23"
+                    
                     if mf_check != "23" and mf_check != "":
                         break
                     
@@ -239,12 +279,14 @@ class ENDFPhotonParser:
                                 xs_str = data_line[(k + 1) * 11:(k + 2) * 11].strip()
                                 
                                 if energy_str and xs_str:
-                                    # Handle ENDF scientific notation
-                                    energy_str = energy_str.replace("+", "E+").replace("-", "E-")
-                                    xs_str = xs_str.replace("+", "E+").replace("-", "E-")
+                                    # Handle ENDF scientific notation (e.g., "1.000000+2" -> "1.000000E+2")
+                                    # Replace "+" or "-" that comes after digits (scientific notation marker)
+                                    import re
+                                    energy_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', energy_str)
+                                    xs_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', xs_str)
                                     
-                                    energy = float(energy_str)  # MeV
-                                    xs = float(xs_str)  # barn
+                                    energy = float(energy_str_clean)  # MeV
+                                    xs = float(xs_str_clean)  # barn
                                     
                                     if energy > 0:
                                         energy_list.append(energy)
@@ -267,6 +309,10 @@ class ENDFPhotonParser:
         
         if len(source_energy) == 0:
             return np.zeros_like(target_energy)
+        
+        # Handle single point case - use constant value
+        if len(source_energy) == 1:
+            return np.full_like(target_energy, source_xs[0])
         
         # Interpolate
         xs_interp = np.interp(target_energy, source_energy, source_xs, left=0.0, right=0.0)
