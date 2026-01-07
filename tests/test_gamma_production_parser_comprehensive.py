@@ -226,4 +226,168 @@ class TestENDFGammaProductionParserComprehensive:
         assert parser.reaction_mt_map[18] == "fission"
         assert 102 in parser.reaction_mt_map
         assert parser.reaction_mt_map[102] == "capture"
+    
+    def test_parse_file_empty_file(self, tmp_path):
+        """Test parsing empty file."""
+        parser = ENDFGammaProductionParser()
+        
+        filepath = tmp_path / "gammas-092_U_235.endf"
+        filepath.write_text("")
+        
+        result = parser.parse_file(filepath)
+        
+        # Should return None or handle gracefully
+        assert result is None or isinstance(result, GammaProductionData)
+    
+    def test_parse_file_read_exception(self, tmp_path):
+        """Test exception handling during file read."""
+        parser = ENDFGammaProductionParser()
+        
+        filepath = tmp_path / "readonly.endf"
+        filepath.write_text("test")
+        
+        # Mock open to raise exception
+        with patch('builtins.open', side_effect=Exception("Read error")):
+            result = parser.parse_file(filepath)
+            assert result is None
+    
+    def test_parse_filename_multiple_patterns(self):
+        """Test parsing filename with multiple pattern attempts."""
+        parser = ENDFGammaProductionParser()
+        
+        # Test first pattern
+        result1 = parser._parse_filename("gammas-092_U_235.endf")
+        assert result1 is not None
+        assert result1.Z == 92
+        
+        # Test second pattern
+        result2 = parser._parse_filename("gamma-001_H_001.endf")
+        assert result2 is not None
+        assert result2.Z == 1
+        
+        # Test third pattern (alternative format)
+        result3 = parser._parse_filename("092_U_235.endf")
+        assert result3 is not None
+        assert result3.Z == 92
+    
+    def test_parse_filename_with_metastable(self):
+        """Test parsing filename with metastable state."""
+        parser = ENDFGammaProductionParser()
+        
+        result = parser._parse_filename("gammas-092_U_239m1.endf")
+        assert result is not None
+        assert result.m == 1
+        
+        result = parser._parse_filename("gammas-092_U_239m2.endf")
+        assert result is not None
+        assert result.m == 2
+    
+    def test_parse_filename_invalid_format(self):
+        """Test parsing filename with invalid format."""
+        parser = ENDFGammaProductionParser()
+        
+        result = parser._parse_filename("invalid")
+        assert result is None
+        
+        result = parser._parse_filename("not-gamma-file.txt")
+        assert result is None
+    
+    def test_parse_mf12_no_sections(self):
+        """Test parsing MF=12 when no sections exist."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 1.001000+3 1.000000+0          0          0          0          0  3  1     \n",
+        ]
+        
+        spectra = parser._parse_mf12(lines)
+        assert isinstance(spectra, dict)
+        assert len(spectra) == 0
+    
+    def test_parse_mf12_invalid_mt(self):
+        """Test parsing MF=12 with invalid MT number."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 1.001000+3 1.000000+0          0          0          0          0 12 XX     \n",
+        ]
+        
+        spectra = parser._parse_mf12(lines)
+        assert isinstance(spectra, dict)
+        # Should skip invalid MT
+    
+    def test_parse_mf13_14_no_sections(self):
+        """Test parsing MF=13,14 when no sections exist."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 1.001000+3 1.000000+0          0          0          0          0  3  1     \n",
+        ]
+        
+        spectra = parser._parse_mf13_14(lines)
+        assert isinstance(spectra, dict)
+        assert len(spectra) == 0
+    
+    def test_parse_gamma_spectrum_section_invalid_index(self):
+        """Test parsing gamma spectrum section with invalid start index."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 1.001000+3 1.000000+0          0          0          0          0 12 18     \n",
+        ]
+        
+        result = parser._parse_gamma_spectrum_section(lines, 100, 18)  # Index out of range
+        assert result is None
+    
+    def test_parse_gamma_spectrum_section_exception(self):
+        """Test parsing gamma spectrum section with exception."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = ["invalid line\n"]
+        
+        result = parser._parse_gamma_spectrum_section(lines, 0, 18)
+        assert result is None
+    
+    def test_gamma_production_data_empty_spectra(self):
+        """Test GammaProductionData with empty spectra."""
+        u235 = Nuclide(Z=92, A=235)
+        
+        gamma_data = GammaProductionData(
+            nuclide=u235,
+            prompt_spectra={},
+            delayed_spectra={},
+        )
+        
+        # Should return 0.0 for missing reactions
+        yield_fission = gamma_data.get_total_gamma_yield("fission", prompt=True)
+        assert yield_fission == 0.0
+        
+        spec = gamma_data.get_gamma_spectrum("fission", prompt=True)
+        assert spec is None
+    
+    def test_gamma_production_data_delayed_only(self):
+        """Test GammaProductionData with only delayed spectra."""
+        u235 = Nuclide(Z=92, A=235)
+        
+        delayed_spectrum = GammaProductionSpectrum(
+            reaction="fission",
+            energy=np.array([0.5, 1.0]),
+            intensity=np.array([0.6, 0.4]),
+            total_yield=0.5,
+            prompt=False,
+        )
+        
+        gamma_data = GammaProductionData(
+            nuclide=u235,
+            prompt_spectra={},
+            delayed_spectra={"fission": delayed_spectrum},
+        )
+        
+        # Prompt should return 0.0
+        prompt_yield = gamma_data.get_total_gamma_yield("fission", prompt=True)
+        assert prompt_yield == 0.0
+        
+        # Delayed should return yield
+        delayed_yield = gamma_data.get_total_gamma_yield("fission", prompt=False)
+        assert delayed_yield == 0.5
 

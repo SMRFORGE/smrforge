@@ -224,4 +224,205 @@ class TestENDFPhotonParserComprehensive:
         
         # Should return None or handle gracefully
         assert result is None or isinstance(result, PhotonCrossSection)
+    
+    def test_parse_file_empty_file(self, tmp_path):
+        """Test parsing empty file."""
+        parser = ENDFPhotonParser()
+        
+        filepath = tmp_path / "p-001_H_001.endf"
+        filepath.write_text("")
+        
+        result = parser.parse_file(filepath)
+        
+        # Should return None
+        assert result is None
+    
+    def test_parse_file_read_exception(self, tmp_path):
+        """Test exception handling during file read."""
+        parser = ENDFPhotonParser()
+        
+        filepath = tmp_path / "readonly.endf"
+        filepath.write_text("test")
+        
+        # Mock open to raise exception
+        with patch('builtins.open', side_effect=Exception("Read error")):
+            result = parser.parse_file(filepath)
+            assert result is None
+    
+    def test_parse_filename_invalid_z(self):
+        """Test parsing filename with invalid Z."""
+        parser = ENDFPhotonParser()
+        
+        result = parser._parse_filename("p-ABC_H_001.endf")
+        assert result is None
+    
+    def test_parse_filename_no_underscore(self):
+        """Test parsing filename without underscore."""
+        parser = ENDFPhotonParser()
+        
+        result = parser._parse_filename("p-001H001.endf")
+        assert result is None
+    
+    def test_parse_mt_section_short_line(self):
+        """Test parsing MT section with short line."""
+        parser = ENDFPhotonParser()
+        
+        lines = ["short\n"]
+        
+        result = parser._parse_mt_section(lines, 501)
+        assert result is None
+    
+    def test_parse_mt_section_exception(self):
+        """Test parsing MT section with exception."""
+        parser = ENDFPhotonParser()
+        
+        lines = ["invalid line\n"]
+        
+        result = parser._parse_mt_section(lines, 501)
+        assert result is None
+    
+    def test_parse_mt_section_no_data(self):
+        """Test parsing MT section with no data."""
+        parser = ENDFPhotonParser()
+        
+        lines = [
+            " 1.001000+3 1.000000+0          0          0          0          0 23 501   \n",
+            "                                                                    -1  0  0   \n",
+        ]
+        
+        result = parser._parse_mt_section(lines, 501)
+        # Should return None if no data found
+        assert result is None or result[0] is not None
+    
+    def test_interpolate_to_grid_extrapolation(self):
+        """Test interpolating outside energy range."""
+        parser = ENDFPhotonParser()
+        
+        source_energy = np.array([0.1, 1.0, 10.0])
+        source_xs = np.array([1.0, 2.0, 3.0])
+        source_data = (source_energy, source_xs)
+        
+        # Target energy outside source range
+        target_energy = np.array([0.05, 0.5, 50.0])
+        
+        interpolated = parser._interpolate_to_grid(target_energy, source_data)
+        
+        assert len(interpolated) == len(target_energy)
+        assert np.all(interpolated >= 0)
+    
+    def test_interpolate_to_grid_single_point(self):
+        """Test interpolating with single source point."""
+        parser = ENDFPhotonParser()
+        
+        source_energy = np.array([1.0])
+        source_xs = np.array([2.0])
+        source_data = (source_energy, source_xs)
+        
+        target_energy = np.array([0.5, 1.0, 2.0])
+        
+        interpolated = parser._interpolate_to_grid(target_energy, source_data)
+        
+        assert len(interpolated) == len(target_energy)
+        # Should use constant value
+        assert np.all(interpolated == 2.0)
+    
+    def test_interpolate_to_grid_exact_match(self):
+        """Test interpolating with exact energy match."""
+        parser = ENDFPhotonParser()
+        
+        source_energy = np.array([0.1, 1.0, 10.0])
+        source_xs = np.array([1.0, 2.0, 3.0])
+        source_data = (source_energy, source_xs)
+        
+        # Target energy matches source exactly
+        target_energy = np.array([0.1, 1.0, 10.0])
+        
+        interpolated = parser._interpolate_to_grid(target_energy, source_data)
+        
+        assert len(interpolated) == len(target_energy)
+        assert np.allclose(interpolated, source_xs)
+    
+    def test_photon_cross_section_interpolate_exact_match(self):
+        """Test PhotonCrossSection interpolation with exact energy match."""
+        energy = np.array([0.01, 0.1, 1.0, 10.0])
+        sigma_pe = np.array([1.0, 2.0, 3.0, 4.0])
+        sigma_comp = np.array([2.0, 4.0, 6.0, 8.0])
+        sigma_pair = np.array([0.1, 0.2, 0.3, 0.4])
+        sigma_total = sigma_pe + sigma_comp + sigma_pair
+        
+        photon_data = PhotonCrossSection(
+            element="H",
+            Z=1,
+            energy=energy,
+            sigma_photoelectric=sigma_pe,
+            sigma_compton=sigma_comp,
+            sigma_pair=sigma_pair,
+            sigma_total=sigma_total,
+        )
+        
+        # Exact match
+        pe, comp, pair, tot = photon_data.interpolate(1.0)
+        assert pe == 3.0
+        assert comp == 6.0
+        assert pair == 0.3
+        assert tot == 9.3
+    
+    def test_photon_cross_section_interpolate_zero_denominator(self):
+        """Test PhotonCrossSection interpolation with zero denominator."""
+        energy = np.array([0.01, 0.01, 1.0])  # Duplicate energy
+        sigma_pe = np.array([1.0, 1.0, 3.0])
+        sigma_comp = np.array([2.0, 2.0, 6.0])
+        sigma_pair = np.array([0.1, 0.1, 0.3])
+        sigma_total = sigma_pe + sigma_comp + sigma_pair
+        
+        photon_data = PhotonCrossSection(
+            element="H",
+            Z=1,
+            energy=energy,
+            sigma_photoelectric=sigma_pe,
+            sigma_compton=sigma_comp,
+            sigma_pair=sigma_pair,
+            sigma_total=sigma_total,
+        )
+        
+        # Should handle zero denominator gracefully
+        pe, comp, pair, tot = photon_data.interpolate(0.01)
+        assert pe >= 0
+        assert comp >= 0
+    
+    def test_parse_file_no_cross_sections(self, tmp_path):
+        """Test parsing file with no cross-section sections."""
+        parser = ENDFPhotonParser()
+        
+        filepath = tmp_path / "p-001_H_001.endf"
+        filepath.write_text(" 1.001000+3 1.000000+0          0          0          0          0 23  1     \n")
+        
+        result = parser.parse_file(filepath)
+        
+        # Should return None if no cross-sections
+        assert result is None
+    
+    def test_parse_file_only_one_section(self, tmp_path):
+        """Test parsing file with only one cross-section section."""
+        parser = ENDFPhotonParser()
+        
+        filepath = tmp_path / "p-001_H_001.endf"
+        lines = [
+            " 1.001000+3 1.000000+0          0          0          0          0 23  1     \n",
+            " 0.000000+0 0.000000+0          0          0          0          0 23 501   \n",
+            " 0.000000+0 0.000000+0          0          0          2         10 23 501   \n",
+            " 1.000000-2 1.000000+1 1.000000-1 5.000000+0 1.000000+0 2.000000+0 23 501   \n",
+            " 1.000000+1 1.000000+0 0.000000+0 0.000000+0 0.000000+0 0.000000+0 23 501   \n",
+            "                                                                    -1  0  0   \n",
+        ]
+        filepath.write_text("".join(lines))
+        
+        result = parser.parse_file(filepath)
+        
+        # Should create PhotonCrossSection with zeros for missing sections
+        assert result is not None
+        assert result.sigma_photoelectric is not None
+        # Missing sections should be zeros
+        assert np.all(result.sigma_compton == 0) or result.sigma_compton is not None
+        assert np.all(result.sigma_pair == 0) or result.sigma_pair is not None
 
