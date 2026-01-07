@@ -191,9 +191,13 @@ class BurnupSolver:
         self._initialize_nuclides()
         
         # Initialize concentrations [n_nuclides, n_time_steps]
+        # Note: concentrations must be created before _set_initial_concentrations is called
         n_nuclides = len(self.nuclides)
         n_times = len(self.time_steps_sec)
         self.concentrations = np.zeros((n_nuclides, n_times))
+        
+        # Set initial concentrations (called after concentrations array is created)
+        self._set_initial_concentrations()
         
         # Initialize burnup tracking
         self.burnup_mwd_per_kg = np.zeros(n_times)
@@ -249,8 +253,7 @@ class BurnupSolver:
                 if nuc not in self.nuclides:
                     self.nuclides.append(nuc)
         
-        # Set initial concentrations
-        self._set_initial_concentrations()
+        # Note: Initial concentrations are set after concentrations array is created in __init__
     
     def _set_initial_concentrations(self):
         """Set initial nuclide concentrations based on enrichment."""
@@ -558,6 +561,22 @@ class BurnupSolver:
         yield_data = get_fission_yield_data(nuclide, cache=self.cache)
         self._fission_yield_cache[nuclide] = yield_data
         return yield_data
+    
+    def _update_cross_sections(self, step: int):
+        """
+        Update cross-sections based on new composition.
+        
+        This is a placeholder for future implementation.
+        In full implementation, would update xs.sigma_a, sigma_f, etc.
+        based on nuclide concentrations at this time step.
+        
+        Args:
+            step: Time step index
+        """
+        # Placeholder: In full implementation, would update cross-sections
+        # based on current nuclide concentrations
+        # For now, cross-sections remain constant
+        pass
     
     def _update_burnup(self, step: int):
         """

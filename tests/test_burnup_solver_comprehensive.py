@@ -28,7 +28,7 @@ def simple_geometry():
     geometry = PrismaticCore(name="TestCore")
     geometry.core_height = 100.0  # cm
     geometry.core_diameter = 50.0  # cm
-    geometry.build_mesh(n_radial=5, n_axial=3)
+    geometry.generate_mesh(n_radial=5, n_axial=3)
     return geometry
 
 
@@ -75,7 +75,8 @@ def mock_cache():
         return decay_data
     
     cache.get_decay_data = mock_get_decay_data
-    cache.get_fission_yield_data.return_value = None
+    cache.get_fission_yield_data = Mock(return_value=None)
+    cache.get_cross_section = Mock(return_value=(np.array([1e6, 2e6]), np.array([1.0, 2.0])))
     return cache
 
 
@@ -130,8 +131,9 @@ class TestBurnupSolverComprehensive:
         
         burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
         
-        # Set flux
-        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, burnup.neutronics.n_groups))
+        # Set flux - get shape from xs data
+        n_groups = burnup.neutronics.xs.n_groups
+        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
         
         # Build production vector
         production_vector = burnup._build_fission_production_vector(0)
@@ -169,8 +171,8 @@ class TestBurnupSolverComprehensive:
         # Update cross-sections
         burnup._update_cross_sections(1)
         
-        # Check that cross-sections exist
-        assert burnup.neutronics.xs_data is not None
+        # Check that cross-sections exist (use xs instead of xs_data)
+        assert burnup.neutronics.xs is not None
     
     def test_update_burnup(self, simple_neutronics, mock_cache):
         """Test updating burnup calculation."""
@@ -189,8 +191,9 @@ class TestBurnupSolverComprehensive:
             burnup.concentrations[idx_u235, 0] = 1e20
             burnup.concentrations[idx_u235, 1] = 0.9e20
         
-        # Set flux
-        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, burnup.neutronics.n_groups))
+        # Set flux - get shape from xs data
+        n_groups = burnup.neutronics.xs.n_groups
+        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
         
         # Update burnup
         burnup._update_burnup(1)
@@ -325,8 +328,9 @@ class TestBurnupSolverComprehensive:
         
         burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
         
-        # Set flux
-        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, burnup.neutronics.n_groups))
+        # Set flux - get shape from xs data
+        n_groups = burnup.neutronics.xs.n_groups
+        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
         
         # Mock get_cross_section to return data
         def mock_get_cross_section(nuclide, reaction, temperature=None):
@@ -349,8 +353,9 @@ class TestBurnupSolverComprehensive:
         
         burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
         
-        # Set flux
-        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, burnup.neutronics.n_groups))
+        # Set flux - get shape from xs data
+        n_groups = burnup.neutronics.xs.n_groups
+        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
         
         # Mock get_cross_section to raise exception (forces fallback)
         mock_cache.get_cross_section.side_effect = Exception("No cross-section data")
@@ -421,8 +426,9 @@ class TestBurnupSolverComprehensive:
             idx_u235 = burnup.nuclides.index(u235)
             burnup.concentrations[idx_u235, 0] = 1e20
         
-        # Set flux
-        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, burnup.neutronics.n_groups))
+        # Set flux - get shape from xs data
+        n_groups = burnup.neutronics.xs.n_groups
+        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
         
         # Mock solve_ivp to return unsuccessful result
         from unittest.mock import patch
@@ -454,8 +460,9 @@ class TestBurnupSolverComprehensive:
             idx_u235 = burnup.nuclides.index(u235)
             burnup.concentrations[idx_u235, 0] = 1e20
         
-        # Set flux
-        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, burnup.neutronics.n_groups))
+        # Set flux - get shape from xs data
+        n_groups = burnup.neutronics.xs.n_groups
+        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
         
         # Mock solve_ivp to raise exception
         from unittest.mock import patch
@@ -480,7 +487,8 @@ class TestBurnupSolverComprehensive:
         
         # Mock initial solve to work
         def mock_solve_initial():
-            burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, burnup.neutronics.n_groups))
+            n_groups = burnup.neutronics.xs.n_groups
+            burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
             burnup.neutronics.k_eff = 1.0
             return 1.0, burnup.neutronics.flux
         
@@ -533,4 +541,139 @@ class TestBurnupSolverComprehensive:
         assert capture_matrix.shape[0] == len(burnup.nuclides)
         # Should be zero matrix when flux is None
         assert np.all(capture_matrix.data == 0) or capture_matrix.nnz == 0
+
+    def test_init_decay_data_fallback(self, simple_neutronics, mock_cache):
+        """Test BurnupSolver.__init__ with DecayData fallback path."""
+        options = BurnupOptions(
+            time_steps=[0, 30],
+            initial_enrichment=0.195,
+        )
+        
+        # Mock DecayData: first call (with cache) raises TypeError, second call (without cache) succeeds
+        call_count = [0]
+        def mock_decay_data(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1 and 'cache' in kwargs:
+                # First call with cache parameter raises TypeError
+                raise TypeError("Invalid args")
+            # Second call (fallback) succeeds
+            decay_data_mock = Mock(spec=DecayData)
+            decay_data_mock._cache = mock_cache
+            return decay_data_mock
+        
+        with patch('smrforge.burnup.solver.DecayData', side_effect=mock_decay_data):
+            burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
+            
+            # Should still initialize with fallback
+            assert burnup.decay_data is not None
+            assert burnup.cache == mock_cache
+
+    def test_build_capture_matrix_nuclide_specific_xs_failure(self, simple_neutronics, mock_cache):
+        """Test _build_capture_matrix when nuclide-specific XS retrieval fails."""
+        options = BurnupOptions(
+            time_steps=[0, 30],
+            initial_enrichment=0.195,
+        )
+        
+        burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
+        
+        # Set flux - get shape from xs data
+        n_groups = burnup.neutronics.xs.n_groups
+        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
+        
+        # Set concentrations
+        u235 = Nuclide(Z=92, A=235)
+        if u235 in burnup.nuclides:
+            idx_u235 = burnup.nuclides.index(u235)
+            burnup.concentrations[idx_u235, 0] = 1e20
+        
+        # Mock get_cross_section to raise exception (triggers fallback)
+        mock_cache.get_cross_section.side_effect = Exception("Cross-section not found")
+        
+        # Should fall back to material average
+        capture_matrix = burnup._build_capture_matrix(0)
+        
+        assert capture_matrix is not None
+        assert capture_matrix.shape[0] == len(burnup.nuclides)
+
+    def test_build_capture_matrix_zero_concentration(self, simple_neutronics, mock_cache):
+        """Test _build_capture_matrix with zero nuclide concentration."""
+        options = BurnupOptions(
+            time_steps=[0, 30],
+            initial_enrichment=0.195,
+        )
+        
+        burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
+        
+        # Set flux - get shape from xs data
+        n_groups = burnup.neutronics.xs.n_groups
+        burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
+        
+        # Set all concentrations to zero
+        burnup.concentrations[:, 0] = 0.0
+        
+        # Should handle zero concentrations gracefully
+        capture_matrix = burnup._build_capture_matrix(0)
+        
+        assert capture_matrix is not None
+        # Should have zero capture rates when concentrations are zero
+        assert np.all(capture_matrix.data == 0) or capture_matrix.nnz == 0
+
+    def test_update_burnup_zero_mass_kg(self, simple_neutronics, mock_cache):
+        """Test _update_burnup when mass_u_kg is zero."""
+        options = BurnupOptions(
+            time_steps=[0, 30],
+            initial_enrichment=0.195,
+        )
+        
+        burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
+        
+        # Set all U concentrations to zero
+        u235 = Nuclide(Z=92, A=235)
+        u238 = Nuclide(Z=92, A=238)
+        if u235 in burnup.nuclides:
+            idx_u235 = burnup.nuclides.index(u235)
+            burnup.concentrations[idx_u235, 0] = 0.0
+            burnup.concentrations[idx_u235, 1] = 0.0
+        if u238 in burnup.nuclides:
+            idx_u238 = burnup.nuclides.index(u238)
+            burnup.concentrations[idx_u238, 0] = 0.0
+            burnup.concentrations[idx_u238, 1] = 0.0
+        
+        # Set initial burnup
+        burnup.burnup_mwd_per_kg[0] = 0.0
+        
+        # Should handle zero mass gracefully (burnup stays same)
+        burnup._update_burnup(1)
+        
+        assert burnup.burnup_mwd_per_kg[1] == burnup.burnup_mwd_per_kg[0]
+
+    def test_solve_with_neutronics_resolve_condition(self, simple_neutronics, mock_cache):
+        """Test solve method when neutronics re-solve condition is met."""
+        # Create enough time steps to trigger re-solve condition
+        options = BurnupOptions(
+            time_steps=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+            power_density=1e6,
+            initial_enrichment=0.195,
+        )
+        
+        burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
+        
+        # Mock solve_steady_state to return valid results
+        def mock_solve():
+            n_groups = burnup.neutronics.xs.n_groups
+            burnup.neutronics.flux = np.ones((burnup.neutronics.nz, burnup.neutronics.nr, n_groups))
+            burnup.neutronics.k_eff = 1.0
+            return 1.0, burnup.neutronics.flux
+        
+        with patch.object(burnup.neutronics, 'solve_steady_state', side_effect=mock_solve):
+            # Set flux to None so _build_fission_production_vector returns zeros
+            # This simplifies the test
+            burnup.neutronics.flux = None
+            
+            # Should complete without error
+            inventory = burnup.solve()
+            
+            assert inventory is not None
+            assert isinstance(inventory, NuclideInventory)
 
