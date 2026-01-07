@@ -16,6 +16,8 @@ import pytest
 from unittest.mock import Mock, MagicMock
 
 from smrforge.geometry.mesh_extraction import (
+    add_flux_to_mesh,
+    add_power_to_mesh,
     extract_block_mesh,
     extract_fuel_channel_mesh,
     extract_coolant_channel_mesh,
@@ -390,4 +392,169 @@ class TestMaterialBoundaryExtraction:
         
         surfaces = extract_material_boundaries(core)
         assert isinstance(surfaces, list)
+
+
+class TestAddFluxToMesh:
+    """Test adding flux data to mesh."""
+    
+    def test_add_flux_to_mesh_3d(self, mock_prismatic_core):
+        """Test adding 3D flux array to mesh."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        # Create a simple mesh with cells
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+            cells=np.array([[0, 1, 2, 3]]),
+        )
+        
+        # Create 3D flux array [nz=2, nr=2, ng=3]
+        flux = np.array([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], 
+                         [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]]])
+        
+        result = add_flux_to_mesh(mesh, flux, mock_prismatic_core, group=0)
+        
+        assert result is not None
+        assert hasattr(result, 'cell_data')
+        assert 'flux' in result.cell_data
+    
+    def test_add_flux_to_mesh_2d(self, mock_prismatic_core):
+        """Test adding 2D flux array to mesh."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+            cells=np.array([[0, 1, 2, 3]]),
+        )
+        
+        # Create 2D flux array [n_blocks=3, ng=2]
+        flux = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        
+        result = add_flux_to_mesh(mesh, flux, mock_prismatic_core, group=1)
+        
+        assert result is not None
+        assert 'flux' in result.cell_data
+    
+    def test_add_flux_to_mesh_1d(self, mock_prismatic_core):
+        """Test adding 1D flux array to mesh."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+            cells=np.array([[0, 1, 2, 3]]),
+        )
+        
+        # Create 1D flux array
+        flux = np.array([1.0, 2.0, 3.0, 4.0])
+        
+        result = add_flux_to_mesh(mesh, flux, mock_prismatic_core, group=0)
+        
+        assert result is not None
+        assert 'flux' in result.cell_data
+    
+    def test_add_flux_to_mesh_short_array(self, mock_prismatic_core):
+        """Test adding flux array shorter than number of cells."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]]),
+            cells=np.array([[0, 1, 2, 3], [1, 2, 3, 4]]),
+        )
+        
+        # Create short flux array (2 values for 2 cells - should work)
+        flux = np.array([1.0, 2.0])
+        
+        result = add_flux_to_mesh(mesh, flux, mock_prismatic_core, group=0)
+        
+        assert result is not None
+        assert 'flux' in result.cell_data
+        assert len(result.cell_data['flux']) == mesh.n_cells
+    
+    def test_add_flux_to_mesh_no_cells(self, mock_prismatic_core):
+        """Test adding flux to mesh without cells."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0]]),
+            cells=None,
+        )
+        
+        flux = np.array([1.0, 2.0])
+        
+        result = add_flux_to_mesh(mesh, flux, mock_prismatic_core, group=0)
+        
+        # Should return mesh unchanged
+        assert result is mesh
+
+
+class TestAddPowerToMesh:
+    """Test adding power data to mesh."""
+    
+    def test_add_power_to_mesh_2d(self, mock_prismatic_core):
+        """Test adding 2D power array to mesh."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+            cells=np.array([[0, 1, 2, 3]]),
+        )
+        
+        # Create 2D power array [nz=2, nr=2]
+        power = np.array([[1.0, 2.0], [3.0, 4.0]])
+        
+        result = add_power_to_mesh(mesh, power, mock_prismatic_core)
+        
+        assert result is not None
+        assert hasattr(result, 'cell_data')
+        assert 'power' in result.cell_data
+    
+    def test_add_power_to_mesh_1d(self, mock_prismatic_core):
+        """Test adding 1D power array to mesh."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+            cells=np.array([[0, 1, 2, 3]]),
+        )
+        
+        # Create 1D power array
+        power = np.array([1.0, 2.0, 3.0, 4.0])
+        
+        result = add_power_to_mesh(mesh, power, mock_prismatic_core)
+        
+        assert result is not None
+        assert 'power' in result.cell_data
+    
+    def test_add_power_to_mesh_short_array(self, mock_prismatic_core):
+        """Test adding power array shorter than number of cells."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, 0, 1]]),
+            cells=np.array([[0, 1, 2, 3], [2, 3, 4, 5]]),
+        )
+        
+        # Create short power array (1 value for 2 cells - will be tiled)
+        power = np.array([1.0])
+        
+        result = add_power_to_mesh(mesh, power, mock_prismatic_core)
+        
+        assert result is not None
+        assert 'power' in result.cell_data
+        assert len(result.cell_data['power']) == mesh.n_cells
+    
+    def test_add_power_to_mesh_no_cells(self, mock_prismatic_core):
+        """Test adding power to mesh without cells."""
+        from smrforge.geometry.mesh_3d import Mesh3D
+        
+        mesh = Mesh3D(
+            vertices=np.array([[0, 0, 0], [1, 0, 0]]),
+            cells=None,
+        )
+        
+        power = np.array([1.0, 2.0])
+        
+        result = add_power_to_mesh(mesh, power, mock_prismatic_core)
+        
+        # Should return mesh unchanged
+        assert result is mesh
 
