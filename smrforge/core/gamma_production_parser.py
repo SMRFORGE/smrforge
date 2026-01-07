@@ -268,10 +268,13 @@ class ENDFGammaProductionParser:
                 j += 1
                 continue
             
-            # Check for end of section
-            mf_check = data_line[70:72].strip()
-            if mf_check not in ["12", "13", "14", ""]:
-                break
+            # Check for end of section (new MF section starts)
+            # Skip check if line is too short to have MF field
+            if len(data_line) >= 72:
+                mf_check = data_line[70:72].strip()
+                # Only break if we encounter a different MF (not continuation of current MF)
+                if mf_check and mf_check not in ["12", "13", "14", ""]:
+                    break
             
             # Check for end marker
             if data_line.strip().endswith("-1"):
@@ -285,9 +288,11 @@ class ENDFGammaProductionParser:
                         intensity_str = data_line[(k + 1) * 11:(k + 2) * 11].strip()
                         
                         if energy_str and intensity_str:
-                            # Handle ENDF scientific notation
-                            energy_str = energy_str.replace("+", "E+").replace("-", "E-")
-                            intensity_str = intensity_str.replace("+", "E+").replace("-", "E-")
+                            # Handle ENDF scientific notation (e.g., "1.000000+2" -> "1.000000E+2")
+                            # Replace "+" or "-" that comes after digits (scientific notation marker)
+                            import re
+                            energy_str = re.sub(r'([\d.]+)([+-])', r'\1E\2', energy_str)
+                            intensity_str = re.sub(r'([\d.]+)([+-])', r'\1E\2', intensity_str)
                             
                             energy = float(energy_str)  # MeV
                             intensity = float(intensity_str)  # gammas/reaction
