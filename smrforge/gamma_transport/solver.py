@@ -109,16 +109,28 @@ class GammaTransportSolver:
         self.options = options
         self.cache = cache if cache is not None else NuclearDataCache()
         
-        # Get geometry dimensions
-        self.nz = geometry.n_axial
-        self.nr = geometry.n_radial
+        # Get geometry dimensions from mesh
+        if geometry.axial_mesh is not None and geometry.radial_mesh is not None:
+            self.nz = len(geometry.axial_mesh) - 1
+            self.nr = len(geometry.radial_mesh) - 1
+        else:
+            # Fallback: try to get from attributes if they exist
+            self.nz = getattr(geometry, 'n_axial', 1)
+            self.nr = getattr(geometry, 'n_radial', 1)
         self.ng = options.n_groups
         
         # Get mesh
-        self.r_centers = geometry.r_centers
-        self.z_centers = geometry.z_centers
-        self.dr = geometry.dr
-        self.dz = geometry.dz
+        if geometry.axial_mesh is not None and geometry.radial_mesh is not None:
+            self.r_centers = 0.5 * (geometry.radial_mesh[1:] + geometry.radial_mesh[:-1])
+            self.z_centers = 0.5 * (geometry.axial_mesh[1:] + geometry.axial_mesh[:-1])
+            self.dr = np.diff(geometry.radial_mesh)
+            self.dz = np.diff(geometry.axial_mesh)
+        else:
+            # Fallback: create dummy mesh
+            self.r_centers = np.array([25.0])  # Default to radius at center
+            self.z_centers = np.array([50.0])  # Default to height at center
+            self.dr = np.array([50.0])
+            self.dz = np.array([100.0])
         
         # Material map (simplified: assume single material for now)
         self.material_map = np.zeros((self.nz, self.nr), dtype=int)

@@ -26,7 +26,7 @@ def simple_geometry():
     geometry = PrismaticCore(name="TestCore")
     geometry.core_height = 100.0  # cm
     geometry.core_diameter = 50.0  # cm
-    geometry.build_mesh(n_radial=5, n_axial=3)
+    geometry.generate_mesh(n_radial=5, n_axial=3)
     return geometry
 
 
@@ -63,8 +63,9 @@ class TestGammaTransportSolverComprehensive:
         
         assert solver.geometry == simple_geometry
         assert solver.options == options
-        assert solver.nz == simple_geometry.n_axial
-        assert solver.nr == simple_geometry.n_radial
+        # Dimensions computed from mesh
+        assert solver.nz == 3  # n_axial
+        assert solver.nr == 5  # n_radial
         assert solver.ng == 20
         assert solver.sigma_total is not None
         assert len(solver.sigma_total) == 20
