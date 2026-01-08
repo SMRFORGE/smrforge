@@ -558,3 +558,201 @@ class TestAddPowerToMesh:
         # Should return mesh unchanged
         assert result is mesh
 
+
+class TestEdgeCases:
+    """Test edge cases and additional code paths."""
+    
+    def test_extract_core_surface_mesh_single_block(self):
+        """Test extract_core_surface_mesh with single block (optimized path)."""
+        from smrforge.geometry.core_geometry import PrismaticCore, GraphiteBlock, Point3D
+        from smrforge.geometry.mesh_extraction import extract_core_surface_mesh
+        
+        core = PrismaticCore(name="SingleBlockCore")
+        block = GraphiteBlock(
+            id=1,
+            position=Point3D(x=0, y=0, z=0),
+            block_type="reflector",
+            flat_to_flat=36.0,
+            height=80.0,
+        )
+        core.blocks = [block]
+        
+        surface = extract_core_surface_mesh(core)
+        assert surface is not None
+        # Should use optimized path for single vertex list (len(vertices) == 1)
+    
+    def test_extract_core_surface_mesh_block_with_no_faces(self):
+        """Test extract_core_surface_mesh when block mesh has no faces."""
+        from smrforge.geometry.core_geometry import PrismaticCore, GraphiteBlock, Point3D
+        from smrforge.geometry.mesh_extraction import extract_core_surface_mesh
+        
+        core = PrismaticCore(name="TestCore")
+        block = GraphiteBlock(
+            id=1,
+            position=Point3D(x=0, y=0, z=0),
+            block_type="reflector",
+            flat_to_flat=36.0,
+            height=80.0,
+        )
+        core.blocks = [block]
+        
+        # Patch extract_block_mesh to return mesh without faces
+        from smrforge.geometry.mesh_3d import Mesh3D
+        from unittest.mock import patch
+        
+        def mock_extract_block_mesh(block):
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            return Mesh3D(vertices=vertices, faces=None)  # No faces
+        
+        with patch('smrforge.geometry.mesh_extraction.extract_block_mesh', side_effect=mock_extract_block_mesh):
+            surface = extract_core_surface_mesh(core)
+            # Should handle gracefully - block_mesh.faces is None or empty
+            assert surface is not None
+    
+    def test_extract_core_surface_mesh_block_with_empty_faces(self):
+        """Test extract_core_surface_mesh when block mesh has empty faces array."""
+        from smrforge.geometry.core_geometry import PrismaticCore, GraphiteBlock, Point3D
+        from smrforge.geometry.mesh_extraction import extract_core_surface_mesh
+        
+        core = PrismaticCore(name="TestCore")
+        block = GraphiteBlock(
+            id=1,
+            position=Point3D(x=0, y=0, z=0),
+            block_type="reflector",
+            flat_to_flat=36.0,
+            height=80.0,
+        )
+        core.blocks = [block]
+        
+        # Patch extract_block_mesh to return mesh with empty faces
+        from smrforge.geometry.mesh_3d import Mesh3D
+        from unittest.mock import patch
+        
+        def mock_extract_block_mesh(block):
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            faces = np.array([]).reshape(0, 3)  # Empty faces
+            return Mesh3D(vertices=vertices, faces=faces)
+        
+        with patch('smrforge.geometry.mesh_extraction.extract_block_mesh', side_effect=mock_extract_block_mesh):
+            surface = extract_core_surface_mesh(core)
+            # Should handle gracefully - block_mesh.faces.size == 0
+            assert surface is not None
+    
+    def test_extract_core_volume_mesh_empty_channels(self, mock_prismatic_core):
+        """Test extract_core_volume_mesh when blocks have empty channel lists."""
+        from smrforge.geometry.mesh_extraction import extract_core_volume_mesh
+        
+        # Ensure blocks have empty channel lists
+        for block in mock_prismatic_core.blocks:
+            if not hasattr(block, 'fuel_channels'):
+                block.fuel_channels = []
+            if not hasattr(block, 'coolant_channels'):
+                block.coolant_channels = []
+        
+        # Extract with include_channels=True but empty channels
+        mesh = extract_core_volume_mesh(mock_prismatic_core, include_channels=True)
+        assert mesh is not None
+        # Should work fine with empty channel lists
+    
+    def test_extract_material_boundaries_no_faces(self, mock_prismatic_core):
+        """Test extract_material_boundaries when combined mesh has no faces."""
+        from smrforge.geometry.mesh_extraction import extract_material_boundaries
+        from smrforge.geometry.mesh_3d import Mesh3D
+        from unittest.mock import patch
+        
+        def mock_extract_block_mesh(block):
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            return Mesh3D(vertices=vertices, faces=None)  # No faces
+        
+        with patch('smrforge.geometry.mesh_extraction.extract_block_mesh', side_effect=mock_extract_block_mesh):
+            surfaces = extract_material_boundaries(mock_prismatic_core)
+            # Should handle gracefully - combined_mesh.faces is None
+            assert isinstance(surfaces, list)
+            # Surfaces with no faces should not be added
+    
+    def test_add_flux_to_mesh_2d_array(self, mock_prismatic_core):
+        """Test add_flux_to_mesh with 2D flux array [n_blocks, ng]."""
+        from smrforge.geometry.mesh_extraction import add_flux_to_mesh, extract_core_volume_mesh
+        
+        mesh = extract_core_volume_mesh(mock_prismatic_core)
+        
+        # Create 2D flux array [n_blocks, ng]
+        n_blocks = len(mock_prismatic_core.blocks)
+        flux = np.array([[1.0, 2.0], [3.0, 4.0]] * (n_blocks // 2 + 1))[:n_blocks]
+        
+        result = add_flux_to_mesh(mesh, flux, mock_prismatic_core, group=1)
+        assert "flux" in result.cell_data
+        assert result.cell_data["flux"] is not None
+    
+    def test_add_flux_to_mesh_exact_length(self, mock_prismatic_core):
+        """Test add_flux_to_mesh when flux length exactly matches n_cells."""
+        from smrforge.geometry.mesh_extraction import add_flux_to_mesh, extract_core_volume_mesh
+        
+        mesh = extract_core_volume_mesh(mock_prismatic_core)
+        n_cells = mesh.n_cells
+        
+        # Create flux array with exact length
+        flux = np.ones((n_cells, 2))  # [n_cells, ng]
+        
+        result = add_flux_to_mesh(mesh, flux, mock_prismatic_core, group=0)
+        assert len(result.cell_data["flux"]) == n_cells
+    
+    def test_add_power_to_mesh_exact_length(self, mock_prismatic_core):
+        """Test add_power_to_mesh when power length exactly matches n_cells."""
+        from smrforge.geometry.mesh_extraction import add_power_to_mesh, extract_core_volume_mesh
+        
+        mesh = extract_core_volume_mesh(mock_prismatic_core)
+        n_cells = mesh.n_cells
+        
+        # Create power array with exact length
+        power = np.ones(n_cells)
+        
+        result = add_power_to_mesh(mesh, power, mock_prismatic_core)
+        assert len(result.cell_data["power"]) == n_cells
+    
+    def test_add_power_to_mesh_3d_array(self, mock_prismatic_core):
+        """Test add_power_to_mesh with 3D power array [nz, nr]."""
+        from smrforge.geometry.mesh_extraction import add_power_to_mesh, extract_core_volume_mesh
+        
+        mesh = extract_core_volume_mesh(mock_prismatic_core)
+        
+        # Create 3D power array
+        power = np.ones((5, 10))  # [nz, nr]
+        
+        result = add_power_to_mesh(mesh, power, mock_prismatic_core)
+        assert "power" in result.cell_data
+        assert result.cell_data["power"] is not None
+    
+    def test_extract_material_boundaries_empty_groups(self):
+        """Test extract_material_boundaries when all material groups are empty."""
+        from smrforge.geometry.core_geometry import PrismaticCore
+        from smrforge.geometry.mesh_extraction import extract_material_boundaries
+        
+        core = PrismaticCore(name="EmptyCore")
+        core.blocks = []  # No blocks
+        
+        surfaces = extract_material_boundaries(core)
+        assert isinstance(surfaces, list)
+        assert len(surfaces) == 0
+    
+    def test_extract_material_boundaries_multiple_materials(self, mock_prismatic_core):
+        """Test extract_material_boundaries with multiple material types."""
+        from smrforge.geometry.core_geometry import GraphiteBlock, Point3D
+        from smrforge.geometry.mesh_extraction import extract_material_boundaries
+        
+        # Add blocks with different materials
+        for i, block_type in enumerate(["fuel", "reflector", "control", "fuel"]):
+            block = GraphiteBlock(
+                id=i+100,
+                position=Point3D(x=i*40, y=0, z=0),
+                block_type=block_type,
+                flat_to_flat=36.0,
+                height=80.0,
+            )
+            mock_prismatic_core.blocks.append(block)
+        
+        surfaces = extract_material_boundaries(mock_prismatic_core)
+        # Should create surfaces for each unique material type
+        assert len(surfaces) >= 1  # At least one material group
+        assert all(hasattr(s, 'material_id') for s in surfaces)
+
