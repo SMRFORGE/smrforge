@@ -81,19 +81,22 @@
 
 ### 🔴 CRITICAL (Blocks significant coverage)
 
-1. **Create Realistic Mock ENDF Files** 
+1. **✅ Create Realistic Mock ENDF Files** ✅ **COMPLETE**
    - **Location**: `tests/data/sample_U235.endf`, `sample_U238.endf`
-   - **Requirements**:
-     - Valid ENDF-6 format structure
-     - Header section (MF=1, MT=451) with Z/A metadata
-     - Cross-section sections (MF=3) with multiple MT numbers:
-       - MT=1 (total)
-       - MT=2 (elastic)
-       - MT=18 (fission)
-       - MT=102 (capture)
-     - Proper ENDF format: 80-char lines, 6E11.0 data format
+   - **Status**: ✅ **COMPLETE** - Created based on real ENDF-B-VIII.1 files from `C:\Users\cmwha\Downloads\ENDF-B-VIII.1\neutrons-version.VIII.1\`
+   - **Requirements Met**:
+     - ✅ Valid ENDF-6 format structure
+     - ✅ Header section (MF=1, MT=451) with Z/A metadata (Z=92, A=235/238)
+     - ✅ Cross-section sections (MF=3) with multiple MT numbers:
+       - ✅ MT=1 (total cross-section)
+       - ✅ MT=2 (elastic scattering)
+       - ✅ MT=18 (fission) - U235 only
+       - ✅ MT=102 (capture)
+     - ✅ Proper ENDF format: 80-character lines, 6E11.0 data format
+     - ✅ File size > 1000 bytes (passes validation)
    - **Impact**: Unlocks 97+ lines in `_parse_mf3_section` (~55% of endf_parser gap)
    - **Estimated coverage gain**: +20-30% for endf_parser, +10-15% for reactor_core
+   - **Source Files**: `C:\Users\cmwha\Downloads\ENDF-B-VIII.1\neutrons-version.VIII.1\n-092_U_235.endf`, `n-092_U_238.endf`
 
 ### 🟠 HIGH PRIORITY (Blocking specific tests)
 
@@ -290,7 +293,7 @@
 ### Phase 1: Foundation (1-2 days)
 - [x] Mock network requests ✅
 - [x] Create fixtures for pre-populated caches ✅
-- [ ] **Task #1**: Create realistic mock ENDF files 🔴
+- [x] **Task #1**: Create realistic mock ENDF files ✅ **COMPLETE** - Created `tests/data/sample_U235.endf` and `sample_U238.endf` based on real ENDF-B-VIII.1 files
 - [ ] **Task #2**: Fix zarr API usage 🟠
 
 ### Phase 2: reactor_core.py (3-4 days) ⚠️ **PARTIALLY COMPLETE**
@@ -380,6 +383,16 @@ Task #2 (Fix Zarr API)
   - MF3 data extraction patterns fully tested
   - Multigroup collapse edge cases covered
   - File discovery methods (TSL, photon, gamma, decay) tested
+
+- ✅ **Mock ENDF Files Created** (Task #1)
+  - Created realistic mock ENDF files: `tests/data/sample_U235.endf`, `sample_U238.endf`
+  - Based on real ENDF-B-VIII.1 files from `C:\Users\cmwha\Downloads\ENDF-B-VIII.1\neutrons-version.VIII.1\`
+  - Files include proper ENDF-6 format structure:
+    - Header section (MF=1, MT=451) with Z/A metadata
+    - Cross-section sections (MF=3) with MT=1 (total), MT=2 (elastic), MT=18 (fission), MT=102 (capture)
+    - Valid ENDF format: 80-character lines, 6E11.0 data format
+    - File size > 1000 bytes (passes validation)
+  - These files unlock testing of `_parse_mf3_section` and `_fetch_and_cache` backend chains
 
 ### Remaining Work for reactor_core.py
 - **Largest Gap**: `_fetch_and_cache` and `_fetch_and_cache_async` backend fallback chains (~200 lines)
