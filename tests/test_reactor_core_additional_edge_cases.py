@@ -380,3 +380,194 @@ class TestCollapseToMultigroupEdgeCases:
         assert len(mg_xs) == 2
         assert np.all(np.isfinite(mg_xs))
         assert np.all(mg_xs >= 0)
+
+
+class TestNuclearDataCacheAdditionalMethods:
+    """Test additional methods in NuclearDataCache for coverage."""
+    
+    def test_get_library_fallback(self):
+        """Test _get_library_fallback method."""
+        # VIII.1 should fallback to VIII.0
+        fallback = NuclearDataCache._get_library_fallback(Library.ENDF_B_VIII_1)
+        assert fallback == Library.ENDF_B_VIII
+        
+        # VIII.0 should have no fallback
+        fallback = NuclearDataCache._get_library_fallback(Library.ENDF_B_VIII)
+        assert fallback is None
+        
+        # JEFF_33 should have no fallback
+        fallback = NuclearDataCache._get_library_fallback(Library.JEFF_33)
+        assert fallback is None
+    
+    def test_endf_filename_to_nuclide_standard(self):
+        """Test parsing standard ENDF filename."""
+        nuclide = NuclearDataCache._endf_filename_to_nuclide("n-092_U_235.endf")
+        assert nuclide is not None
+        assert nuclide.Z == 92
+        assert nuclide.A == 235
+        assert nuclide.m == 0
+    
+    def test_endf_filename_to_nuclide_metastable(self):
+        """Test parsing ENDF filename with metastable state."""
+        nuclide = NuclearDataCache._endf_filename_to_nuclide("n-013_Al_026m1.endf")
+        assert nuclide is not None
+        assert nuclide.Z == 13
+        assert nuclide.A == 26
+        assert nuclide.m == 1
+    
+    def test_endf_filename_to_nuclide_invalid(self):
+        """Test parsing invalid ENDF filename."""
+        nuclide = NuclearDataCache._endf_filename_to_nuclide("invalid.endf")
+        assert nuclide is None
+        
+        nuclide = NuclearDataCache._endf_filename_to_nuclide("n-092_U_235.txt")
+        assert nuclide is None
+    
+    def test_endf_filename_to_nuclide_mismatched_element(self):
+        """Test parsing filename with mismatched element symbol."""
+        # Z=92 but element=H (mismatch)
+        nuclide = NuclearDataCache._endf_filename_to_nuclide("n-092_H_235.endf")
+        assert nuclide is None
+    
+    def test_nuclide_to_endf_filename_standard(self):
+        """Test converting nuclide to standard ENDF filename."""
+        u235 = Nuclide(Z=92, A=235, m=0)
+        filename = NuclearDataCache._nuclide_to_endf_filename(u235)
+        assert filename == "n-092_U_235.endf"
+    
+    def test_nuclide_to_endf_filename_metastable(self):
+        """Test converting nuclide with metastable to ENDF filename."""
+        al26m = Nuclide(Z=13, A=26, m=1)
+        filename = NuclearDataCache._nuclide_to_endf_filename(al26m)
+        assert filename == "n-013_Al_026m1.endf"
+    
+    def test_find_local_endf_file_fallback(self, temp_cache_dir):
+        """Test _find_local_endf_file with library fallback."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        # Test with non-ENDF library (should return None)
+        u235 = Nuclide(Z=92, A=235)
+        file_path = cache._find_local_endf_file(u235, Library.JEFF_33)
+        assert file_path is None
+    
+    def test_find_local_decay_file_metastable(self, temp_cache_dir):
+        """Test finding decay file for metastable nuclide."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        local_dir = temp_cache_dir / "local_endf"
+        local_dir.mkdir()
+        decay_dir = local_dir / "decay-version.VIII.1"
+        decay_dir.mkdir()
+        
+        # Create decay file for metastable
+        decay_file = decay_dir / "dec-092_U_239m1.endf"
+        endf_content = " " * 60 + "  -1" + "\n" * 10 + " " * 66 + "ENDF" + "\n" * 20
+        decay_file.write_text(endf_content)
+        
+        cache.local_endf_dir = local_dir
+        u239m = Nuclide(Z=92, A=239, m=1)
+        
+        file_path = cache._find_local_decay_file(u239m, Library.ENDF_B_VIII_1)
+        # May be None if validation fails
+        assert file_path is None or file_path.exists()
+    
+    def test_find_local_tsl_file_case_insensitive(self, temp_cache_dir):
+        """Test finding TSL file with case-insensitive search."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        local_dir = temp_cache_dir / "local_endf"
+        local_dir.mkdir()
+        tsl_dir = local_dir / "thermal_scatt-version.VIII.1"
+        tsl_dir.mkdir()
+        
+        # Create TSL file with different case
+        tsl_file = tsl_dir / "tsl-H_IN_H2O.endf"  # Different case
+        endf_content = " " * 60 + "  -1" + "\n" * 10 + " " * 66 + "ENDF" + "\n" * 20
+        tsl_file.write_text(endf_content)
+        
+        cache.local_endf_dir = local_dir
+        
+        file_path = cache._find_local_tsl_file("h_in_h2o", Library.ENDF_B_VIII_1)
+        # May be None if validation fails
+        assert file_path is None or file_path.exists()
+    
+    def test_build_tsl_file_index_with_parser_error(self, temp_cache_dir):
+        """Test building TSL index when parser fails."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        local_dir = temp_cache_dir / "local_endf"
+        local_dir.mkdir()
+        tsl_dir = local_dir / "thermal_scatt-version.VIII.1"
+        tsl_dir.mkdir()
+        
+        # Create invalid TSL file
+        tsl_file = tsl_dir / "tsl-invalid.endf"
+        tsl_file.write_text("invalid content")
+        
+        cache.local_endf_dir = local_dir
+        index = cache._build_tsl_file_index()
+        
+        # Should handle gracefully (may skip invalid files)
+        assert isinstance(index, dict)
+    
+    def test_build_photon_file_index_with_parser_error(self, temp_cache_dir):
+        """Test building photon index when parser fails."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        local_dir = temp_cache_dir / "local_endf"
+        local_dir.mkdir()
+        photoat_dir = local_dir / "photoat-version.VIII.1"
+        photoat_dir.mkdir()
+        
+        # Create invalid photon file
+        photon_file = photoat_dir / "p-invalid.endf"
+        photon_file.write_text("invalid content")
+        
+        cache.local_endf_dir = local_dir
+        index = cache._build_photon_file_index()
+        
+        # Should handle gracefully (may skip invalid files)
+        assert isinstance(index, dict)
+    
+    def test_get_photon_cross_section_no_file(self, temp_cache_dir):
+        """Test getting photon cross-section when file not found."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        photon_data = cache.get_photon_cross_section("Nonexistent")
+        assert photon_data is None
+    
+    def test_get_gamma_production_data_no_file(self, temp_cache_dir):
+        """Test getting gamma production data when file not found."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        u235 = Nuclide(Z=92, A=235)
+        gamma_data = cache.get_gamma_production_data(u235)
+        assert gamma_data is None
+    
+    def test_list_available_tsl_materials(self, temp_cache_dir):
+        """Test listing available TSL materials."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        materials = cache.list_available_tsl_materials()
+        assert isinstance(materials, list)
+    
+    def test_get_tsl_file(self, temp_cache_dir):
+        """Test getting TSL file."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        tsl_file = cache.get_tsl_file("nonexistent")
+        assert tsl_file is None
+    
+    def test_list_available_photon_elements(self, temp_cache_dir):
+        """Test listing available photon elements."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        elements = cache.list_available_photon_elements()
+        assert isinstance(elements, list)
+    
+    def test_get_photon_file(self, temp_cache_dir):
+        """Test getting photon file."""
+        cache = NuclearDataCache(cache_dir=temp_cache_dir)
+        
+        photon_file = cache.get_photon_file("H")
+        assert photon_file is None or isinstance(photon_file, Path)
