@@ -61,6 +61,9 @@
 - ✅ File discovery methods: decay, TSL, photon, gamma production (metastable, case-insensitive, parser errors)
 - ✅ List/get methods for TSL and photon data
 - ✅ Error handling paths for all file discovery methods
+- ✅ `_fetch_and_cache` backend chains: 9 comprehensive tests in `test_fetch_and_cache_with_mock_files.py`
+- ✅ `_fetch_and_cache_async` async backend chains: 8 comprehensive tests in `test_fetch_and_cache_async_comprehensive.py`
+- ✅ `get_cross_section_async` async paths: 3 comprehensive tests in `test_fetch_and_cache_async_comprehensive.py`
 
 **Coverage Breakdown**:
 - Total statements: 1199
@@ -68,12 +71,11 @@
 - Missing: 350 (29.2%)
 
 **Remaining Gaps** (to reach 80%):
-- `_fetch_and_cache` backend fallback chains (all 4 backends)
-- `_fetch_and_cache_async` async operations
-- `_save_to_cache` zarr storage operations
+- `_fetch_and_cache` backend actual parser code (currently mocked - requires parser installation for full coverage)
+- `_fetch_and_cache_async` backend actual parser code (currently mocked - requires parser installation for full coverage)
+- `_save_to_cache` zarr storage operations (needs more edge case testing)
 - `_update_file_metadata` and `_get_file_metadata` error paths
 - `generate_multigroup` and `generate_multigroup_async` error paths
-- Integration with actual ENDF files (requires mock files)
 
 ---
 
