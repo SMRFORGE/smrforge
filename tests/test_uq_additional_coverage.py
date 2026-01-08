@@ -217,13 +217,18 @@ class TestSensitivityAnalysisEdgeCases:
             output_names=["output"]
         )
         
-        # Should work but may have limitations with single parameter
+        # Skip if SALib not available
         try:
-            results = analysis.sobol_analysis(n_samples=10, calc_second_order=False)
-            assert isinstance(results, dict)
-        except (ValueError, RuntimeError):
-            # Acceptable if single parameter causes issues
-            pass
+            from SALib.sample import saltelli
+            # Should work but may have limitations with single parameter
+            try:
+                results = analysis.sobol_analysis(n_samples=10, calc_second_order=False)
+                assert isinstance(results, dict)
+            except (ValueError, RuntimeError):
+                # Acceptable if single parameter causes issues
+                pass
+        except ImportError:
+            pytest.skip("SALib not available")
     
     def test_sensitivity_sobol_analysis_model_returns_array(self):
         """Test Sobol analysis with model returning array."""
