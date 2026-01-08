@@ -71,6 +71,63 @@ class TestAssembly:
         assert assembly.age_cycles(current_cycle=10) == 5
         assert assembly.age_cycles(current_cycle=5) == 0
         assert assembly.age_cycles(current_cycle=15) == 10
+    
+    def test_assembly_rotate(self):
+        """Test assembly rotation."""
+        assembly = Assembly(id=1, position=Point3D(0, 0, 0), orientation=0.0)
+        assembly.rotate(60.0)
+        assert assembly.orientation == 60.0
+        
+        assembly.rotate(300.0)  # Should wrap to 0
+        assert assembly.orientation == 0.0
+        
+        assembly.rotate(370.0)  # Should wrap to 10
+        assert assembly.orientation == 10.0
+    
+    def test_assembly_set_orientation(self):
+        """Test setting assembly orientation."""
+        assembly = Assembly(id=1, position=Point3D(0, 0, 0), orientation=0.0)
+        assembly.set_orientation(120.0)
+        assert assembly.orientation == 120.0
+        
+        assembly.set_orientation(450.0)  # Should wrap to 90
+        assert assembly.orientation == 90.0
+    
+    def test_assembly_record_position(self):
+        """Test recording position history."""
+        assembly = Assembly(id=1, position=Point3D(10, 20, 30))
+        assert len(assembly.position_history) == 0
+        
+        assembly.record_position(cycle=1)
+        assert len(assembly.position_history) == 1
+        assert assembly.position_history[0][0] == 1
+        assert assembly.position_history[0][1].x == 10
+        assert assembly.position_history[0][1].y == 20
+        assert assembly.position_history[0][1].z == 30
+    
+    def test_assembly_move_to(self):
+        """Test moving assembly and recording history."""
+        assembly = Assembly(id=1, position=Point3D(0, 0, 0))
+        assert assembly.original_position is None
+        
+        new_pos = Point3D(10, 20, 30)
+        assembly.move_to(new_pos, cycle=1)
+        
+        assert assembly.position.x == 10
+        assert assembly.position.y == 20
+        assert assembly.position.z == 30
+        assert assembly.original_position is not None
+        assert assembly.original_position.x == 0
+        assert len(assembly.position_history) == 1
+    
+    def test_assembly_move_to_no_cycle(self):
+        """Test moving assembly without recording cycle."""
+        assembly = Assembly(id=1, position=Point3D(0, 0, 0))
+        new_pos = Point3D(10, 20, 30)
+        assembly.move_to(new_pos, cycle=None)
+        
+        assert assembly.position.x == 10
+        assert len(assembly.position_history) == 0
 
 
 class TestRefuelingPattern:
@@ -116,6 +173,95 @@ class TestRefuelingPattern:
         # Test invalid batch
         assert pattern.get_batch_size(30, 3) == 0
         assert pattern.get_batch_size(30, -1) == 0
+    
+    def test_pattern_generate_position_based_shuffle_radial_rotation(self):
+        """Test generating shuffle with radial rotation pattern."""
+        pattern = RefuelingPattern(
+            name="3-batch", n_batches=3, batch_fractions=[1 / 3, 1 / 3, 1 / 3]
+        )
+        
+        # Create 9 assemblies
+        assemblies = [
+            Assembly(id=i, position=Point3D(i * 10, 0, 0), batch=(i % 3) + 1)
+            for i in range(9)
+        ]
+        
+        shuffle_map = pattern.generate_position_based_shuffle(
+            assemblies, shuffle_type="radial_rotation"
+        )
+        
+        assert len(shuffle_map) == 9
+        # Each assembly should be mapped to another assembly
+        assert all(new_id in [a.id for a in assemblies] for new_id in shuffle_map.values())
+    
+    def test_pattern_generate_position_based_shuffle_radial_outward(self):
+        """Test generating shuffle with radial outward pattern."""
+        pattern = RefuelingPattern(
+            name="3-batch", n_batches=3, batch_fractions=[1 / 3, 1 / 3, 1 / 3]
+        )
+        
+        # Create assemblies with different burnups
+        assemblies = [
+            Assembly(id=i, position=Point3D(i * 10, 0, 0), burnup=i * 10.0, batch=1)
+            for i in range(9)
+        ]
+        
+        shuffle_map = pattern.generate_position_based_shuffle(
+            assemblies, shuffle_type="radial_outward"
+        )
+        
+        assert len(shuffle_map) == 9
+    
+    def test_pattern_generate_position_based_shuffle_radial_inward(self):
+        """Test generating shuffle with radial inward pattern."""
+        pattern = RefuelingPattern(
+            name="3-batch", n_batches=3, batch_fractions=[1 / 3, 1 / 3, 1 / 3]
+        )
+        
+        # Create assemblies with different burnups
+        assemblies = [
+            Assembly(id=i, position=Point3D(i * 10, 0, 0), burnup=i * 10.0, batch=1)
+            for i in range(9)
+        ]
+        
+        shuffle_map = pattern.generate_position_based_shuffle(
+            assemblies, shuffle_type="radial_inward"
+        )
+        
+        assert len(shuffle_map) == 9
+    
+    def test_pattern_generate_position_based_shuffle_pattern_based(self):
+        """Test generating shuffle with existing pattern."""
+        existing_shuffle = {0: 5, 1: 6, 2: 7}
+        pattern = RefuelingPattern(
+            name="3-batch",
+            n_batches=3,
+            batch_fractions=[1 / 3, 1 / 3, 1 / 3],
+            shuffle_sequence=existing_shuffle,
+        )
+        
+        assemblies = [Assembly(id=i, position=Point3D(i * 10, 0, 0)) for i in range(9)]
+        shuffle_map = pattern.generate_position_based_shuffle(
+            assemblies, shuffle_type="pattern_based"
+        )
+        
+        # Should use existing shuffle
+        assert shuffle_map == existing_shuffle
+    
+    def test_pattern_generate_position_based_shuffle_default(self):
+        """Test generating shuffle with default (no shuffle) pattern."""
+        pattern = RefuelingPattern(
+            name="3-batch", n_batches=3, batch_fractions=[1 / 3, 1 / 3, 1 / 3]
+        )
+        
+        assemblies = [Assembly(id=i, position=Point3D(i * 10, 0, 0)) for i in range(9)]
+        shuffle_map = pattern.generate_position_based_shuffle(
+            assemblies, shuffle_type="unknown_type"
+        )
+        
+        # Should map each assembly to itself
+        assert len(shuffle_map) == 9
+        assert all(shuffle_map[a.id] == a.id for a in assemblies)
 
 
 class TestAssemblyManager:
