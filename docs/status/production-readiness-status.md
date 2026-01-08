@@ -2,6 +2,7 @@
 
 **Assessment Date:** January 1, 2026  
 **Last Updated:** January 1, 2026  
+**Status:** Documentation deployment complete, API docs generated and hosted  
 **Version:** 0.1.0 (Alpha)  
 **Current Readiness:** ~70-75% (improved from 30-40%)
 
@@ -110,12 +111,16 @@
 
 **Priority:** HIGH (2-3 hours)
 
-### 4. Generate Actual API Documentation ⚠️ **PARTIAL**
+### 4. Generate Actual API Documentation ✅ **COMPLETE**
 - ✅ Structure exists
-- ⚠️ Need to run `sphinx-apidoc` to generate actual API docs
-- ⚠️ Need to deploy/host docs
+- ✅ API docs generated with `sphinx-apidoc` (docs/api/ directory exists)
+- ✅ GitHub Pages deployment workflow configured (.github/workflows/docs.yml)
+- ✅ Documentation deployed at:
+  - GitHub Pages: https://cmwhalen.github.io/smrforge/
+  - Read the Docs: https://smrforge.readthedocs.io
+- ⚠️ Docstrings need review and enhancement (ongoing maintenance)
 
-**Priority:** MEDIUM (2-4 hours)
+**Priority:** ✅ Complete - Deployment active
 
 ### 5. Feature Implementation ✅ **MAJOR PROGRESS**
 - ✅ **Advanced visualization** - COMPLETE (animations, comparison views, 3D visualization)
@@ -223,7 +228,7 @@ Based on the assessment, minimum requirements are:
 1. ✅ CI/CD pipeline - **DONE**
 2. ⚠️ 80%+ test coverage - **NEEDS VERIFICATION**
 3. ✅ Logging framework - **DONE**
-4. ⚠️ API documentation - **STRUCTURE DONE, NEEDS GENERATION**
+4. ✅ API documentation - **GENERATED AND DEPLOYED** (GitHub Pages and Read the Docs)
 5. ❌ CHANGELOG.md - **MISSING**
 6. ❌ CONTRIBUTING.md - **MISSING**
 7. ⚠️ Complete core features - **MOSTLY DONE** (stubs are optional)
@@ -296,8 +301,8 @@ Based on the assessment, minimum requirements are:
 
 **Remaining Work:**
 - ✅ Test coverage verified (70-73% overall, 75-80% on priority modules)
+- ✅ API documentation generated and deployed (GitHub Pages and Read the Docs)
 - ❌ CHANGELOG.md and CONTRIBUTING.md
-- ⚠️ Generate API documentation (structure ready)
 - ⚠️ Code formatting (run Black on entire codebase)
 - ❌ Release process
 
