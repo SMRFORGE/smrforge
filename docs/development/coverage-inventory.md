@@ -266,8 +266,8 @@
 | 2155-2175 | `get_photon_cross_section` | ✅ | **COMPLETE** - No file path tested |
 | 2176-2210 | `_find_local_gamma_production_file` | ✅ | **COMPLETE** - Tested |
 | 2212-2229 | `get_gamma_production_data` | ✅ | **COMPLETE** - No file path tested |
-| 436-466 | `generate_multigroup` | 🟡 | Needs more error path testing |
-| 2506-2712 | `generate_multigroup_async` | 🟡 | Needs async testing |
+| 2366-2504 | `generate_multigroup` | ✅ | **COMPLETE** - Comprehensive error path testing in `test_generate_multigroup_complete_coverage.py` (11 tests) - Exception handling (ImportError, FileNotFoundError, ValueError), None/empty data validation, mismatched array lengths, skipped reactions logging, partial success scenarios, all edge cases covered |
+| 2506-2608 | `generate_multigroup_async` | ✅ | **COMPLETE** - Comprehensive async testing in `test_generate_multigroup_complete_coverage.py` (10 tests) - Success path, empty inputs, exception handling in async gathering, None/empty data scenarios, mismatched lengths, multiple nuclides/reactions, weighting flux, single group structure, all edge cases covered |
 | 2714-2772 | `pivot_for_solver` | ✅ | **COMPLETE** - Fixed and tested |
 | 2774-3002 | `DecayData` methods | ✅ | **COMPLETE** - Private methods tested |
 | 1285-1375 | `_doppler_broaden` (Numba JIT) | 🟢 | Numba JIT - excluded, separate tests exist |
