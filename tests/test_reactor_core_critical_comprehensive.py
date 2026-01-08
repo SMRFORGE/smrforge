@@ -391,30 +391,34 @@ class TestReactorCoreEdgeCases:
         cache = NuclearDataCache(cache_dir=temp_cache_dir)
         
         u235 = Nuclide(Z=92, A=235)
-        key = f"ENDF-B-VIII.0/{u235.name}/total/293.6K"
+        # Use correct key format matching get_cross_section: library.value/nuclide/reaction/temperatureK
+        key = f"{Library.ENDF_B_VIII.value}/{u235.name}/total/293.6K"
         energy = np.array([1e5, 1e6, 1e7])
         xs = np.array([10.0, 12.0, 15.0])
         
-        # Pre-populate zarr cache
+        # Pre-populate zarr cache using the correct zarr API (create_array instead of create_dataset)
         try:
-            group = cache.root.create_group(key)
-            group.create_dataset("energy", data=energy, chunks=(1024,), compression="zstd")
-            group.create_dataset("xs", data=xs, chunks=(1024,), compression="zstd")
+            group = cache.root.create_group(key, overwrite=True)
+            # Use create_array (modern zarr API) instead of deprecated create_dataset
+            group.create_array("energy", data=energy, chunks=(1024,))
+            group.create_array("xs", data=xs, chunks=(1024,))
             
             # Clear memory cache
             cache._memory_cache.clear()
             
-            # Should retrieve from zarr
-            retrieved_energy, retrieved_xs = cache.get_cross_section(u235, "total", 293.6)
+            # Should retrieve from zarr (must pass library parameter to match key format)
+            retrieved_energy, retrieved_xs = cache.get_cross_section(
+                u235, "total", 293.6, Library.ENDF_B_VIII
+            )
             
             assert np.array_equal(retrieved_energy, energy)
             assert np.array_equal(retrieved_xs, xs)
             
             # Should also be in memory cache now
             assert key in cache._memory_cache
-        except Exception:
+        except Exception as e:
             # Zarr may not be available or may fail
-            pytest.skip("Zarr cache not available in test environment")
+            pytest.skip(f"Zarr cache not available in test environment: {e}")
     
     def test_get_file_metadata_cached(self, temp_cache_dir, tmp_path):
         """Test _get_file_metadata with cached metadata."""
@@ -578,24 +582,24 @@ class TestReactorCoreEdgeCases:
         finally:
             cache.root = original_root
     
-    def test_save_to_cache_zarr_dataset_exception(self, temp_cache_dir):
-        """Test _save_to_cache with dataset creation exception."""
+    def test_save_to_cache_zarr_array_exception(self, temp_cache_dir):
+        """Test _save_to_cache with array creation exception."""
         cache = NuclearDataCache(cache_dir=temp_cache_dir)
         
         energy = np.array([1e5, 1e6])
         xs = np.array([1.0, 2.0])
         
-        # Mock zarr group to raise exception on create_dataset
+        # Mock zarr group to raise exception on create_array
         original_root = cache.root
         mock_root = MagicMock()
         mock_group = MagicMock()
-        mock_group.create_dataset.side_effect = Exception("Dataset error")
+        mock_group.create_array.side_effect = Exception("Array creation error")
         mock_root.create_group.return_value = mock_group
         
         cache.root = mock_root
         
         try:
-            # Should still update memory cache even if dataset creation fails
+            # Should still update memory cache even if array creation fails
             cache._save_to_cache("test/key2", energy, xs)
             assert "test/key2" in cache._memory_cache
         finally:

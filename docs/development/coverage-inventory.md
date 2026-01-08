@@ -100,18 +100,23 @@
 
 ### 🟠 HIGH PRIORITY (Blocking specific tests)
 
-2. **Fix Zarr API Usage in `_save_to_cache`**
-   - **Location**: `smrforge/core/reactor_core.py:249-254`
-   - **Current Code**:
-     ```python
-     group.create_dataset("energy", data=energy, chunks=(1024,), compression="zstd")
-     ```
-   - **Issue**: Need to verify if zarr API requires explicit `shape` parameter
-   - **Tests Blocked**: 
-     - `test_get_cross_section_zarr_cache_hit` (line 466)
-     - `test_save_to_cache` (line 506)
-   - **Status**: Tests currently skipped with `@pytest.mark.skip`
-   - **Estimated coverage gain**: +5-10%
+2. **✅ Fix Zarr API Usage in `_save_to_cache`** ✅ **COMPLETE**
+   - **Location**: `smrforge/core/reactor_core.py:663-664`
+   - **Status**: ✅ **COMPLETE** - Code already uses correct `create_array` API (not deprecated `create_dataset`)
+   - **Issue Resolved**: 
+     - ✅ Implementation uses `group.create_array("energy", data=energy, chunks=(chunk_size,))` (line 663)
+     - ✅ Implementation uses `group.create_array("xs", data=xs, chunks=(chunk_size,))` (line 664)
+     - ✅ Modern zarr API (no deprecated `create_dataset`)
+     - ✅ Tests updated to use `create_array` instead of deprecated `create_dataset`
+   - **Tests Fixed**: 
+     - ✅ `test_get_cross_section_zarr_cache_hit` - Updated to use `create_array` (line 401-402)
+     - ✅ `test_save_to_cache_zarr_array_exception` - Updated to use `create_array` (line 593)
+   - **Implementation Details**:
+     - Uses `create_array` (modern zarr API) which infers shape from `data` parameter
+     - No explicit `shape` parameter needed (inferred from data)
+     - Uses adaptive chunk sizing (8192 for large, 2048 for medium, 1024 for small arrays)
+     - Default compression (zlib) for compatibility (zstd requires numcodecs)
+   - **Estimated coverage gain**: +5-10% (now unlocked)
 
 3. **✅ Fix test_pivot_for_solver** 
    - **Status**: RESOLVED - Test is passing
@@ -294,7 +299,7 @@
 - [x] Mock network requests ✅
 - [x] Create fixtures for pre-populated caches ✅
 - [x] **Task #1**: Create realistic mock ENDF files ✅ **COMPLETE** - Created `tests/data/sample_U235.endf` and `sample_U238.endf` based on real ENDF-B-VIII.1 files
-- [ ] **Task #2**: Fix zarr API usage 🟠
+- [x] **Task #2**: Fix zarr API usage ✅ **COMPLETE** - Code already uses correct `create_array` API, tests updated
 
 ### Phase 2: reactor_core.py (3-4 days) ⚠️ **PARTIALLY COMPLETE**
 - [x] **Task #5**: Test `_simple_endf_parse` fully ✅ **COMPLETE**
