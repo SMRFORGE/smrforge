@@ -111,7 +111,7 @@ class Nuclide:
         suffix = f"m{self.m}" if self.m > 0 else ""
         return f"{symbol}{self.A}{suffix}"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.zam)
 
 

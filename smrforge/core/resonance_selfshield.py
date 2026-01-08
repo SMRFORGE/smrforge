@@ -47,7 +47,7 @@ class BondarenkoMethod:
         self.f_factors: Dict[str, RectBivariateSpline] = {}
         self._load_f_factors()
 
-    def _load_f_factors(self):
+    def _load_f_factors(self) -> None:
         """
         Load pre-tabulated Bondarenko f-factors.
         In production, these would come from processed libraries.
@@ -96,7 +96,7 @@ class BondarenkoMethod:
         self._add_u235_factors()
         self._add_pu239_factors()
 
-    def _add_u235_factors(self):
+    def _add_u235_factors(self) -> None:
         """Add U-235 f-factors."""
         sigma_0_grid = np.array([1, 10, 100, 1000, 10000, 1e5, 1e6, 1e10])
         T_grid = np.array([300, 600, 900, 1200, 1500, 1800, 2100])
@@ -118,7 +118,7 @@ class BondarenkoMethod:
             np.log10(sigma_0_grid), T_grid, f_table_u235_fission.T, kx=3, ky=3
         )
 
-    def _add_pu239_factors(self):
+    def _add_pu239_factors(self) -> None:
         """Add Pu-239 f-factors."""
         sigma_0_grid = np.array([1, 10, 100, 1000, 10000, 1e5, 1e6, 1e10])
         T_grid = np.array([300, 600, 900, 1200, 1500, 1800, 2100])
@@ -271,7 +271,7 @@ class SubgroupMethod:
         self.subgroup_data: Dict[str, Dict] = {}
         self._generate_subgroup_parameters()
 
-    def _generate_subgroup_parameters(self):
+    def _generate_subgroup_parameters(self) -> None:
         """
         Generate subgroup parameters (weights and XS).
         These would come from processing ENDF data.
@@ -290,7 +290,7 @@ class SubgroupMethod:
         # Add more energy groups and nuclides
         self._add_fast_subgroups()
 
-    def _add_fast_subgroups(self):
+    def _add_fast_subgroups(self) -> None:
         """Add fast spectrum subgroups."""
         # U-238 fission in fast group
         sigma_sg = np.array([0.3, 0.5, 0.8, 1.2, 2.0, 3.5, 6.0, 10.0])
