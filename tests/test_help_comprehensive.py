@@ -406,3 +406,236 @@ class TestPlainTextFallback:
             from smrforge.help import _print_help_plain
             _print_help_plain("geometry", "geometry", True)
 
+
+class TestHelperFunctions:
+    """Test helper functions."""
+    
+    def test_get_smr_module_first_call(self):
+        """Test _get_smr_module on first call."""
+        # Reset module state
+        import smrforge.help as help_module
+        help_module._CORE_AVAILABLE = None
+        help_module._smr_module = None
+        
+        from smrforge.help import _get_smr_module
+        smr = _get_smr_module()
+        # Should return the module or None depending on availability
+        assert smr is None or hasattr(smr, '__name__')
+    
+    def test_get_smr_module_cached(self):
+        """Test _get_smr_module uses cache on subsequent calls."""
+        from smrforge.help import _get_smr_module
+        smr1 = _get_smr_module()
+        smr2 = _get_smr_module()
+        # Should return same object (cached)
+        assert smr1 is smr2
+    
+    def test_is_core_available(self):
+        """Test _is_core_available."""
+        from smrforge.help import _is_core_available
+        result = _is_core_available()
+        assert isinstance(result, bool)
+    
+    def test_show_topic_help_no_smr_module(self):
+        """Test _show_topic_help when smr module is not available."""
+        try:
+            from smrforge.help import _show_topic_help, _get_smr_module
+            from smrforge.help import Console
+            
+            # Patch _get_smr_module to return None
+            original_get_smr = _get_smr_module
+            with patch('smrforge.help._get_smr_module', return_value=None):
+                console = Console()
+                _show_topic_help(console, "nonexistent_function", True)
+                # Should fall through to built-in topics or show "No help found"
+        except ImportError:
+            pytest.skip("rich not available")
+    
+    def test_show_topic_help_function_not_in_smr(self):
+        """Test _show_topic_help when function doesn't exist in smr module."""
+        try:
+            from smrforge.help import _show_topic_help
+            from smrforge.help import Console
+            
+            console = Console()
+            # Use a function name that definitely doesn't exist
+            _show_topic_help(console, "definitely_nonexistent_function_xyz123", True)
+            # Should show "No help found"
+        except ImportError:
+            pytest.skip("rich not available")
+
+
+class TestObjectHelpEdgeCases:
+    """Test edge cases in object help functions."""
+    
+    def test_show_object_help_no_signature(self):
+        """Test _show_object_help with object that raises ValueError on signature."""
+        try:
+            from smrforge.help import _show_object_help
+            from smrforge.help import Console
+            import inspect
+            
+            # Create mock object that raises ValueError on signature
+            obj = Mock()
+            obj.__name__ = "TestObject"
+            obj.__doc__ = "Test docstring"
+            # Make inspect.signature raise ValueError
+            with patch('inspect.signature', side_effect=ValueError("No signature")):
+                console = Console()
+                _show_object_help(console, obj, True)
+                # Should handle gracefully
+        except ImportError:
+            pytest.skip("rich not available")
+    
+    def test_show_object_help_complex_type_annotations(self):
+        """Test _show_object_help with complex type annotations."""
+        try:
+            from smrforge.help import _show_object_help
+            from smrforge.help import Console
+            from typing import List, Dict, Optional
+            
+            def test_func(
+                x: List[Dict[str, Optional[int]]],
+                y: 'smrforge.core.reactor_core.Nuclide',
+                z: float = 1.0
+            ) -> 'smrforge.geometry.core_geometry.PrismaticCore':
+                """Test function with complex annotations."""
+                pass
+            
+            console = Console()
+            _show_object_help(console, test_func, True)
+        except ImportError:
+            pytest.skip("rich not available")
+    
+    def test_show_object_help_long_default_value(self):
+        """Test _show_object_help with long default value (truncation)."""
+        try:
+            from smrforge.help import _show_object_help
+            from smrforge.help import Console
+            
+            def test_func(x: str = "This is a very long default value that should be truncated when displayed in the help system because it exceeds the maximum length"):
+                """Test function with long default."""
+                pass
+            
+            console = Console()
+            _show_object_help(console, test_func, True)
+        except ImportError:
+            pytest.skip("rich not available")
+    
+    def test_show_object_help_no_name_attribute(self):
+        """Test _show_object_help with object without __name__."""
+        try:
+            from smrforge.help import _show_object_help
+            from smrforge.help import Console
+            
+            # Create object without __name__
+            obj = Mock()
+            del obj.__name__
+            obj.__doc__ = "Test docstring"
+            
+            console = Console()
+            _show_object_help(console, obj, True)
+        except ImportError:
+            pytest.skip("rich not available")
+    
+    def test_show_object_help_return_annotation_edge_cases(self):
+        """Test _show_object_help with various return annotation edge cases."""
+        try:
+            from smrforge.help import _show_object_help
+            from smrforge.help import Console
+            
+            # Test with <class '...'> wrapper
+            def test_func1() -> type:
+                """Function returning type."""
+                pass
+            
+            # Test with complex typing annotation
+            from typing import Union
+            def test_func2() -> Union[int, str]:
+                """Function with Union return."""
+                pass
+            
+            console = Console()
+            _show_object_help(console, test_func1, True)
+            _show_object_help(console, test_func2, True)
+        except ImportError:
+            pytest.skip("rich not available")
+    
+    def test_format_docstring(self):
+        """Test _format_docstring function."""
+        try:
+            from smrforge.help import _format_docstring
+            
+            # Test with code blocks
+            doc1 = """
+This is a docstring.
+
+```python
+def example():
+    pass
+```
+"""
+            result1 = _format_docstring(doc1)
+            assert "```" in result1
+            
+            # Test with >>> examples
+            doc2 = """
+This is a docstring.
+
+>>> example()
+result
+"""
+            result2 = _format_docstring(doc2)
+            assert "```" in result2
+            
+            # Test with regular text
+            doc3 = "Just plain text."
+            result3 = _format_docstring(doc3)
+            assert "Just plain text." in result3
+        except ImportError:
+            pytest.skip("_format_docstring may not be available")
+    
+    def test_get_examples(self):
+        """Test _get_examples function."""
+        try:
+            from smrforge.help import _get_examples
+            
+            examples = _get_examples()
+            assert isinstance(examples, dict)
+            # Check some expected keys
+            assert "create_reactor" in examples
+            assert "quick_keff" in examples
+            # Check structure
+            for key, value in examples.items():
+                assert isinstance(value, list)
+                for example in value:
+                    assert "description" in example
+                    assert "code" in example
+        except ImportError:
+            pytest.skip("_get_examples may not be available")
+    
+    def test_show_object_help_parameter_annotations(self):
+        """Test _show_object_help with various parameter annotation types."""
+        try:
+            from smrforge.help import _show_object_help
+            from smrforge.help import Console
+            
+            # Test with built-in types
+            def test_builtin(x: int, y: float, z: str = "default"):
+                pass
+            
+            # Test with typing module types
+            from typing import List, Dict, Optional
+            def test_typing(x: List[int], y: Dict[str, float], z: Optional[str] = None):
+                pass
+            
+            # Test with complex nested types
+            def test_complex(x: 'typing.Union[list, dict]'):
+                pass
+            
+            console = Console()
+            _show_object_help(console, test_builtin, True)
+            _show_object_help(console, test_typing, True)
+            _show_object_help(console, test_complex, True)
+        except ImportError:
+            pytest.skip("rich not available")
