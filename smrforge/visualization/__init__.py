@@ -6,6 +6,8 @@ This module provides visualization capabilities for:
 - Flux and power distribution plots
 - Temperature distribution visualization
 - 3D mesh visualization (plotly and pyvista)
+- Animation of transient data
+- Comparison views for multiple designs
 """
 
 try:
@@ -37,6 +39,29 @@ try:
 except ImportError:
     _MESH_3D_VIS_AVAILABLE = False
 
+try:
+    from smrforge.visualization.animations import (
+        animate_3d_transient_plotly,
+        animate_transient_matplotlib,
+        create_comparison_animation,
+    )
+
+    _ANIMATIONS_AVAILABLE = True
+except ImportError:
+    _ANIMATIONS_AVAILABLE = False
+
+try:
+    from smrforge.visualization.comparison import (
+        compare_designs_matplotlib,
+        compare_designs_plotly,
+        compare_metrics_matplotlib,
+        overlay_comparison_matplotlib,
+    )
+
+    _COMPARISON_AVAILABLE = True
+except ImportError:
+    _COMPARISON_AVAILABLE = False
+
 __all__ = []
 
 if _GEOMETRY_VIS_AVAILABLE:
@@ -58,5 +83,24 @@ if _MESH_3D_VIS_AVAILABLE:
             "plot_surface_pyvista",
             "plot_multiple_meshes_plotly",
             "export_mesh_to_vtk",
+        ]
+    )
+
+if _ANIMATIONS_AVAILABLE:
+    __all__.extend(
+        [
+            "animate_transient_matplotlib",
+            "animate_3d_transient_plotly",
+            "create_comparison_animation",
+        ]
+    )
+
+if _COMPARISON_AVAILABLE:
+    __all__.extend(
+        [
+            "compare_designs_matplotlib",
+            "compare_designs_plotly",
+            "compare_metrics_matplotlib",
+            "overlay_comparison_matplotlib",
         ]
     )

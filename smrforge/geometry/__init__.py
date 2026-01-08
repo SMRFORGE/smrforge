@@ -1,5 +1,12 @@
 """
-Reactor geometry and spatial discretization
+Reactor geometry and spatial discretization.
+
+This module provides:
+- Core geometry classes (PrismaticCore, PebbleBedCore)
+- Geometry import/export
+- Mesh generation
+- 3D mesh support
+- Enhanced geometry validation
 """
 
 try:
@@ -94,6 +101,25 @@ try:
 except ImportError:
     _MESH_3D_AVAILABLE = False
 
+# Import geometry validation if available
+try:
+    from smrforge.geometry.validation import (
+        Gap,
+        ValidationReport,
+        check_distances_and_clearances,
+        check_gaps_and_boundaries,
+        comprehensive_validation,
+        validate_assembly_placement,
+        validate_control_rod_insertion,
+        validate_fuel_loading_pattern,
+        validate_geometry_completeness,
+        validate_material_connectivity,
+    )
+
+    _VALIDATION_AVAILABLE = True
+except ImportError:
+    _VALIDATION_AVAILABLE = False
+
 __all__ = []
 if _GEOMETRY_AVAILABLE:
     __all__.extend(
@@ -160,5 +186,21 @@ if _MESH_3D_AVAILABLE:
             "extract_material_boundaries",
             "add_flux_to_mesh",
             "add_power_to_mesh",
+        ]
+    )
+
+if _VALIDATION_AVAILABLE:
+    __all__.extend(
+        [
+            "Gap",
+            "ValidationReport",
+            "validate_geometry_completeness",
+            "check_gaps_and_boundaries",
+            "validate_material_connectivity",
+            "check_distances_and_clearances",
+            "validate_assembly_placement",
+            "validate_control_rod_insertion",
+            "validate_fuel_loading_pattern",
+            "comprehensive_validation",
         ]
     )
