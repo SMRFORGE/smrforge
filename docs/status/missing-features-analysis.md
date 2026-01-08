@@ -129,25 +129,34 @@
 
 ## 🟡 MEDIUM PRIORITY Missing Features
 
-### 4. **Control Rod Geometry Enhancements** 🎛️
+### 4. **Control Rod Geometry Enhancements** 🎛️ ✅ **IMPLEMENTED**
 
-**Status**: ✅ Basic control rod geometry implemented, ⚠️ Advanced features missing
+**Status**: ✅ **COMPLETE** - Advanced features now implemented
 
 **What's Implemented:**
 - ✅ Control rod geometry definition
 - ✅ Positioning
 - ✅ Reactivity worth calculations
 - ✅ Shutdown margin calculations
+- ✅ **Advanced control rod bank definitions** - Now implemented
+- ✅ **Control rod sequencing** - Now implemented
+- ✅ **Enhanced scram geometry (full insertion)** - Now implemented
+- ✅ **Advanced worth calculations per position** - Now implemented
 
-**What's Still Missing:**
-- Advanced control rod bank definitions
-- Control rod sequencing
-- Enhanced scram geometry (full insertion)
-- Advanced worth calculations per position
+**Implementation Status**: ✅ **COMPLETE** - All advanced features implemented (January 2026)
 
-**Implementation Priority**: 🟢 **LOW** - Basic functionality exists
+**Location**: `smrforge/geometry/control_rods.py`
 
-**Estimated Effort**: 1 week (for advanced features)
+**New Features:**
+- `BankPriority` enum (SAFETY, SHUTDOWN, REGULATION, MANUAL)
+- Bank dependencies and zone-based organization
+- `ControlRodSequence` class for operation sequences
+- `ScramEvent` class for scram tracking with history
+- Axial and radial worth profiles (system-wide and per-bank)
+- `worth_at_position()` for position-dependent worth calculations
+- `sequenced_insertion()` with priority/dependency ordering
+- `create_standard_sequence()` helper method
+- Enhanced scram tracking with event history
 
 ---
 
