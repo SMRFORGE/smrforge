@@ -586,14 +586,13 @@ class AdvancedGeometryImporter:
                 abs(bounds[1][0] - bounds[0][0]), abs(bounds[1][1] - bounds[0][1])
             )  # max x or y
 
-                # Create simplified block representation from mesh
-                # This is a placeholder - full implementation would extract
-                # individual volumes/blocks from the CAD geometry
-                from smrforge.geometry.core_geometry import GraphiteBlock
+            # Create simplified block representation from mesh
+            # This is a placeholder - full implementation would extract
+            # individual volumes/blocks from the CAD geometry
 
-                # For now, create a single center block
-                # Full implementation would parse CAD structure to identify blocks
-                if core.core_diameter > 0 and core.core_height > 0:
+            # For now, create a single center block
+            # Full implementation would parse CAD structure to identify blocks
+            if core.core_diameter > 0 and core.core_height > 0:
                     block = GraphiteBlock(
                         id=0,
                         position=Point3D(

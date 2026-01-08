@@ -91,6 +91,18 @@ try:
 except ImportError:
     _MESH_GENERATION_AVAILABLE = False
 
+# Import advanced 3D mesh generation if available
+try:
+    from smrforge.geometry.advanced_mesh import (
+        AdvancedMeshGenerator3D,
+        MeshConverter,
+        StructuredMesh3D,
+    )
+
+    _ADVANCED_MESH_AVAILABLE = True
+except ImportError:
+    _ADVANCED_MESH_AVAILABLE = False
+
 # Import 3D mesh support if available
 try:
     from smrforge.geometry.mesh_3d import (
@@ -195,6 +207,15 @@ if _MESH_GENERATION_AVAILABLE:
             "MeshQuality",
             "MeshType",
             "compute_mesh_gradient",
+        ]
+    )
+
+if _ADVANCED_MESH_AVAILABLE:
+    __all__.extend(
+        [
+            "AdvancedMeshGenerator3D",
+            "StructuredMesh3D",
+            "MeshConverter",
         ]
     )
 

@@ -6,7 +6,7 @@ flux distributions, power distributions, temperature profiles, and control rod m
 """
 
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 
@@ -28,6 +28,9 @@ try:
 
     _PLOTLY_AVAILABLE = True
 except ImportError:
+    _PLOTLY_AVAILABLE = False
+    go = None  # type: ignore
+    make_subplots = None  # type: ignore
     _PLOTLY_AVAILABLE = False
     go = None  # type: ignore
 
@@ -184,7 +187,7 @@ def animate_3d_transient_plotly(
     interval: int = 100,
     title: str = "3D Transient",
     **kwargs,
-) -> go.Figure:
+) -> Any:  # type: ignore
     """
     Create plotly animation of 3D transient data.
 
