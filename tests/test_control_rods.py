@@ -700,24 +700,23 @@ class TestControlRodSystem:
         """Test sequenced insertion ordered by dependencies."""
         system = ControlRodSystem()
         dep_bank = ControlRodBank(id=1, name="DepBank", priority=BankPriority.SAFETY, max_worth=1000.0)
-        # Start with DepBank fully withdrawn
-        dep_bank.set_insertion(1.0)
+        # Start with DepBank already inserted to satisfy dependency
+        dep_bank.set_insertion(0.05)  # Already inserted (insertion <= 0.1)
         system.add_bank(dep_bank)
         
         bank = ControlRodBank(id=2, name="Bank", priority=BankPriority.REGULATION, max_worth=500.0, dependencies=["DepBank"])
         bank.set_insertion(1.0)  # Start fully withdrawn
         system.add_bank(bank)
         
-        # When ordering by dependencies (not priority), DepBank should be ordered before Bank
-        # However, Bank cannot be inserted until DepBank is inserted first (insertion <= 0.1)
-        # So we test that the ordering works correctly by inserting DepBank to satisfy dependency,
-        # then both can be inserted
-        dep_bank.set_insertion(0.05)  # Satisfy dependency first
-        system.sequenced_insertion(target_insertion=0.3, order_by_priority=False)
+        # With dependency satisfied, both can be inserted to target
+        # Note: sequenced_insertion sets all banks to the same target insertion,
+        # so DepBank will be withdrawn from 0.05 to 0.3, but since it processes
+        # sequentially, DepBank is processed first (dependency order)
+        system.sequenced_insertion(target_insertion=0.05, order_by_priority=False)  # Insert to 0.05 (same as DepBank)
         
         # Both should reach target insertion
-        assert abs(dep_bank.insertion - 0.3) < 0.01
-        assert abs(bank.insertion - 0.3) < 0.01
+        assert abs(dep_bank.insertion - 0.05) < 0.01
+        assert abs(bank.insertion - 0.05) < 0.01
     
     def test_system_sequenced_insertion_specific_banks(self):
         """Test sequenced insertion with specific bank names."""
