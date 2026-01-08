@@ -824,3 +824,135 @@ class TestVisualizationTools:
         
         with pytest.raises(ValueError, match="Length mismatch"):
             VisualizationTools.plot_sobol_indices(sobol_results, "output", ["p1"])
+
+
+class TestSensitivityAnalysisPrivateMethods:
+    """Test private methods of SensitivityAnalysis for coverage."""
+    
+    def test_print_statistics(self):
+        """Test _print_statistics method indirectly through propagate."""
+        params = [UncertainParameter("p1", "normal", 100.0, 10.0)]
+        def model(params_dict):
+            return {"output": params_dict["p1"] * 2.0}
+        
+        propagation = UncertaintyPropagation(
+            parameters=params,
+            model=model,
+            output_names=["output"]
+        )
+        
+        # This will call _print_statistics internally
+        results = propagation.propagate(n_samples=10, method="mc")
+        
+        # Verify results are correct
+        assert results is not None
+        assert len(results.output_names) == 1
+    
+    def test_print_sobol_results_valid(self):
+        """Test _print_sobol_results with valid results structure."""
+        params = [
+            UncertainParameter("p1", "uniform", 0.0, (0.0, 1.0)),
+            UncertainParameter("p2", "uniform", 0.0, (0.0, 1.0)),
+        ]
+        def model(params_dict):
+            return {"output": params_dict["p1"] + params_dict["p2"]}
+        
+        analysis = SensitivityAnalysis(
+            parameters=params,
+            model=model,
+            output_names=["output"]
+        )
+        
+        # Mock sobol results structure
+        mock_results = {
+            "output": {
+                "S1": np.array([0.4, 0.3]),
+                "ST": np.array([0.6, 0.5]),
+                "S2": np.array([[0.0, 0.1], [0.1, 0.0]]),  # Second order
+            }
+        }
+        
+        # Call private method directly (for coverage)
+        analysis._print_sobol_results(mock_results)
+        
+        # Should not raise any errors
+    
+    def test_print_sobol_results_invalid_structure(self):
+        """Test _print_sobol_results with invalid results structure."""
+        params = [UncertainParameter("p1", "normal", 100.0, 10.0)]
+        def model(params_dict):
+            return {"output": 1.0}
+        
+        analysis = SensitivityAnalysis(
+            parameters=params,
+            model=model,
+            output_names=["output"]
+        )
+        
+        # Invalid structure (missing S1/ST keys)
+        invalid_results = {
+            "output": {
+                "invalid_key": np.array([0.5])
+            }
+        }
+        
+        # Should handle gracefully (logs warning, doesn't crash)
+        analysis._print_sobol_results(invalid_results)
+        
+        # Also test with non-dict
+        with pytest.raises(ValueError, match="results must be dict"):
+            analysis._print_sobol_results("not a dict")
+    
+    def test_print_morris_results_valid(self):
+        """Test _print_morris_results with valid results structure."""
+        params = [
+            UncertainParameter("p1", "uniform", 0.0, (0.0, 1.0)),
+            UncertainParameter("p2", "uniform", 0.0, (0.0, 1.0)),
+        ]
+        def model(params_dict):
+            return {"output": params_dict["p1"] + params_dict["p2"]}
+        
+        analysis = SensitivityAnalysis(
+            parameters=params,
+            model=model,
+            output_names=["output"]
+        )
+        
+        # Mock Morris results structure
+        mock_results = {
+            "output": {
+                "mu_star": np.array([0.5, 0.3]),
+                "sigma": np.array([0.2, 0.1]),
+            }
+        }
+        
+        # Call private method directly (for coverage)
+        analysis._print_morris_results(mock_results)
+        
+        # Should not raise any errors
+    
+    def test_print_morris_results_invalid_structure(self):
+        """Test _print_morris_results with invalid results structure."""
+        params = [UncertainParameter("p1", "normal", 100.0, 10.0)]
+        def model(params_dict):
+            return {"output": 1.0}
+        
+        analysis = SensitivityAnalysis(
+            parameters=params,
+            model=model,
+            output_names=["output"]
+        )
+        
+        # Invalid structure (missing mu_star/sigma keys)
+        invalid_results = {
+            "output": {
+                "invalid_key": np.array([0.5])
+            }
+        }
+        
+        # Should handle gracefully (logs warning, doesn't crash)
+        analysis._print_morris_results(invalid_results)
+        
+        # Also test with non-dict
+        with pytest.raises(ValueError, match="results must be dict"):
+            analysis._print_morris_results("not a dict")
