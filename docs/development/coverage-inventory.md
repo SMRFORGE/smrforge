@@ -274,24 +274,20 @@
 | 2560-2712 | `_collapse_to_multigroup` | ✅ | **COMPLETE** - Edge cases covered |
 | 582-606 | `__main__` example | 🟢 | Skip (not production code) |
 
-### endf_parser.py (105 lines uncovered)
+### endf_parser.py ✅ **SIGNIFICANTLY IMPROVED**
 
 | Lines | Component | Priority | Notes |
 |-------|-----------|----------|-------|
-| 22-24 | Import handling | 🟢 | Skip |
-| 38-49 | `ReactionData.interpolate` | 🟡 | Task #9 (12 lines) |
-| 85-87 | `__getitem__` KeyError | 🟢 | Task #14 |
-| 97-112 | `to_polars` | 🟡 | Part of task #10 |
-| 124 | Return/comments | 🟢 | Skip |
-| 128 | Comments | 🟢 | Skip |
-| 167-172 | `__getitem__` wrapper | 🟡 | Part of task #10 |
-| 191-192 | Comments | 🟢 | Skip |
-| 197-199 | Exception handling | 🟢 | Part of task #8 |
-| 203-207 | Control flow | 🟢 | Part of task #8 |
-| **225-321** | **`_parse_mf3_section`** | **🔴** | **Task #4 (97 lines - LARGEST GAP!)** |
-| 326-345 | `_mt_to_reaction_name` | 🟢 | Task #13 (20 lines) |
-| 374-392 | `ReactionWrapper` creation | 🟡 | Part of task #10 |
-| 396 | Comments | 🟢 | Skip |
+| 22-24 | Import handling (POLARS_AVAILABLE = False) | ✅ | **COMPLETE** - Tested via `test_endf_parser_polars_unavailable.py` with patching |
+| 38-49 | `ReactionData.interpolate` | ✅ | **COMPLETE** - Comprehensive testing in `test_reaction_data_interpolate.py` |
+| 79-87 | `__contains__` and `__getitem__` KeyError | ✅ | **COMPLETE** - Tested in `test_endf_parser_complete_coverage.py` (4 tests) |
+| 97-112 | `to_polars` | ✅ | **COMPLETE** - Tested with/without Polars in `test_endf_parser_complete_coverage.py` and `test_endf_parser_polars_unavailable.py` |
+| 114-141 | `get_reactions_dataframe` | ✅ | **COMPLETE** - Tested with/without Polars |
+| 197-210 | `_parse_mf3` exception handling | ✅ | **COMPLETE** - Exception handling tested in `test_endf_parser_complete_coverage.py` |
+| 227-332 | `_parse_mf3_section` | ✅ | **COMPLETE** - Comprehensive edge case testing in `test_endf_parser_edge_cases.py` and `test_endf_parser_complete_coverage.py` - start_idx >= len(lines), break conditions, next_mt=0, different MF, exception handling all covered |
+| 335-356 | `_mt_to_reaction_name` | ✅ | **COMPLETE** - Tested via parsing tests |
+| 379-381 | `ENDFCompatibility.__contains__` | ✅ | **COMPLETE** - Tested in `test_endf_parser_complete_coverage.py` |
+| 405-407 | `ENDFCompatibility.to_polars` | ✅ | **COMPLETE** - Tested in `test_endf_parser_complete_coverage.py` |
 
 ---
 
@@ -321,9 +317,14 @@
 - [x] Boundary conditions ✅ **COMPLETE**
 - **Result**: Coverage improved from 70.5% → **80.1%** ✅ **TARGET EXCEEDED**
 
-### Phase 3: endf_parser.py (4-5 days)
-- [ ] **Task #4**: Test `_parse_mf3_section` fully 🔴
-- [ ] **Task #8**: Test `ENDFEvaluation` parsing methods 🟡
+### Phase 3: endf_parser.py ✅ **COMPLETE**
+- [x] **Task #4**: Test `_parse_mf3_section` fully ✅ **COMPLETE** - Comprehensive edge case testing in `test_endf_parser_edge_cases.py` and `test_endf_parser_complete_coverage.py`
+- [x] **Task #8**: Test `ENDFEvaluation` parsing methods ✅ **COMPLETE** - Exception handling, __contains__, __getitem__, to_polars, get_reactions_dataframe all tested
+- [x] **Task #9**: Test `ReactionData.interpolate` ✅ **COMPLETE** - Comprehensive testing in `test_reaction_data_interpolate.py`
+- [x] **Task #10**: Test `ENDFCompatibility` wrapper ✅ **COMPLETE** - __contains__, to_polars, xs dictionary structure all tested
+- [x] **Task #13**: Test `_mt_to_reaction_name` ✅ **COMPLETE** - Tested via parsing tests
+- [x] **Task #14**: Test `__getitem__` KeyError ✅ **COMPLETE** - Tested in `test_endf_parser_complete_coverage.py`
+- [x] Polars unavailable paths ✅ **COMPLETE** - Tested in `test_endf_parser_polars_unavailable.py` with patching
 - [ ] **Task #9**: Test `ReactionData.interpolate` 🟡
 - [ ] **Task #10**: Test `ENDFCompatibility` wrapper methods 🟡
 
