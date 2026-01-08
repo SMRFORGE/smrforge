@@ -235,9 +235,9 @@
 
 | Lines | Component | Priority | Notes |
 |-------|-----------|----------|-------|
-| 385-584 | `_fetch_and_cache` backend chains | 🔴 | All 4 backends (endf-parserpy, SANDY, endf_parser, simple) - **LARGEST GAP** |
-| 735-900 | `_fetch_and_cache_async` async operations | 🔴 | Async versions of backend chains |
-| 700-734 | `get_cross_section_async` async paths | 🔴 | Async cache retrieval |
+| 385-584 | `_fetch_and_cache` backend chains | 🟡 | **PARTIALLY COMPLETE** - All 4 backends tested with real mock ENDF files in `test_fetch_and_cache_with_mock_files.py` (9 tests) - Backend logic paths covered, but actual parser code still mocked |
+| 735-900 | `_fetch_and_cache_async` async operations | 🔴 | Async versions of backend chains - Needs async test coverage |
+| 700-734 | `get_cross_section_async` async paths | 🔴 | Async cache retrieval - Needs async test coverage |
 | 106-116 | Zarr cache retrieval | ✅ | **COMPLETE** - Tested in comprehensive tests |
 | 228 | Error message generation | ✅ | **COMPLETE** - Tested in comprehensive tests |
 | 249-254 | Zarr cache storage | 🟡 | Needs more edge case testing |
