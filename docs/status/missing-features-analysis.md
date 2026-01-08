@@ -261,7 +261,7 @@
 5. ✅ **Control Rod Geometry** - COMPLETE
 6. ✅ **Advanced Visualization** (3D, animations) - **COMPLETE** (January 2026)
 7. ✅ **Enhanced Geometry Validation** - **COMPLETE** (January 2026)
-8. 🟡 **Complex Geometry Import** (full CSG parsing) - MEDIUM PRIORITY (future enhancement)
+8. ✅ **Complex Geometry Import** (full CSG parsing, CAD, MCNP) - **COMPLETE** (January 2026)
 
 ### Phase 2: New Module Development (Future)
 1. 🟢 **Optimization Module** - LOW PRIORITY (use scipy.optimize)
