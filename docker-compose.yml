@@ -63,5 +63,6 @@ services:
     stdin_open: true
     tty: true
     # Install dev dependencies on startup (including pytest-asyncio for async tests)
+    # Optional: Add visualization/mesh dependencies with: pip install plotly pyvista meshio joblib trimesh
     command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio && bash"
 
