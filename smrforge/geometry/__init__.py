@@ -64,6 +64,20 @@ try:
 except ImportError:
     _IMPORTERS_AVAILABLE = False
 
+# Import advanced geometry importers if available
+try:
+    from smrforge.geometry.advanced_import import (
+        AdvancedGeometryImporter,
+        CSGCell,
+        CSGSurface,
+        GeometryConverter,
+        Lattice,
+    )
+
+    _ADVANCED_IMPORTERS_AVAILABLE = True
+except ImportError:
+    _ADVANCED_IMPORTERS_AVAILABLE = False
+
 # Import mesh generation if available
 try:
     from smrforge.geometry.mesh_generation import (
@@ -162,6 +176,17 @@ if _ASSEMBLY_AVAILABLE:
 
 if _IMPORTERS_AVAILABLE:
     __all__.append("GeometryImporter")
+
+if _ADVANCED_IMPORTERS_AVAILABLE:
+    __all__.extend(
+        [
+            "AdvancedGeometryImporter",
+            "GeometryConverter",
+            "CSGSurface",
+            "CSGCell",
+            "Lattice",
+        ]
+    )
 
 if _MESH_GENERATION_AVAILABLE:
     __all__.extend(
