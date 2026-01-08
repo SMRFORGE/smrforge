@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from smrforge.geometry.control_rods import (
+    BankPriority,
     ControlRod,
     ControlRodBank,
     ControlRodSystem,
@@ -599,4 +600,230 @@ class TestControlRodSystem:
         assert bank1 in core_banks
         assert bank3 in core_banks
         assert bank2 not in core_banks
+    
+    def test_system_calculate_worth_at_position(self):
+        """Test calculating worth at 3D position."""
+        from smrforge.geometry.core_geometry import Point3D
+        
+        system = ControlRodSystem()
+        rod = ControlRod(id=1, position=Point3D(0, 0, 0), length=400.0, diameter=5.0, worth=1000.0)
+        bank = ControlRodBank(id=1, name="A")
+        bank.add_rod(rod)
+        system.add_bank(bank)
+        
+        # Calculate worth at position
+        position = Point3D(10, 10, 100)  # 10 cm radial, 100 cm axial
+        worth = system.calculate_worth_at_position(position, axial_position=100.0, core_radius=150.0)
+        
+        # Should be positive if rod is inserted enough
+        rod.insertion = 0.5  # 50% inserted = 200 cm inserted
+        worth = system.calculate_worth_at_position(position, axial_position=100.0, core_radius=150.0)
+        assert worth >= 0
+    
+    def test_system_calculate_worth_at_position_with_radial_profile(self):
+        """Test calculating worth with radial worth profile."""
+        from smrforge.geometry.core_geometry import Point3D
+        
+        def radial_profile(r_fraction):
+            return 1.0 - 0.5 * r_fraction  # Higher worth at center
+        
+        system = ControlRodSystem()
+        system.radial_worth_profile = radial_profile
+        
+        rod = ControlRod(id=1, position=Point3D(0, 0, 0), length=400.0, diameter=5.0, worth=1000.0)
+        rod.insertion = 0.5  # 50% inserted
+        bank = ControlRodBank(id=1, name="A")
+        bank.add_rod(rod)
+        system.add_bank(bank)
+        
+        # Center position (r=0)
+        center_position = Point3D(0, 0, 100)
+        worth_center = system.calculate_worth_at_position(center_position, axial_position=100.0, core_radius=150.0)
+        
+        # Edge position (r near core_radius)
+        edge_position = Point3D(140, 0, 100)
+        worth_edge = system.calculate_worth_at_position(edge_position, axial_position=100.0, core_radius=150.0)
+        
+        assert worth_center >= 0
+        assert worth_edge >= 0
+    
+    def test_system_calculate_worth_at_position_with_axial_profile(self):
+        """Test calculating worth with axial worth profile."""
+        from smrforge.geometry.core_geometry import Point3D
+        
+        def axial_profile(z_fraction):
+            return 1.0 - 0.5 * z_fraction  # Higher worth at bottom
+        
+        system = ControlRodSystem()
+        system.axial_worth_profile = axial_profile
+        
+        rod = ControlRod(id=1, position=Point3D(0, 0, 0), length=400.0, diameter=5.0, worth=1000.0)
+        rod.insertion = 0.5  # 50% inserted
+        bank = ControlRodBank(id=1, name="A")
+        bank.add_rod(rod)
+        system.add_bank(bank)
+        
+        position = Point3D(10, 10, 100)
+        worth = system.calculate_worth_at_position(position, axial_position=100.0, core_radius=150.0)
+        assert worth >= 0
+    
+    def test_system_calculate_worth_at_position_zero_radius(self):
+        """Test calculating worth with zero core radius."""
+        from smrforge.geometry.core_geometry import Point3D
+        
+        system = ControlRodSystem()
+        rod = ControlRod(id=1, position=Point3D(0, 0, 0), length=400.0, diameter=5.0, worth=1000.0)
+        rod.insertion = 0.5
+        bank = ControlRodBank(id=1, name="A")
+        bank.add_rod(rod)
+        system.add_bank(bank)
+        
+        position = Point3D(10, 10, 100)
+        worth = system.calculate_worth_at_position(position, axial_position=100.0, core_radius=0.0)
+        assert worth >= 0
+    
+    def test_system_sequenced_insertion_by_priority(self):
+        """Test sequenced insertion ordered by priority."""
+        system = ControlRodSystem()
+        bank1 = ControlRodBank(id=1, name="A", priority=BankPriority.SAFETY, max_worth=1000.0)
+        bank2 = ControlRodBank(id=2, name="B", priority=BankPriority.REGULATION, max_worth=500.0)
+        
+        system.add_bank(bank1)
+        system.add_bank(bank2)
+        
+        system.sequenced_insertion(target_insertion=0.5, order_by_priority=True)
+        
+        assert bank1.insertion == 0.5
+        assert bank2.insertion == 0.5
+    
+    def test_system_sequenced_insertion_by_dependency(self):
+        """Test sequenced insertion ordered by dependencies."""
+        system = ControlRodSystem()
+        dep_bank = ControlRodBank(id=1, name="DepBank", priority=BankPriority.SAFETY, max_worth=1000.0)
+        dep_bank.set_insertion(0.0)  # Pre-inserted
+        system.add_bank(dep_bank)
+        
+        bank = ControlRodBank(id=2, name="Bank", priority=BankPriority.REGULATION, max_worth=500.0, dependencies=["DepBank"])
+        system.add_bank(bank)
+        
+        system.sequenced_insertion(target_insertion=0.3, order_by_priority=False)
+        
+        # Should insert in dependency order (DepBank first, then Bank)
+        assert dep_bank.insertion == 0.3
+        assert bank.insertion == 0.3
+    
+    def test_system_sequenced_insertion_specific_banks(self):
+        """Test sequenced insertion with specific bank names."""
+        system = ControlRodSystem()
+        bank1 = ControlRodBank(id=1, name="A", max_worth=1000.0)
+        bank2 = ControlRodBank(id=2, name="B", max_worth=500.0)
+        bank3 = ControlRodBank(id=3, name="C", max_worth=300.0)
+        
+        system.add_bank(bank1)
+        system.add_bank(bank2)
+        system.add_bank(bank3)
+        
+        system.sequenced_insertion(target_insertion=0.6, bank_names=["A", "C"])
+        
+        assert bank1.insertion == 0.6
+        assert bank2.insertion == 1.0  # Not in list, should remain unchanged
+        assert bank3.insertion == 0.6
+    
+    def test_system_sequenced_insertion_circular_dependency(self):
+        """Test sequenced insertion detects circular dependencies."""
+        system = ControlRodSystem()
+        bank1 = ControlRodBank(id=1, name="A", dependencies=["B"], max_worth=1000.0)
+        bank2 = ControlRodBank(id=2, name="B", dependencies=["A"], max_worth=500.0)
+        
+        system.add_bank(bank1)
+        system.add_bank(bank2)
+        
+        with pytest.raises(ValueError, match="Circular dependency"):
+            system.sequenced_insertion(target_insertion=0.5, order_by_priority=False)
+    
+    def test_system_sequenced_insertion_dependency_violation(self):
+        """Test sequenced insertion raises error on dependency violation."""
+        system = ControlRodSystem()
+        dep_bank = ControlRodBank(id=1, name="DepBank", max_worth=1000.0)
+        dep_bank.set_insertion(0.5)  # Not inserted
+        system.add_bank(dep_bank)
+        
+        bank = ControlRodBank(id=2, name="Bank", max_worth=500.0, dependencies=["DepBank"])
+        system.add_bank(bank)
+        
+        with pytest.raises(ValueError, match="Cannot insert bank"):
+            system.sequenced_insertion(target_insertion=0.3, order_by_priority=False)
+    
+    def test_system_get_scram_geometry(self):
+        """Test getting scram geometry."""
+        system = ControlRodSystem()
+        rod1 = ControlRod(id=1, position=Point3D(0, 0, 0), length=400.0, diameter=5.0)
+        rod2 = ControlRod(id=2, position=Point3D(10, 0, 0), length=400.0, diameter=5.0)
+        
+        bank1 = ControlRodBank(id=1, name="A")
+        bank1.add_rod(rod1)
+        bank2 = ControlRodBank(id=2, name="B")
+        bank2.add_rod(rod2)
+        
+        system.add_bank(bank1)
+        system.add_bank(bank2)
+        
+        scram_geo = system.get_scram_geometry()
+        assert "A" in scram_geo
+        assert "B" in scram_geo
+        assert scram_geo["A"][1] == 0.0
+        assert scram_geo["B"][2] == 0.0
+    
+    def test_system_is_in_scram_state(self):
+        """Test checking if system is in scram state."""
+        system = ControlRodSystem()
+        bank1 = ControlRodBank(id=1, name="A")
+        bank1.set_insertion(0.0)  # Fully inserted
+        bank2 = ControlRodBank(id=2, name="B")
+        bank2.set_insertion(0.01)  # Within tolerance
+        
+        system.add_bank(bank1)
+        system.add_bank(bank2)
+        
+        assert system.is_in_scram_state()
+        
+        bank2.set_insertion(0.02)  # Not in scram
+        assert not system.is_in_scram_state()
+    
+    def test_system_create_standard_sequence(self):
+        """Test creating standard withdrawal sequence."""
+        system = ControlRodSystem()
+        reg_bank = ControlRodBank(id=1, name="Reg", priority=BankPriority.REGULATION, max_worth=500.0)
+        safety_bank = ControlRodBank(id=2, name="Safety", priority=BankPriority.SAFETY, max_worth=1000.0)
+        
+        system.add_bank(reg_bank)
+        system.add_bank(safety_bank)
+        
+        sequence = system.create_standard_sequence("Startup", withdrawal_steps=5, regulation_first=True)
+        assert sequence.name == "Startup"
+        assert len(sequence.steps) > 0
+        
+        # Should start with regulation bank
+        first_step_bank = sequence.steps[0][0]
+        assert first_step_bank == "Reg"
+    
+    def test_system_create_standard_sequence_not_regulation_first(self):
+        """Test creating standard sequence without regulation first."""
+        system = ControlRodSystem()
+        reg_bank = ControlRodBank(id=1, name="Reg", priority=BankPriority.REGULATION, max_worth=500.0)
+        safety_bank = ControlRodBank(id=2, name="Safety", priority=BankPriority.SAFETY, max_worth=1000.0)
+        
+        system.add_bank(reg_bank)
+        system.add_bank(safety_bank)
+        
+        sequence = system.create_standard_sequence("Startup", withdrawal_steps=3, regulation_first=False)
+        assert sequence.name == "Startup"
+        assert len(sequence.steps) > 0
+    
+    def test_system_create_standard_sequence_empty_banks(self):
+        """Test creating standard sequence with no banks."""
+        system = ControlRodSystem()
+        sequence = system.create_standard_sequence("Startup", withdrawal_steps=5)
+        assert sequence.name == "Startup"
+        assert len(sequence.steps) == 0
 
