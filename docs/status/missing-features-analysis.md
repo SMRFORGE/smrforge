@@ -277,7 +277,7 @@
 |---------|----------|--------|--------|--------|
 | Advanced Visualization | 🟡 MEDIUM | ✅ **COMPLETE** | ✅ Done | Medium |
 | Enhanced Geometry Validation | 🟡 MEDIUM | ✅ **COMPLETE** | ✅ Done | Medium |
-| Complex Geometry Import | 🟡 MEDIUM | ✅ Basic exists | 2-3 weeks | Medium |
+| Complex Geometry Import | 🟡 MEDIUM | ✅ **COMPLETE** | ✅ Done | Medium |
 | 3D Mesh Generation | 🟢 LOW | ✅ 2D exists | 2-3 weeks | Low |
 | Optimization | 🟢 LOW | ❌ Stub | 2-3 weeks | Low |
 | Fuel Performance | 🟢 LOW | ❌ Stub | Variable | Low |
@@ -290,7 +290,7 @@
 
 ### Immediate Focus (Next 1-2 months) ✅ **COMPLETE**
 1. ✅ **Enhanced geometry validation** - **COMPLETE** (January 2026)
-2. 🟡 **Complex geometry import** - Full CSG parsing for OpenMC/Serpent (future)
+2. ✅ **Complex geometry import** - **COMPLETE** (January 2026)
 3. ✅ **Advanced visualization** - **COMPLETE** (January 2026)
 
 ### Medium-term (3-6 months)
