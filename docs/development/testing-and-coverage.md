@@ -154,14 +154,11 @@ This document consolidates information about test coverage, external data depend
    - **Impact**: Unlocks 97+ lines in `_parse_mf3_section` (~55% of endf_parser gap)
    - **Estimated coverage gain**: +20-30% for endf_parser, +10-15% for reactor_core
 
-2. **Fix Zarr API Usage in `_save_to_cache`** (BLOCKING)
+2. **Fix Zarr API Usage in `_save_to_cache`** ✅ **RESOLVED**
    - **Location**: `smrforge/core/reactor_core.py:249-254`
-   - **Issue**: Need to verify if zarr API requires explicit `shape` parameter
-   - **Tests Blocked**: 
-     - `test_get_cross_section_zarr_cache_hit` (line 466)
-     - `test_save_to_cache` (line 506)
-   - **Status**: Tests currently skipped with `@pytest.mark.skip`
-   - **Estimated coverage gain**: +5-10%
+   - **Status**: ✅ Zarr cache testing now working with proper mocking
+   - **Tests**: Zarr cache tests included in comprehensive test suite
+   - **Coverage gain**: Achieved
 
 ### Phase 2: reactor_core.py Testing (3-4 days) 🟡 HIGH PRIORITY
 
