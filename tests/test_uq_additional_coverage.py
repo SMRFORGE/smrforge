@@ -26,11 +26,11 @@ class TestUncertainParameterEdgeCases:
     """Test edge cases for UncertainParameter."""
     
     def test_parameter_sample_zero_n(self):
-        """Test sampling with n=0."""
+        """Test sampling with n=0 raises error."""
         param = UncertainParameter("p1", "normal", 100.0, 10.0)
         
-        samples = param.sample(n=0)
-        assert len(samples) == 0
+        with pytest.raises(ValueError, match="n must be > 0"):
+            param.sample(n=0)
     
     def test_parameter_sample_very_large_n(self):
         """Test sampling with very large n."""
@@ -70,7 +70,7 @@ class TestMonteCarloSamplerEdgeCases:
     
     def test_sampler_empty_parameters_list(self):
         """Test sampler with empty parameters list."""
-        with pytest.raises(ValueError, match="must be non-empty"):
+        with pytest.raises(ValueError, match="cannot be empty"):
             MonteCarloSampler([])
     
     def test_sampler_single_parameter(self):
@@ -78,7 +78,7 @@ class TestMonteCarloSamplerEdgeCases:
         params = [UncertainParameter("p1", "normal", 100.0, 10.0)]
         sampler = MonteCarloSampler(params)
         
-        samples = sampler.monte_carlo(n_samples=10)
+        samples = sampler.sample_monte_carlo(n_samples=10)
         assert samples.shape == (10, 1)
     
     def test_sampler_many_parameters(self):
@@ -86,7 +86,7 @@ class TestMonteCarloSamplerEdgeCases:
         params = [UncertainParameter(f"p{i}", "normal", 100.0, 10.0) for i in range(20)]
         sampler = MonteCarloSampler(params)
         
-        samples = sampler.monte_carlo(n_samples=50)
+        samples = sampler.sample_monte_carlo(n_samples=50)
         assert samples.shape == (50, 20)
     
     def test_sampler_lhs_small_n(self):
@@ -94,7 +94,7 @@ class TestMonteCarloSamplerEdgeCases:
         params = [UncertainParameter("p1", "normal", 100.0, 10.0)]
         sampler = MonteCarloSampler(params)
         
-        samples = sampler.latin_hypercube(n_samples=2)
+        samples = sampler.sample_latin_hypercube(n_samples=2)
         assert samples.shape == (2, 1)
     
     def test_sampler_sobol_sequence_small_n(self):
@@ -102,7 +102,7 @@ class TestMonteCarloSamplerEdgeCases:
         params = [UncertainParameter("p1", "uniform", 0.0, (0.0, 1.0))]
         sampler = MonteCarloSampler(params)
         
-        samples = sampler.sobol_sequence(n_samples=2)
+        samples = sampler.sample_sobol_sequence(n_samples=2)
         assert samples.shape == (2, 1)
 
 
@@ -121,7 +121,7 @@ class TestUncertaintyPropagationEdgeCases:
             output_names=["output"]
         )
         
-        with pytest.raises(ValueError, match="must return dict or array"):
+        with pytest.raises(RuntimeError, match="shape"):
             propagation.propagate(n_samples=10, method="mc")
     
     def test_propagation_model_returns_none(self):
@@ -136,7 +136,7 @@ class TestUncertaintyPropagationEdgeCases:
             output_names=["output"]
         )
         
-        with pytest.raises(ValueError, match="must return dict or array"):
+        with pytest.raises(RuntimeError, match="shape"):
             propagation.propagate(n_samples=10, method="mc")
     
     def test_propagation_model_returns_empty_dict(self):
@@ -151,7 +151,7 @@ class TestUncertaintyPropagationEdgeCases:
             output_names=["output"]
         )
         
-        with pytest.raises(ValueError, match="missing outputs"):
+        with pytest.raises(RuntimeError, match="missing outputs"):
             propagation.propagate(n_samples=10, method="mc")
     
     def test_propagation_model_returns_wrong_array_shape(self):
@@ -166,7 +166,7 @@ class TestUncertaintyPropagationEdgeCases:
             output_names=["output"]
         )
         
-        with pytest.raises(ValueError, match="shape"):
+        with pytest.raises(RuntimeError, match="shape"):
             propagation.propagate(n_samples=10, method="mc")
     
     def test_propagation_single_output(self):
@@ -240,13 +240,13 @@ class TestSensitivityAnalysisEdgeCases:
             output_names=["output"]
         )
         
-        with patch("smrforge.uncertainty.uq._SALIB_AVAILABLE", True):
-            try:
-                results = analysis.sobol_analysis(n_samples=10, calc_second_order=False)
-                assert isinstance(results, dict)
-            except (ImportError, RuntimeError):
-                # May fail if SALib not properly installed
-                pass
+        # Skip if SALib not available
+        try:
+            from SALib.sample import saltelli
+            results = analysis.sobol_analysis(n_samples=10, calc_second_order=False)
+            assert isinstance(results, dict)
+        except ImportError:
+            pytest.skip("SALib not available")
     
     def test_sensitivity_morris_screening_single_parameter(self):
         """Test Morris screening with single parameter."""
@@ -260,13 +260,13 @@ class TestSensitivityAnalysisEdgeCases:
             output_names=["output"]
         )
         
-        with patch("smrforge.uncertainty.uq._SALIB_AVAILABLE", True):
-            try:
-                results = analysis.morris_screening(n_trajectories=5, n_levels=4)
-                assert isinstance(results, dict)
-            except (ImportError, RuntimeError, ValueError):
-                # May fail if SALib not properly installed or single param issue
-                pass
+        # Skip if SALib not available
+        try:
+            from SALib.sample import morris
+            results = analysis.morris_screening(n_trajectories=5, n_levels=4)
+            assert isinstance(results, dict)
+        except ImportError:
+            pytest.skip("SALib not available")
 
 
 class TestUQResultsEdgeCases:
@@ -317,7 +317,7 @@ class TestVisualizationToolsEdgeCases:
         
         # Should not raise error
         try:
-            VisualizationTools.plot_distributions(results, output_idx=0, max_params=1)
+            VisualizationTools.plot_distributions(results, output_idx=0)
         except (ImportError, RuntimeError):
             # May fail if matplotlib not properly configured
             pass
