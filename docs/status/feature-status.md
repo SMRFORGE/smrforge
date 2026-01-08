@@ -40,23 +40,52 @@ These modules are fully implemented, tested, and ready for production use:
   - Serpent input file import (basic geometries)
   - Geometry validation
   - Support for PrismaticCore and PebbleBedCore
+- ✅ **Complex Geometry Import** (`smrforge.geometry.advanced_import`) - **NEW (January 2026)**
+  - Full OpenMC CSG parsing and lattice reconstruction
+  - Complex Serpent geometry parsing
+  - CAD format import (STEP, IGES, STL)
+  - MCNP geometry import
+  - Advanced geometry conversion utilities
+- ✅ **Enhanced Geometry Validation** (`smrforge.geometry.validation`) - **NEW (January 2026)**
+  - Comprehensive validation tools (gaps, connectivity, clearances)
+  - Assembly placement validation
+  - Control rod insertion validation
+  - Fuel loading pattern validation
+  - Material boundary checking
 - ✅ **Control Rod Geometry** (`smrforge.geometry.control_rods`)
   - Control rod positioning and geometry
   - Control rod banks and systems
   - Insertion/withdrawal control
   - Reactivity worth calculations
   - Shutdown margin analysis
+  - **Enhanced features (January 2026):**
+    - Advanced bank definitions (priority, dependencies, zones)
+    - Control rod sequencing with priority/dependency ordering
+    - Enhanced scram geometry (full insertion)
+    - Advanced worth calculations per position
+    - Axial and radial worth profiles (system-wide and per-bank)
 - ✅ **Advanced Mesh Generation** (`smrforge.geometry.mesh_generation`)
   - Adaptive mesh refinement
   - Local refinement in regions
   - Mesh quality evaluation (angles, aspect ratio, skewness)
   - 2D unstructured mesh generation (Delaunay triangulation)
+- ✅ **Enhanced Mesh Generation** (`smrforge.geometry.advanced_mesh`) - **NEW (January 2026)**
+  - 3D structured/unstructured/hybrid mesh generation
+  - Parallel mesh generation support (with joblib)
+  - Mesh conversion utilities (VTK, STL, XDMF, OBJ, PLY, MSH, MED)
+  - Format conversion between different mesh formats
 - ✅ **Assembly Management** (`smrforge.geometry.assembly`)
   - Fuel assembly tracking
   - Burnup management
   - Refueling patterns (multi-batch)
   - Shuffle and refueling operations
   - Cycle length estimation
+  - **Enhanced features (January 2026):**
+    - Fuel shuffling with burnup-dependent geometry
+    - Multi-batch fuel management (configurable max_batches)
+    - Advanced assembly positioning/orientation (0-360 degrees)
+    - Enhanced fuel cycle geometry tracking
+    - Position history tracking per assembly
 
 ### Validation
 - ✅ **Pydantic Models** (`smrforge.validation.models`) - Data validation
@@ -82,6 +111,13 @@ These modules are fully implemented, tested, and ready for production use:
   - Temperature distribution plots
   - Support for prismatic and pebble bed cores
   - Test coverage: 83.5%
+- ✅ **Advanced Visualization** (`smrforge.visualization.animations`, `comparison`) - **NEW (January 2026)**
+  - Animation support (matplotlib, plotly)
+  - 3D transient visualization
+  - Comparison views for multiple designs
+  - Video/GIF export capabilities
+  - Overlaid geometry comparison
+  - Time-dependent metric comparison
 
 ### Utilities
 - ✅ **Utilities Module** (`smrforge.utils`)
