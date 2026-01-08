@@ -194,7 +194,7 @@ def _show_category_help(console, category: str, show_examples: bool):
         console.print(f"[yellow]No help available for category '{category}'[/yellow]")
 
 
-def _show_object_help(console, obj: Any, show_examples: bool):
+def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
     """Show help for a function or class object."""
     import inspect
     
@@ -279,7 +279,7 @@ def _show_object_help(console, obj: Any, show_examples: bool):
         _show_examples_for_object(console, obj)
 
 
-def _show_examples_for_object(console, obj: Any):
+def _show_examples_for_object(console: Any, obj: Any) -> None:
     """Show examples for an object."""
     examples = _get_examples()
     obj_name = obj.__name__ if hasattr(obj, "__name__") else str(obj)

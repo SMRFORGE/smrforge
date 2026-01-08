@@ -6,7 +6,7 @@ geometry, neutronics, burnup, visualization, and nuclear data.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -611,7 +611,7 @@ def quick_plot_mesh(
 # ============================================================================
 
 
-def get_material(name: str):
+def get_material(name: str) -> Any:
     """
     Get material from MaterialDatabase by name.
 
@@ -664,7 +664,7 @@ def list_materials(category: Optional[str] = None) -> List[str]:
 # (only if not already present)
 
 
-def _add_convenience_methods():
+def _add_convenience_methods() -> None:
     """Add convenience methods to existing classes."""
     if not _CORE_AVAILABLE:
         return
@@ -681,7 +681,7 @@ def _add_convenience_methods():
         n_axial: int = 2,
         n_radial: int = 15,
         n_axial_mesh: int = 20,
-    ):
+    ) -> None:
         """
         Quick setup of core geometry and mesh.
 
