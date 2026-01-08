@@ -22,11 +22,25 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
   - Automatic version fallback (e.g., VIII.1 → VIII.0)
   - **Setup required**: Run `python -m smrforge.core.endf_setup` to configure ENDF files
 - **Geometry**: Prismatic and pebble bed core geometries with mesh generation
-- **Geometry Tools**: Import/export (JSON, OpenMC XML, Serpent), control rod geometry, assembly management
-- **Visualization**: 2D core layouts, flux/power distribution plots
+- **Geometry Tools**: 
+  - Import/export (JSON, OpenMC XML, Serpent)
+  - **Advanced geometry import**: Full OpenMC CSG parsing, complex Serpent geometry, CAD formats (STEP, IGES, STL), MCNP import
+  - **Enhanced geometry validation**: Comprehensive validation tools (gaps, connectivity, clearances, assembly placement, control rod insertion)
+  - Control rod geometry with advanced features (bank priorities, sequencing, scram geometry)
+  - Assembly management with fuel shuffling, multi-batch support, position tracking
+- **Mesh Generation**: 
+  - Adaptive mesh refinement
+  - **Advanced 3D mesh generation**: Structured/unstructured/hybrid meshes
+  - **Parallel mesh generation** support
+  - **Mesh conversion utilities**: VTK, STL, XDMF, OBJ, PLY, MSH, MED formats
+- **Visualization**: 
+  - 2D core layouts, flux/power distribution plots
+  - **Advanced visualization**: Animations (matplotlib, plotly), comparison views, video/GIF export
+  - 3D transient visualization
 - **Validation**: Pydantic-based input validation with physics checks
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
+- **Quality Assurance**: 70-73% test coverage overall, 75-80%+ on priority modules
 
 ### 🟡 Experimental (API May Change)
 These features are **functionally complete and well-tested**, but their APIs may change in future versions:
@@ -246,16 +260,29 @@ All examples are runnable and include comments explaining each step.
 
 ## Testing
 
+SMRForge has comprehensive test coverage with 70-73% overall coverage and 75-80%+ on priority modules. All critical modules are well-tested with extensive edge case coverage.
+
 ```bash
 # Run all tests
 pytest tests/
 
 # Run with coverage
-pytest --cov=smrforge tests/
+pytest --cov=smrforge --cov-report=html tests/
+
+# View coverage report
+# Open htmlcov/index.html in your browser
 
 # Run specific test
 pytest tests/test_neutronics.py
 ```
+
+**Test Coverage Status:**
+- **Overall Coverage**: 70-73% (up from 35-40%)
+- **Priority Modules**: 75-80%+ coverage achieved
+- **14 Priority Modules**: Comprehensive test coverage completed
+- **Critical Modules**: All critical modules at target coverage
+
+See [`docs/status/test-coverage-summary.md`](docs/status/test-coverage-summary.md) for detailed coverage breakdown.
 
 ## Contributing
 

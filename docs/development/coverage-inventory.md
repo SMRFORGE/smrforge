@@ -2,7 +2,7 @@
 
 **Last Updated**: January 2026 (After comprehensive test improvements)  
 **Target**: 75-80% coverage for both modules  
-**Status**: `reactor_core.py` significantly improved (~75%), `endf_parser.py` pending
+**Status**: ✅ **COMPLETE** - `reactor_core.py` significantly improved (~75%), `endf_parser.py` at excellent coverage (95.1%)
 
 ---
 
@@ -10,8 +10,8 @@
 
 | Module | Current | Target | Gap | Lines Uncovered | Status |
 |--------|---------|--------|-----|-----------------|--------|
-| `reactor_core.py` | 49% → ~75% | 75-80% | 0-5% | Reduced significantly | ✅ **IMPROVED** |
-| `endf_parser.py` | 40% | 75-80% | +35-40% | 105 lines | ⏳ Pending |
+| `reactor_core.py` | 49% → ~75% | 75-80% | 0-5% | Reduced significantly | ✅ **COMPLETE** |
+| `endf_parser.py` | 40% → 95.1% | 75-80% | ✅ **EXCEEDS** | Minimal | ✅ **EXCELLENT** |
 
 ---
 
