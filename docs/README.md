@@ -50,15 +50,18 @@ This directory contains all SMRForge documentation organized by category.
 - ENDF workflow validation
 - File type analysis
 
-### Visualization (`visualization/`)
-- Visualization readiness
-- Implementation details
-- Advanced requirements
+### Visualization
+- See [Visualization Implementation](implementation/visualization.md) for current implementation
+- Historical assessments archived in `archive/`
 
 ### Archive (`archive/`)
 - Historical phase reports
 - Documentation consolidation history
 - Past updates
+- Archived redundant/outdated documents:
+  - Coverage improvements (merged into test-coverage-summary.md)
+  - Outdated status reports (replaced by next-steps-complete.md)
+  - Historical visualization assessments (features now implemented)
 
 ### Sphinx Documentation (`sphinx/` or root of `docs/`)
 - API reference
