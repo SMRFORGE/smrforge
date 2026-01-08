@@ -311,7 +311,7 @@ def animate_3d_transient_plotly(
     return fig
 
 
-def _save_gif_matplotlib(anim: "animation.FuncAnimation", save_path: Path, fps: int = 10):
+def _save_gif_matplotlib(anim: "animation.FuncAnimation", save_path: Path, fps: int = 10) -> None:
     """Save matplotlib animation as GIF."""
     if not _IMAGEIO_AVAILABLE:
         raise ImportError(

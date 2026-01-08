@@ -16,7 +16,7 @@ import concurrent.futures
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -613,7 +613,7 @@ class MonteCarloEngine:
 
     def run_eigenvalue(
         self, n_generations: int = 100, n_per_generation: int = 1000, n_skip: int = 20
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Run k-eigenvalue calculation"""
         print(
             f"Running {n_generations} generations with {n_per_generation} neutrons each..."
@@ -669,7 +669,7 @@ class ParallelMonteCarlo:
 # ============================================================================
 
 
-def example_bare_sphere_criticality():
+def example_bare_sphere_criticality() -> Dict[str, Any]:
     """Example: Critical mass calculation for bare U-235 sphere"""
 
     # Create U-235 cross sections (simplified)
@@ -864,7 +864,7 @@ class Transport:
         n_generations: int = 100,
         n_per_generation: int = 1000,
         n_skip: int = 20,
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Run k-eigenvalue calculation.
 

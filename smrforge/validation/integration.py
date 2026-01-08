@@ -6,7 +6,7 @@ Apply to functions/classes to enforce validation rules.
 
 import functools
 import inspect
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 
@@ -18,7 +18,7 @@ from .validators import (
 )
 
 
-def validate_inputs(**validators):
+def validate_inputs(**validators: Callable[[Any], ValidationResult]) -> Callable[[Callable], Callable]:
     """
     Decorator to validate function inputs automatically.
     
@@ -58,7 +58,7 @@ def validate_inputs(**validators):
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Get function signature
             sig = inspect.signature(func)
             bound = sig.bind(*args, **kwargs)
@@ -99,7 +99,7 @@ def validate_inputs(**validators):
     return decorator
 
 
-def validate_outputs(**validators):
+def validate_outputs(**validators: Callable[[Any], ValidationResult]) -> Callable[[Callable], Callable]:
     """
     Decorator to validate function outputs automatically.
     
@@ -142,7 +142,7 @@ def validate_outputs(**validators):
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             result = func(*args, **kwargs)
 
             # Validate outputs
@@ -179,8 +179,8 @@ def validate_array(
     allow_negative: bool = False,
     allow_nan: bool = False,
     allow_inf: bool = False,
-    min_val: float = None,
-    max_val: float = None,
+    min_val: Optional[float] = None,
+    max_val: Optional[float] = None,
 ) -> ValidationResult:
     """
     Validate numpy array properties.
@@ -306,7 +306,7 @@ class ValidatedClass:
         Sets up validation infrastructure with validation enabled by default.
         """
         self._validation_enabled = True
-        self._last_validation: ValidationResult = None
+        self._last_validation: Optional[ValidationResult] = None
 
     def _validate(self) -> ValidationResult:
         """
@@ -382,7 +382,7 @@ class ValidatedClass:
 class ValidatedReactorSpec(ValidatedClass):
     """Example of validated reactor specification."""
 
-    def __init__(self, spec):
+    def __init__(self, spec: Any) -> None:
         super().__init__()
         self.spec = spec
         self.validator = DataValidator()
@@ -399,7 +399,7 @@ class ValidatedReactorSpec(ValidatedClass):
 class ValidatedSolver(ValidatedClass):
     """Example of validated solver."""
 
-    def __init__(self, geometry, xs_data, options):
+    def __init__(self, geometry: Any, xs_data: Any, options: Any) -> None:
         super().__init__()
         self.geometry = geometry
         self.xs_data = xs_data
@@ -415,11 +415,11 @@ class ValidatedSolver(ValidatedClass):
             self.geometry, self.xs_data, self.options
         )
 
-    def solve_with_validation(self):
+    def solve_with_validation(self) -> tuple[float, np.ndarray, np.ndarray]:
         """Solve with automatic output validation."""
         # Run solver
-        k_eff, flux = self._solve_internal()
-        power = self._compute_power(flux)
+        k_eff, flux = self._solve_internal()  # type: ignore
+        power = self._compute_power(flux)  # type: ignore
 
         # Validate outputs
         if self._validation_enabled:
@@ -434,26 +434,26 @@ class ValidatedSolver(ValidatedClass):
 
 
 # Utility functions for common validation patterns
-def check_positive(value: float, name: str = "value"):
+def check_positive(value: float, name: str = "value") -> None:
     """Quick check for positive values."""
     if value <= 0:
         raise ValueError(f"{name} must be positive, got {value}")
 
 
-def check_range(value: float, min_val: float, max_val: float, name: str = "value"):
+def check_range(value: float, min_val: float, max_val: float, name: str = "value") -> None:
     """Quick range check."""
     if not (min_val <= value <= max_val):
         raise ValueError(f"{name} must be in [{min_val}, {max_val}], got {value}")
 
 
-def check_normalized(arr: np.ndarray, tolerance: float = 1e-6, name: str = "array"):
+def check_normalized(arr: np.ndarray, tolerance: float = 1e-6, name: str = "array") -> None:
     """Check if array sums to 1."""
     total = np.sum(arr)
     if abs(total - 1.0) > tolerance:
         raise ValueError(f"{name} must sum to 1, got sum={total}")
 
 
-def check_physical_temperature(T: float, name: str = "temperature"):
+def check_physical_temperature(T: float, name: str = "temperature") -> None:
     """Quick physical temperature check."""
     if T <= 0:
         raise ValueError(f"{name} below absolute zero: {T} K")
@@ -465,17 +465,23 @@ def check_physical_temperature(T: float, name: str = "temperature"):
 class ValidationContext:
     """Context manager to temporarily disable validation."""
 
-    def __init__(self, obj: ValidatedClass):
+    def __init__(self, obj: ValidatedClass) -> None:
         self.obj = obj
-        self.original_state = None
+        self.original_state: Optional[bool] = None
 
-    def __enter__(self):
+    def __enter__(self) -> ValidatedClass:
         self.original_state = self.obj._validation_enabled
         self.obj._validation_enabled = False
         return self.obj
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.obj._validation_enabled = self.original_state
+    def __exit__(
+        self, 
+        exc_type: Optional[type[BaseException]], 
+        exc_val: Optional[BaseException], 
+        exc_tb: Optional[Any]
+    ) -> None:
+        if self.original_state is not None:
+            self.obj._validation_enabled = self.original_state
 
 
 # Example usage documentation

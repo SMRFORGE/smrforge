@@ -4,7 +4,10 @@ Interactive help system for SMRForge.
 Provides comprehensive help and documentation for functions, classes, and features.
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rich.console import Console
 
 try:
     from rich.console import Console
@@ -16,13 +19,14 @@ try:
     _RICH_AVAILABLE = True
 except ImportError:
     _RICH_AVAILABLE = False
+    Console = Any  # type: ignore
 
 # Import core modules for introspection (lazy import to avoid circular dependencies)
-_CORE_AVAILABLE = None
-_smr_module = None
+_CORE_AVAILABLE: Optional[bool] = None
+_smr_module: Optional[Any] = None
 
 
-def _get_smr_module():
+def _get_smr_module() -> Optional[Any]:
     """Lazy import of smrforge module."""
     global _CORE_AVAILABLE, _smr_module
     if _CORE_AVAILABLE is None:
@@ -36,10 +40,10 @@ def _get_smr_module():
     return _smr_module
 
 
-def _is_core_available():
+def _is_core_available() -> bool:
     """Check if core modules are available."""
     _get_smr_module()
-    return _CORE_AVAILABLE
+    return _CORE_AVAILABLE is True
 
 
 def help(
@@ -83,7 +87,7 @@ def help(
         _show_object_help(console, topic, show_examples)
 
 
-def _show_main_menu(console):
+def _show_main_menu(console: "Console") -> None:
     """Show main help menu."""
     console.print("\n[bold cyan]SMRForge Help System[/bold cyan]\n")
     
@@ -136,7 +140,7 @@ def _show_main_menu(console):
         console.print(f"  [cyan]smr.help('{func}')[/cyan]")
 
 
-def _show_topic_help(console, topic: str, show_examples: bool):
+def _show_topic_help(console: "Console", topic: str, show_examples: bool) -> None:
     """Show help for a specific topic."""
     topic_lower = topic.lower()
     
@@ -172,7 +176,7 @@ def _show_topic_help(console, topic: str, show_examples: bool):
         console.print("  [cyan]smr.help('geometry')[/cyan] - Show geometry help")
 
 
-def _show_category_help(console, category: str, show_examples: bool):
+def _show_category_help(console: "Console", category: str, show_examples: bool) -> None:
     """Show help for a category."""
     category_help = {
         "geometry": _help_geometry,
@@ -291,7 +295,7 @@ def _show_examples_for_object(console: Any, obj: Any) -> None:
             console.print(f"  [green]{example['code']}[/green]\n")
 
 
-def _help_getting_started(console, show_examples: bool):
+def _help_getting_started(console: "Console", show_examples: bool) -> None:
     """Help for getting started."""
     console.print(Panel(
         Markdown("""
@@ -328,7 +332,7 @@ def _help_getting_started(console, show_examples: bool):
     ))
 
 
-def _help_examples(console, show_examples: bool):
+def _help_examples(console: "Console", show_examples: bool) -> None:
     """Help for examples."""
     console.print(Panel(
         Markdown("""
@@ -375,7 +379,7 @@ See the `examples/` directory for:
     ))
 
 
-def _help_workflows(console, show_examples: bool):
+def _help_workflows(console: "Console", show_examples: bool) -> None:
     """Help for common workflows."""
     console.print(Panel(
         Markdown("""
@@ -432,7 +436,7 @@ quick_plot_mesh(mesh, color_by="material")
     ))
 
 
-def _help_geometry(console, show_examples: bool):
+def _help_geometry(console: "Console", show_examples: bool) -> None:
     """Help for geometry features."""
     console.print(Panel(
         Markdown("""
@@ -468,7 +472,7 @@ mesh = quick_mesh_extraction(core, mesh_type="volume")
     ))
 
 
-def _help_neutronics(console, show_examples: bool):
+def _help_neutronics(console: "Console", show_examples: bool) -> None:
     """Help for neutronics features."""
     console.print(Panel(
         Markdown("""
@@ -503,7 +507,7 @@ k_eff, flux = solver.solve_steady_state()
     ))
 
 
-def _help_burnup(console, show_examples: bool):
+def _help_burnup(console: "Console", show_examples: bool) -> None:
     """Help for burnup features."""
     console.print(Panel(
         Markdown("""
@@ -540,7 +544,7 @@ inventory = burnup.solve()
     ))
 
 
-def _help_thermal(console, show_examples: bool):
+def _help_thermal(console: "Console", show_examples: bool) -> None:
     """Help for thermal features."""
     console.print(Panel(
         Markdown("""
@@ -569,7 +573,7 @@ thermal = ChannelThermalHydraulics(geometry)
     ))
 
 
-def _help_decay(console, show_examples: bool):
+def _help_decay(console: "Console", show_examples: bool) -> None:
     """Help for decay heat features."""
     console.print(Panel(
         Markdown("""
@@ -601,7 +605,7 @@ heat = quick_decay_heat(
     ))
 
 
-def _help_gamma(console, show_examples: bool):
+def _help_gamma(console: "Console", show_examples: bool) -> None:
     """Help for gamma transport features."""
     console.print(Panel(
         Markdown("""
@@ -630,7 +634,7 @@ flux = solver.solve(source)
     ))
 
 
-def _help_visualization(console, show_examples: bool):
+def _help_visualization(console: "Console", show_examples: bool) -> None:
     """Help for visualization features."""
     console.print(Panel(
         Markdown("""
@@ -669,7 +673,7 @@ pip install smrforge[viz]
     ))
 
 
-def _help_materials(console, show_examples: bool):
+def _help_materials(console: "Console", show_examples: bool) -> None:
     """Help for material features."""
     console.print(Panel(
         Markdown("""
@@ -706,7 +710,7 @@ moderators = list_materials(category="moderator")
     ))
 
 
-def _help_nuclides(console, show_examples: bool):
+def _help_nuclides(console: "Console", show_examples: bool) -> None:
     """Help for nuclide features."""
     console.print(Panel(
         Markdown("""
@@ -735,7 +739,7 @@ nuclides = create_nuclide_list(["U235", "U238", "Pu239"])
     ))
 
 
-def _help_convenience(console, show_examples: bool):
+def _help_convenience(console: "Console", show_examples: bool) -> None:
     """Help for convenience functions."""
     console.print(Panel(
         Markdown("""
@@ -807,7 +811,7 @@ results = run_complete_analysis(power_mw=10.0)
     ))
 
 
-def _help_presets(console, show_examples: bool):
+def _help_presets(console: "Console", show_examples: bool) -> None:
     """Help for preset designs."""
     console.print(Panel(
         Markdown("""
@@ -852,7 +856,7 @@ print(f"k-eff: {results['k_eff']:.6f}")
     ))
 
 
-def _help_troubleshooting(console, show_examples: bool):
+def _help_troubleshooting(console: "Console", show_examples: bool) -> None:
     """Help for troubleshooting."""
     console.print(Panel(
         Markdown("""
@@ -887,7 +891,11 @@ def _help_troubleshooting(console, show_examples: bool):
     ))
 
 
-def _print_help_plain(topic, category, show_examples):
+def _print_help_plain(
+    topic: Optional[Union[str, Any]], 
+    category: Optional[str], 
+    show_examples: bool
+) -> None:
     """Print help without rich formatting."""
     print("\nSMRForge Help System\n")
     print("Usage: smr.help('topic')")
