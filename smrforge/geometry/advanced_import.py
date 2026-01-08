@@ -193,15 +193,15 @@ class AdvancedGeometryImporter:
                 lower_left = Point3D(ll_coords[0], ll_coords[1], ll_coords[2] if len(ll_coords) > 2 else 0.0)
 
                 # Parse universes (simplified - would need full lattice structure)
-                universes = []
+                universes_flat = []
                 universe_elems = lattice_elem.findall(".//universes/*")
                 for uni_elem in universe_elems:
                     uni_id = int(uni_elem.text) if uni_elem.text else 0
-                    universes.append(uni_id)
+                    universes_flat.append(uni_id)
 
                 # Convert flat universe list to nested structure for lattice
                 # Simplified: create 3D nested list (would need full lattice parsing)
-                if universes and len(dimension) >= 3:
+                if universes_flat and len(dimension) >= 3:
                     nx, ny, nz = dimension[0], dimension[1], dimension[2]
                     nested_universes = []
                     idx = 0
@@ -210,15 +210,15 @@ class AdvancedGeometryImporter:
                         for y in range(ny):
                             y_row = []
                             for x in range(nx):
-                                if idx < len(universes):
-                                    y_row.append(universes[idx])
+                                if idx < len(universes_flat):
+                                    y_row.append(universes_flat[idx])
                                     idx += 1
                                 else:
                                     y_row.append(0)
                             z_slice.append(y_row)
                         nested_universes.append(z_slice)
                 else:
-                    nested_universes = [universes] if universes else []
+                    nested_universes = [universes_flat] if universes_flat else []
 
                 lattices[lattice_id] = Lattice(
                     id=lattice_id,

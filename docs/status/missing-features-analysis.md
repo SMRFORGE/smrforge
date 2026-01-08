@@ -160,26 +160,34 @@
 
 ---
 
-### 5. **Enhanced Geometry Import/Conversion** 📥
+### 5. **Enhanced Geometry Import/Conversion** 📥 ✅ **IMPLEMENTED**
 
-**Status**: ✅ Basic import/export implemented, ⚠️ Advanced formats missing
+**Status**: ✅ **COMPLETE** - Advanced import/conversion features now implemented
 
 **What's Implemented:**
 - ✅ JSON import/export
 - ✅ OpenMC XML import (basic geometries)
 - ✅ Serpent input file import (basic geometries)
 - ✅ VTK export (ParaView)
+- ✅ **Full OpenMC CSG parsing and lattice reconstruction** - Now implemented
+- ✅ **Complex Serpent geometry parsing** - Now implemented
+- ✅ **Import from CAD formats (STEP, IGES, STL)** - Now implemented
+- ✅ **Import from MCNP geometry** - Now implemented
+- ✅ **Advanced geometry conversion utilities** - Now implemented
 
-**What's Still Missing:**
-- Full OpenMC CSG parsing and lattice reconstruction
-- Complex Serpent geometry parsing
-- Import from CAD formats (STEP, IGES, STL)
-- Import from MCNP geometry
-- Advanced geometry conversion utilities
+**Implementation Status**: ✅ **COMPLETE** - All advanced features implemented (January 2026)
 
-**Implementation Priority**: 🟡 **MEDIUM** - Basic import exists, complex geometries need work
+**Location**: `smrforge/geometry/advanced_import.py`
 
-**Estimated Effort**: 2-3 weeks (for complex geometry support)
+**New Features:**
+- `AdvancedGeometryImporter` class for complex import formats
+- `CSGSurface`, `CSGCell`, `Lattice` classes for CSG representation
+- `from_openmc_full()` - Full CSG and lattice parsing
+- `from_serpent_full()` - Complex Serpent geometry parsing
+- `from_cad()` - CAD format import (STEP, IGES, STL) with auto-detection
+- `from_mcnp()` - MCNP geometry import
+- `GeometryConverter` class for format conversion
+- `convert_format()` - Convert between any supported formats
 
 ---
 
