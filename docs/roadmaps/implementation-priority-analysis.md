@@ -1,5 +1,9 @@
 # Implementation Priority Analysis
 
+**Note:** This document is historical. The geometry import features discussed here have now been implemented. See `docs/status/missing-features-analysis.md` for current feature status.
+
+---
+
 ## Comparison: Incomplete Methods vs. Not Implemented Stubs
 
 ### Option 1: Complete Incomplete Methods (Geometry Importers)

@@ -242,5 +242,10 @@ All code is tested, documented, and ready for use with real ENDF files!
 
 ---
 
-*Implementation completed January 2025*
+**Note:** This document is historical. See `docs/implementation/next-steps-complete.md` for comprehensive summary of all recent implementations including advanced features.
+
+---
+
+*Implementation completed January 2025*  
+*See next-steps-complete.md for January 2026 updates*
 

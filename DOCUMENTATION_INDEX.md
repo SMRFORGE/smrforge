@@ -1,6 +1,7 @@
 # SMRForge Documentation Index
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 1, 2026  
+**Status:** Consolidated and reorganized - Redundant documents archived
 
 This document provides a comprehensive index of all SMRForge documentation files.
 
@@ -92,11 +93,9 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[Fission Yields Decay](docs/implementation/fission-yields-decay.md)** - Fission yields and decay data
 
 ### Complete Summaries
-- **[Complete Summary](docs/implementation/complete-summary.md)** - Complete implementation summary
-- **[Status High Medium](docs/implementation/status-high-medium.md)** - High/medium priority status
+- **[Next Steps Complete](docs/implementation/next-steps-complete.md)** - **CURRENT** - Comprehensive summary of all recent implementations (January 2026)
+- **[Complete Summary](docs/implementation/complete-summary.md)** - Photon/gamma integration summary (historical)
 - **[Options 1 2 4 6](docs/implementation/options-1-2-4-6.md)** - Options 1, 2, 4, 6 summary
-- **[Feature Implementation Summary](docs/implementation/feature-implementation-summary.md)** - Feature implementation overview
-- **[Next Steps Complete](docs/implementation/next-steps-complete.md)** - Next steps completion
 
 See [Implementation Summaries Index](docs/implementation/README.md) for a complete list.
 
@@ -110,10 +109,10 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 
 ---
 
-## 📐 Visualization Documents (`docs/visualization/`)
+## 📐 Visualization Documents
 
-- **[Readiness Assessment](docs/visualization/readiness-assessment.md)** - Visualization readiness
-- **[Advanced Requirements](docs/visualization/advanced-requirements.md)** - Advanced visualization requirements
+- **[Visualization Implementation](docs/implementation/visualization.md)** - **CURRENT** - Visualization implementation summary
+  - Historical assessments archived in `docs/archive/`
 
 ---
 
@@ -125,6 +124,11 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 - **[Phase 3 Completion Report](docs/archive/phase3-completion-report.md)** - Phase 3 completion
 - **[Documentation Consolidation Summary](docs/archive/documentation-consolidation-summary.md)** - Documentation consolidation history
 - **[Documentation Update 2026-01-01](docs/archive/documentation-update-2026-01-01.md)** - Documentation update summary
+- **[Coverage Improvements 2026-01](docs/archive/coverage-improvements-2026-01.md)** - Test coverage improvements (historical)
+- **[Status High Medium](docs/archive/status-high-medium.md)** - Outdated status report (replaced by next-steps-complete.md)
+- **[Feature Implementation Summary](docs/archive/feature-implementation-summary.md)** - Historical implementation summary
+- **[Visualization Readiness Assessment](docs/archive/visualization-readiness-assessment.md)** - Historical assessment (features now implemented)
+- **[Visualization Advanced Requirements](docs/archive/visualization-advanced-requirements.md)** - Historical requirements (features now implemented)
 
 ---
 
@@ -169,11 +173,12 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 - **Technical Documentation:** 6 files
 - **Development Documentation:** 5 files
 - **Roadmaps:** 5 files
-- **Status Documents:** 5 files
-- **Implementation Summaries:** 14+ files
+- **Status Documents:** 6 files
+- **Implementation Summaries:** 12+ active files
 - **Validation Documents:** 3 files
-- **Visualization Documents:** 2 files
-- **Archive:** 5+ files
+- **Archive:** 10+ historical files
+
+**Note:** Redundant and outdated documents have been archived. Current documents are clearly marked with **CURRENT** tags where applicable.
 
 ---
 

@@ -254,5 +254,10 @@ Based on recent work, the following HIGH and MEDIUM priority items have been **C
 
 ---
 
-*This analysis is based on ENDF_FILE_TYPES_ANALYSIS.md and current codebase status as of January 2025.*
+**Note:** This document is historical. Most items listed here are now complete. See `docs/roadmaps/next-steps.md` for current next steps.
+
+---
+
+*This analysis is based on ENDF_FILE_TYPES_ANALYSIS.md and current codebase status as of January 2025.  
+Status updated January 2026 - Most high/medium priority items completed.*
 

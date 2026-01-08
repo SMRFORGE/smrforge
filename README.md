@@ -232,6 +232,8 @@ See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`e
 - **Usage Guide**: See [`docs/guides/usage.md`](docs/guides/usage.md) for usage examples and quick reference
 - **Docker**: See [`docs/guides/docker.md`](docs/guides/docker.md) for Docker usage and troubleshooting
 - **Feature Status**: See [`docs/status/feature-status.md`](docs/status/feature-status.md) for module status
+- **Test Coverage**: See [`docs/status/test-coverage-summary.md`](docs/status/test-coverage-summary.md) for test coverage details
+- **Production Readiness**: See [`docs/status/production-readiness-status.md`](docs/status/production-readiness-status.md) for production readiness assessment
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development guidelines
 - **Changelog**: See [`CHANGELOG.md`](CHANGELOG.md) for version history
 

@@ -343,9 +343,17 @@
 
 ---
 
+## Detailed Coverage Improvements (January 2026)
+
+For detailed information on improvements made to each module, see [Coverage Improvements - January 2026](docs/archive/coverage-improvements-2026-01.md) (archived for historical reference).
+
 ## References
 
 - See [Testing and Coverage Guide](docs/development/testing-and-coverage.md) for detailed testing strategies
 - See [Critical Coverage Issues](docs/development/critical-coverage-issues.md) for detailed analysis of critical issues and solutions
 - See [Coverage Exclusions](docs/development/coverage-exclusions.md) for excluded code paths
 - See [Coverage Inventory](docs/development/coverage-inventory.md) for detailed module breakdowns
+
+---
+
+**Note:** `coverage-improvements-2026-01.md` has been moved to `docs/archive/` as it documents historical improvements that are now summarized in this document.

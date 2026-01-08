@@ -160,5 +160,15 @@ pip install plotly pyvista
 
 ---
 
-*Implementation completed January 2025*
+---
+
+## References
+
+- See [Visualization Readiness Assessment](docs/archive/visualization-readiness-assessment.md) for historical assessment (archived)
+- See [Advanced Visualization Requirements](docs/archive/visualization-advanced-requirements.md) for historical requirements (archived)
+
+---
+
+*Implementation completed January 2025*  
+*Advanced features (animations, comparison views) completed January 2026*
 

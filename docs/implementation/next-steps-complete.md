@@ -8,7 +8,7 @@
 
 ## ✅ Implementation Summary
 
-All three next steps from `docs/implementation/complete-summary.md` have been completed:
+All three next steps from photon/gamma integration implementation have been completed:
 
 ### 1. ✅ Add Integration Tests
 
