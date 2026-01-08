@@ -29,10 +29,13 @@ except ImportError as e:
 # Import control rods if available
 try:
     from smrforge.geometry.control_rods import (
+        BankPriority,
         ControlRod,
         ControlRodBank,
+        ControlRodSequence,
         ControlRodSystem,
         ControlRodType,
+        ScramEvent,
     )
 
     _CONTROL_RODS_AVAILABLE = True
@@ -140,6 +143,9 @@ if _CONTROL_RODS_AVAILABLE:
             "ControlRodBank",
             "ControlRodSystem",
             "ControlRodType",
+            "BankPriority",
+            "ControlRodSequence",
+            "ScramEvent",
         ]
     )
 
