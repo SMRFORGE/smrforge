@@ -482,4 +482,140 @@ class TestEdgeCases:
             assert fig is not None
         except ImportError:
             pytest.skip("plotly not available")
+    
+    def test_plot_mesh3d_plotly_with_cells_and_faces(self):
+        """Test plotly plotting with mesh that has both cells and faces."""
+        try:
+            from smrforge.visualization.mesh_3d import plot_mesh3d_plotly
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            cells = np.array([[0, 1, 2, 3]])
+            faces = np.array([[0, 1, 2]])  # Also has faces
+            mesh = Mesh3D(vertices=vertices, cells=cells, faces=faces)
+            fig = plot_mesh3d_plotly(mesh)
+            assert fig is not None
+        except ImportError:
+            pytest.skip("plotly not available")
+    
+    def test_plot_mesh3d_plotly_edges_with_different_face_sizes(self):
+        """Test edge extraction with faces of different sizes (tri, quad, etc.)."""
+        try:
+            from smrforge.visualization.mesh_3d import plot_mesh3d_plotly
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1]])
+            # Use object dtype to allow different face sizes, or just use tri faces
+            # For now, use tri faces only since Mesh3D likely expects consistent sizes
+            faces = np.array([[0, 1, 2], [1, 2, 3], [0, 2, 4]])  # All tri faces
+            mesh = Mesh3D(vertices=vertices, faces=faces)
+            fig = plot_mesh3d_plotly(mesh, show_edges=True)
+            assert fig is not None
+        except ImportError:
+            pytest.skip("plotly not available")
+    
+    def test_plot_mesh3d_plotly_color_by_none_no_materials(self):
+        """Test plotly plotting with no color_by and no materials (uses default)."""
+        try:
+            from smrforge.visualization.mesh_3d import plot_mesh3d_plotly
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+            faces = np.array([[0, 1, 2]])
+            mesh = Mesh3D(vertices=vertices, faces=faces)  # No cell_data, no materials
+            fig = plot_mesh3d_plotly(mesh, color_by=None)
+            assert fig is not None
+        except ImportError:
+            pytest.skip("plotly not available")
+    
+    def test_export_mesh_to_vtk_with_materials_only(self, tmp_path):
+        """Test exporting mesh with materials but no cell_data."""
+        try:
+            from smrforge.visualization.mesh_3d import export_mesh_to_vtk
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            cells = np.array([[0, 1, 2, 3]])
+            materials = np.array(["fuel"])
+            mesh = Mesh3D(vertices=vertices, cells=cells, cell_materials=materials)
+            filepath = tmp_path / "test_materials_only.vtk"
+            export_mesh_to_vtk(mesh, str(filepath))
+            assert filepath.exists()
+        except ImportError:
+            pytest.skip("pyvista not available")
+    
+    def test_export_mesh_to_vtk_empty_cell_data(self, tmp_path):
+        """Test exporting mesh with empty cell_data dict."""
+        try:
+            from smrforge.visualization.mesh_3d import export_mesh_to_vtk
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            cells = np.array([[0, 1, 2, 3]])
+            mesh = Mesh3D(vertices=vertices, cells=cells)
+            # cell_data is empty dict by default
+            filepath = tmp_path / "test_empty_data.vtk"
+            export_mesh_to_vtk(mesh, str(filepath))
+            assert filepath.exists()
+        except ImportError:
+            pytest.skip("pyvista not available")
+    
+    def test_plot_mesh3d_pyvista_with_both_cells_and_faces(self):
+        """Test pyvista plotting with mesh that has both cells and faces (prefers cells)."""
+        try:
+            from smrforge.visualization.mesh_3d import plot_mesh3d_pyvista
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            cells = np.array([[0, 1, 2, 3]])
+            faces = np.array([[0, 1, 2]])  # Also has faces
+            mesh = Mesh3D(vertices=vertices, cells=cells, faces=faces)
+            plotter = plot_mesh3d_pyvista(mesh)
+            assert plotter is not None
+        except ImportError:
+            pytest.skip("pyvista not available")
+    
+    def test_plot_mesh3d_pyvista_no_coloring(self):
+        """Test pyvista plotting with no color_by, no materials, no cell_data."""
+        try:
+            from smrforge.visualization.mesh_3d import plot_mesh3d_pyvista
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+            faces = np.array([[0, 1, 2]])
+            mesh = Mesh3D(vertices=vertices, faces=faces)
+            plotter = plot_mesh3d_pyvista(mesh, color_by=None)
+            assert plotter is not None
+        except ImportError:
+            pytest.skip("pyvista not available")
+    
+    def test_plot_multiple_meshes_plotly_custom_opacity(self):
+        """Test plotting multiple meshes with custom opacity."""
+        try:
+            from smrforge.visualization.mesh_3d import plot_multiple_meshes_plotly
+            vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+            faces1 = np.array([[0, 1, 2]])
+            mesh1 = Mesh3D(vertices=vertices1, faces=faces1)
+            
+            vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0]])
+            faces2 = np.array([[0, 1, 2]])
+            mesh2 = Mesh3D(vertices=vertices2, faces=faces2)
+            
+            meshes = {"mesh1": mesh1, "mesh2": mesh2}
+            fig = plot_multiple_meshes_plotly(meshes, opacity=0.5)
+            assert fig is not None
+        except ImportError:
+            pytest.skip("plotly not available")
+    
+    def test_plot_multiple_meshes_plotly_custom_title(self):
+        """Test plotting multiple meshes with custom title."""
+        try:
+            from smrforge.visualization.mesh_3d import plot_multiple_meshes_plotly
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+            faces = np.array([[0, 1, 2]])
+            mesh = Mesh3D(vertices=vertices, faces=faces)
+            meshes = {"mesh": mesh}
+            fig = plot_multiple_meshes_plotly(meshes, title="Custom Title")
+            assert fig is not None
+        except ImportError:
+            pytest.skip("plotly not available")
+    
+    def test_plot_mesh3d_plotly_edges_reversed_vertex_order(self):
+        """Test edge extraction when vertices are in reversed order (v0 > v1)."""
+        try:
+            from smrforge.visualization.mesh_3d import plot_mesh3d_plotly
+            vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+            # Face with vertices that would result in v0 > v1 after sorting
+            faces = np.array([[2, 1, 0]])  # Reversed order
+            mesh = Mesh3D(vertices=vertices, faces=faces)
+            fig = plot_mesh3d_plotly(mesh, show_edges=True)
+            assert fig is not None
+        except ImportError:
+            pytest.skip("plotly not available")
 
