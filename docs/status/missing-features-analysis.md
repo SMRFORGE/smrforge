@@ -334,4 +334,8 @@ When implementing these features, consider integration with:
 - ✅ Comparison views for multiple reactor designs
 - ✅ Video/GIF export capabilities
 - ✅ Comprehensive geometry validation (gaps, connectivity, clearances, assembly placement, control rods)
+- ✅ Complex geometry import/conversion (`smrforge/geometry/advanced_import.py`) - Full OpenMC CSG, Serpent, CAD (STEP/IGES/STL), MCNP
+- ✅ Enhanced 3D mesh generation (`smrforge/geometry/advanced_mesh.py`) - Structured, unstructured, hybrid, parallel generation, format conversion
+- ✅ Assembly management enhancements - Fuel shuffling, multi-batch support, position tracking
+- ✅ Control rod geometry enhancements - Bank priorities, sequencing, scram geometry, worth profiles
 
