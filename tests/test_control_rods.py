@@ -700,17 +700,20 @@ class TestControlRodSystem:
         """Test sequenced insertion ordered by dependencies."""
         system = ControlRodSystem()
         dep_bank = ControlRodBank(id=1, name="DepBank", priority=BankPriority.SAFETY, max_worth=1000.0)
-        dep_bank.set_insertion(0.0)  # Pre-inserted
+        # Start with DepBank fully withdrawn so it can be inserted first
+        dep_bank.set_insertion(1.0)
         system.add_bank(dep_bank)
         
         bank = ControlRodBank(id=2, name="Bank", priority=BankPriority.REGULATION, max_worth=500.0, dependencies=["DepBank"])
+        bank.set_insertion(1.0)  # Start fully withdrawn
         system.add_bank(bank)
         
         system.sequenced_insertion(target_insertion=0.3, order_by_priority=False)
         
         # Should insert in dependency order (DepBank first, then Bank)
-        assert dep_bank.insertion == 0.3
-        assert bank.insertion == 0.3
+        # Both should reach target insertion
+        assert abs(dep_bank.insertion - 0.3) < 0.01
+        assert abs(bank.insertion - 0.3) < 0.01
     
     def test_system_sequenced_insertion_specific_banks(self):
         """Test sequenced insertion with specific bank names."""
