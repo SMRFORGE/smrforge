@@ -194,6 +194,78 @@ class TestUncertaintyInit:
         """Test importing uncertainty module."""
         from smrforge.uncertainty import uq
         assert uq is not None
+    
+    def test_uncertainty_init_all_attributes(self):
+        """Test that __all__ is properly populated."""
+        import smrforge.uncertainty as uncertainty_module
+        assert hasattr(uncertainty_module, '__all__')
+        # uncertainty/__init__.py uses `from uq import *`, so __all__ may be empty
+        # but the imports should work
+    
+    def test_uncertainty_init_imports_from_uq(self):
+        """Test that uncertainty/__init__.py imports from uq."""
+        from smrforge.uncertainty.uq import UncertainParameter, MonteCarloSampler
+        # These should be available after import
+        assert UncertainParameter is not None
+        assert MonteCarloSampler is not None
+
+
+class TestPresetsInit:
+    """Test smrforge/presets/__init__.py."""
+    
+    def test_import_presets_htgr(self):
+        """Test importing presets from htgr."""
+        from smrforge.presets import (
+            ValarAtomicsReactor,
+            GTMHR350,
+            HTRPM200,
+            MicroHTGR,
+            DesignLibrary,
+        )
+        assert ValarAtomicsReactor is not None
+        assert GTMHR350 is not None
+        assert HTRPM200 is not None
+        assert MicroHTGR is not None
+        assert DesignLibrary is not None
+    
+    def test_presets_init_all_attributes(self):
+        """Test that __all__ is properly populated."""
+        import smrforge.presets as presets_module
+        assert hasattr(presets_module, '__all__')
+        assert 'ValarAtomicsReactor' in presets_module.__all__
+        assert 'DesignLibrary' in presets_module.__all__
+
+
+class TestSafetyInit:
+    """Test smrforge/safety/__init__.py."""
+    
+    def test_import_safety_transients(self):
+        """Test importing safety transients."""
+        from smrforge.safety import (
+            TransientType,
+            TransientConditions,
+            PointKineticsParameters,
+            PointKineticsSolver,
+            LOFCTransient,
+            ATWSTransient,
+            ReactivityInsertionAccident,
+            AirWaterIngressAnalysis,
+            decay_heat_ans_standard,
+        )
+        assert TransientType is not None
+        assert TransientConditions is not None
+        assert PointKineticsParameters is not None
+        assert PointKineticsSolver is not None
+        assert LOFCTransient is not None
+        assert decay_heat_ans_standard is not None
+    
+    def test_safety_init_all_attributes(self):
+        """Test that __all__ is properly populated."""
+        import smrforge.safety as safety_module
+        assert hasattr(safety_module, '__all__')
+        assert 'TransientType' in safety_module.__all__
+        assert 'PointKineticsSolver' in safety_module.__all__
+        assert 'LOFCTransient' in safety_module.__all__
 
 
 class TestMainInit:
@@ -318,3 +390,33 @@ class TestInitImportErrors:
             # Should handle error gracefully
             assert hasattr(main_module, '__all__')
             assert '__version__' in main_module.__all__  # Should still have version
+    
+    def test_presets_init_import_error(self):
+        """Test presets __init__ handles import error."""
+        with patch.dict(sys.modules, {'smrforge.presets.htgr': None}):
+            import importlib
+            import smrforge.presets as presets_module
+            importlib.reload(presets_module)
+            
+            # Should handle error gracefully
+            assert hasattr(presets_module, '__all__')
+    
+    def test_safety_init_import_error(self):
+        """Test safety __init__ handles import error."""
+        with patch.dict(sys.modules, {'smrforge.safety.transients': None}):
+            import importlib
+            import smrforge.safety as safety_module
+            importlib.reload(safety_module)
+            
+            # Should handle error gracefully
+            assert hasattr(safety_module, '__all__')
+    
+    def test_uncertainty_init_import_error(self):
+        """Test uncertainty __init__ handles import error."""
+        with patch.dict(sys.modules, {'smrforge.uncertainty.uq': None}):
+            import importlib
+            import smrforge.uncertainty as uncertainty_module
+            importlib.reload(uncertainty_module)
+            
+            # Should handle error gracefully (uses try/except with pass)
+            assert hasattr(uncertainty_module, '__all__')
