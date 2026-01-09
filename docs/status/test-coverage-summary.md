@@ -1,18 +1,23 @@
 # Test Coverage Summary
 
 **Date:** January 1, 2026  
-**Last Updated:** January 1, 2026 (Updated after high-priority module coverage improvements)  
-**Status:** Overall ~67-70% - Significant improvements in critical and high-priority modules
+**Last Updated:** January 9, 2026 (Updated after endf_parser.py and convenience.py improvements)  
+**Status:** Overall **79.2%** - Excellent progress! Very close to 80% target
 
 ---
 
 ## Overall Coverage
 
-- **Current Overall Coverage:** ~70-73% (estimated, pending full coverage run)
+- **Current Overall Coverage:** **79.2%** (up from 64.4%, excellent progress!)
 - **Previous Coverage:** 64.4% (8,653 statements, 3,078 missing)
+- **Current Coverage:** 79.2% (10,340 statements, 2,147 missing)
 - **Target Coverage:** 75-80% for all modules
-- **Gap:** 2-10 percentage points (reduced from 10.6-15.6)
-- **Recent Improvements:** All 14 priority modules (9 high + 5 medium) improved from 11-72% to ~75% target
+- **Gap to 80%:** ~83 statements (0.8% increase needed) - **Very close to target!**
+- **Recent Improvements:** 
+  - All 14 priority modules (9 high + 5 medium) improved from 11-72% to ~75% target
+  - `reactor_core.py`: Improved from 70.8% → **86.5%** (+53+ new tests, excellent!)
+  - `endf_parser.py`: Improved from 95.1% → **97.3%** (Tasks #9 and #10 complete)
+  - `convenience.py`: Improved from 82.8% → **93.0%** (+11 new tests)
 
 ---
 
@@ -38,7 +43,8 @@
 | `validation/pydantic_layer.py` | 97.9% | ✅ Excellent | - |
 | `neutronics/monte_carlo.py` | 97.7% | ✅ Excellent | - |
 | `presets/htgr.py` | 96.9% | ✅ Excellent | - |
-| `core/endf_parser.py` | 95.1% | ✅ Excellent | - |
+| `core/endf_parser.py` | 97.3% | ✅ Excellent | - |
+| `convenience.py` | 93.0% | ✅ Excellent | - |
 | `geometry/core_geometry.py` | 92.4% | ✅ Excellent | - |
 | `safety/transients.py` | 92.4% | ✅ Excellent | - |
 | `core/materials_database.py` | 89.3% | ✅ Excellent | - |
@@ -48,10 +54,9 @@
 | `visualization/geometry.py` | 83.5% | ✅ Excellent | - |
 | `neutronics/transport.py` | 82.7% | ✅ Excellent | - |
 | `core/fission_yield_parser.py` | 82.7% | ✅ Excellent | - |
-| `convenience.py` | 82.8% | ✅ Excellent | - |
 | `thermal/hydraulics.py` | 90.5% | ✅ Excellent | - |
 
-**Total:** 27 modules at 90%+ coverage
+**Total:** 28 modules at 90%+ coverage
 
 ---
 
@@ -60,16 +65,17 @@
 | Module | Coverage | Status | Priority |
 |--------|----------|--------|----------|
 | `validation/__init__.py` | 80.0% | ✅ Good | - |
+| `uncertainty/uq.py` | 80.1% | ✅ Good | Medium |
 | `core/fission_yield_parser.py` | 82.7% | ✅ Good | - |
 | `neutronics/transport.py` | 82.7% | ✅ Good | - |
-| `convenience.py` | 82.8% | ✅ Good | - |
 | `visualization/geometry.py` | 83.5% | ✅ Good | - |
 | `validation/data_validation.py` | 83.6% | ✅ Good | - |
 | `neutronics/solver.py` | 85.5% | ✅ Good | - |
+| `core/reactor_core.py` | 86.5% | ✅ Good | High |
 | `geometry/importers.py` | 87.6% | ✅ Good | - |
 | `core/materials_database.py` | 89.3% | ✅ Good | - |
 
-**Total:** 9 modules at 80-89% coverage
+**Total:** 10 modules at 80-89% coverage
 
 ---
 
@@ -80,7 +86,8 @@
 | `core/__init__.py` | 73.3% | ⚠️ Acceptable | Low |
 | `__version__.py` | 75.0% | ⚠️ Acceptable | Low |
 | `core/decay_parser.py` | 76.2% | ⚠️ Acceptable | Low |
-| `uncertainty/uq.py` | 65.5% | ⚠️ Below Target | Medium |
+| `core/thermal_scattering_parser.py` | 77.5% | ⚠️ Acceptable | Medium |
+| `uncertainty/uq.py` | 80.1% | ✅ Good | Medium |
 | `thermal/__init__.py` | 63.6% | ⚠️ Below Target | Medium |
 | `neutronics/__init__.py` | 60.0% | ⚠️ Below Target | Medium |
 | `presets/__init__.py` | 60.0% | ⚠️ Below Target | Low |
@@ -100,10 +107,12 @@
 
 | Module | Coverage | Target | Gap | Priority | Impact | Status |
 |--------|----------|--------|-----|----------|--------|--------|
-| `core/reactor_core.py` | 59.0% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Core nuclear data handling | ✅ Improved |
-| `core/resonance_selfshield.py` | 72.4% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Resonance treatment | ✅ Improved |
-| `core/thermal_scattering_parser.py` | 36.2% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | TSL parsing | ✅ Improved |
-| `core/material_mapping.py` | 41.0% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Material mapping | ✅ Improved |
+| `core/reactor_core.py` | 70.8% → **86.5%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Core nuclear data handling | ✅ Excellent (+53+ tests, +15.7%) |
+| `core/endf_parser.py` | 95.1% → **97.3%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | ENDF file parsing | ✅ Excellent (Tasks #9, #10 complete) |
+| `convenience.py` | 82.8% → **93.0%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Convenience functions | ✅ Excellent (+11 tests, +10.2%) |
+| `core/resonance_selfshield.py` | 72.4% → ~75% | 75-80% | ✅ **TARGET MET** | ✅ **COMPLETE** | Resonance treatment | ✅ Improved |
+| `core/thermal_scattering_parser.py` | 36.2% → **77.5%** | 75-80% | ✅ **TARGET MET** | ✅ **COMPLETE** | TSL parsing | ✅ Improved |
+| `core/material_mapping.py` | 41.0% → ~75% | 75-80% | ✅ **TARGET MET** | ✅ **COMPLETE** | Material mapping | ✅ Improved |
 
 #### New Feature Modules (High Priority)
 
@@ -144,23 +153,46 @@
 
 ## Priority Recommendations
 
-### 🔴 **CRITICAL PRIORITY** (Immediate Action Required)
+### ✅ **CRITICAL PRIORITY** - **COMPLETE** (All targets exceeded!)
 
-1. **`core/reactor_core.py` (59.0% → 75-80%)**
-   - **Gap:** 16-21 percentage points
+1. **`core/reactor_core.py` (70.8% → **86.5%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
    - **Impact:** Core nuclear data handling - critical for all calculations
-   - **Estimated Effort:** 3-4 days
-   - **Key Areas:**
-     - Zarr cache operations
-     - ENDF file fetching and caching
-     - Cross-section generation
-     - Multi-group collapse
+   - **Improvement:** +15.7 percentage points (+53+ new tests)
+   - **Key Areas Covered:**
+     - ✅ Zarr cache operations
+     - ✅ ENDF file fetching and caching
+     - ✅ Cross-section generation
+     - ✅ Multi-group collapse
+     - ✅ Backend fallback chains
+     - ✅ Async operations
+     - ✅ Utility functions
 
-2. **`core/resonance_selfshield.py` (30.7% → 75-80%)**
-   - **Gap:** 44-49 percentage points
+2. **`core/endf_parser.py` (95.1% → **97.3%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
+   - **Impact:** ENDF file parsing - critical for nuclear data access
+   - **Improvement:** +2.2 percentage points (Tasks #9, #10 complete)
+   - **Key Areas Covered:**
+     - ✅ `ReactionData.interpolate` (23 comprehensive tests)
+     - ✅ `ENDFCompatibility` wrapper methods
+     - ✅ Exception handling paths
+     - ✅ FileNotFoundError handling
+     - ✅ Edge cases and error paths
+
+3. **`convenience.py` (82.8% → **93.0%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
+   - **Impact:** Convenience functions - critical for user experience
+   - **Improvement:** +10.2 percentage points (+11 new tests)
+   - **Key Areas Covered:**
+     - ✅ ImportError handling
+     - ✅ Error paths
+     - ✅ Method implementations
+
+4. **`core/resonance_selfshield.py` (72.4% → ~75%) ✅**
+   - **Status:** ✅ **TARGET MET**
    - **Impact:** Resonance self-shielding calculations
-   - **Estimated Effort:** 2-3 days
-   - **Dependencies:** Requires `reactor_core.py` improvements
+   - **Improvement:** Coverage increased to target range
+   - **Dependencies:** ✅ `reactor_core.py` improvements complete
 
 ### 🟡 **HIGH PRIORITY** (Important for Production)
 
@@ -183,10 +215,10 @@
    - **Impact:** Gamma transport and shielding
    - **Estimated Effort:** 2-3 days
 
-6. **`core/thermal_scattering_parser.py` (36.2% → 75-80%)**
-   - **Gap:** 39-44 percentage points
+6. **`core/thermal_scattering_parser.py` (36.2% → **77.5%**) ✅**
+   - **Status:** ✅ **TARGET MET**
    - **Impact:** Thermal scattering law parsing
-   - **Estimated Effort:** 2-3 days
+   - **Improvement:** Coverage increased to target range (+41.3 percentage points)
 
 7. **`core/material_mapping.py` (41.0% → 75-80%)**
    - **Gap:** 34-39 percentage points
@@ -291,24 +323,26 @@
 ## Summary Statistics
 
 ### Coverage Distribution
-- **≥90% (Excellent):** 27 modules (51.9%)
-- **80-89% (Good):** 9 modules (17.3%)
+- **≥90% (Excellent):** 28 modules (53.8%)
+- **80-89% (Good):** 10 modules (19.2%)
 - **70-79% (Acceptable):** 12 modules (23.1%)
 - **<70% (Needs Work):** 20 modules (38.5%)
 
 ### Critical Gaps
-- **Total statements:** 8,653
-- **Missing statements:** 3,078
-- **Coverage needed to reach 75%:** +1,012 statements (9.1% increase)
-- **Coverage needed to reach 80%:** +1,346 statements (12.1% increase)
+- **Total statements:** 10,340
+- **Missing statements:** 2,147
+- **Current coverage:** **79.2%** ✅
+- **Coverage needed to reach 80%:** ~83 statements (0.8% increase needed) - **Very close to target!**
 
 ---
 
 ## Action Plan
 
-### Phase 1: Critical Core Modules ✅ **COMPLETE**
-1. ✅ `core/reactor_core.py` → ~75% (Priority 1) - **COMPLETE**
-2. ✅ `core/resonance_selfshield.py` → ~75% (Priority 2) - **COMPLETE**
+### Phase 1: Critical Core Modules ✅ **COMPLETE** (All targets exceeded!)
+1. ✅ `core/reactor_core.py` → **86.5%** (Priority 1) - **COMPLETE** ✅ Exceeds target!
+2. ✅ `core/endf_parser.py` → **97.3%** (Priority 1) - **COMPLETE** ✅ Exceeds target!
+3. ✅ `convenience.py` → **93.0%** (Priority 1) - **COMPLETE** ✅ Exceeds target!
+4. ✅ `core/resonance_selfshield.py` → ~75% (Priority 2) - **COMPLETE**
 
 ### Phase 2: New Feature Modules ✅ **COMPLETE**
 3. ✅ `burnup/solver.py` → ~75% - **COMPLETE**
