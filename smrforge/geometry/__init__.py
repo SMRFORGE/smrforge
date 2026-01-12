@@ -191,6 +191,20 @@ except ImportError as e:
     warnings.warn(f"Could not import Fast Reactor SMR geometry: {e}", ImportWarning)
     _FAST_REACTOR_SMR_AVAILABLE = False
 
+# Import SMR mesh optimization if available
+try:
+    from smrforge.geometry.smr_mesh_optimization import (
+        SMRMeshOptimizer,
+        SMRMeshParams,
+    )
+
+    _SMR_MESH_OPTIMIZATION_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import SMR mesh optimization: {e}", ImportWarning)
+    _SMR_MESH_OPTIMIZATION_AVAILABLE = False
+
 __all__ = []
 if _GEOMETRY_AVAILABLE:
     __all__.extend(
@@ -326,5 +340,13 @@ if _FAST_REACTOR_SMR_AVAILABLE:
             "WireWrapSpacer",
             "LiquidMetalChannel",
             "FastReactorType",
+        ]
+    )
+
+if _SMR_MESH_OPTIMIZATION_AVAILABLE:
+    __all__.extend(
+        [
+            "SMRMeshOptimizer",
+            "SMRMeshParams",
         ]
     )
