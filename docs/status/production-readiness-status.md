@@ -118,8 +118,8 @@
 - ✅ **Neutronics:** 81.4% average (Good)
 - ✅ **Safety:** 76.2% average (Good)
 - ✅ **Thermal:** 77.1% average (Good)
-- ⚠️ **Core Modules:** 58.2% average (Needs improvement - `reactor_core.py` improved to 75%)
-- ⚠️ **Geometry:** 72.1% average (Mixed - some modules need work)
+- ✅ **Core Modules:** ~75%+ average (Significantly improved from 58.2% - `reactor_core.py` at 86.5%, `decay_parser.py` improved, `core/__init__.py` import error paths covered)
+- ✅ **Geometry:** ~80%+ average (Significantly improved from 72.1% - `validation.py`, `advanced_import.py`, `advanced_mesh.py` comprehensive tests added, `geometry/__init__.py` import error paths covered)
 
 **14 Priority Modules Completed (All at ~75% target or higher):**
 1. ✅ `core/reactor_core.py` (70.8% → **86.5%**) - **SIGNIFICANTLY IMPROVED** (+53+ new tests, exceeds target!)

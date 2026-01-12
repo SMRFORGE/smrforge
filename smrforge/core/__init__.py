@@ -84,6 +84,16 @@ except ImportError:
     _ENERGY_ANGLE_PARSER_AVAILABLE = False
 
 try:
+    from smrforge.core.self_shielding_integration import (
+        get_cross_section_with_equivalence_theory,
+        get_cross_section_with_self_shielding,
+    )
+
+    _SELF_SHIELDING_INTEGRATION_AVAILABLE = True
+except ImportError:
+    _SELF_SHIELDING_INTEGRATION_AVAILABLE = False
+
+try:
     from smrforge.core.endf_parser import (
         ENDFCompatibility,
         ENDFEvaluation,
@@ -168,5 +178,13 @@ if _ENERGY_ANGLE_PARSER_AVAILABLE:
             "EnergyAngleData",
             "AngularDistribution",
             "get_energy_angle_data",
+        ]
+    )
+
+if _SELF_SHIELDING_INTEGRATION_AVAILABLE:
+    __all__.extend(
+        [
+            "get_cross_section_with_self_shielding",
+            "get_cross_section_with_equivalence_theory",
         ]
     )

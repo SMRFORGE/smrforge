@@ -340,6 +340,246 @@ class EquivalenceTheory:
         )
         
         return equiv_xs
+
+
+def collapse_with_adjoint_weighting(
+    fine_group_structure: np.ndarray,
+    coarse_group_structure: np.ndarray,
+    fine_cross_sections: np.ndarray,
+    fine_flux: np.ndarray,
+    fine_adjoint: np.ndarray,
+) -> np.ndarray:
+    """
+    Collapse cross-sections using adjoint flux weighting.
+    
+    Adjoint flux weighting uses both forward and adjoint fluxes for importance-
+    weighted cross-section collapse. This is more accurate than flux-weighted
+    collapse for certain applications (e.g., reactivity worth calculations).
+    
+    The adjoint-weighted cross-section is:
+        Σ_coarse_g = Σ_fine_g * (φ_fine * φ*_fine) / (φ_coarse * φ*_coarse)
+    
+    Where:
+        φ_fine = fine-group forward flux
+        φ*_fine = fine-group adjoint flux
+        φ_coarse = coarse-group forward flux
+        φ*_coarse = coarse-group adjoint flux
+    
+    Args:
+        fine_group_structure: Fine-group energy boundaries [eV] [n_fine+1]
+        coarse_group_structure: Coarse-group energy boundaries [eV] [n_coarse+1]
+        fine_cross_sections: Fine-group cross-sections [n_fine] [barn]
+        fine_flux: Fine-group forward flux [n_fine] [n/cm²/s]
+        fine_adjoint: Fine-group adjoint flux [n_fine] [n/cm²/s]
+    
+    Returns:
+        Coarse-group cross-sections [n_coarse] [barn]
+    
+    Example:
+        >>> from smrforge.core.multigroup_advanced import collapse_with_adjoint_weighting
+        >>> 
+        >>> # Fine-group structure (100 groups)
+        >>> fine_groups = np.logspace(7, -5, 101)
+        >>> 
+        >>> # Coarse-group structure (4 groups)
+        >>> coarse_groups = np.array([2e7, 1e6, 1e5, 1e-5])
+        >>> 
+        >>> # Fine-group data
+        >>> fine_xs = np.ones(100) * 5.0  # 5 barns
+        >>> fine_flux = np.ones(100)  # Uniform flux
+        >>> fine_adjoint = np.ones(100)  # Uniform adjoint
+        >>> 
+        >>> # Collapse with adjoint weighting
+        >>> coarse_xs = collapse_with_adjoint_weighting(
+        ...     fine_groups, coarse_groups, fine_xs, fine_flux, fine_adjoint
+        ... )
+    """
+    n_fine = len(fine_group_structure) - 1
+    n_coarse = len(coarse_group_structure) - 1
+    
+    if len(fine_cross_sections) != n_fine:
+        raise ValueError(
+            f"Fine cross-sections length ({len(fine_cross_sections)}) must match "
+            f"fine groups ({n_fine})"
+        )
+    if len(fine_flux) != n_fine:
+        raise ValueError(
+            f"Fine flux length ({len(fine_flux)}) must match fine groups ({n_fine})"
+        )
+    if len(fine_adjoint) != n_fine:
+        raise ValueError(
+            f"Fine adjoint length ({len(fine_adjoint)}) must match fine groups ({n_fine})"
+        )
+    
+    # Calculate importance (forward * adjoint)
+    fine_importance = fine_flux * fine_adjoint
+    
+    # Collapse importance to coarse groups
+    coarse_importance = np.zeros(n_coarse)
+    coarse_flux = np.zeros(n_coarse)
+    coarse_adjoint = np.zeros(n_coarse)
+    
+    # Map fine groups to coarse groups
+    for g_fine in range(n_fine):
+        # Find which coarse group this fine group belongs to
+        E_low = fine_group_structure[g_fine]
+        E_high = fine_group_structure[g_fine + 1]
+        E_center = (E_low + E_high) / 2
+        
+        # Find coarse group index
+        # Check if boundaries are in descending or ascending order
+        is_descending = coarse_group_structure[0] > coarse_group_structure[-1]
+        
+        g_coarse = 0
+        if is_descending:
+            # Descending: [E_high, ..., E_low] -> groups: [E_high, E_mid), [E_mid, E_low)
+            for c in range(n_coarse):
+                low_bound = coarse_group_structure[c + 1]
+                high_bound = coarse_group_structure[c]
+                if low_bound <= E_center < high_bound:
+                    g_coarse = c
+                    break
+            # Handle edge cases
+            if E_center >= coarse_group_structure[0]:
+                g_coarse = 0
+            elif E_center < coarse_group_structure[-1]:
+                g_coarse = n_coarse - 1
+        else:
+            # Ascending: [E_low, ..., E_high] -> groups: [E_low, E_mid), [E_mid, E_high)
+            for c in range(n_coarse):
+                if coarse_group_structure[c] <= E_center < coarse_group_structure[c + 1]:
+                    g_coarse = c
+                    break
+            # Handle edge cases
+            if E_center >= coarse_group_structure[-1]:
+                g_coarse = n_coarse - 1
+            elif E_center < coarse_group_structure[0]:
+                g_coarse = 0
+        
+        # Group width
+        dE = E_high - E_low
+        
+        # Accumulate importance-weighted quantities
+        if 0 <= g_coarse < n_coarse:
+            coarse_importance[g_coarse] += fine_importance[g_fine] * dE
+            coarse_flux[g_coarse] += fine_flux[g_fine] * dE
+            coarse_adjoint[g_coarse] += fine_adjoint[g_fine] * dE
+    
+    # Calculate adjoint-weighted cross-sections
+    coarse_xs = np.zeros(n_coarse)
+    
+    for g_coarse in range(n_coarse):
+        if coarse_importance[g_coarse] > 0:
+            # Calculate weighted average
+            numerator = 0.0
+            denominator = 0.0
+            
+            for g_fine in range(n_fine):
+                E_low = fine_group_structure[g_fine]
+                E_high = fine_group_structure[g_fine + 1]
+                E_center = (E_low + E_high) / 2
+                
+                # Find which coarse group this belongs to
+                is_descending = coarse_group_structure[0] > coarse_group_structure[-1]
+                g_coarse_check = 0
+                if is_descending:
+                    for c in range(n_coarse):
+                        if coarse_group_structure[c + 1] <= E_center < coarse_group_structure[c]:
+                            g_coarse_check = c
+                            break
+                    if E_center >= coarse_group_structure[0]:
+                        g_coarse_check = 0
+                    elif E_center < coarse_group_structure[-1]:
+                        g_coarse_check = n_coarse - 1
+                else:
+                    for c in range(n_coarse):
+                        if coarse_group_structure[c] <= E_center < coarse_group_structure[c + 1]:
+                            g_coarse_check = c
+                            break
+                    if E_center >= coarse_group_structure[-1]:
+                        g_coarse_check = n_coarse - 1
+                    elif E_center < coarse_group_structure[0]:
+                        g_coarse_check = 0
+                
+                if g_coarse_check == g_coarse:
+                    dE = E_high - E_low
+                    importance = fine_importance[g_fine]
+                    numerator += fine_cross_sections[g_fine] * importance * dE
+                    denominator += importance * dE
+            
+            if denominator > 0:
+                coarse_xs[g_coarse] = numerator / denominator
+            else:
+                # Fallback to flux-weighted
+                if coarse_flux[g_coarse] > 0:
+                    numerator_flux = 0.0
+                    for g_fine in range(n_fine):
+                        E_low = fine_group_structure[g_fine]
+                        E_high = fine_group_structure[g_fine + 1]
+                        E_center = (E_low + E_high) / 2
+                        
+                        g_coarse_check = 0
+                        for c in range(n_coarse):
+                            if coarse_group_structure[c] <= E_center < coarse_group_structure[c + 1]:
+                                g_coarse_check = c
+                                break
+                        if E_center >= coarse_group_structure[-1]:
+                            g_coarse_check = n_coarse - 1
+                        elif E_center < coarse_group_structure[0]:
+                            g_coarse_check = 0
+                        
+                        if g_coarse_check == g_coarse:
+                            dE = E_high - E_low
+                            numerator_flux += fine_cross_sections[g_fine] * fine_flux[g_fine] * dE
+                    coarse_xs[g_coarse] = numerator_flux / coarse_flux[g_coarse]
+                else:
+                    # Uniform collapse
+                    count = 0
+                    for g_fine in range(n_fine):
+                        E_low = fine_group_structure[g_fine]
+                        E_high = fine_group_structure[g_fine + 1]
+                        E_center = (E_low + E_high) / 2
+                        
+                        g_coarse_check = 0
+                        for c in range(n_coarse):
+                            if coarse_group_structure[c] <= E_center < coarse_group_structure[c + 1]:
+                                g_coarse_check = c
+                                break
+                        if E_center >= coarse_group_structure[-1]:
+                            g_coarse_check = n_coarse - 1
+                        elif E_center < coarse_group_structure[0]:
+                            g_coarse_check = 0
+                        
+                        if g_coarse_check == g_coarse:
+                            coarse_xs[g_coarse] += fine_cross_sections[g_fine]
+                            count += 1
+                    if count > 0:
+                        coarse_xs[g_coarse] /= count
+        else:
+            # No importance in this group, use flux-weighted
+            if coarse_flux[g_coarse] > 0:
+                numerator = 0.0
+                for g_fine in range(n_fine):
+                    E_low = fine_group_structure[g_fine]
+                    E_high = fine_group_structure[g_fine + 1]
+                    E_center = (E_low + E_high) / 2
+                    
+                    g_coarse_check = 0
+                    for c in range(n_coarse):
+                        if coarse_group_structure[c] <= E_center < coarse_group_structure[c + 1]:
+                            g_coarse_check = c
+                            break
+                    if E_center >= coarse_group_structure[-1]:
+                        g_coarse_check = n_coarse - 1
+                    elif E_center < coarse_group_structure[0]:
+                        g_coarse_check = 0
+                    
+                    if g_coarse_check == g_coarse:
+                        dE = E_high - E_low
+                        numerator += fine_cross_sections[g_fine] * fine_flux[g_fine] * dE
+                coarse_xs[g_coarse] = numerator / coarse_flux[g_coarse]
+    
+    return coarse_xs
     
     def _calculate_dancoff_factor(
         self,

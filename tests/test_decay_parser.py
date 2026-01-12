@@ -229,6 +229,119 @@ class TestENDFDecayParser:
         lines = [" " * 70 + " 8  455"]
         spectrum = parser._parse_beta_spectrum(lines)
         assert spectrum is None  # Simplified parser returns None
+    
+    def test_parse_half_life_short_line(self):
+        """Test parsing half-life with short line (line 224)."""
+        parser = ENDFDecayParser()
+        
+        # Line shorter than 75 characters
+        lines = ["short line"]
+        half_life = parser._parse_half_life(lines)
+        assert half_life == 1e20  # Default for stable
+    
+    def test_parse_half_life_value_error(self):
+        """Test parsing half-life with ValueError (line 245)."""
+        parser = ENDFDecayParser()
+        
+        # Line with invalid float value
+        lines = [
+            " " * 70 + " 8  457",
+            "invalid_float_value",
+        ]
+        half_life = parser._parse_half_life(lines)
+        assert half_life == 1e20  # Default when parsing fails
+    
+    def test_parse_half_life_positive_value(self):
+        """Test parsing half-life with positive value."""
+        parser = ENDFDecayParser()
+        
+        lines = [
+            " " * 70 + " 8  457",
+            " 7.04000000E+08",  # U-235 half-life
+        ]
+        half_life = parser._parse_half_life(lines)
+        assert half_life > 0
+        assert half_life < 1e20
+    
+    def test_parse_decay_modes_short_line(self):
+        """Test parsing decay modes with short line (line 266)."""
+        parser = ENDFDecayParser()
+        u235 = Nuclide(Z=92, A=235)
+        
+        # Line shorter than 75 characters
+        lines = ["short line"]
+        decay_modes = parser._parse_decay_modes(lines, u235)
+        assert isinstance(decay_modes, list)
+    
+    def test_parse_filename_metastable_m_only(self):
+        """Test parsing filename with metastable 'm' only."""
+        parser = ENDFDecayParser()
+        
+        nuclide = parser._parse_filename("dec-092_U_235m.endf")
+        assert nuclide is not None
+        assert nuclide.Z == 92
+        assert nuclide.A == 235
+        assert nuclide.m == 1  # Default to 1 if no number after 'm'
+    
+    def test_parse_filename_metastable_uppercase(self):
+        """Test parsing filename with uppercase metastable marker."""
+        parser = ENDFDecayParser()
+        
+        nuclide = parser._parse_filename("dec-092_U_235M1.endf")
+        assert nuclide is not None
+        assert nuclide.Z == 92
+        assert nuclide.A == 235
+        assert nuclide.m == 1
+    
+    def test_parse_file_exception_handling(self, tmp_path):
+        """Test parse_file exception handling (lines 173-177)."""
+        parser = ENDFDecayParser()
+        
+        # Create a file that will cause parsing to fail
+        filepath = tmp_path / "dec-092_U_235.endf"
+        filepath.write_text("invalid content that will cause parsing to fail\n" * 10)
+        
+        # Should return None with warning, not raise exception
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = parser.parse_file(filepath)
+            
+            # Should return None
+            assert result is None
+            # Should have issued a warning
+            assert len(w) > 0
+            assert "Failed to parse" in str(w[0].message)
+    
+    def test_parse_file_invalid_filename(self, tmp_path):
+        """Test parse_file with invalid filename format."""
+        parser = ENDFDecayParser()
+        
+        # Create file with invalid filename format
+        filepath = tmp_path / "invalid_filename.endf"
+        filepath.write_text("some content\n")
+        
+        # Should raise ValueError because filename can't be parsed
+        with pytest.raises(ValueError, match="Could not extract nuclide"):
+            parser.parse_file(filepath)
+    
+    def test_parse_gamma_spectrum_short_line(self):
+        """Test parsing gamma spectrum with short line (line 311)."""
+        parser = ENDFDecayParser()
+        
+        # Line shorter than 75 characters
+        lines = ["short line"]
+        spectrum = parser._parse_gamma_spectrum(lines)
+        assert spectrum is None
+    
+    def test_parse_beta_spectrum_short_line(self):
+        """Test parsing beta spectrum with short line (line 337)."""
+        parser = ENDFDecayParser()
+        
+        # Line shorter than 75 characters
+        lines = ["short line"]
+        spectrum = parser._parse_beta_spectrum(lines)
+        assert spectrum is None
 
 
 class TestDecayIntegration:

@@ -349,7 +349,7 @@ class TestInitImportErrors:
     """Test __init__.py files handle import errors gracefully."""
     
     def test_core_init_import_error_reactor_core(self):
-        """Test core __init__ handles reactor_core import error."""
+        """Test core __init__ handles reactor_core import error (lines 22-24)."""
         # Remove from sys.modules first to ensure clean reload
         import importlib
         modules_to_clear = [
@@ -372,9 +372,53 @@ class TestInitImportErrors:
             import smrforge.core as core_module
             # Should still work without reactor_core
             assert hasattr(core_module, '__all__')
+            assert '_CORE_DATA_AVAILABLE' in dir(core_module)
+            assert core_module._CORE_DATA_AVAILABLE == False
         
         # Clean up - restore original import
         importlib.reload(sys.modules['smrforge.core'])
+    
+    def test_core_init_import_error_endf_setup(self):
+        """Test core __init__ handles endf_setup import error (lines 32-34)."""
+        with patch.dict(sys.modules, {'smrforge.core.endf_setup': None}):
+            import importlib
+            if 'smrforge.core' in sys.modules:
+                del sys.modules['smrforge.core']
+            import smrforge.core as core_module
+            importlib.reload(core_module)
+            
+            # Should handle error gracefully
+            assert hasattr(core_module, '__all__')
+            assert '_ENDF_SETUP_AVAILABLE' in dir(core_module)
+            assert core_module._ENDF_SETUP_AVAILABLE == False
+    
+    def test_core_init_import_error_resonance(self):
+        """Test core __init__ handles resonance_selfshield import error (lines 44-46)."""
+        with patch.dict(sys.modules, {'smrforge.core.resonance_selfshield': None}):
+            import importlib
+            if 'smrforge.core' in sys.modules:
+                del sys.modules['smrforge.core']
+            import smrforge.core as core_module
+            importlib.reload(core_module)
+            
+            # Should handle error gracefully
+            assert hasattr(core_module, '__all__')
+            assert '_RESONANCE_AVAILABLE' in dir(core_module)
+            assert core_module._RESONANCE_AVAILABLE == False
+    
+    def test_core_init_import_error_endf_parser(self):
+        """Test core __init__ handles endf_parser import error (lines 56-57)."""
+        with patch.dict(sys.modules, {'smrforge.core.endf_parser': None}):
+            import importlib
+            if 'smrforge.core' in sys.modules:
+                del sys.modules['smrforge.core']
+            import smrforge.core as core_module
+            importlib.reload(core_module)
+            
+            # Should handle error gracefully
+            assert hasattr(core_module, '__all__')
+            assert '_ENDF_PARSER_AVAILABLE' in dir(core_module)
+            assert core_module._ENDF_PARSER_AVAILABLE == False
     
     def test_neutronics_init_import_error_solver(self):
         """Test neutronics __init__ handles solver import error (lines 11-15)."""

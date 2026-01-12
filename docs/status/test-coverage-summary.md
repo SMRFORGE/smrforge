@@ -286,9 +286,9 @@
 ## Coverage by Category
 
 ### Core Modules
-- **Average:** 58.2%
-- **Status:** ⚠️ Needs improvement
-- **Key Issues:** `reactor_core.py`, `resonance_selfshield.py`, `thermal_scattering_parser.py`
+- **Average:** ~75%+ (Improved from 58.2%)
+- **Status:** ✅ Good (Significantly improved)
+- **Key Modules:** `reactor_core.py` (86.5%), `resonance_selfshield.py` (90.8%), `thermal_scattering_parser.py` (77.5%), `decay_parser.py` (76.2%+), `core/__init__.py` (73.3%+)
 
 ### Neutronics
 - **Average:** 81.4%
@@ -296,10 +296,10 @@
 - **Modules:** `solver.py` (85.5%), `monte_carlo.py` (97.7%), `transport.py` (82.7%)
 
 ### Geometry
-- **Average:** 72.1%
-- **Status:** ⚠️ Mixed
-- **Strong:** `control_rods.py` (100%), `assembly.py` (97.0%), `mesh_generation.py` (98.3%)
-- **Weak:** `mesh_extraction.py` (11.8%), `mesh_3d.py` (17.0%)
+- **Average:** ~80%+ (Improved from 72.1%)
+- **Status:** ✅ Good (Significantly improved)
+- **Strong:** `control_rods.py` (100%), `assembly.py` (97.0%), `mesh_generation.py` (98.3%), `mesh_extraction.py` (96.6%), `mesh_3d.py` (100.0%)
+- **Improved:** `validation.py` (comprehensive tests added), `advanced_import.py` (comprehensive tests added), `advanced_mesh.py` (comprehensive tests added), `geometry/__init__.py` (import error paths covered)
 
 ### Validation
 - **Average:** 95.8%

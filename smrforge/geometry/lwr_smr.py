@@ -99,6 +99,54 @@ class SpacerGrid:
 
 
 @dataclass
+class AssemblyNozzle:
+    """
+    Top or bottom nozzle for fuel assembly.
+    
+    Structural component at the top or bottom of fuel assemblies that provides
+    handling points, flow distribution, and structural support.
+    
+    Attributes:
+        id: Unique identifier
+        position: Center position
+        nozzle_type: Type of nozzle ("top", "bottom")
+        height: Nozzle height [cm]
+        width: Nozzle width [cm] (square cross-section)
+        flow_area: Flow area through nozzle [cm²]
+        material: Nozzle material (typically stainless steel)
+    """
+    
+    id: int
+    position: Point3D
+    nozzle_type: str  # "top" or "bottom"
+    height: float  # cm
+    width: float  # cm (square cross-section)
+    flow_area: float = 0.0  # cm² (calculated if 0)
+    material: str = "stainless_steel"
+    
+    def volume(self) -> float:
+        """Calculate nozzle volume [cm³]."""
+        return self.width ** 2 * self.height
+    
+    def calculate_flow_area(self, n_rods: int, rod_pitch: float) -> float:
+        """
+        Calculate flow area based on rod positions.
+        
+        Args:
+            n_rods: Number of fuel rods
+            rod_pitch: Rod-to-rod pitch [cm]
+        
+        Returns:
+            Flow area [cm²]
+        """
+        # Approximate: total area minus rod areas
+        total_area = (n_rods ** 0.5 * rod_pitch) ** 2
+        rod_area = n_rods * np.pi * (0.4096 ** 2)  # Typical rod radius
+        self.flow_area = max(0.0, total_area - rod_area)
+        return self.flow_area
+
+
+@dataclass
 class FuelAssembly:
     """
     Square lattice fuel assembly for LWR SMRs.
@@ -129,6 +177,8 @@ class FuelAssembly:
     spacer_grids: List[SpacerGrid] = field(default_factory=list)
     guide_tubes: List[Point3D] = field(default_factory=list)
     water_fraction: float = 0.4  # Typical water fraction in PWR assembly
+    top_nozzle: Optional["AssemblyNozzle"] = None
+    bottom_nozzle: Optional["AssemblyNozzle"] = None
 
     def n_rods(self) -> int:
         """Total number of fuel rod positions."""
@@ -214,6 +264,37 @@ class FuelAssembly:
                 n_rods=len(self.fuel_rods),
             )
             self.spacer_grids.append(grid)
+        
+        # Add top and bottom nozzles
+        self._add_nozzles()
+    
+    def _add_nozzles(self):
+        """Add top and bottom nozzles to assembly."""
+        # Calculate nozzle dimensions based on assembly size
+        nozzle_width = self.lattice_size * self.pitch * 1.1  # Slightly larger than assembly
+        nozzle_height = 10.0  # cm (typical nozzle height)
+        
+        # Bottom nozzle
+        bottom_z = self.position.z - self.height / 2 - nozzle_height / 2
+        self.bottom_nozzle = AssemblyNozzle(
+            id=0,
+            position=Point3D(self.position.x, self.position.y, bottom_z),
+            nozzle_type="bottom",
+            height=nozzle_height,
+            width=nozzle_width,
+        )
+        self.bottom_nozzle.calculate_flow_area(len(self.fuel_rods), self.pitch)
+        
+        # Top nozzle
+        top_z = self.position.z + self.height / 2 + nozzle_height / 2
+        self.top_nozzle = AssemblyNozzle(
+            id=1,
+            position=Point3D(self.position.x, self.position.y, top_z),
+            nozzle_type="top",
+            height=nozzle_height,
+            width=nozzle_width,
+        )
+        self.top_nozzle.calculate_flow_area(len(self.fuel_rods), self.pitch)
 
 
 @dataclass

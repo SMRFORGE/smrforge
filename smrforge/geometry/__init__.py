@@ -221,6 +221,72 @@ except ImportError as e:
     warnings.warn(f"Could not import SMR fuel management: {e}", ImportWarning)
     _SMR_FUEL_MANAGEMENT_AVAILABLE = False
 
+# Import SMR compact core if available
+try:
+    from smrforge.geometry.smr_compact_core import (
+        CompactReflector,
+        CompactSMRCore,
+        create_mpower_compact_core,
+        create_nuscale_compact_core,
+    )
+
+    _SMR_COMPACT_CORE_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import SMR compact core: {e}", ImportWarning)
+    _SMR_COMPACT_CORE_AVAILABLE = False
+
+# Import SMR scram system if available
+try:
+    from smrforge.geometry.smr_scram_system import (
+        SMRScramSequence,
+        SMRScramSystem,
+        ScramType,
+        create_nuscale_scram_system,
+    )
+
+    _SMR_SCRAM_SYSTEM_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import SMR scram system: {e}", ImportWarning)
+    _SMR_SCRAM_SYSTEM_AVAILABLE = False
+
+# Import two-phase flow if available
+try:
+    from smrforge.geometry.two_phase_flow import (
+        TwoPhaseFlowRegion,
+        create_bwr_two_phase_region,
+    )
+
+    _TWO_PHASE_FLOW_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import two-phase flow: {e}", ImportWarning)
+    _TWO_PHASE_FLOW_AVAILABLE = False
+
+# Import Molten Salt SMR if available
+try:
+    from smrforge.geometry.molten_salt_smr import (
+        FreezePlug,
+        GraphiteModeratorBlock,
+        MSRSMRCore,
+        MSRType,
+        MoltenSaltChannel,
+        SaltCirculationLoop,
+        create_liquid_fuel_msr_core,
+        create_thermal_msr_core,
+    )
+
+    _MOLTEN_SALT_SMR_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import Molten Salt SMR: {e}", ImportWarning)
+    _MOLTEN_SALT_SMR_AVAILABLE = False
+
 __all__ = []
 if _GEOMETRY_AVAILABLE:
     __all__.extend(
@@ -374,5 +440,47 @@ if _SMR_FUEL_MANAGEMENT_AVAILABLE:
         [
             "SMRFuelManager",
             "SMRRefuelingPattern",
+        ]
+    )
+
+if _SMR_COMPACT_CORE_AVAILABLE:
+    __all__.extend(
+        [
+            "CompactSMRCore",
+            "CompactReflector",
+            "create_nuscale_compact_core",
+            "create_mpower_compact_core",
+        ]
+    )
+
+if _SMR_SCRAM_SYSTEM_AVAILABLE:
+    __all__.extend(
+        [
+            "SMRScramSystem",
+            "SMRScramSequence",
+            "ScramType",
+            "create_nuscale_scram_system",
+        ]
+    )
+
+if _TWO_PHASE_FLOW_AVAILABLE:
+    __all__.extend(
+        [
+            "TwoPhaseFlowRegion",
+            "create_bwr_two_phase_region",
+        ]
+    )
+
+if _MOLTEN_SALT_SMR_AVAILABLE:
+    __all__.extend(
+        [
+            "MSRSMRCore",
+            "MoltenSaltChannel",
+            "GraphiteModeratorBlock",
+            "FreezePlug",
+            "SaltCirculationLoop",
+            "MSRType",
+            "create_liquid_fuel_msr_core",
+            "create_thermal_msr_core",
         ]
     )
