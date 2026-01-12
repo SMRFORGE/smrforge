@@ -115,6 +115,11 @@ def _get_nndc_url(nuclide: Nuclide, library: Library) -> str:
     
     Returns:
         URL string for downloading the ENDF file.
+        Falls back to IAEA URL if library is not supported by NNDC.
+    
+    Note:
+        This is a helper function used internally by the downloader.
+        NNDC URLs use simpler naming: `{base_url}/{nuclide.name}.endf`
     """
     # NNDC URLs
     base_urls = {
@@ -143,6 +148,12 @@ def _get_download_urls(nuclide: Nuclide, library: Library) -> List[str]:
     
     Returns:
         List of URLs, with preferred source first based on cache.
+        Returns [IAEA_URL, NNDC_URL] or [NNDC_URL, IAEA_URL] depending on
+        which source was successful in previous downloads.
+    
+    Note:
+        This is a helper function used internally by the downloader.
+        Uses `_source_cache` to remember which source works best for each library.
     """
     iaea_url = _get_endf_url(nuclide, library)
     nndc_url = _get_nndc_url(nuclide, library)
@@ -157,13 +168,18 @@ def _get_download_urls(nuclide: Nuclide, library: Library) -> List[str]:
         return [iaea_url, nndc_url]
 
 
-def _cache_successful_source(url: str, library: Library):
+def _cache_successful_source(url: str, library: Library) -> None:
     """
     Cache which source was successful for future downloads.
     
     Args:
-        url: URL that succeeded.
-        library: Library enum.
+        url: URL that succeeded (must contain "iaea.org" or "nndc.bnl.gov").
+        library: Library enum to cache the preference for.
+    
+    Note:
+        This is a helper function used internally by the downloader.
+        Updates the module-level `_source_cache` dictionary to remember
+        which source (IAEA or NNDC) works best for each library.
     """
     if "iaea.org" in url:
         _source_cache[library.value] = "iaea"
@@ -176,10 +192,15 @@ def _parse_isotope_string(iso_str: str) -> Optional[Nuclide]:
     Parse isotope string (e.g., "U235", "Pu239m1") to Nuclide.
     
     Args:
-        iso_str: Isotope string.
+        iso_str: Isotope string in format "ElementSymbolMassNumber" or
+            "ElementSymbolMassNumbermMetastableState" (e.g., "U235", "Pu239m1").
     
     Returns:
         Nuclide instance if parsing succeeds, None otherwise.
+    
+    Note:
+        This is a helper function used internally by the downloader.
+        Handles both ground state and metastable isotopes.
     """
     iso_str = iso_str.strip()
     
@@ -214,15 +235,22 @@ def _expand_elements_to_nuclides(elements: List[str], library: Library) -> List[
     """
     Expand element symbols to all available nuclides for that element.
     
-    Note: This is a simplified version. In practice, you'd need to query
-    the data source for available nuclides, or use a predefined list.
+    Note: This is a simplified version that uses a predefined list of common
+    isotopes. In practice, you'd need to query the data source for available
+    nuclides, or use a more comprehensive list.
     
     Args:
         elements: List of element symbols (e.g., ["U", "Pu"]).
-        library: Nuclear data library.
+        library: Nuclear data library (currently not used, kept for API compatibility).
     
     Returns:
         List of Nuclide instances for common isotopes of those elements.
+        Returns empty list if no valid elements are provided.
+    
+    Note:
+        This is a helper function used internally by the downloader.
+        Only includes common isotopes for each element. For a complete list,
+        consider using a nuclide database or querying the data source.
     """
     nuclides = []
     
@@ -273,9 +301,25 @@ def download_file(
         show_progress: If True, show progress bar.
         max_retries: Maximum number of retry attempts.
         timeout: Request timeout in seconds.
+        session: Optional requests.Session to use for connection pooling.
+            If None, creates a new session.
     
     Returns:
         True if download succeeded, False otherwise.
+    
+    Raises:
+        ImportError: If requests library is not available.
+    
+    Example:
+        >>> from pathlib import Path
+        >>> from smrforge.data_downloader import download_file
+        >>> 
+        >>> success = download_file(
+        ...     url="https://example.com/file.endf",
+        ...     output_path=Path("file.endf"),
+        ...     show_progress=True
+        ... )
+        >>> print(f"Download {'succeeded' if success else 'failed'}")
     """
     if not REQUESTS_AVAILABLE:
         raise ImportError(
@@ -374,6 +418,12 @@ def download_endf_data(
         - "failed": Number of failed downloads
         - "total": Total number of files attempted
         - "output_dir": Path to output directory
+        - "organized": Number of files organized (if organize=True)
+    
+    Raises:
+        ImportError: If requests library is not available.
+        ValueError: If no nuclides are specified for download or invalid library version.
+        IOError: If output directory cannot be created or accessed.
     
     Example:
         >>> from smrforge.data_downloader import download_endf_data
@@ -673,16 +723,37 @@ def download_preprocessed_library(
     Download pre-processed Zarr library (placeholder for Phase 2).
     
     This function will be implemented in Phase 2 to download pre-processed
-    libraries from GitHub Releases or Zenodo.
+    libraries from GitHub Releases or Zenodo. Currently falls back to
+    downloading raw ENDF files.
     
     Args:
-        library: Library version.
-        nuclides: Nuclide set name or list of Nuclides.
-        output_dir: Output directory.
+        library: Library version (e.g., "ENDF/B-VIII.1") or Library enum.
+        nuclides: Nuclide set name (e.g., "common_smr") or list of Nuclide instances.
+        output_dir: Output directory. Defaults to standard ENDF directory.
         show_progress: If True, show progress indicators.
     
     Returns:
-        Dictionary with download statistics.
+        Dictionary with download statistics (same format as `download_endf_data`).
+    
+    Raises:
+        ImportError: If requests library is not available.
+        ValueError: If no nuclides are specified or invalid library version.
+        IOError: If output directory cannot be created or accessed.
+    
+    Note:
+        This is a placeholder function. It currently calls `download_endf_data()`
+        to download raw ENDF files. Pre-processed library support will be added
+        in Phase 2 of the data import improvements.
+    
+    Example:
+        >>> from smrforge.data_downloader import download_preprocessed_library
+        >>> 
+        >>> # Download common SMR nuclides (currently downloads raw ENDF)
+        >>> stats = download_preprocessed_library(
+        ...     library="ENDF/B-VIII.1",
+        ...     nuclides="common_smr",
+        ...     output_dir="~/ENDF-Data"
+        ... )
     """
     logger.warning(
         "Pre-processed library download not yet implemented. "
