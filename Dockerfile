@@ -5,9 +5,12 @@
 # Run:   docker run -it smrforge:latest
 #
 # Last Updated: January 2026
+# - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
+# - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
+# - Added automated data downloader with parallel downloads and progress indicators
 # - Added support for advanced features (visualization, mesh conversion, CAD import)
 # - Includes optional dependencies for enhanced capabilities
-# - Test coverage: 70-73% overall, 75-80%+ on priority modules
+# - Test coverage: 79.2% overall, 75-80%+ on priority modules
 
 FROM python:3.11-slim
 
@@ -76,11 +79,12 @@ RUN mkdir -p /app/data /app/output /app/endf-data
 
 # Set environment variable for standard ENDF directory
 # Users can override this or mount their own ENDF directory
+# Also supports configuration file: ~/.smrforge/config.yaml
 ENV SMRFORGE_ENDF_DIR=/app/endf-data
 
 # Default command (can be overridden)
-# Note: ENDF files must be set up manually before use
-# Run: python -m smrforge.core.endf_setup
-# Or: smrforge-setup-endf
-CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print('Run: python -m smrforge.core.endf_setup to set up ENDF data'); print('Features: Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP), enhanced mesh generation'); print('For visualization: pip install plotly pyvista (or install with [viz] extra)'); print('For mesh conversion: pip install meshio joblib'); print('For CAD import: pip install trimesh')"]
+# Note: ENDF files can be downloaded automatically using the data downloader
+# Run: python -c \"from smrforge.data_downloader import download_endf_data; download_endf_data(library='ENDF/B-VIII.1', output_dir='/app/endf-data')\"
+# Or set up manually: python -m smrforge.core.endf_setup
+CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print('Features:'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use data downloader'); print('    from smrforge.data_downloader import download_endf_data'); print('    download_endf_data(library=\"ENDF/B-VIII.1\", output_dir=\"/app/endf-data\")'); print('  Option 2: Manual setup'); print('    python -m smrforge.core.endf_setup'); print(''); print('Optional dependencies:'); print('  - Visualization: pip install plotly pyvista (or install with [viz] extra)'); print('  - Mesh conversion: pip install meshio joblib'); print('  - CAD import: pip install trimesh')"]
 

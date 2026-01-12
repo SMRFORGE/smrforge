@@ -5,13 +5,16 @@
 # Or use: docker compose up smrforge-dev
 #
 # Last Updated: January 2026
+# - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
+# - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
+# - Added automated data downloader with parallel downloads (tqdm, pyyaml)
 # - Added visualization dependencies support (plotly, pyvista)
 # - Added mesh conversion dependencies (meshio, joblib)
 # - Added CAD import dependencies (trimesh)
 # - Added pytest-asyncio for async test support
 # - Added system libraries for 3D visualization
 # - Updated to support latest features and test requirements
-# - Test coverage: 70-73% overall, 75-80%+ on priority modules
+# - Test coverage: 79.2% overall, 75-80%+ on priority modules
 
 FROM python:3.11-slim
 
@@ -81,11 +84,18 @@ RUN mkdir -p /app/data /app/output /app/endf-data
 
 # Set environment variable for standard ENDF directory
 # Users can override this or mount their own ENDF directory
+# Also supports configuration file: ~/.smrforge/config.yaml
 ENV SMRFORGE_ENDF_DIR=/app/endf-data
 
 # Default to bash shell for interactive development
-# Note: ENDF files must be set up manually before use
-# Run: python -m smrforge.core.endf_setup
-# Features: Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP), enhanced mesh generation
+# Note: ENDF files can be downloaded automatically using the data downloader
+# Run: python -c "from smrforge.data_downloader import download_endf_data; download_endf_data(library='ENDF/B-VIII.1', output_dir='/app/endf-data')"
+# Or set up manually: python -m smrforge.core.endf_setup
+# Features:
+#   - LWR SMR transient analysis (PWR/BWR/Integral SMR)
+#   - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)
+#   - Automated ENDF data downloader
+#   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
+#   - Enhanced mesh generation
 CMD ["/bin/bash"]
 

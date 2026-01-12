@@ -27,6 +27,7 @@ services:
       - PYTHONUNBUFFERED=1
       # Optional: set custom ENDF directory path
       # - SMRFORGE_ENDF_DIR=/app/endf-data
+      # Note: Also supports configuration file: ~/.smrforge/config.yaml
     # Keep container running for exec commands
     stdin_open: true
     tty: true
@@ -60,9 +61,11 @@ services:
       - PYTHONUNBUFFERED=1
       # Optional: set custom ENDF directory path
       # - SMRFORGE_ENDF_DIR=/app/endf-data
+      # Note: Also supports configuration file: ~/.smrforge/config.yaml
     stdin_open: true
     tty: true
     # Install dev dependencies on startup (including pytest-asyncio for async tests)
+    # Data downloader dependencies (tqdm, pyyaml) are already in requirements.txt
     # Optional: Add visualization/mesh dependencies with: pip install plotly pyvista meshio joblib trimesh
     command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio && bash"
 
