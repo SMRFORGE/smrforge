@@ -215,20 +215,49 @@ def compute_improved_scattering_matrix(
         is_thermal = group_center < 1.0  # Below 1 eV (thermal range)
         
         if is_thermal and tsl_data is not None:
-            # Use TSL for thermal groups
-            # Compute scattering from group g to all groups
+            # Use TSL for thermal groups with full upscattering support
+            # Compute scattering from group g to all groups (including upscattering)
+            E_in = group_center
+            
             for g_out in range(n_groups):
-                if g_out <= g:  # Only downscattering (thermal groups)
-                    E_in = group_center
-                    E_out = (group_structure[g_out] + group_structure[g_out + 1]) / 2
-                    
-                    # Compute TSL cross-section
+                E_out_center = (group_structure[g_out] + group_structure[g_out + 1]) / 2
+                E_out_low = group_structure[g_out + 1]
+                E_out_high = group_structure[g_out]
+                
+                # Check if upscattering is possible (E_out > E_in)
+                is_upscatter = E_out_center > E_in
+                
+                # For thermal groups, allow both downscattering and upscattering
+                # Upscattering occurs when neutron gains energy from thermal motion
+                if is_upscatter:
+                    # Upscattering: neutron gains energy
+                    # Use TSL to compute probability of upscattering
+                    # β = (E_in - E_out) / (k_B*T) will be negative for upscattering
                     xs_tsl = parser.compute_thermal_scattering_xs(
-                        tsl_data, E_in, E_out, temperature
+                        tsl_data, E_in, E_out_center, temperature
+                    )
+                    
+                    # Upscattering probability is typically smaller than downscattering
+                    # Weight by detailed balance: σ_s(E→E') * φ(E) = σ_s(E'→E) * φ(E') * exp((E'-E)/(kT))
+                    # For upscattering, apply detailed balance correction
+                    k_B = 8.617333262e-5  # eV/K
+                    kT = k_B * temperature
+                    if E_in > 0:
+                        detailed_balance_factor = np.sqrt(E_out_center / E_in) * np.exp((E_out_center - E_in) / kT)
+                    else:
+                        detailed_balance_factor = 0.0
+                    
+                    # Weight by group width and detailed balance
+                    group_width = E_out_high - E_out_low
+                    sigma_s[g, g_out] = xs_tsl * group_width * detailed_balance_factor
+                else:
+                    # Downscattering: neutron loses energy (normal case)
+                    xs_tsl = parser.compute_thermal_scattering_xs(
+                        tsl_data, E_in, E_out_center, temperature
                     )
                     
                     # Weight by group width
-                    group_width = group_structure[g] - group_structure[g + 1]
+                    group_width = E_out_high - E_out_low
                     sigma_s[g, g_out] = xs_tsl * group_width
         else:
             # Use standard model for fast groups or when TSL not available
@@ -242,10 +271,26 @@ def compute_improved_scattering_matrix(
                 if g < n_groups - 2:
                     sigma_s[g, g + 2] = 0.05 * elastic_mg[g]
             else:
-                # Thermal/epithermal groups: mostly same group
-                sigma_s[g, g] = 0.9 * elastic_mg[g]
+                # Thermal/epithermal groups: mostly same group with some upscattering
+                sigma_s[g, g] = 0.85 * elastic_mg[g]  # Same group
                 if g < n_groups - 1:
-                    sigma_s[g, g + 1] = 0.1 * elastic_mg[g]
+                    sigma_s[g, g + 1] = 0.1 * elastic_mg[g]  # Downscattering
+                if g > 0:
+                    # Upscattering: neutron gains energy from thermal motion
+                    # Probability decreases with energy gain
+                    k_B = 8.617333262e-5  # eV/K
+                    kT = k_B * temperature
+                    E_g = group_center
+                    E_g_minus_1 = (group_structure[g - 1] + group_structure[g]) / 2
+                    energy_gain = E_g_minus_1 - E_g
+                    
+                    # Upscattering probability follows Maxwell-Boltzmann distribution
+                    # P(upscatter) ∝ exp(-ΔE / (kT))
+                    if energy_gain > 0 and kT > 0:
+                        upscatter_prob = 0.05 * np.exp(-energy_gain / kT)
+                        sigma_s[g, g - 1] = upscatter_prob * elastic_mg[g]
+                    else:
+                        sigma_s[g, g - 1] = 0.0
     
     # Normalize rows to ensure conservation
     for g in range(n_groups):

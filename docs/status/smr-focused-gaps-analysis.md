@@ -197,7 +197,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 - ✅ TSL integration with neutronics - Available via `compute_improved_scattering_matrix()`
 - ✅ **MF=6 (energy-angle distributions)** parsing - `ENDFEnergyAngleParser` class implemented
 - ✅ **Anisotropic scattering** (P0, P1, P2 Legendre moments) - `compute_anisotropic_scattering_matrix()` implemented
-- ⚠️ **Thermal upscattering** - Basic support, full implementation pending
+- ✅ **Thermal upscattering** - Full implementation with detailed balance
 
 **Implementation:**
 - `ENDFEnergyAngleParser` class for parsing MF=6 data from ENDF files
@@ -208,20 +208,24 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 - P1 = linear anisotropy (forward/backward scattering preference)
 - P2 = quadratic anisotropy (angular distribution shape)
 - **Now uses MF=6 data when available**, falls back to simplified models
+- **Thermal upscattering**: Neutrons can gain energy through collisions with thermally moving nuclei
+- **Detailed balance**: Upscattering probabilities follow Maxwell-Boltzmann distribution
+- **Temperature-dependent**: Upscattering increases with temperature
 
 **Why Important for SMRs:**
 - LWR SMRs are thermal reactors → need accurate thermal scattering
 - Anisotropic scattering important for accurate flux distributions
 - MF=6 data provides actual angular distributions from ENDF files
+- Thermal upscattering critical for accurate thermal neutron spectrum
 - Now supports Legendre moment expansion with real ENDF data
 
-**Status:** ✅ **IMPLEMENTED** - Anisotropic scattering with MF=6 parsing complete
+**Status:** ✅ **IMPLEMENTED** - Anisotropic scattering with MF=6 parsing and thermal upscattering complete
 
 **Location:** 
 - `smrforge/core/energy_angle_parser.py` - MF=6 parser
 - `smrforge/core/endf_extractors.py` - Anisotropic scattering integration
 
-**Test Coverage:** 19 tests (9 for anisotropic scattering + 10 for MF=6 parser, all passing)
+**Test Coverage:** 24 tests (9 for anisotropic scattering + 10 for MF=6 parser + 5 for thermal upscattering, all passing)
 
 ---
 
