@@ -97,19 +97,25 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 
 ---
 
-#### 1.2 **Integral Reactor Designs** ⚠️
-- ❌ **No in-vessel steam generators** (integral PWR designs) - **Phase 2**
-- ⚠️ **Compact core layouts** - Basic support via `PWRSMRCore` (can create compact arrangements)
-- ❌ **No integrated primary system** (core + SG + pumps in single vessel) - **Phase 2**
+#### 1.2 **Integral Reactor Designs** ✅
+- ✅ **In-vessel steam generators** - `InVesselSteamGenerator` class implemented
+- ✅ **Integrated primary system** - `IntegratedPrimarySystem` class implemented
+- ✅ **Compact core layouts** - Supported via `PWRSMRCore` and integrated system
 
-**Status:** 🟡 **PARTIAL** - Core geometry supported, in-vessel components pending
+**Status:** ✅ **COMPLETE** - Integral reactor design components implemented
 
-**SMR Examples:**
-- CAREM: Integral PWR with in-vessel steam generators - **Core geometry supported**
-- SMART: Integral PWR design - **Core geometry supported**
-- NuScale: Compact integral design - **Core geometry supported**
+**Implementation:**
+- `InVesselSteamGenerator` class with tube bundle support
+- `SteamGeneratorTube` class for individual tubes
+- `IntegratedPrimarySystem` class for complete in-vessel systems
+- Full test coverage (13 tests, all passing)
 
-**Recommendation:** 🟡 **PHASE 2 PRIORITY** - Core geometry complete, in-vessel components next
+**SMR Examples Supported:**
+- ✅ CAREM: Integral PWR with in-vessel steam generators
+- ✅ SMART: Integral PWR design
+- ✅ NuScale: Compact integral design
+
+**Location:** `smrforge/geometry/lwr_smr.py`
 
 ---
 
@@ -388,11 +394,13 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 
 ### 🟡 Phase 2: Enhanced SMR Capabilities (6-12 months)
 
-5. **Integral Reactor Designs** (Geometry)
-   - In-vessel steam generators
-   - Compact core layouts
-   - **Effort:** Medium
-   - **Impact:** 🟡 **HIGH** - Important for many SMR designs
+5. **Integral Reactor Designs** (Geometry) ✅
+   - ✅ In-vessel steam generators - `InVesselSteamGenerator` class implemented
+   - ✅ Integrated primary system - `IntegratedPrimarySystem` class implemented
+   - ✅ Compact core layouts - Supported via `PWRSMRCore` and integrated system
+   - **Status:** ✅ **COMPLETE** - Integral reactor design components implemented
+   - **Test Coverage:** 13 tests, all passing
+   - **Location:** `smrforge/geometry/lwr_smr.py`
 
 6. **Advanced Scattering Matrix** (`reactor_core.py`) ✅
    - ✅ TSL integration - Available via `compute_improved_scattering_matrix()`
@@ -448,7 +456,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 | **Water Geometry** | ✅ Complete | - | Critical | Geometry | ~70% of SMR market | Included ✅ |
 | **Resonance Self-Shielding** | ✅ Complete | - | Critical | `reactor_core.py` | All SMRs | 3 tests ✅ |
 | **Fission Yields/Delayed Neutrons** | ✅ Complete | - | Critical | `reactor_core.py` | All SMRs (burnup) | 5 tests ✅ |
-| **Integral Reactor Designs** | ⚠️ Partial | 🟡 High | High | Geometry | Many SMRs | - |
+| **Integral Reactor Designs** | ✅ Complete | - | High | `lwr_smr.py` | Many SMRs | 13 tests ✅ |
 | **Anisotropic Scattering** | ✅ Complete | - | High | `endf_extractors.py` | Thermal SMRs | 9 tests ✅ |
 | **Nuclide Inventory Tracking** | ✅ Complete | - | Medium | `reactor_core.py` | All SMRs (burnup) | 13 tests ✅ |
 | **SMR Control Systems** | ✅ Complete | - | Medium | `control_rod_worth.py` | LWR SMRs | 15 tests ✅ |

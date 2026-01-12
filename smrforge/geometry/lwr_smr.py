@@ -468,3 +468,198 @@ class BWRSMRCore:
         # Similar to PWR but with BWR-specific parameters
         # Implementation similar to PWRSMRCore
         pass
+
+
+@dataclass
+class SteamGeneratorTube:
+    """
+    Individual steam generator tube for in-vessel steam generators.
+    
+    Represents a U-tube or straight tube in an integral PWR steam generator.
+    Primary coolant flows on the outside (shell side), secondary water/steam
+    flows on the inside (tube side).
+    
+    Attributes:
+        id: Unique identifier
+        position: Center position of tube
+        outer_diameter: Outer diameter [cm]
+        inner_diameter: Inner diameter [cm]
+        length: Tube length [cm]
+        tube_type: "U-tube" or "straight"
+        material: Tube material (typically Inconel-690 or Inconel-600)
+    """
+    
+    id: int
+    position: Point3D
+    outer_diameter: float  # cm
+    inner_diameter: float  # cm
+    length: float  # cm
+    tube_type: str = "U-tube"  # "U-tube" or "straight"
+    material: str = "Inconel-690"
+    
+    def flow_area_primary(self) -> float:
+        """Flow area for primary coolant (shell side) [cm²]."""
+        # Simplified: assume tube bundle arrangement
+        return np.pi * (self.outer_diameter / 2) ** 2
+    
+    def flow_area_secondary(self) -> float:
+        """Flow area for secondary water/steam (tube side) [cm²]."""
+        return np.pi * (self.inner_diameter / 2) ** 2
+    
+    def heat_transfer_area(self) -> float:
+        """Heat transfer surface area [cm²]."""
+        return np.pi * self.outer_diameter * self.length
+
+
+@dataclass
+class InVesselSteamGenerator:
+    """
+    In-vessel steam generator for integral PWR SMR designs.
+    
+    Represents a steam generator located inside the reactor pressure vessel,
+    as used in integral PWR SMRs like CAREM, SMART, and NuScale.
+    
+    Primary coolant (hot water from core) flows on shell side.
+    Secondary water/steam flows on tube side.
+    
+    Attributes:
+        id: Unique identifier
+        position: Center position in vessel
+        n_tubes: Number of steam generator tubes
+        tube_bundle_diameter: Diameter of tube bundle [cm]
+        height: Height of steam generator [cm]
+        tubes: List of steam generator tubes
+        primary_inlet_temp: Primary coolant inlet temperature [K]
+        primary_outlet_temp: Primary coolant outlet temperature [K]
+        secondary_pressure: Secondary side pressure [Pa]
+        secondary_inlet_temp: Secondary water inlet temperature [K]
+        secondary_outlet_temp: Secondary steam outlet temperature [K]
+        heat_transfer_rate: Heat transfer rate [W]
+    """
+    
+    id: int
+    position: Point3D
+    n_tubes: int
+    tube_bundle_diameter: float  # cm
+    height: float  # cm
+    tubes: List[SteamGeneratorTube] = field(default_factory=list)
+    primary_inlet_temp: float = 573.15  # K (300°C typical PWR)
+    primary_outlet_temp: float = 523.15  # K (250°C typical PWR)
+    secondary_pressure: float = 6.0e6  # Pa (6 MPa typical)
+    secondary_inlet_temp: float = 433.15  # K (160°C feedwater)
+    secondary_outlet_temp: float = 553.15  # K (280°C steam)
+    heat_transfer_rate: float = 0.0  # W
+    
+    def total_heat_transfer_area(self) -> float:
+        """Total heat transfer area of all tubes [cm²]."""
+        return sum(tube.heat_transfer_area() for tube in self.tubes)
+    
+    def build_tube_bundle(
+        self,
+        tube_outer_diameter: float = 1.9,  # cm (typical)
+        tube_inner_diameter: float = 1.7,  # cm
+        tube_length: float = 600.0,  # cm
+        tube_pitch: float = 2.5,  # cm (center-to-center spacing)
+        tube_type: str = "U-tube",
+    ):
+        """
+        Build a tube bundle for the steam generator.
+        
+        Args:
+            tube_outer_diameter: Outer diameter of tubes [cm]
+            tube_inner_diameter: Inner diameter of tubes [cm]
+            tube_length: Length of each tube [cm]
+            tube_pitch: Center-to-center spacing of tubes [cm]
+            tube_type: "U-tube" or "straight"
+        """
+        self.tubes = []
+        
+        # Calculate number of tubes that fit in bundle
+        # Simplified: assume square pitch arrangement
+        n_tubes_per_row = int(self.tube_bundle_diameter / tube_pitch)
+        n_rows = int(self.height / tube_pitch)
+        max_tubes = n_tubes_per_row * n_rows
+        
+        # Limit to specified number
+        n_tubes_to_build = min(self.n_tubes, max_tubes)
+        
+        tube_id = 0
+        for row in range(n_rows):
+            for col in range(n_tubes_per_row):
+                if tube_id >= n_tubes_to_build:
+                    break
+                
+                # Calculate tube position (relative to bundle center)
+                x = (col - (n_tubes_per_row - 1) / 2) * tube_pitch
+                y = (row - (n_rows - 1) / 2) * tube_pitch
+                z = self.position.z
+                
+                tube = SteamGeneratorTube(
+                    id=tube_id,
+                    position=Point3D(
+                        self.position.x + x,
+                        self.position.y + y,
+                        z,
+                    ),
+                    outer_diameter=tube_outer_diameter,
+                    inner_diameter=tube_inner_diameter,
+                    length=tube_length,
+                    tube_type=tube_type,
+                )
+                self.tubes.append(tube)
+                tube_id += 1
+        
+        # Update actual number of tubes
+        self.n_tubes = len(self.tubes)
+
+
+@dataclass
+class IntegratedPrimarySystem:
+    """
+    Integrated primary system for integral PWR SMR designs.
+    
+    Represents a complete primary system within a single pressure vessel,
+    including core, steam generators, and pumps. Used in integral PWR SMRs
+    like CAREM, SMART, and NuScale.
+    
+    Attributes:
+        name: System name
+        vessel_diameter: Reactor pressure vessel diameter [cm]
+        vessel_height: Reactor pressure vessel height [cm]
+        core: PWR SMR core
+        steam_generators: List of in-vessel steam generators
+        primary_pumps: Number of primary coolant pumps (if any)
+        pressurizer_volume: Pressurizer volume [m³] (if separate)
+        integrated_pressurizer: True if pressurizer is integrated in vessel
+    """
+    
+    name: str
+    vessel_diameter: float  # cm
+    vessel_height: float  # cm
+    core: Optional["PWRSMRCore"] = None
+    steam_generators: List[InVesselSteamGenerator] = field(default_factory=list)
+    primary_pumps: int = 0
+    pressurizer_volume: float = 0.0  # m³
+    integrated_pressurizer: bool = True
+    
+    def total_steam_generator_heat_transfer(self) -> float:
+        """Total heat transfer rate from all steam generators [W]."""
+        return sum(sg.heat_transfer_rate for sg in self.steam_generators)
+    
+    def vessel_volume(self) -> float:
+        """Total vessel volume [cm³]."""
+        return np.pi * (self.vessel_diameter / 2) ** 2 * self.vessel_height
+    
+    def add_steam_generator(self, sg: InVesselSteamGenerator):
+        """Add a steam generator to the system."""
+        self.steam_generators.append(sg)
+    
+    def get_steam_generators_by_position(
+        self, min_z: float, max_z: float
+    ) -> List[InVesselSteamGenerator]:
+        """Get steam generators within a z-range."""
+        return [
+            sg
+            for sg in self.steam_generators
+            if min_z <= sg.position.z <= max_z
+        ]

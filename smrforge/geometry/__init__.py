@@ -158,8 +158,11 @@ try:
         ControlRodCluster,
         FuelAssembly,
         FuelRod,
+        InVesselSteamGenerator,
+        IntegratedPrimarySystem,
         PWRSMRCore,
         SpacerGrid,
+        SteamGeneratorTube,
         WaterChannel,
     )
 
@@ -290,5 +293,8 @@ if _LWR_SMR_AVAILABLE:
             "ControlRodCluster",
             "ControlBlade",
             "AssemblyType",
+            "InVesselSteamGenerator",
+            "SteamGeneratorTube",
+            "IntegratedPrimarySystem",
         ]
     )
