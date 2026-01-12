@@ -25,19 +25,52 @@ SMRForge provides a web-based dashboard interface built with Dash, allowing you 
 
 ### Install Dashboard Dependencies
 
+**IMPORTANT:** The dashboard requires Dash and related packages. These are **not installed by default**.
+
 ```bash
-# Install with visualization extras (includes Dash)
+# Option 1: Install with visualization extras (includes Dash)
 pip install smrforge[viz]
 
-# Or install Dash separately
+# Option 2: Install Dash separately
 pip install dash dash-bootstrap-components
+
+# Option 3: Install in development mode with extras
+pip install -e ".[viz]"
 ```
 
 ### Verify Installation
 
 ```bash
+# Check if Dash is installed
+python -c "import dash; print('Dash version:', dash.__version__)"
+
+# Check if dashboard module is available
 python -c "from smrforge.gui import create_app; print('Dashboard available!')"
+
+# Full dependency check
+python -c "import dash; import dash_bootstrap_components; from smrforge.gui import create_app; print('All dependencies OK!')"
 ```
+
+### Troubleshooting Installation
+
+If you get `ModuleNotFoundError: No module named 'dash'`:
+
+1. **Install dependencies:**
+   ```bash
+   pip install dash dash-bootstrap-components
+   ```
+
+2. **Verify installation:**
+   ```bash
+   pip list | grep dash
+   ```
+
+3. **Check Python environment:**
+   - Ensure you're using the correct Python environment
+   - If using virtual environment, activate it first
+   - If using conda, ensure conda environment is activated
+
+See [Dashboard Troubleshooting Guide](dashboard-troubleshooting.md) for more help.
 
 ---
 

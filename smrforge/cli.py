@@ -17,8 +17,33 @@ def serve_dashboard(args):
     Args:
         args: Parsed command-line arguments
     """
+    # Check for Dash dependencies first
+    try:
+        import dash
+        import dash_bootstrap_components
+    except ImportError as e:
+        print("=" * 70)
+        print("ERROR: Dashboard dependencies not installed")
+        print("=" * 70)
+        print("\nThe SMRForge web dashboard requires Dash and related packages.")
+        print("\nTo install dashboard dependencies:")
+        print("  pip install dash dash-bootstrap-components")
+        print("\nOr install all visualization dependencies:")
+        print("  pip install smrforge[viz]")
+        print("\nAfter installation, run:")
+        print(f"  smrforge serve --host {args.host} --port {args.port}")
+        print("=" * 70)
+        sys.exit(1)
+    
     try:
         from smrforge.gui import run_server
+        
+        print("=" * 70)
+        print("Starting SMRForge Dashboard...")
+        print("=" * 70)
+        print(f"\nDashboard will be available at: http://{args.host}:{args.port}")
+        print("Press Ctrl+C to stop the server\n")
+        print("=" * 70)
         
         run_server(
             host=args.host,
@@ -26,12 +51,25 @@ def serve_dashboard(args):
             debug=args.debug,
         )
     except ImportError as e:
-        print("Error: Dash is not installed.")
-        print("Install with: pip install dash dash-bootstrap-components")
-        print("Or install all visualization dependencies: pip install smrforge[viz]")
+        print("=" * 70)
+        print("ERROR: Failed to import dashboard module")
+        print("=" * 70)
+        print(f"\nError: {e}")
+        print("\nThis may indicate a missing dependency or installation issue.")
+        print("Try installing dashboard dependencies:")
+        print("  pip install dash dash-bootstrap-components")
+        print("=" * 70)
         sys.exit(1)
     except Exception as e:
-        print(f"Error starting dashboard: {e}")
+        print("=" * 70)
+        print("ERROR: Failed to start dashboard")
+        print("=" * 70)
+        print(f"\nError: {e}")
+        print("\nPlease check:")
+        print("  1. Dashboard dependencies are installed: pip install dash dash-bootstrap-components")
+        print("  2. Port is not already in use (try different port with --port)")
+        print("  3. Firewall allows connections on the specified port")
+        print("=" * 70)
         sys.exit(1)
 
 

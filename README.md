@@ -195,6 +195,18 @@ print(f"Power: {results['power_thermal_mw']:.1f} MWth")
 
 SMRForge now includes a **web-based dashboard** for interactive analysis:
 
+**⚠️ IMPORTANT: Dashboard requires additional dependencies!**
+
+```bash
+# First, install dashboard dependencies
+pip install dash dash-bootstrap-components
+
+# Or install all visualization extras
+pip install smrforge[viz]
+```
+
+Then launch the dashboard:
+
 ```bash
 # Launch dashboard
 smrforge serve
@@ -212,8 +224,11 @@ Then open your browser to `http://127.0.0.1:8050`
 - ✅ Interactive results visualization
 - ✅ ENDF data downloader interface
 - ✅ Project management (save/load)
+- ✅ Dark and gray mode themes
 
 **Note:** All dashboard features remain fully available via CLI and Python API. The dashboard is an optional, user-friendly interface.
+
+**Troubleshooting:** If dashboard won't start, see [Dashboard Troubleshooting Guide](docs/guides/dashboard-troubleshooting.md)
 
 See [Dashboard Guide](docs/guides/dashboard-guide.md) for complete documentation.
 
