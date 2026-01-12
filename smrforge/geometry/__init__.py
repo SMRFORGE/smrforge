@@ -173,6 +173,24 @@ except ImportError as e:
     warnings.warn(f"Could not import LWR SMR geometry: {e}", ImportWarning)
     _LWR_SMR_AVAILABLE = False
 
+# Import Fast Reactor SMR geometry if available
+try:
+    from smrforge.geometry.fast_reactor_smr import (
+        FastReactorAssembly,
+        FastReactorFuelPin,
+        FastReactorSMRCore,
+        FastReactorType,
+        LiquidMetalChannel,
+        WireWrapSpacer,
+    )
+
+    _FAST_REACTOR_SMR_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import Fast Reactor SMR geometry: {e}", ImportWarning)
+    _FAST_REACTOR_SMR_AVAILABLE = False
+
 __all__ = []
 if _GEOMETRY_AVAILABLE:
     __all__.extend(
@@ -296,5 +314,17 @@ if _LWR_SMR_AVAILABLE:
             "InVesselSteamGenerator",
             "SteamGeneratorTube",
             "IntegratedPrimarySystem",
+        ]
+    )
+
+if _FAST_REACTOR_SMR_AVAILABLE:
+    __all__.extend(
+        [
+            "FastReactorSMRCore",
+            "FastReactorAssembly",
+            "FastReactorFuelPin",
+            "WireWrapSpacer",
+            "LiquidMetalChannel",
+            "FastReactorType",
         ]
     )
