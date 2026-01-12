@@ -408,11 +408,13 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
    - **Test Coverage:** 13 tests, all passing
    - **Location:** `smrforge/core/reactor_core.py` - `NuclideInventoryTracker` class
 
-8. **SMR Control Systems** (Geometry)
-   - Control rod clusters (PWR)
-   - Control blades (BWR)
-   - **Effort:** Low-Medium
-   - **Impact:** 🟡 **MEDIUM** - SMR-specific features
+8. **SMR Control Systems** (Geometry) ✅
+   - ✅ Control rod clusters (PWR) - `ControlRodCluster` class implemented
+   - ✅ Control blades (BWR) - `ControlBlade` class implemented
+   - ✅ Advanced worth calculations - `ControlRodWorthCalculator` implemented
+   - **Status:** ✅ **COMPLETE** - Control systems with advanced worth calculations
+   - **Test Coverage:** 15 tests, all passing
+   - **Location:** `smrforge/core/control_rod_worth.py` and `smrforge/geometry/lwr_smr.py`
 
 ---
 
@@ -449,7 +451,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 | **Integral Reactor Designs** | ⚠️ Partial | 🟡 High | High | Geometry | Many SMRs | - |
 | **Anisotropic Scattering** | ✅ Complete | - | High | `endf_extractors.py` | Thermal SMRs | 9 tests ✅ |
 | **Nuclide Inventory Tracking** | ✅ Complete | - | Medium | `reactor_core.py` | All SMRs (burnup) | 13 tests ✅ |
-| **SMR Control Systems** | ⚠️ Partial | 🟡 Medium | Medium | Geometry | LWR SMRs | - |
+| **SMR Control Systems** | ✅ Complete | - | Medium | `control_rod_worth.py` | LWR SMRs | 15 tests ✅ |
 | **Fast Reactor SMR** | ❌ Pending | 🟢 Medium | Medium | Geometry | ~10% of SMR market | - |
 | **Advanced Multi-Group** | ❌ Pending | 🟢 Low | Low-Medium | `reactor_core.py` | Enhancement | - |
 
