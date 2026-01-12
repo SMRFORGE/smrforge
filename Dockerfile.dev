@@ -5,10 +5,13 @@
 # Or use: docker compose up smrforge-dev
 #
 # Last Updated: January 2026
+# - Added Dash web dashboard with dark/gray mode support
+# - Added CLI command (smrforge serve) for dashboard
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
 # - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
 # - Added automated data downloader with parallel downloads (tqdm, pyyaml)
 # - Added visualization dependencies support (plotly, pyvista)
+# - Added dashboard dependencies (dash, dash-bootstrap-components)
 # - Added mesh conversion dependencies (meshio, joblib)
 # - Added CAD import dependencies (trimesh)
 # - Added pytest-asyncio for async test support
@@ -63,15 +66,17 @@ RUN pip install --upgrade pip wheel setuptools
 # Includes pytest, pytest-cov, black, flake8, mypy
 RUN pip install --no-cache-dir -e ".[dev]"
 
-# Optional: Install visualization and advanced feature dependencies
-# Uncomment the next lines to include visualization, mesh conversion, and CAD import support:
+# Optional: Install visualization and dashboard dependencies
+# Uncomment the next lines to include visualization, dashboard, mesh conversion, and CAD import support:
 # RUN pip install --no-cache-dir \
 #     plotly>=5.0 \
 #     pyvista>=0.40.0 \
+#     dash>=2.0 \
+#     dash-bootstrap-components>=1.0.0 \
 #     joblib>=1.0.0 \
 #     meshio>=5.0.0 \
 #     trimesh>=3.0.0
-# Or install with [viz] extra (if defined in setup.py):
+# Or install with [viz] extra (includes dashboard):
 # RUN pip install --no-cache-dir -e ".[viz]"
 
 # Optional: Install pytest-asyncio for async test support
@@ -91,7 +96,13 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 # Note: ENDF files can be downloaded automatically using the data downloader
 # Run: python -c "from smrforge.data_downloader import download_endf_data; download_endf_data(library='ENDF/B-VIII.1', output_dir='/app/endf-data')"
 # Or set up manually: python -m smrforge.core.endf_setup
+# 
+# To run the web dashboard:
+#   smrforge serve --host 0.0.0.0 --port 8050
+#   Or: python -c "from smrforge.gui import run_server; run_server(host='0.0.0.0', port=8050)"
+#   Then access at http://localhost:8050 (map port 8050 in docker compose)
 # Features:
+#   - Web Dashboard (smrforge serve) with dark/gray mode
 #   - LWR SMR transient analysis (PWR/BWR/Integral SMR)
 #   - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)
 #   - Automated ENDF data downloader

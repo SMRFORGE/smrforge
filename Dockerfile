@@ -5,6 +5,8 @@
 # Run:   docker run -it smrforge:latest
 #
 # Last Updated: January 2026
+# - Added Dash web dashboard with dark/gray mode support
+# - Added CLI command (smrforge serve) for dashboard
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
 # - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
 # - Added automated data downloader with parallel downloads and progress indicators
@@ -59,15 +61,17 @@ RUN pip install --upgrade pip wheel setuptools
 # Optionally install visualization extras: pip install -e ".[viz]"
 RUN pip install --no-cache-dir -e .
 
-# Optional: Install visualization and advanced feature dependencies
-# Uncomment the next lines to include visualization, mesh conversion, and CAD import support:
+# Optional: Install visualization and dashboard dependencies
+# Uncomment the next lines to include visualization, dashboard, mesh conversion, and CAD import support:
 # RUN pip install --no-cache-dir \
 #     plotly>=5.0 \
 #     pyvista>=0.40.0 \
+#     dash>=2.0 \
+#     dash-bootstrap-components>=1.0.0 \
 #     joblib>=1.0.0 \
 #     meshio>=5.0.0 \
 #     trimesh>=3.0.0
-# Or install with [viz] extra (if defined in setup.py):
+# Or install with [viz] extra (includes dashboard):
 # RUN pip install --no-cache-dir -e ".[viz]"
 
 # Copy examples (optional - can be mounted as volume instead)
@@ -86,5 +90,10 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 # Note: ENDF files can be downloaded automatically using the data downloader
 # Run: python -c \"from smrforge.data_downloader import download_endf_data; download_endf_data(library='ENDF/B-VIII.1', output_dir='/app/endf-data')\"
 # Or set up manually: python -m smrforge.core.endf_setup
-CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print('Features:'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use data downloader'); print('    from smrforge.data_downloader import download_endf_data'); print('    download_endf_data(library=\"ENDF/B-VIII.1\", output_dir=\"/app/endf-data\")'); print('  Option 2: Manual setup'); print('    python -m smrforge.core.endf_setup'); print(''); print('Optional dependencies:'); print('  - Visualization: pip install plotly pyvista (or install with [viz] extra)'); print('  - Mesh conversion: pip install meshio joblib'); print('  - CAD import: pip install trimesh')"]
+# 
+# To run the web dashboard:
+#   smrforge serve --host 0.0.0.0 --port 8050
+#   Or: python -c \"from smrforge.gui import run_server; run_server(host='0.0.0.0', port=8050)\"
+#   Then access at http://localhost:8050 (map port 8050 in docker run -p 8050:8050)
+CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print('Features:'); print('  - Web Dashboard (smrforge serve) with dark/gray mode'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use data downloader'); print('    from smrforge.data_downloader import download_endf_data'); print('    download_endf_data(library=\"ENDF/B-VIII.1\", output_dir=\"/app/endf-data\")'); print('  Option 2: Manual setup'); print('    python -m smrforge.core.endf_setup'); print(''); print('Web Dashboard:'); print('  smrforge serve --host 0.0.0.0 --port 8050'); print('  Access at http://localhost:8050 (map port with -p 8050:8050)'); print(''); print('Optional dependencies:'); print('  - Dashboard & Visualization: pip install dash dash-bootstrap-components plotly pyvista'); print('  - Or install with [viz] extra: pip install -e \".[viz]\"'); print('  - Mesh conversion: pip install meshio joblib'); print('  - CAD import: pip install trimesh')"]
 

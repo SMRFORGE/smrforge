@@ -28,12 +28,18 @@ services:
       # Optional: set custom ENDF directory path
       # - SMRFORGE_ENDF_DIR=/app/endf-data
       # Note: Also supports configuration file: ~/.smrforge/config.yaml
+      # Dashboard will be available at http://localhost:8050 when running
     # Keep container running for exec commands
     stdin_open: true
     tty: true
+    # Expose dashboard port (8050)
+    ports:
+      - "8050:8050"
     command: tail -f /dev/null
     # Or run a specific script
     # command: python examples/complete_integration_example.py
+    # Or run the dashboard:
+    # command: smrforge serve --host 0.0.0.0 --port 8050
 
   smrforge-dev:
     build:
@@ -62,10 +68,15 @@ services:
       # Optional: set custom ENDF directory path
       # - SMRFORGE_ENDF_DIR=/app/endf-data
       # Note: Also supports configuration file: ~/.smrforge/config.yaml
+      # Dashboard will be available at http://localhost:8050 when running
     stdin_open: true
     tty: true
+    # Expose dashboard port (8050)
+    ports:
+      - "8050:8050"
     # Install dev dependencies on startup (including pytest-asyncio for async tests)
     # Data downloader dependencies (tqdm, pyyaml) are already in requirements.txt
-    # Optional: Add visualization/mesh dependencies with: pip install plotly pyvista meshio joblib trimesh
+    # Optional: Add dashboard/visualization/mesh dependencies with: pip install dash dash-bootstrap-components plotly pyvista meshio joblib trimesh
+    # Or install with [viz] extra: pip install -e ".[viz]"
     command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio && bash"
 
