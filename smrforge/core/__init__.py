@@ -60,6 +60,18 @@ except ImportError:
     _CONTROL_ROD_WORTH_AVAILABLE = False
 
 try:
+    from smrforge.core.multigroup_advanced import (
+        EquivalenceTheory,
+        SPHFactors,
+        SPHMethod,
+        apply_sph_to_multigroup_table,
+    )
+
+    _MULTIGROUP_ADVANCED_AVAILABLE = True
+except ImportError:
+    _MULTIGROUP_ADVANCED_AVAILABLE = False
+
+try:
     from smrforge.core.endf_parser import (
         ENDFCompatibility,
         ENDFEvaluation,
@@ -124,5 +136,15 @@ if _CONTROL_ROD_WORTH_AVAILABLE:
             "calculate_rod_worth_from_neutronics",
             "calculate_rod_worth_pcm",
             "calculate_worth_profile_from_neutronics",
+        ]
+    )
+
+if _MULTIGROUP_ADVANCED_AVAILABLE:
+    __all__.extend(
+        [
+            "SPHMethod",
+            "SPHFactors",
+            "EquivalenceTheory",
+            "apply_sph_to_multigroup_table",
         ]
     )
