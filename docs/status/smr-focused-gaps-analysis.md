@@ -40,7 +40,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 3. **Fast Reactor SMRs** (~10% of SMR market)
    - Natrium (SFR, 345 MWe)
    - PRISM (SFR, 311 MWe)
-   - **Status:** ❌ **NOT SUPPORTED**
+   - **Status:** ✅ **SUPPORTED** (Phase 3 Complete - January 2026)
 
 4. **Molten Salt SMRs** (~5% of SMR market)
    - Various MSR concepts
