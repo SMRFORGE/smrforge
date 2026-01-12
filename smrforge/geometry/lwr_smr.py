@@ -217,6 +217,75 @@ class FuelAssembly:
 
 
 @dataclass
+class Pressurizer:
+    """
+    Pressurizer for PWR SMR designs.
+    
+    Maintains primary system pressure in PWR SMRs. Can be integrated
+    in-vessel or separate.
+    
+    Attributes:
+        id: Unique identifier
+        position: Center position
+        volume: Pressurizer volume [m³]
+        height: Pressurizer height [cm]
+        diameter: Pressurizer diameter [cm]
+        pressure: Operating pressure [Pa]
+        temperature: Operating temperature [K]
+        water_volume: Water volume [m³]
+        steam_volume: Steam volume [m³]
+        integrated: True if integrated in reactor vessel
+    """
+    
+    id: int
+    position: Point3D
+    volume: float  # m³
+    height: float  # cm
+    diameter: float  # cm
+    pressure: float = 15.5e6  # Pa (15.5 MPa typical PWR)
+    temperature: float = 618.15  # K (345°C typical)
+    water_volume: float = 0.0  # m³
+    steam_volume: float = 0.0  # m³
+    integrated: bool = True  # Integrated in vessel for SMRs
+    
+    def water_level(self) -> float:
+        """Water level as fraction of height (0-1)."""
+        if self.volume == 0:
+            return 0.0
+        return self.water_volume / self.volume
+
+
+@dataclass
+class SteamSeparator:
+    """
+    Steam separator for BWR SMR designs.
+    
+    Separates steam from water in BWR SMRs. Located in upper plenum.
+    
+    Attributes:
+        id: Unique identifier
+        position: Center position
+        diameter: Separator diameter [cm]
+        height: Separator height [cm]
+        separation_efficiency: Steam separation efficiency (0-1)
+        steam_quality_inlet: Inlet steam quality (0-1)
+        steam_quality_outlet: Outlet steam quality (0-1)
+    """
+    
+    id: int
+    position: Point3D
+    diameter: float  # cm
+    height: float  # cm
+    separation_efficiency: float = 0.99  # 99% typical
+    steam_quality_inlet: float = 0.15  # 15% typical at core exit
+    steam_quality_outlet: float = 0.99  # 99% after separation
+    
+    def flow_area(self) -> float:
+        """Flow area [cm²]."""
+        return np.pi * (self.diameter / 2) ** 2
+
+
+@dataclass
 class WaterChannel:
     """
     Water moderator/coolant channel for LWR SMRs.

@@ -160,9 +160,11 @@ try:
         FuelRod,
         InVesselSteamGenerator,
         IntegratedPrimarySystem,
+        Pressurizer,
         PWRSMRCore,
         SpacerGrid,
         SteamGeneratorTube,
+        SteamSeparator,
         WaterChannel,
     )
 
@@ -204,6 +206,20 @@ except ImportError as e:
 
     warnings.warn(f"Could not import SMR mesh optimization: {e}", ImportWarning)
     _SMR_MESH_OPTIMIZATION_AVAILABLE = False
+
+# Import SMR fuel management if available
+try:
+    from smrforge.geometry.smr_fuel_management import (
+        SMRFuelManager,
+        SMRRefuelingPattern,
+    )
+
+    _SMR_FUEL_MANAGEMENT_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import SMR fuel management: {e}", ImportWarning)
+    _SMR_FUEL_MANAGEMENT_AVAILABLE = False
 
 __all__ = []
 if _GEOMETRY_AVAILABLE:
@@ -328,6 +344,8 @@ if _LWR_SMR_AVAILABLE:
             "InVesselSteamGenerator",
             "SteamGeneratorTube",
             "IntegratedPrimarySystem",
+            "Pressurizer",
+            "SteamSeparator",
         ]
     )
 
@@ -348,5 +366,13 @@ if _SMR_MESH_OPTIMIZATION_AVAILABLE:
         [
             "SMRMeshOptimizer",
             "SMRMeshParams",
+        ]
+    )
+
+if _SMR_FUEL_MANAGEMENT_AVAILABLE:
+    __all__.extend(
+        [
+            "SMRFuelManager",
+            "SMRRefuelingPattern",
         ]
     )

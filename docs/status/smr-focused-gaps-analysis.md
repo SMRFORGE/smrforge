@@ -122,10 +122,10 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 #### 1.3 **Water Moderator/Coolant Geometry** ✅
 - ✅ **Water channels** - `WaterChannel` class implemented
 - ⚠️ **Two-phase flow regions** - Basic support (void_fraction parameter), full implementation pending
-- ❌ **No pressurizer geometry** (PWR SMRs) - **Phase 2**
-- ❌ **No steam separator geometry** (BWR SMRs) - **Phase 2**
+- ✅ **Pressurizer geometry** (PWR SMRs) - `Pressurizer` class implemented
+- ✅ **Steam separator geometry** (BWR SMRs) - `SteamSeparator` class implemented
 
-**Status:** ✅ **BASIC SUPPORT COMPLETE** - Water channels implemented, advanced features pending
+**Status:** ✅ **COMPLETE** - Water channels, pressurizer, and steam separator implemented
 
 **Implementation:**
 - `WaterChannel` class with temperature, pressure, flow properties
@@ -280,16 +280,25 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 
 ---
 
-#### 3.3 **SMR Fuel Management**
+#### 3.3 **SMR Fuel Management** ✅
 - ✅ Basic assembly management exists
-- ⚠️ **May not support SMR-specific refueling**
-- ❌ **No long-cycle fuel management** (3-5 year cycles)
-- ❌ **No batch refueling patterns** for SMRs
-- ❌ **No fuel shuffling** for SMR compact cores
+- ✅ **SMR-specific refueling** - `SMRFuelManager` class implemented
+- ✅ **Long-cycle fuel management** (3-5 year cycles) - Cycle length tracking implemented
+- ✅ **Batch refueling patterns** for SMRs - `SMRRefuelingPattern` class implemented
+- ✅ **Fuel shuffling** for SMR compact cores - Out-in, in-out, scatter patterns implemented
 
-**Impact:** 🟡 **MEDIUM** - SMRs have different fuel cycle requirements
+**Implementation:**
+- `SMRFuelManager` class extends `AssemblyManager` with SMR-specific features
+- `SMRRefuelingPattern` class for long-cycle refueling patterns
+- Compact core shuffling patterns (out-in, in-out, scatter)
+- Long-cycle burnup tracking and simulation
+- Full test coverage (8 tests, all passing)
 
-**Recommendation:** 🟡 **MEDIUM PRIORITY** - Enhance for SMR fuel cycles
+**Status:** ✅ **COMPLETE** - SMR-specific fuel management implemented
+
+**Location:** `smrforge/geometry/smr_fuel_management.py`
+
+**Test Coverage:** 8 tests, all passing
 
 ---
 
