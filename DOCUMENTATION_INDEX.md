@@ -70,12 +70,38 @@ This document provides a comprehensive index of all SMRForge documentation files
 
 ## 📊 Status Documents (`docs/status/`)
 
+### Consolidated Summaries (CURRENT)
+- **[Data Import: Complete Summary](docs/status/data-import-complete-summary.md)** - **CURRENT** - Complete data import implementation summary (consolidates improvement, implementation, and optimization summaries)
+- **[SMR Implementation: Complete Summary](docs/status/smr-implementation-complete-summary.md)** - **CURRENT** - Complete SMR implementation summary (consolidates all SMR summaries)
+- **[Test Coverage: Complete Summary](docs/status/test-coverage-complete-summary.md)** - **CURRENT** - Complete test coverage summary (consolidates coverage summary, inventory, and plan)
+- **[Capability Gaps Analysis](docs/status/capability-gaps-analysis.md)** - **CURRENT** - Comprehensive capability gaps analysis (consolidates all gap analyses)
+
 ### Status Reports
 - **[Feature Status](docs/status/feature-status.md)** - Implementation status of all features
 - **[Production Readiness Status](docs/status/production-readiness-status.md)** - Production readiness assessment
-- **[Missing Features Analysis](docs/status/missing-features-analysis.md)** - Analysis of missing features
-- **[Test Coverage Summary](docs/status/test-coverage-summary.md)** - Test coverage analysis
 - **[SMRForge Fact Sheet](docs/status/smrforge-fact-sheet.md)** - Comprehensive feature overview
+- **[Codebase Consistency Report](docs/status/codebase-consistency-report.md)** - Codebase consistency analysis
+
+### Detailed Analysis Documents
+- **[Data Import Comparison and Plan](docs/status/data-import-comparison-and-improvement-plan.md)** - Detailed OpenMC vs SMRForge comparison
+- **[SMR-Focused Gaps Analysis](docs/status/smr-focused-gaps-analysis.md)** - Detailed SMR capability analysis
+- **[OpenMC Visualization Gaps Analysis](docs/status/openmc-visualization-gaps-analysis.md)** - Detailed visualization comparison
+- **[OpenMC Visualization Implementation Summary](docs/status/openmc-visualization-implementation-summary.md)** - Visualization implementation details
+- **[GUI/UX Strategy Analysis](docs/status/gui-ux-strategy-analysis.md)** - GUI/UX strategy and recommendations
+
+### Archived Summaries (Consolidated)
+- ~~`data-import-improvement-summary.md`~~ → Consolidated into `data-import-complete-summary.md`
+- ~~`data-import-implementation-summary.md`~~ → Consolidated into `data-import-complete-summary.md`
+- ~~`data-downloader-optimization-summary.md`~~ → Consolidated into `data-import-complete-summary.md`
+- ~~`smr-implementation-summary.md`~~ → Consolidated into `smr-implementation-complete-summary.md`
+- ~~`smr-gaps-implementation-summary.md`~~ → Consolidated into `smr-implementation-complete-summary.md`
+- ~~`smr-implementation-coverage-summary.md`~~ → Consolidated into `smr-implementation-complete-summary.md`
+- ~~`test-coverage-summary.md`~~ → Consolidated into `test-coverage-complete-summary.md`
+- ~~`comprehensive-coverage-inventory.md`~~ → Consolidated into `test-coverage-complete-summary.md`
+- ~~`coverage-completion-plan.md`~~ → Consolidated into `test-coverage-complete-summary.md`
+- ~~`advanced-capabilities-gaps-analysis.md`~~ → Consolidated into `capability-gaps-analysis.md`
+- ~~`missing-features-analysis.md`~~ → Consolidated into `capability-gaps-analysis.md`
+- ~~`missing-reactor-types-analysis.md`~~ → Consolidated into `capability-gaps-analysis.md`
 
 ---
 
