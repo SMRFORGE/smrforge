@@ -483,6 +483,9 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 | **SMR Control Systems** | ✅ Complete | - | Medium | `control_rod_worth.py` | LWR SMRs | 15 tests ✅ |
 | **Fast Reactor SMR** | ✅ Complete | - | Medium | `fast_reactor_smr.py` | ~10% of SMR market | 11 tests ✅ |
 | **Advanced Multi-Group** | ✅ Complete | - | Low-Medium | `multigroup_advanced.py` | Enhancement | 12 tests ✅ |
+| **SMR Mesh Optimization** | ✅ Complete | - | Low | `smr_mesh_optimization.py` | Enhancement | 10 tests ✅ |
+| **SMR Fuel Management** | ✅ Complete | - | Medium | `smr_fuel_management.py` | All SMRs | 8 tests ✅ |
+| **Pressurizer/Steam Separator** | ✅ Complete | - | Medium | `lwr_smr.py` | PWR/BWR SMRs | Included ✅ |
 
 **Legend:**
 - ✅ Complete - Fully implemented with tests
