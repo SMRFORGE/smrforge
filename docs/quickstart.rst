@@ -172,13 +172,128 @@ Track nuclide concentrations for burnup:
    tracker.update_nuclide(u235, atom_density=0.0004)
    tracker.burnup = 10.0  # MWd/kgU
 
+Advanced Features
+-----------------
+
+LWR SMR Transient Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Analyze safety transients for PWR SMRs:
+
+.. code-block:: python
+
+   from smrforge.safety.transients import (
+       TransientType,
+       TransientConditions,
+       SteamLineBreakTransient,
+   )
+   from smrforge.geometry.lwr_smr import PWRSMRCore
+   
+   # Create PWR SMR core
+   core = PWRSMRCore(name="NuScale-SMR", n_assemblies=37)
+   
+   # Create reactor spec
+   class ReactorSpec:
+       def __init__(self):
+           self.name = "NuScale-SMR"
+           self.power_thermal = 77e6
+   
+   reactor_spec = ReactorSpec()
+   
+   # Analyze steam line break
+   slb = SteamLineBreakTransient(reactor_spec, core)
+   conditions = TransientConditions(
+       initial_power=77e6,
+       initial_temperature=600.0,
+       initial_flow_rate=100.0,
+       initial_pressure=15.5e6,
+       transient_type=TransientType.STEAM_LINE_BREAK,
+       trigger_time=0.0,
+       t_end=3600.0,
+       scram_available=True,
+   )
+   
+   result = slb.simulate(conditions, break_area=0.01)
+   print(f"Peak power: {max(result['power'])/1e6:.2f} MWth")
+   print(f"Min pressure: {min(result['pressure'])/1e6:.2f} MPa")
+
+Advanced Burnup Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Track gadolinium depletion and assembly-wise burnup:
+
+.. code-block:: python
+
+   from smrforge.burnup.lwr_burnup import (
+       GadoliniumDepletion,
+       GadoliniumPoison,
+       AssemblyWiseBurnupTracker,
+   )
+   from smrforge.core.reactor_core import NuclearDataCache, Nuclide
+   
+   # Initialize
+   cache = NuclearDataCache()
+   gd_depletion = GadoliniumDepletion(cache)
+   
+   # Create gadolinium poison
+   gd155 = Nuclide(Z=64, A=155)
+   gd157 = Nuclide(Z=64, A=157)
+   gd_poison = GadoliniumPoison(
+       nuclides=[gd155, gd157],
+       initial_concentrations=[1e20, 1e20],  # atoms/cm³
+   )
+   
+   # Calculate reactivity worth
+   flux = 1e14  # n/cm²/s
+   initial_worth = gd_depletion.calculate_reactivity_worth(gd_poison, flux, 0.0)
+   print(f"Initial Gd worth: {initial_worth*1000:.1f} m$")
+   
+   # Track assembly burnup
+   tracker = AssemblyWiseBurnupTracker(n_assemblies=37)
+   for assembly_id in range(37):
+       position = tracker.get_assembly_position(assembly_id)
+       tracker.update_assembly(assembly_id, position, burnup=50.0, enrichment=0.045)
+   
+   print(f"Average burnup: {tracker.get_average_burnup():.2f} MWd/kgU")
+
+Automated Data Download
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Download ENDF data programmatically:
+
+.. code-block:: python
+
+   from smrforge.data_downloader import download_endf_data
+   
+   # Download common SMR nuclides
+   stats = download_endf_data(
+       library="ENDF/B-VIII.1",
+       nuclide_set="common_smr",
+       output_dir="~/ENDF-Data",
+       show_progress=True,
+       max_workers=5,  # Parallel downloads
+   )
+   
+   print(f"Downloaded: {stats['downloaded']} files")
+   print(f"Skipped: {stats['skipped']} files")
+
+Complete Workflow Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+See `examples/complete_smr_workflow_example.py` for a complete end-to-end example
+demonstrating all SMRForge capabilities in a single script.
+
 Next Steps
 ----------
 
 - See :doc:`examples` for more detailed examples including:
+  - `complete_smr_workflow_example.py` - **NEW**: Complete end-to-end workflow
   - `advanced_features_examples.py` - All new advanced features
   - `lwr_smr_example.py` - LWR SMR specific examples
   - `visualization_3d_example.py` - Advanced 3D visualization
+- Check :doc:`guides/complete-workflow-examples` for comprehensive workflow examples
+- Review :doc:`guides/lwr-smr-transient-analysis` for detailed transient analysis
+- Review :doc:`guides/lwr-smr-burnup-guide` for advanced burnup analysis
 - Check :doc:`api_reference` for complete API documentation
 - Review :doc:`installation` for advanced installation options
 

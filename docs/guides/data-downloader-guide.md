@@ -79,6 +79,132 @@ stats = download_endf_data(
 
 ---
 
+## Advanced Examples
+
+### Parallel Downloads with Progress
+
+```python
+from smrforge.data_downloader import download_endf_data
+from pathlib import Path
+
+# Download with maximum parallelization (10 concurrent downloads)
+print("Downloading with parallel processing...")
+stats = download_endf_data(
+    library="ENDF/B-VIII.1",
+    isotopes=["U235", "U238", "Pu239", "Pu240", "Pu241", "Th232", 
+              "Np237", "Am241", "Am243"],
+    output_dir="~/ENDF-Data",
+    show_progress=True,
+    max_workers=10,  # Maximum parallel downloads
+    resume=True,
+    validate=True,
+    organize=True,
+)
+
+print(f"\nDownload Statistics:")
+print(f"  Downloaded: {stats['downloaded']} files")
+print(f"  Skipped: {stats['skipped']} files (already exist)")
+print(f"  Failed: {stats['failed']} files")
+print(f"  Total: {stats['total']} files")
+print(f"  Output directory: {stats['output_dir']}")
+```
+
+### Download by Element with Custom Output
+
+```python
+# Download all common isotopes of uranium, plutonium, and thorium
+stats = download_endf_data(
+    library="ENDF/B-VIII.1",
+    elements=["U", "Pu", "Th"],
+    output_dir="/path/to/custom/endf/directory",
+    show_progress=True,
+    max_workers=5,
+)
+
+# The files will be organized into:
+# /path/to/custom/endf/directory/
+#   ├── U/
+#   │   ├── n-092_U_235.endf
+#   │   ├── n-092_U_238.endf
+#   │   └── ...
+#   ├── Pu/
+#   │   ├── n-094_Pu_239.endf
+#   │   └── ...
+#   └── Th/
+#       └── n-090_Th_232.endf
+```
+
+### Resume Interrupted Downloads
+
+```python
+# If download is interrupted, resume capability automatically continues
+# from where it left off
+stats = download_endf_data(
+    library="ENDF/B-VIII.1",
+    nuclide_set="common_smr",
+    output_dir="~/ENDF-Data",
+    resume=True,  # Resume interrupted downloads
+    show_progress=True,
+)
+
+# Files that were already downloaded will be skipped
+# Only missing files will be downloaded
+```
+
+### Integration with NuclearDataCache
+
+```python
+from smrforge.data_downloader import download_endf_data
+from smrforge.core.reactor_core import NuclearDataCache
+from pathlib import Path
+
+# Download data
+stats = download_endf_data(
+    library="ENDF/B-VIII.1",
+    nuclide_set="common_smr",
+    output_dir="~/ENDF-Data",
+)
+
+# Use downloaded data with NuclearDataCache
+cache = NuclearDataCache(local_endf_dir=Path(stats['output_dir']).expanduser())
+
+# Now you can use the cache to get cross-sections
+from smrforge.core.reactor_core import Nuclide
+u235 = Nuclide(Z=92, A=235)
+energy, xs = cache.get_cross_section(u235, "fission", temperature=600.0)
+print(f"U-235 fission cross-section: {len(energy)} energy points")
+```
+
+### Batch Download for Multiple Libraries
+
+```python
+libraries = ["ENDF/B-VIII.1", "JEFF-3.3", "JENDL-5.0"]
+all_stats = {}
+
+for library in libraries:
+    print(f"\nDownloading {library}...")
+    stats = download_endf_data(
+        library=library,
+        nuclide_set="common_smr",
+        output_dir=f"~/ENDF-Data/{library}",
+        show_progress=True,
+        max_workers=5,
+    )
+    all_stats[library] = stats
+
+# Summary
+print("\n" + "=" * 70)
+print("DOWNLOAD SUMMARY")
+print("=" * 70)
+for library, stats in all_stats.items():
+    print(f"\n{library}:")
+    print(f"  Downloaded: {stats['downloaded']}")
+    print(f"  Skipped: {stats['skipped']}")
+    print(f"  Failed: {stats['failed']}")
+```
+
+---
+
 ## API Reference
 
 ### `download_endf_data()`
@@ -199,6 +325,32 @@ print(COMMON_SMR_NUCLIDES)
 
 ## Advanced Usage
 
+### Parallel Downloads with Custom Workers
+
+Optimize download speed by adjusting the number of parallel workers:
+
+```python
+from smrforge.data_downloader import download_endf_data
+import time
+
+# Download with more workers for faster downloads (if bandwidth allows)
+start_time = time.time()
+
+stats = download_endf_data(
+    library="ENDF/B-VIII.1",
+    elements=["U", "Pu", "Th"],
+    output_dir="~/ENDF-Data",
+    max_workers=10,  # 10 parallel downloads
+    show_progress=True,
+    validate=True,
+    organize=True,
+)
+
+elapsed = time.time() - start_time
+print(f"Downloaded {stats['downloaded']} files in {elapsed:.1f} seconds")
+print(f"Average speed: {stats['downloaded']/elapsed:.2f} files/second")
+```
+
 ### Resume Interrupted Downloads
 
 ```python
@@ -210,6 +362,37 @@ stats = download_endf_data(
     resume=True,  # Skip already-downloaded files
     show_progress=True,
 )
+
+print(f"Downloaded: {stats['downloaded']}")
+print(f"Skipped (already exist): {stats['skipped']}")
+print(f"Failed: {stats['failed']}")
+```
+
+### Batch Download Multiple Libraries
+
+```python
+from smrforge.data_downloader import download_endf_data
+from smrforge.core.reactor_core import Library
+
+# Download from multiple libraries
+libraries = [
+    "ENDF/B-VIII.1",
+    "ENDF/B-VIII.0",
+    "JEFF-3.3",
+]
+
+common_isotopes = ["U235", "U238", "Pu239", "Th232"]
+
+for library in libraries:
+    print(f"\nDownloading {library}...")
+    stats = download_endf_data(
+        library=library,
+        isotopes=common_isotopes,
+        output_dir=f"~/ENDF-Data/{library}",
+        show_progress=True,
+    )
+    print(f"  Downloaded: {stats['downloaded']} files")
+    print(f"  Output: {stats['output_dir']}")
 ```
 
 ### Custom Nuclide List
