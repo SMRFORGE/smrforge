@@ -392,11 +392,12 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
    - **Effort:** Medium
    - **Impact:** 🟡 **HIGH** - Improves accuracy
 
-7. **Nuclide Inventory Tracking** (`reactor_core.py`)
-   - Atom density tracking
-   - Decay chain representation
-   - **Effort:** Medium
-   - **Impact:** 🟡 **MEDIUM** - Required for burnup
+7. **Nuclide Inventory Tracking** (`reactor_core.py`) ✅
+   - ✅ Atom density tracking - `NuclideInventoryTracker` class implemented
+   - ⚠️ Decay chain representation - Available via `DecayData.build_decay_matrix()`
+   - **Status:** ✅ **COMPLETE** - General-purpose inventory tracking available
+   - **Test Coverage:** 13 tests, all passing
+   - **Location:** `smrforge/core/reactor_core.py` - `NuclideInventoryTracker` class
 
 8. **SMR Control Systems** (Geometry)
    - Control rod clusters (PWR)
@@ -438,7 +439,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 | **Fission Yields/Delayed Neutrons** | ✅ Complete | - | Critical | `reactor_core.py` | All SMRs (burnup) | 5 tests ✅ |
 | **Integral Reactor Designs** | ⚠️ Partial | 🟡 High | High | Geometry | Many SMRs | - |
 | **Anisotropic Scattering** | ⚠️ Partial | 🟡 High | High | `reactor_core.py` | Thermal SMRs | - |
-| **Nuclide Inventory Tracking** | ❌ Pending | 🟡 Medium | Medium | `reactor_core.py` | All SMRs (burnup) | - |
+| **Nuclide Inventory Tracking** | ✅ Complete | - | Medium | `reactor_core.py` | All SMRs (burnup) | 13 tests ✅ |
 | **SMR Control Systems** | ⚠️ Partial | 🟡 Medium | Medium | Geometry | LWR SMRs | - |
 | **Fast Reactor SMR** | ❌ Pending | 🟢 Medium | Medium | Geometry | ~10% of SMR market | - |
 | **Advanced Multi-Group** | ❌ Pending | 🟢 Low | Low-Medium | `reactor_core.py` | Enhancement | - |
