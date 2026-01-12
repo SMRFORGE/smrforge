@@ -47,6 +47,19 @@ except ImportError:
     _RESONANCE_AVAILABLE = False
 
 try:
+    from smrforge.core.control_rod_worth import (
+        ControlRodWorthCalculator,
+        WorthProfile,
+        calculate_rod_worth_from_neutronics,
+        calculate_rod_worth_pcm,
+        calculate_worth_profile_from_neutronics,
+    )
+
+    _CONTROL_ROD_WORTH_AVAILABLE = True
+except ImportError:
+    _CONTROL_ROD_WORTH_AVAILABLE = False
+
+try:
     from smrforge.core.endf_parser import (
         ENDFCompatibility,
         ENDFEvaluation,
@@ -100,5 +113,16 @@ if _ENDF_PARSER_AVAILABLE:
             "ENDFEvaluation",
             "ENDFCompatibility",
             "ReactionData",
+        ]
+    )
+
+if _CONTROL_ROD_WORTH_AVAILABLE:
+    __all__.extend(
+        [
+            "ControlRodWorthCalculator",
+            "WorthProfile",
+            "calculate_rod_worth_from_neutronics",
+            "calculate_rod_worth_pcm",
+            "calculate_worth_profile_from_neutronics",
         ]
     )
