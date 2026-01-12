@@ -118,6 +118,17 @@ try:
 except ImportError:
     _ENDF_PARSER_AVAILABLE = False
 
+try:
+    from smrforge.core.endf_extractors import (
+        extract_chi_from_endf,
+        extract_chi_prompt_delayed,
+        extract_nu_from_endf,
+    )
+
+    _ENDF_EXTRACTORS_AVAILABLE = True
+except ImportError:
+    _ENDF_EXTRACTORS_AVAILABLE = False
+
 __all__ = ["constants", "materials_database"]
 
 if _CORE_DATA_AVAILABLE:

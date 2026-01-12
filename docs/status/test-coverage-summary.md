@@ -1,8 +1,12 @@
 # Test Coverage Summary
 
 **Date:** January 1, 2026  
-**Last Updated:** January 9, 2026 (Updated after endf_parser.py and convenience.py improvements)  
+**Last Updated:** January 2026 (Comprehensive inventory and completion plan added)  
 **Status:** Overall **79.2%** - Excellent progress! Very close to 80% target
+
+**See Also:**
+- [Comprehensive Coverage Inventory](comprehensive-coverage-inventory.md) - Full module-by-module breakdown
+- [Coverage Completion Plan](coverage-completion-plan.md) - Plan to reach 80% target
 
 ---
 
@@ -83,23 +87,25 @@
 
 ### ⚠️ Acceptable Coverage (70-79%)
 
-| Module | Coverage | Status | Priority |
-|--------|----------|--------|----------|
-| `core/__init__.py` | 73.3% | ⚠️ Acceptable | Low |
-| `__version__.py` | 75.0% | ⚠️ Acceptable | Low |
-| `core/decay_parser.py` | 76.2% | ⚠️ Acceptable | Low |
-| `core/thermal_scattering_parser.py` | 77.5% | ⚠️ Acceptable | Medium |
-| `uncertainty/uq.py` | 80.1% | ✅ Good | Medium |
-| `thermal/__init__.py` | 63.6% | ⚠️ Below Target | Medium |
-| `neutronics/__init__.py` | 60.0% | ⚠️ Below Target | Medium |
-| `presets/__init__.py` | 60.0% | ⚠️ Below Target | Low |
-| `safety/__init__.py` | 60.0% | ⚠️ Below Target | Low |
-| `uncertainty/__init__.py` | 60.0% | ⚠️ Below Target | Low |
-| `geometry/__init__.py` | 69.6% | ⚠️ Below Target | Low |
-| `visualization/__init__.py` | 64.7% | ⚠️ Below Target | Low |
-| `__init__.py` | 64.9% | ⚠️ Below Target | Low |
+| Module | Coverage | Status | Priority | Notes |
+|--------|----------|--------|----------|-------|
+| `core/__init__.py` | 73.3% | ⚠️ Acceptable | Low | Phase 1 target: 80% (see [Coverage Completion Plan](coverage-completion-plan.md)) |
+| `__version__.py` | 75.0% | ⚠️ Acceptable | Low | Version info - low priority |
+| `core/decay_parser.py` | 76.2% | ⚠️ Acceptable | Low | Close to target, incremental improvement possible |
+| `core/thermal_scattering_parser.py` | 77.5% | ✅ Good | Medium | Meets 75-80% target range |
+| `uncertainty/uq.py` | 80.1% | ✅ Good | Medium | Exceeds target |
+| `thermal/__init__.py` | 63.6% | ⚠️ Below Target | Medium | Phase 1 target: 75% (package initialization) |
+| `neutronics/__init__.py` | 60.0% | ⚠️ Below Target | Medium | Phase 1 target: 75% (package initialization) |
+| `presets/__init__.py` | 60.0% | ⚠️ Below Target | Low | Phase 1 target: 75% (package initialization) |
+| `safety/__init__.py` | 60.0% | ⚠️ Below Target | Low | Phase 1 target: 75% (package initialization) |
+| `uncertainty/__init__.py` | 60.0% | ⚠️ Below Target | Low | Phase 1 target: 75% (package initialization) |
+| `geometry/__init__.py` | 69.6% | ⚠️ Below Target | Low | Phase 1 target: 75% (package initialization) |
+| `visualization/__init__.py` | 64.7% | ⚠️ Below Target | Low | Phase 1 target: 75% (package initialization) |
+| `__init__.py` | 64.9% | ⚠️ Below Target | Low | Phase 1 target: 75% (root package initialization) |
 
 **Total:** 12 modules at 70-79% coverage
+
+**Note:** Most modules below 75% are `__init__.py` files (package initialization). These are low-priority targets identified in [Phase 1 of the Coverage Completion Plan](coverage-completion-plan.md#phase-1-quick-wins-05-10-gain--low-effort). Tests exist in `tests/test_init_modules.py` but may need expansion for full coverage. These improvements would contribute ~0.5-1.0% to overall coverage.
 
 ---
 
@@ -340,6 +346,29 @@
 ---
 
 ## Action Plan
+
+### Phase 0: Package Initialization Files (Optional - Low Priority) 🟢 **INCREMENTAL**
+
+**Target:** Improve coverage of `__init__.py` files to reach 75% target
+
+**Modules:**
+- `__init__.py` (64.9% → 75%)
+- `core/__init__.py` (73.3% → 80%)
+- `geometry/__init__.py` (69.6% → 75%)
+- `visualization/__init__.py` (64.7% → 75%)
+- `thermal/__init__.py` (63.6% → 75%)
+- `neutronics/__init__.py` (60.0% → 75%)
+- `presets/__init__.py` (60.0% → 75%)
+- `safety/__init__.py` (60.0% → 75%)
+- `uncertainty/__init__.py` (60.0% → 75%)
+
+**Status:** Tests exist in `tests/test_init_modules.py` - may need expansion for conditional import paths
+
+**Expected Coverage Gain:** +0.5-1.0% overall (would reach 80% target)
+
+**See:** [Coverage Completion Plan - Phase 1](coverage-completion-plan.md#phase-1-quick-wins-05-10-gain--low-effort) for detailed implementation plan
+
+---
 
 ### Phase 1: Critical Core Modules ✅ **COMPLETE** (All targets exceeded!)
 1. ✅ `core/reactor_core.py` → **86.5%** (Priority 1) - **COMPLETE** ✅ Exceeds target!

@@ -8,6 +8,13 @@ This module provides visualization capabilities for:
 - 3D mesh visualization (plotly and pyvista)
 - Animation of transient data
 - Comparison views for multiple designs
+- Advanced visualization (ray-traced geometry, dashboards, interactive viewers)
+- Unified Plot API (OpenMC-inspired)
+- Voxel plots with HDF5 export
+- Mesh tally visualization
+- Geometry verification visualization
+- Material composition visualization
+- Tally data visualization (energy spectra, spatial distributions)
 """
 
 try:
@@ -78,6 +85,69 @@ try:
 except ImportError:
     _ADVANCED_VIS_AVAILABLE = False
 
+try:
+    from smrforge.visualization.plot_api import Plot, create_plot
+
+    _PLOT_API_AVAILABLE = True
+except ImportError:
+    _PLOT_API_AVAILABLE = False
+
+try:
+    from smrforge.visualization.voxel_plots import (
+        convert_voxel_hdf5_to_vtk,
+        export_voxel_to_hdf5,
+        plot_voxel,
+    )
+
+    _VOXEL_PLOTS_AVAILABLE = True
+except ImportError:
+    _VOXEL_PLOTS_AVAILABLE = False
+
+try:
+    from smrforge.visualization.mesh_tally import (
+        MeshTally,
+        plot_mesh_tally,
+        plot_multi_group_mesh_tally,
+    )
+
+    _MESH_TALLY_AVAILABLE = True
+except ImportError:
+    _MESH_TALLY_AVAILABLE = False
+
+try:
+    from smrforge.visualization.geometry_verification import (
+        plot_geometry_consistency,
+        plot_material_assignment,
+        plot_overlap_detection,
+    )
+
+    _GEOMETRY_VERIFICATION_AVAILABLE = True
+except ImportError:
+    _GEOMETRY_VERIFICATION_AVAILABLE = False
+
+try:
+    from smrforge.visualization.material_composition import (
+        plot_burnup_composition,
+        plot_material_property,
+        plot_nuclide_concentration,
+    )
+
+    _MATERIAL_COMPOSITION_AVAILABLE = True
+except ImportError:
+    _MATERIAL_COMPOSITION_AVAILABLE = False
+
+try:
+    from smrforge.visualization.tally_data import (
+        plot_energy_spectrum,
+        plot_spatial_distribution,
+        plot_time_dependent_tally,
+        plot_uncertainty,
+    )
+
+    _TALLY_DATA_AVAILABLE = True
+except ImportError:
+    _TALLY_DATA_AVAILABLE = False
+
 __all__ = []
 
 if _GEOMETRY_VIS_AVAILABLE:
@@ -132,5 +202,59 @@ if _ADVANCED_VIS_AVAILABLE:
             "create_dashboard",
             "create_interactive_viewer",
             "export_visualization",
+        ]
+    )
+
+if _PLOT_API_AVAILABLE:
+    __all__.extend(
+        [
+            "Plot",
+            "create_plot",
+        ]
+    )
+
+if _VOXEL_PLOTS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_voxel",
+            "export_voxel_to_hdf5",
+            "convert_voxel_hdf5_to_vtk",
+        ]
+    )
+
+if _MESH_TALLY_AVAILABLE:
+    __all__.extend(
+        [
+            "MeshTally",
+            "plot_mesh_tally",
+            "plot_multi_group_mesh_tally",
+        ]
+    )
+
+if _GEOMETRY_VERIFICATION_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_overlap_detection",
+            "plot_geometry_consistency",
+            "plot_material_assignment",
+        ]
+    )
+
+if _MATERIAL_COMPOSITION_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_nuclide_concentration",
+            "plot_material_property",
+            "plot_burnup_composition",
+        ]
+    )
+
+if _TALLY_DATA_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_energy_spectrum",
+            "plot_spatial_distribution",
+            "plot_time_dependent_tally",
+            "plot_uncertainty",
         ]
     )

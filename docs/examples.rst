@@ -34,6 +34,7 @@ Advanced Features Examples
    :maxdepth: 1
 
    examples/advanced_features_examples
+   examples/openmc_visualization_examples
 
 These examples demonstrate:
 - Advanced 3D visualization (ray-traced geometry, interactive viewers, dashboards)
@@ -45,6 +46,7 @@ These examples demonstrate:
 - Thermal scattering laws (TSL)
 - Nuclide inventory tracking
 - Complete integrated SMR analysis workflows
+- **OpenMC-Inspired Visualization** - Unified Plot API, mesh tallies, geometry verification, voxel plots, material composition, tally data visualization
 
 Geometry Examples
 -----------------
