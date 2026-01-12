@@ -80,7 +80,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 - ✅ **Square lattice** support (17x17, 15x15, 14x14 arrays) - Configurable
 - ✅ **Fuel rod arrays** (cylindrical pins in square grid)
 - ✅ **Spacer grids** (support structures for fuel rods)
-- ⚠️ **Top/bottom nozzles** - Not yet implemented (low priority)
+- ✅ **Top/bottom nozzles** - `AssemblyNozzle` class implemented with flow area calculations
 
 **Implementation:**
 - `FuelAssembly` class with `build_square_lattice()` method
@@ -180,8 +180,8 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 - ✅ Basic chi (fission spectrum) exists
 - ✅ **MF=5 (fission product yields)** parsing - `get_fission_yields()` function
 - ✅ **Delayed neutron data** (MF=1, MT=455) - `get_delayed_neutron_data()` function
-- ⚠️ **Prompt/delayed chi separation** - Not yet implemented (Phase 2)
-- ⚠️ **Nu-bar energy dependence** - Not yet implemented (Phase 2)
+- ✅ **Prompt/delayed chi separation** - `extract_chi_prompt_delayed()` implemented
+- ✅ **Nu-bar energy dependence** - `extract_nu_from_endf()` with energy dependence implemented
 
 **Implementation:**
 - `get_fission_yields()` - Parses MF=5, returns independent/cumulative yields
@@ -243,7 +243,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 - ✅ Basic multi-group collapse exists
 - ✅ **Superhomogenization (SPH)** method - `SPHMethod` class implemented
 - ✅ **Equivalence theory** - `EquivalenceTheory` class implemented
-- ⚠️ **Adjoint flux weighting** - Not yet implemented (future enhancement)
+- ✅ **Adjoint flux weighting** - `collapse_with_adjoint_weighting()` implemented
 
 **Implementation:**
 - `SPHMethod` class for SPH factor calculation and application
@@ -347,7 +347,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 - ✅ **Nuclide inventory tracking** - `NuclideInventoryTracker` class implemented
 - ✅ **Atom density tracking** (concentrations) - Full support for atom densities
 - ✅ **Burnup-dependent composition** tracking - Burnup and time tracking implemented
-- ⚠️ **Decay chain representation** - Basic support (via burnup solver), full decay chain pending
+- ✅ **Decay chain representation** - `DecayChain` class and `DecayData.build_decay_matrix()` implemented
 
 **Why Important for SMRs:**
 - SMRs need long fuel cycles → requires burnup tracking
@@ -569,38 +569,50 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 
 ## Implementation Strategy for SMR Focus
 
-### Immediate Actions (Next 3 months)
+**Status:** ✅ **ALL ITEMS COMPLETE** (January 2026)
 
-1. **Add LWR SMR Geometry Support**
-   - Create `LWRCore` base class
-   - Implement `PWRSMRCore` class
-   - Square lattice fuel assemblies
-   - Fuel rod arrays
-   - Water moderator/coolant
+### Immediate Actions (Next 3 months) - ✅ COMPLETE
 
-2. **Add Resonance Self-Shielding**
-   - Implement Bondarenko factor calculation
-   - Add to `NuclearDataCache` class
-   - Integrate with multi-group collapse
+1. **Add LWR SMR Geometry Support** ✅ **COMPLETE**
+   - ✅ `PWRSMRCore` class implemented (`smrforge/geometry/lwr_smr.py`)
+   - ✅ `BWRSMRCore` class implemented
+   - ✅ Square lattice fuel assemblies (`build_square_lattice_core()`)
+   - ✅ Fuel rod arrays (`FuelRod` dataclass)
+   - ✅ Water moderator/coolant channels (`WaterChannel` dataclass)
+   - **Implementation:** Full PWR and BWR SMR geometry support with square lattice assemblies, fuel rods, and water channels
 
-3. **Add Fission Data Parsing**
-   - Parse MF=5 (fission yields)
-   - Parse delayed neutron data
-   - Add to `NuclearDataCache` class
+2. **Add Resonance Self-Shielding** ✅ **COMPLETE**
+   - ✅ Bondarenko factor calculation (`BondarenkoMethod` class)
+   - ✅ Integrated with `NuclearDataCache` via `get_cross_section_with_self_shielding()`
+   - ✅ Integrated with multi-group collapse (`multigroup_advanced.py`)
+   - ✅ Subgroup and Equivalence theory methods also available
+   - **Implementation:** `smrforge/core/self_shielding_integration.py` provides full integration with `NuclearDataCache`
 
-### Medium-term (3-6 months)
+3. **Add Fission Data Parsing** ✅ **COMPLETE**
+   - ✅ MF=5 (fission yields) parsing (`ENDFFissionYieldParser` class)
+   - ✅ Delayed neutron data parsing (`get_delayed_neutron_data()`)
+   - ✅ Integrated with `NuclearDataCache` via `get_fission_yields()` and `get_fission_yield_data()`
+   - **Implementation:** `smrforge/core/fission_yield_parser.py` and functions in `reactor_core.py`
 
-4. **Integral Reactor Designs**
-   - In-vessel components
-   - Compact layouts
+### Medium-term (3-6 months) - ✅ COMPLETE
 
-5. **Verify TSL Integration**
-   - Ensure thermal scattering used in calculations
-   - Add anisotropic scattering support
+4. **Integral Reactor Designs** ✅ **COMPLETE**
+   - ✅ In-vessel components (`InVesselSteamGenerator`, `SteamGeneratorTube`)
+   - ✅ Compact layouts (`CompactSMRCore` class)
+   - ✅ Integrated primary systems (`IntegratedPrimarySystem` class)
+   - **Implementation:** `smrforge/geometry/lwr_smr.py` and `smrforge/geometry/smr_compact_core.py`
 
-6. **Nuclide Inventory Tracking**
-   - Add inventory tracking classes
-   - Decay chain representation
+5. **Verify TSL Integration** ✅ **COMPLETE**
+   - ✅ Thermal scattering used in calculations via `compute_improved_scattering_matrix()`
+   - ✅ Anisotropic scattering support (P0, P1, P2 moments from MF=6)
+   - ✅ Thermal upscattering implemented with detailed balance
+   - **Implementation:** `smrforge/core/endf_extractors.py` with `use_tsl` parameter, `smrforge/core/thermal_scattering_parser.py` for TSL data
+
+6. **Nuclide Inventory Tracking** ✅ **COMPLETE**
+   - ✅ Inventory tracking classes (`NuclideInventoryTracker`, `NuclideInventory`)
+   - ✅ Decay chain representation (`DecayChain` dataclass, `build_fission_product_chain()`)
+   - ✅ Bateman equation solver (`solve_bateman_equations()`)
+   - **Implementation:** `smrforge/core/reactor_core.py` (NuclideInventoryTracker), `smrforge/burnup/solver.py` (NuclideInventory), `smrforge/core/decay_chain_utils.py` (decay chains)
 
 ---
 

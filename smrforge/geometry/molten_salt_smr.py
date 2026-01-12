@@ -256,20 +256,40 @@ class MSRSMRCore:
         # Temperature distribution
         self.temperature_field: Optional[np.ndarray] = None
     
-    def add_salt_channel(self, channel: MoltenSaltChannel):
-        """Add a salt channel to the core."""
+    def add_salt_channel(self, channel: MoltenSaltChannel) -> None:
+        """
+        Add a salt channel to the core.
+        
+        Args:
+            channel: MoltenSaltChannel instance to add
+        """
         self.salt_channels.append(channel)
     
-    def add_graphite_block(self, block: GraphiteModeratorBlock):
-        """Add a graphite moderator block (for thermal MSRs)."""
+    def add_graphite_block(self, block: GraphiteModeratorBlock) -> None:
+        """
+        Add a graphite moderator block (for thermal MSRs).
+        
+        Args:
+            block: GraphiteModeratorBlock instance to add
+        """
         self.graphite_blocks.append(block)
     
-    def add_circulation_loop(self, loop: SaltCirculationLoop):
-        """Add a salt circulation loop."""
+    def add_circulation_loop(self, loop: SaltCirculationLoop) -> None:
+        """
+        Add a salt circulation loop.
+        
+        Args:
+            loop: SaltCirculationLoop instance to add
+        """
         self.circulation_loops.append(loop)
     
-    def add_freeze_plug(self, plug: FreezePlug):
-        """Add a freeze plug."""
+    def add_freeze_plug(self, plug: FreezePlug) -> None:
+        """
+        Add a freeze plug.
+        
+        Args:
+            plug: FreezePlug instance to add
+        """
         self.freeze_plugs.append(plug)
     
     def build_liquid_fuel_core(

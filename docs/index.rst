@@ -53,11 +53,19 @@ Quick Start
 Features
 --------
 
-* **Neutronics**: Multi-group diffusion solver
-* **Thermal-Hydraulics**: Channel models
-* **Safety Analysis**: Transient simulations
-* **Validation**: Pydantic-based input validation
-* **Presets**: Reference HTGR designs
+* **Neutronics**: Multi-group diffusion solver with power iteration and Arnoldi methods
+* **Nuclear Data**: ENDF file parsing with resonance self-shielding, fission yields, delayed neutrons, thermal scattering laws
+* **Geometry**: Prismatic, pebble bed, and LWR SMR core geometries
+  - HTGR cores (prismatic, pebble bed)
+  - LWR SMR cores (PWR, BWR with square lattice assemblies)
+  - Integral reactor designs (in-vessel steam generators)
+  - Compact SMR layouts
+* **Visualization**: 2D/3D plots, animations, advanced 3D visualization (ray-traced geometry, interactive viewers, dashboards)
+* **Thermal-Hydraulics**: Channel models with fluid properties
+* **Safety Analysis**: Transient simulations (LOFC, ATWS, RIA, LOCA)
+* **Burnup**: Nuclide inventory tracking, decay chain utilities, Bateman equation solver
+* **Validation**: Pydantic-based input validation with physics checks
+* **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 
 Indices and tables
 ==================

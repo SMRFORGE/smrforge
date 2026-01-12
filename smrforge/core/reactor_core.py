@@ -3262,6 +3262,39 @@ def get_delayed_neutron_data(
         return None
 
 
+def get_prompt_delayed_chi(
+    cache: NuclearDataCache,
+    nuclide: Nuclide,
+    group_structure: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Get prompt and delayed chi (fission spectra) for transient analysis.
+    
+    Convenience wrapper around extract_chi_prompt_delayed for easier access
+    from NuclearDataCache.
+    
+    Args:
+        cache: NuclearDataCache instance
+        nuclide: Nuclide instance
+        group_structure: Energy group boundaries [eV]
+    
+    Returns:
+        Tuple of (chi_prompt, chi_delayed) arrays, both normalized
+    
+    Example:
+        >>> from smrforge.core.reactor_core import NuclearDataCache, Nuclide, get_prompt_delayed_chi
+        >>> 
+        >>> cache = NuclearDataCache()
+        >>> u235 = Nuclide(Z=92, A=235)
+        >>> groups = np.logspace(7, -5, 26)
+        >>> 
+        >>> chi_p, chi_d = get_prompt_delayed_chi(cache, u235, groups)
+    """
+    from .endf_extractors import extract_chi_prompt_delayed
+    
+    return extract_chi_prompt_delayed(cache, nuclide, group_structure)
+
+
 def get_thermal_scattering_data(
     material_name: str,
     cache: Optional[NuclearDataCache] = None,

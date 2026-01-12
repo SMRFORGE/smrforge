@@ -10,6 +10,8 @@ For a comprehensive overview of key features, start with:
 
 * :doc:`examples/comprehensive_examples` - Complete workflow examples covering geometry,
   neutronics, thermal-hydraulics, and integration
+* :doc:`examples/advanced_features_examples` - **NEW (January 2026)**: Advanced features including
+  visualization, decay chains, LWR SMRs, self-shielding, and more
 
 Basic Examples
 --------------
@@ -23,6 +25,27 @@ Basic Examples
    examples/custom_reactor
    examples/thermal_analysis
 
+Advanced Features Examples
+---------------------------
+
+**NEW (January 2026)**: Comprehensive examples of new advanced features:
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/advanced_features_examples
+
+These examples demonstrate:
+- Advanced 3D visualization (ray-traced geometry, interactive viewers, dashboards)
+- LWR SMR geometry (PWR, BWR, compact cores, integral designs)
+- Resonance self-shielding for accurate cross-sections
+- Fission yield and delayed neutron data
+- Prompt/delayed chi for transient analysis
+- Decay chain utilities and Bateman equation solving
+- Thermal scattering laws (TSL)
+- Nuclide inventory tracking
+- Complete integrated SMR analysis workflows
+
 Geometry Examples
 -----------------
 
@@ -30,9 +53,11 @@ Geometry Examples
    :maxdepth: 1
 
    examples/visualization_examples
+   examples/visualization_3d_example
    examples/control_rods_example
    examples/assembly_refueling_example
    examples/geometry_import_example
+   examples/lwr_smr_example
 
 Advanced Examples
 -----------------
@@ -42,6 +67,9 @@ Advanced Examples
 
    examples/complete_integration
    examples/integrated_safety_uq
+   examples/burnup_example
+   examples/decay_heat_example
+   examples/thermal_scattering_example
 
 All example scripts are available in the ``examples/`` directory of the source code.
 

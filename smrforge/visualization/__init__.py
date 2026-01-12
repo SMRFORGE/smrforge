@@ -62,6 +62,22 @@ try:
 except ImportError:
     _COMPARISON_AVAILABLE = False
 
+try:
+    from smrforge.visualization.advanced import (
+        create_dashboard,
+        create_interactive_viewer,
+        export_visualization,
+        plot_isosurface,
+        plot_material_boundaries,
+        plot_ray_traced_geometry,
+        plot_slice,
+        plot_vector_field,
+    )
+
+    _ADVANCED_VIS_AVAILABLE = True
+except ImportError:
+    _ADVANCED_VIS_AVAILABLE = False
+
 __all__ = []
 
 if _GEOMETRY_VIS_AVAILABLE:
@@ -102,5 +118,19 @@ if _COMPARISON_AVAILABLE:
             "compare_designs_plotly",
             "compare_metrics_matplotlib",
             "overlay_comparison_matplotlib",
+        ]
+    )
+
+if _ADVANCED_VIS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_ray_traced_geometry",
+            "plot_slice",
+            "plot_isosurface",
+            "plot_vector_field",
+            "plot_material_boundaries",
+            "create_dashboard",
+            "create_interactive_viewer",
+            "export_visualization",
         ]
     )

@@ -7,12 +7,15 @@ multi-temperature libraries and interpolation between temperature points.
 """
 
 from enum import Enum
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from scipy.interpolate import interp1d, UnivariateSpline
 
 from ..utils.logging import get_logger
+
+if TYPE_CHECKING:
+    from .reactor_core import NuclearDataCache, Nuclide
 
 logger = get_logger("smrforge.core.temperature_interpolation")
 
@@ -221,14 +224,14 @@ class CrossSectionTemperatureInterpolator:
 
 
 def interpolate_cross_section_temperature(
-    cache,
-    nuclide,
+    cache: "NuclearDataCache",
+    nuclide: "Nuclide",
     reaction: str,
     target_temperature: float,
     available_temperatures: Optional[np.ndarray] = None,
     method: InterpolationMethod = InterpolationMethod.LINEAR,
-    library=None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    library: Optional[str] = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Interpolate cross-section at target temperature using multi-temperature data.
     
@@ -243,10 +246,28 @@ def interpolate_cross_section_temperature(
         available_temperatures: Optional array of available temperatures [K].
             If None, will use default temperatures [293.6, 600.0, 900.0, 1200.0] K
         method: Interpolation method (default: LINEAR)
-        library: Nuclear data library (optional)
+        library: Optional nuclear data library name (e.g., "endfb8.0")
     
     Returns:
-        Tuple of (energy, cross_section) arrays at target temperature
+        Tuple of (energy [eV], cross_section [barn]) arrays at target temperature
+    
+    Raises:
+        ValueError: If cross-sections cannot be retrieved at any temperature
+
+    Example:
+        >>> from smrforge.core.reactor_core import NuclearDataCache, Nuclide
+        >>> from smrforge.core.temperature_interpolation import (
+        ...     interpolate_cross_section_temperature, InterpolationMethod
+        ... )
+        >>> cache = NuclearDataCache()
+        >>> u235 = Nuclide(Z=92, A=235)
+        >>> energy, xs = interpolate_cross_section_temperature(
+        ...     cache=cache,
+        ...     nuclide=u235,
+        ...     reaction="fission",
+        ...     target_temperature=900.0,
+        ...     method=InterpolationMethod.LINEAR,
+        ... )
     """
     if available_temperatures is None:
         # Default temperature grid

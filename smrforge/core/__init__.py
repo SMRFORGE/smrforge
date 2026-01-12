@@ -15,6 +15,7 @@ try:
         NuclideInventoryTracker,
         get_fission_yield_data,
         get_thermal_scattering_data,
+        get_prompt_delayed_chi,
         get_standard_endf_directory,
         organize_bulk_endf_downloads,
         scan_endf_directory,
@@ -94,6 +95,19 @@ except ImportError:
     _SELF_SHIELDING_INTEGRATION_AVAILABLE = False
 
 try:
+    from smrforge.core.decay_chain_utils import (
+        DecayChain,
+        build_fission_product_chain,
+        collapse_with_adjoint_for_sensitivity,
+        get_prompt_delayed_chi_for_transient,
+        solve_bateman_equations,
+    )
+
+    _DECAY_CHAIN_UTILS_AVAILABLE = True
+except ImportError:
+    _DECAY_CHAIN_UTILS_AVAILABLE = False
+
+try:
     from smrforge.core.endf_parser import (
         ENDFCompatibility,
         ENDFEvaluation,
@@ -117,6 +131,7 @@ if _CORE_DATA_AVAILABLE:
             "Library",
             "get_fission_yield_data",
             "get_thermal_scattering_data",
+            "get_prompt_delayed_chi",
             "get_standard_endf_directory",
             "organize_bulk_endf_downloads",
             "scan_endf_directory",
@@ -150,6 +165,15 @@ if _ENDF_PARSER_AVAILABLE:
         ]
     )
 
+if _ENDF_EXTRACTORS_AVAILABLE:
+    __all__.extend(
+        [
+            "extract_chi_from_endf",
+            "extract_chi_prompt_delayed",
+            "extract_nu_from_endf",
+        ]
+    )
+
 if _CONTROL_ROD_WORTH_AVAILABLE:
     __all__.extend(
         [
@@ -168,6 +192,8 @@ if _MULTIGROUP_ADVANCED_AVAILABLE:
             "SPHFactors",
             "EquivalenceTheory",
             "apply_sph_to_multigroup_table",
+            "collapse_cross_section_with_adjoint",
+            "collapse_with_adjoint_weighting",
         ]
     )
 
@@ -186,5 +212,16 @@ if _SELF_SHIELDING_INTEGRATION_AVAILABLE:
         [
             "get_cross_section_with_self_shielding",
             "get_cross_section_with_equivalence_theory",
+        ]
+    )
+
+if _DECAY_CHAIN_UTILS_AVAILABLE:
+    __all__.extend(
+        [
+            "DecayChain",
+            "build_fission_product_chain",
+            "collapse_with_adjoint_for_sensitivity",
+            "get_prompt_delayed_chi_for_transient",
+            "solve_bateman_equations",
         ]
     )

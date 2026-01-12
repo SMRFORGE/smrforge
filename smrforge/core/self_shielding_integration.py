@@ -5,6 +5,7 @@ Provides functions to use SubgroupMethod and EquivalenceTheory from
 resonance_selfshield.py with NuclearDataCache and Nuclide classes.
 """
 
+from functools import lru_cache
 from typing import Dict, Optional
 
 import numpy as np
@@ -58,6 +59,11 @@ def get_cross_section_with_self_shielding(
     Returns:
         Tuple of (energy [eV], cross_section [barns])
     
+    Raises:
+        ValueError: If unknown self-shielding method is specified
+        ImportError: If resonance_selfshield module is not available and self-shielding is enabled
+        FileNotFoundError: If cross-section data cannot be found for the nuclide/reaction
+    
     Example:
         >>> from smrforge.core.reactor_core import NuclearDataCache, Nuclide
         >>> from smrforge.core.self_shielding_integration import get_cross_section_with_self_shielding
@@ -95,14 +101,17 @@ def get_cross_section_with_self_shielding(
     if method == "bondarenko":
         bondarenko = BondarenkoMethod()
         nuclide_name = nuclide.name
-        
-        # Apply shielding at each energy point
-        xs_shielded = np.zeros_like(xs_inf)
-        for i, (e, xs_inf_i) in enumerate(zip(energy, xs_inf)):
-            xs_shielded[i] = bondarenko.shield_cross_section(
-                xs_inf_i, nuclide_name, reaction, sigma_0, temperature
-            )
-        
+
+        # Compute f-factor once (sigma_0 and T constant across energy grid)
+        f_factor = bondarenko.get_f_factor(
+            nuclide=nuclide_name,
+            reaction=reaction,
+            sigma_0=sigma_0,
+            T=temperature,
+        )
+
+        # Vectorized shielding
+        xs_shielded = f_factor * xs_inf
         return energy, xs_shielded
     
     elif method == "subgroup":
@@ -154,17 +163,23 @@ def get_cross_section_with_self_shielding(
             non_resonance_mask = ~resonance_mask
             if np.any(non_resonance_mask):
                 bondarenko = BondarenkoMethod()
-                for i in np.where(non_resonance_mask)[0]:
-                    xs_shielded[i] = bondarenko.shield_cross_section(
-                        xs_inf[i], nuclide_name, reaction, sigma_0, temperature
-                    )
+                f_factor = bondarenko.get_f_factor(
+                    nuclide=nuclide_name,
+                    reaction=reaction,
+                    sigma_0=sigma_0,
+                    T=temperature,
+                )
+                xs_shielded[non_resonance_mask] = f_factor * xs_inf[non_resonance_mask]
         else:
             # No resonance region, use Bondarenko for all
             bondarenko = BondarenkoMethod()
-            for i, xs_inf_i in enumerate(xs_inf):
-                xs_shielded[i] = bondarenko.shield_cross_section(
-                    xs_inf_i, nuclide_name, reaction, sigma_0, temperature
-                )
+            f_factor = bondarenko.get_f_factor(
+                nuclide=nuclide_name,
+                reaction=reaction,
+                sigma_0=sigma_0,
+                T=temperature,
+            )
+            xs_shielded = f_factor * xs_inf
         
         return energy, xs_shielded
     
@@ -212,6 +227,10 @@ def get_cross_section_with_equivalence_theory(
     
     Returns:
         Tuple of (energy [eV], equivalent_cross_section [barns])
+    
+    Raises:
+        ImportError: If resonance_selfshield module is not available
+        FileNotFoundError: If cross-section data cannot be found for the nuclide/reaction
     
     Example:
         >>> from smrforge.core.reactor_core import NuclearDataCache, Nuclide

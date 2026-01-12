@@ -8,9 +8,12 @@ heterogeneous fuel assemblies in SMRs.
 
 import numpy as np
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ..utils.logging import get_logger
+
+if TYPE_CHECKING:
+    from .reactor_core import NuclearDataCache, Nuclide
 
 logger = get_logger("smrforge.core.multigroup_advanced")
 
@@ -82,13 +85,13 @@ class SPHMethod:
     
     def calculate_sph_factors(
         self,
-        nuclide,
+        nuclide: "Nuclide",
         reaction: str,
         fine_group_structure: np.ndarray,
         coarse_group_structure: np.ndarray,
         fine_flux: np.ndarray,
         temperature: float = 900.0,
-        cache: Optional[Any] = None,
+        cache: Optional["NuclearDataCache"] = None,
     ) -> SPHFactors:
         """
         Calculate SPH factors for a nuclide/reaction.
@@ -108,6 +111,25 @@ class SPHMethod:
         
         Returns:
             SPHFactors object with SPH factors for each coarse group
+        
+        Raises:
+            ValueError: If group structures are invalid or cross-sections cannot be retrieved
+
+        Example:
+            >>> from smrforge.core.multigroup_advanced import SPHMethod
+            >>> from smrforge.core.reactor_core import Nuclide
+            >>> sph = SPHMethod()
+            >>> u238 = Nuclide(Z=92, A=238)
+            >>> fine_groups = np.logspace(7, -5, 100)
+            >>> coarse_groups = np.array([2e7, 1e6, 1e5, 1e4, 1e-5])
+            >>> fine_flux = np.ones(len(fine_groups) - 1)
+            >>> factors = sph.calculate_sph_factors(
+            ...     nuclide=u238,
+            ...     reaction="capture",
+            ...     fine_group_structure=fine_groups,
+            ...     coarse_group_structure=coarse_groups,
+            ...     fine_flux=fine_flux,
+            ... )
         """
         from .reactor_core import NuclearDataCache, CrossSectionTable
         
@@ -340,6 +362,41 @@ class EquivalenceTheory:
         )
         
         return equiv_xs
+
+
+def collapse_cross_section_with_adjoint(
+    fine_group_structure: np.ndarray,
+    coarse_group_structure: np.ndarray,
+    fine_xs: np.ndarray,
+    fine_flux: np.ndarray,
+    fine_adjoint: np.ndarray,
+) -> np.ndarray:
+    """
+    Collapse cross-sections using adjoint flux weighting (convenience wrapper).
+    
+    This is a convenience wrapper around collapse_with_adjoint_weighting
+    for easier access from the main API.
+    
+    Args:
+        fine_group_structure: Fine-group energy boundaries [eV]
+        coarse_group_structure: Coarse-group energy boundaries [eV]
+        fine_xs: Fine-group cross-sections [n_fine]
+        fine_flux: Fine-group forward flux [n_fine]
+        fine_adjoint: Fine-group adjoint flux [n_fine]
+    
+    Returns:
+        Collapsed cross-sections [n_coarse]
+    
+    Example:
+        >>> from smrforge.core.multigroup_advanced import collapse_cross_section_with_adjoint
+        >>> 
+        >>> coarse_xs = collapse_cross_section_with_adjoint(
+        ...     fine_groups, coarse_groups, fine_xs, fine_flux, fine_adjoint
+        ... )
+    """
+    return collapse_with_adjoint_weighting(
+        fine_group_structure, coarse_group_structure, fine_xs, fine_flux, fine_adjoint
+    )
 
 
 def collapse_with_adjoint_weighting(

@@ -21,7 +21,24 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
   - Local ENDF directory integration for offline use and faster access
   - Automatic version fallback (e.g., VIII.1 → VIII.0)
   - **Setup required**: Run `python -m smrforge.core.endf_setup` to configure ENDF files
+  - **NEW: Advanced Nuclear Data Features** (January 2026):
+    - **Resonance self-shielding**: Bondarenko, Subgroup, and Equivalence theory methods
+    - **Fission yield data**: MF=5 parsing for independent and cumulative yields
+    - **Delayed neutron data**: MT=455 parsing for transient analysis
+    - **Prompt/delayed chi**: Separate prompt and delayed fission spectra
+    - **Thermal scattering laws (TSL)**: MF=7 parsing for H2O, graphite, D2O, BeO
+    - **Nuclide inventory tracking**: Atom density tracking for burnup calculations
+    - **Decay chain utilities**: Bateman equation solver, chain visualization
 - **Geometry**: Prismatic and pebble bed core geometries with mesh generation
+  - **NEW: LWR SMR Support** (January 2026):
+    - PWR SMR cores (NuScale, mPower, CAREM, SMR-160)
+    - BWR SMR cores
+    - Square lattice fuel assemblies (17x17, 15x15, 10x10)
+    - Fuel rod arrays with cladding and gap
+    - Water moderator/coolant channels
+    - Control rod clusters (PWR) and control blades (BWR)
+    - Compact SMR core layouts (reduced assembly counts)
+    - Integral reactor designs (in-vessel steam generators, integrated primary systems)
 - **Geometry Tools**: 
   - Import/export (JSON, OpenMC XML, Serpent)
   - **Advanced geometry import**: Full OpenMC CSG parsing, complex Serpent geometry, CAD formats (STEP, IGES, STL), MCNP import
@@ -37,6 +54,15 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
   - 2D core layouts, flux/power distribution plots
   - **Advanced visualization**: Animations (matplotlib, plotly), comparison views, video/GIF export
   - 3D transient visualization
+  - **NEW: Advanced 3D visualization** (January 2026):
+    - Ray-traced solid geometry plots (inspired by OpenMC)
+    - Interactive cross-section slicing
+    - Material boundary visualization
+    - Isosurface rendering
+    - Vector field visualization (neutron currents)
+    - Multi-view dashboard layouts
+    - Interactive 3D exploration
+    - Export to HTML, PNG, PDF, SVG, VTK, STL formats
 - **Validation**: Pydantic-based input validation with physics checks
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
@@ -203,6 +229,41 @@ k_eff, flux = solver.solve_steady_state()
 power_dist = solver.compute_power_distribution(total_power=10e6)
 ```
 
+### New Features Examples (January 2026)
+
+```python
+# LWR SMR Geometry
+from smrforge.geometry.lwr_smr import PWRSMRCore
+core = PWRSMRCore(name="NuScale")
+core.build_square_lattice_core(
+    n_assemblies_x=4, n_assemblies_y=4,
+    lattice_size=17, rod_pitch=1.26
+)
+
+# Resonance Self-Shielding
+from smrforge.core.reactor_core import get_cross_section_with_self_shielding, Nuclide
+u238 = Nuclide(Z=92, A=238)
+energy, xs = get_cross_section_with_self_shielding(
+    cache, u238, "capture", temperature=900.0, sigma_0=1000.0
+)
+
+# Advanced Visualization
+from smrforge.visualization.advanced import plot_ray_traced_geometry, create_dashboard
+fig = plot_ray_traced_geometry(core, backend='plotly')
+dashboard = create_dashboard(core, flux=flux, power=power, views=['xy', 'xz', '3d'])
+
+# Decay Chain Utilities
+from smrforge.core.decay_chain_utils import build_fission_product_chain, solve_bateman_equations
+chain = build_fission_product_chain(cache, u235, target_nuclide=cs137)
+concentrations = solve_bateman_equations(nuclides, initial, time=365*24*3600)
+
+# Nuclide Inventory Tracking
+from smrforge.core.reactor_core import NuclideInventoryTracker
+tracker = NuclideInventoryTracker()
+tracker.add_nuclide(u235, atom_density=0.0005)
+tracker.burnup = 10.0  # MWd/kgU
+```
+
 See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`examples/`](examples/) directory for complete scripts.
 
 **New to SMRForge?** Start with the **[Tutorial](docs/guides/tutorial.md)** - a step-by-step guide for beginners!
@@ -249,14 +310,20 @@ See the [`examples/`](examples/) directory for complete working examples:
 
 ### Advanced Examples
 - **`comprehensive_examples.py`** - Complete workflow demonstrations
+- **`advanced_features_examples.py`** - **NEW**: Advanced features including visualization, decay chains, LWR SMRs, self-shielding
 - **`complete_integration_example.py`** - Full integration example
 - **`integrated_safety_uq.py`** - Safety analysis with uncertainty quantification
+- **`lwr_smr_example.py`** - **NEW**: LWR SMR geometry and analysis examples
+- **`burnup_example.py`** - Burnup calculations with nuclide tracking
+- **`decay_heat_example.py`** - Decay heat calculations
+- **`thermal_scattering_example.py`** - Thermal scattering law usage
 
 ### Geometry Examples
 - **`geometry_import_example.py`** - Importing geometries from external formats
 - **`control_rods_example.py`** - Control rod positioning and reactivity
 - **`assembly_refueling_example.py`** - Fuel assembly and refueling patterns
 - **`visualization_examples.py`** - Geometry and result visualization
+- **`visualization_3d_example.py`** - **NEW**: Advanced 3D visualization examples
 
 All examples are runnable and include comments explaining each step.
 

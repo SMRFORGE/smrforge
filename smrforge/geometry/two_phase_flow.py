@@ -9,7 +9,7 @@ Provides advanced two-phase flow calculations including:
 - Heat transfer correlations
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 import numpy as np
@@ -40,6 +40,7 @@ class TwoPhaseFlowRegion:
         void_fraction: Void fraction (vapor volume fraction, 0-1)
         quality: Steam mass fraction (0-1)
         flow_regime: Flow regime ("bubbly", "slug", "churn", "annular", "mist")
+        _saturation_cache: Internal cache for saturation properties
     """
     
     id: int
@@ -53,6 +54,7 @@ class TwoPhaseFlowRegion:
     void_fraction: float = 0.0  # 0-1
     quality: float = 0.0  # 0-1 (steam mass fraction)
     flow_regime: str = "bubbly"  # "bubbly", "slug", "churn", "annular", "mist"
+    _saturation_cache: Optional[Dict[float, tuple[float, float]]] = field(default=None, init=False, repr=False)
     
     def calculate_void_fraction_from_quality(self) -> float:
         """
@@ -189,9 +191,20 @@ class TwoPhaseFlowRegion:
         """
         Get saturation liquid and vapor densities at pressure.
         
+        Uses internal cache for performance when called multiple times
+        with the same pressure.
+        
         Returns:
             Tuple of (rho_liquid [kg/m³], rho_vapor [kg/m³])
         """
+        # Initialize cache if needed
+        if self._saturation_cache is None:
+            self._saturation_cache = {}
+        
+        # Check cache
+        if self.pressure in self._saturation_cache:
+            return self._saturation_cache[self.pressure]
+        
         # Simplified saturation properties (would use steam tables in production)
         # At 7 MPa: T_sat ≈ 285°C, rho_l ≈ 740 kg/m³, rho_v ≈ 36 kg/m³
         # Linear approximation for different pressures
@@ -207,7 +220,13 @@ class TwoPhaseFlowRegion:
         # Vapor density [kg/m³] (simplified)
         rho_v = 0.6 * P_MPa  # Approximate
         
-        return rho_l, rho_v
+        result = (rho_l, rho_v)
+        
+        # Cache result (limit cache size to prevent memory issues)
+        if len(self._saturation_cache) < 128:
+            self._saturation_cache[self.pressure] = result
+        
+        return result
     
     def update_from_heat_addition(
         self,
@@ -270,6 +289,18 @@ def create_bwr_two_phase_region(
     
     Returns:
         TwoPhaseFlowRegion instance
+
+    Example:
+        >>> from smrforge.geometry.core_geometry import Point3D
+        >>> from smrforge.geometry.two_phase_flow import create_bwr_two_phase_region
+        >>> region = create_bwr_two_phase_region(
+        ...     id=1,
+        ...     position=Point3D(0.0, 0.0, 100.0),
+        ...     flow_area=50.0,
+        ...     height=400.0,
+        ...     mass_flow_rate=120.0,
+        ... )
+        >>> region.determine_flow_regime()
     """
     region = TwoPhaseFlowRegion(
         id=id,
