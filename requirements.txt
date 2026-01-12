@@ -41,3 +41,4 @@ scikit-learn>=1.0.0
 # plotly>=5.0  # For interactive 3D plots (install with: pip install smrforge[viz])
 # pyvista>=0.40.0  # For advanced 3D visualization and VTK export (install with: pip install smrforge[viz])
 # dash>=2.0  # For web-based dashboards (install with: pip install smrforge[viz])
+# dash-bootstrap-components>=1.0.0  # For Bootstrap styling in Dash (install with: pip install smrforge[viz])

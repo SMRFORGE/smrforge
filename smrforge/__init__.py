@@ -209,6 +209,16 @@ try:
 except ImportError:
     pass
 
+# GUI/Dashboard (optional - requires dash)
+try:
+    from smrforge.gui import create_app, run_server
+
+    __all__.extend(["create_app", "run_server"])
+    _GUI_AVAILABLE = True
+except ImportError:
+    _GUI_AVAILABLE = False
+    # Don't warn - dash is optional
+
 # Photon and gamma production parsers (always available)
 try:
     from smrforge.core.photon_parser import ENDFPhotonParser, PhotonCrossSection

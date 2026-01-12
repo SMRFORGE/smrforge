@@ -59,6 +59,7 @@ setup(
             "plotly>=5.0",
             "pyvista>=0.40.0",
             "dash>=2.0",
+            "dash-bootstrap-components>=1.0.0",
         ],
         "nuclear-data": [
             # Optional nuclear data backends
@@ -75,6 +76,7 @@ setup(
             "plotly>=5.0",
             "pyvista>=0.40.0",
             "dash>=2.0",
+            "dash-bootstrap-components>=1.0.0",
             "SALib>=1.4.0",
             "seaborn>=0.12.0",
         ],
@@ -96,6 +98,7 @@ setup(
     entry_points={
         "console_scripts": [
             "smrforge-setup-endf=smrforge.core.endf_setup:setup_endf_data_interactive",
+            "smrforge=smrforge.cli:main",
         ],
     },
     project_urls={

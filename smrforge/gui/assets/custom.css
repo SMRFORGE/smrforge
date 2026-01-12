@@ -1,0 +1,159 @@
+/* Custom CSS for SMRForge Dashboard Theme Support */
+
+/* Theme-specific overrides */
+.theme-light {
+    --bg-color: #ffffff;
+    --text-color: #212529;
+    --border-color: #dee2e6;
+    --card-bg: #ffffff;
+    --sidebar-bg: #f8f9fa;
+}
+
+.theme-dark {
+    --bg-color: #222222;
+    --text-color: #ffffff;
+    --border-color: #444444;
+    --card-bg: #2c2c2c;
+    --sidebar-bg: #1a1a1a;
+}
+
+.theme-gray {
+    --bg-color: #3a3a3a;
+    --text-color: #e0e0e0;
+    --border-color: #555555;
+    --card-bg: #4a4a4a;
+    --sidebar-bg: #2d2d2d;
+}
+
+/* Apply theme variables */
+body.theme-dark,
+body.theme-gray {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* Card styling for dark/gray themes */
+.theme-dark .card,
+.theme-gray .card {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.theme-dark .card-header,
+.theme-gray .card-header {
+    background-color: var(--card-bg);
+    border-bottom-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Sidebar styling */
+.theme-dark .nav,
+.theme-gray .nav {
+    background-color: var(--sidebar-bg);
+}
+
+.theme-dark .nav-link,
+.theme-gray .nav-link {
+    color: var(--text-color);
+}
+
+.theme-dark .nav-link:hover,
+.theme-gray .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+.theme-dark .nav-link.active,
+.theme-gray .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-color);
+}
+
+/* Input styling */
+.theme-dark .form-control,
+.theme-gray .form-control {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.theme-dark .form-control:focus,
+.theme-gray .form-control:focus {
+    background-color: var(--card-bg);
+    border-color: #0d6efd;
+    color: var(--text-color);
+}
+
+/* Dropdown styling */
+.theme-dark .Select-control,
+.theme-gray .Select-control {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Table styling */
+.theme-dark .table,
+.theme-gray .table {
+    color: var(--text-color);
+}
+
+.theme-dark .table thead th,
+.theme-gray .table thead th {
+    border-bottom-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.theme-dark .table tbody td,
+.theme-gray .table tbody td {
+    border-top-color: var(--border-color);
+}
+
+/* Alert styling */
+.theme-dark .alert,
+.theme-gray .alert {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Button styling adjustments for dark themes */
+.theme-dark .btn-outline-secondary,
+.theme-gray .btn-outline-secondary {
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.theme-dark .btn-outline-secondary:hover,
+.theme-gray .btn-outline-secondary:hover {
+    background-color: var(--border-color);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* HR styling */
+.theme-dark hr,
+.theme-gray hr {
+    border-top-color: var(--border-color);
+}
+
+/* Text muted styling */
+.theme-dark .text-muted,
+.theme-gray .text-muted {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Ensure Plotly graphs work well in dark mode */
+.theme-dark .js-plotly-plot,
+.theme-gray .js-plotly-plot {
+    background-color: transparent;
+}
+
+/* Smooth theme transitions */
+body,
+.card,
+.nav,
+.form-control {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

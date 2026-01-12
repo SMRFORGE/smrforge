@@ -31,49 +31,50 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
     - **Decay chain utilities**: Bateman equation solver, chain visualization
 - **Geometry**: Prismatic and pebble bed core geometries with mesh generation
   - **NEW: LWR SMR Support** (January 2026):
-    - PWR SMR cores (NuScale, mPower, CAREM, SMR-160)
-    - BWR SMR cores
-    - Square lattice fuel assemblies (17x17, 15x15, 10x10)
-    - Fuel rod arrays with cladding and gap
-    - Water moderator/coolant channels
-    - Control rod clusters (PWR) and control blades (BWR)
-    - Compact SMR core layouts (reduced assembly counts)
-    - Integral reactor designs (in-vessel steam generators, integrated primary systems)
-- **Geometry Tools**: 
-  - Import/export (JSON, OpenMC XML, Serpent)
-  - **Advanced geometry import**: Full OpenMC CSG parsing, complex Serpent geometry, CAD formats (STEP, IGES, STL), MCNP import
-  - **Enhanced geometry validation**: Comprehensive validation tools (gaps, connectivity, clearances, assembly placement, control rod insertion)
-  - Control rod geometry with advanced features (bank priorities, sequencing, scram geometry)
-  - Assembly management with fuel shuffling, multi-batch support, position tracking
-- **Mesh Generation**: 
-  - Adaptive mesh refinement
-  - **Advanced 3D mesh generation**: Structured/unstructured/hybrid meshes
-  - **Parallel mesh generation** support
-  - **Mesh conversion utilities**: VTK, STL, XDMF, OBJ, PLY, MSH, MED formats
-- **Visualization**: 
-  - 2D core layouts, flux/power distribution plots
-  - **Advanced visualization**: Animations (matplotlib, plotly), comparison views, video/GIF export
-  - 3D transient visualization
+    - PWR SMR cores (NuScale-style, square lattice assemblies)
+    - BWR SMR cores with two-phase flow regions
+    - Integral reactor designs (in-vessel steam generators)
+    - Compact SMR layouts (reduced assembly counts, compact reflectors)
+    - Fuel assembly nozzles and water channels
+    - Control rod clusters and control blades
+- **Visualization**: 2D/3D plots, animations, advanced 3D visualization
   - **NEW: Advanced 3D visualization** (January 2026):
-    - Ray-traced solid geometry plots (inspired by OpenMC)
-    - Interactive cross-section slicing
+    - Ray-traced geometry visualization
+    - Interactive 3D viewers (Plotly, PyVista)
+    - Multi-view dashboards
+    - Slice plots and isosurfaces
     - Material boundary visualization
-    - Isosurface rendering
-    - Vector field visualization (neutron currents)
-    - Multi-view dashboard layouts
-    - Interactive 3D exploration
-    - Export to HTML, PNG, PDF, SVG, VTK, STL formats
+    - Export to HTML, PNG, PDF, SVG, VTK, STL, HDF5 formats
 - **Validation**: Pydantic-based input validation with physics checks
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
 - **Quality Assurance**: 70-73% test coverage overall, 75-80%+ on priority modules
+- **NEW: Web Dashboard** (January 2026):
+  - Interactive web-based interface
+  - Reactor builder with preset support
+  - Analysis panel (neutronics, burnup, safety)
+  - Results visualization
+  - ENDF data downloader
+  - **Full CLI compatibility** - All features available via command line
 
 ### 🟡 Experimental (API May Change)
 These features are **functionally complete and well-tested**, but their APIs may change in future versions:
 - **Monte Carlo Transport**: Particle transport solver (97.7% test coverage, 51+ tests)
 - **Thermal-Hydraulics**: 1D channel models with fluid properties (45+ tests)
 - **Safety Analysis**: Transient simulations (LOFC, ATWS, RIA, LOCA, air/water ingress) with point kinetics (40+ tests)
+  - **NEW: LWR SMR Transients** (January 2026):
+    - PWR SMR transients (Steam line break, MSIV closure, feedwater line break, pressurizer transients, SB-LOCA, LB-LOCA)
+    - BWR SMR transients (Steam separator issues, recirculation pump trip, main steam line isolation, feedwater pump trip, BWR LOCA)
+    - Integral SMR transients (In-vessel steam generator tube rupture, integrated primary system transients)
 - **Uncertainty Quantification**: Monte Carlo sampling, sensitivity analysis (Sobol indices, Morris screening) (55+ tests)
+- **Burnup**: Nuclide inventory tracking, decay chain utilities, Bateman equation solver
+  - **NEW: Advanced LWR SMR Burnup** (January 2026):
+    - Gadolinium depletion (Gd-155, Gd-157)
+    - Control rod shadowing
+    - Assembly-wise burnup tracking
+    - Fuel rod-wise burnup (intra-assembly variation)
+    - Long-cycle burnup optimization
+    - Burnup coupling with thermal-hydraulics feedback
 
 ### ⚡ Performance: Rust-Powered Dependencies
 SMRForge leverages **Rust-powered libraries** for critical performance:
@@ -94,6 +95,18 @@ These Rust implementations provide significant performance improvements without 
 **See `docs/status/feature-status.md` for detailed status of all features.**
 
 ## Installation
+
+### Quick Install
+
+```bash
+pip install smrforge
+
+# Or with uv (recommended, faster)
+uv pip install smrforge
+
+# With visualization and dashboard support
+pip install smrforge[viz]
+```
 
 ### Requirements
 - **Python 3.8 or higher** (works with standard Python, no conda required!)
@@ -178,6 +191,32 @@ print(f"k-eff: {results['k_eff']:.6f}")
 print(f"Power: {results['power_thermal_mw']:.1f} MWth")
 ```
 
+### Web Dashboard (NEW!)
+
+SMRForge now includes a **web-based dashboard** for interactive analysis:
+
+```bash
+# Launch dashboard
+smrforge serve
+
+# Or from Python
+from smrforge.gui import run_server
+run_server()
+```
+
+Then open your browser to `http://127.0.0.1:8050`
+
+**Features:**
+- ✅ Reactor builder with preset support
+- ✅ Analysis panel (neutronics, burnup, safety)
+- ✅ Interactive results visualization
+- ✅ ENDF data downloader interface
+- ✅ Project management (save/load)
+
+**Note:** All dashboard features remain fully available via CLI and Python API. The dashboard is an optional, user-friendly interface.
+
+See [Dashboard Guide](docs/guides/dashboard-guide.md) for complete documentation.
+
 ### Setting Up ENDF Data
 
 **IMPORTANT**: ENDF files must be downloaded and set up manually before use.
@@ -199,7 +238,20 @@ print(f"Power: {results['power_thermal_mw']:.1f} MWth")
    ```
    Or: `smrforge-setup-endf`
 
-2. **Manual setup** (see [`docs/technical/endf-documentation.md`](docs/technical/endf-documentation.md)):
+2. **Automated download** (NEW - January 2026):
+   ```python
+   from smrforge.data_downloader import download_endf_data
+   
+   stats = download_endf_data(
+       library="ENDF/B-VIII.1",
+       nuclide_set="common_smr",
+       output_dir="~/ENDF-Data",
+       show_progress=True,
+       max_workers=5,  # Parallel downloads
+   )
+   ```
+
+3. **Manual setup** (see [`docs/technical/endf-documentation.md`](docs/technical/endf-documentation.md)):
    - Download ENDF/B-VIII.1 from https://www.nndc.bnl.gov/endf/
    - Extract to a directory
    - Point `NuclearDataCache` to the directory
@@ -310,6 +362,7 @@ See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`e
 - **ENDF Setup**: See [`docs/technical/endf-documentation.md`](docs/technical/endf-documentation.md) for complete ENDF data setup guide (required before use)
 - **Installation**: See [`docs/guides/installation.md`](docs/guides/installation.md) for detailed installation instructions
 - **Usage Guide**: See [`docs/guides/usage.md`](docs/guides/usage.md) for usage examples and quick reference
+- **Dashboard Guide**: See [`docs/guides/dashboard-guide.md`](docs/guides/dashboard-guide.md) for web dashboard usage
 - **Docker**: See [`docs/guides/docker.md`](docs/guides/docker.md) for Docker usage and troubleshooting
 - **Feature Status**: See [`docs/status/feature-status.md`](docs/status/feature-status.md) for module status
 - **Test Coverage**: See [`docs/status/test-coverage-summary.md`](docs/status/test-coverage-summary.md) for test coverage details
@@ -337,6 +390,8 @@ See the [`examples/`](examples/) directory for complete working examples:
 - **`burnup_example.py`** - Burnup calculations with nuclide tracking
 - **`decay_heat_example.py`** - Decay heat calculations
 - **`thermal_scattering_example.py`** - Thermal scattering law usage
+- **`complete_smr_workflow_example.py`** - **NEW**: Complete end-to-end workflow example
+- **`dashboard_example.py`** - **NEW**: Dashboard usage example
 
 ### Geometry Examples
 - **`geometry_import_example.py`** - Importing geometries from external formats
@@ -387,8 +442,12 @@ Contributions are welcome! Please see [`CONTRIBUTING.md`](CONTRIBUTING.md) for g
 git clone https://github.com/cmwhalen/smrforge.git
 cd smrforge
 
-# Install with development dependencies
-pip install -e ".[dev]"
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install in development mode with all dependencies
+pip install -e ".[dev,docs,viz]"
 
 # Run tests
 pytest tests/
@@ -396,30 +455,34 @@ pytest tests/
 # Format code
 black smrforge/ tests/
 isort smrforge/ tests/
+
+# Type checking
+mypy smrforge/
 ```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Built on top of excellent open-source libraries (NumPy, SciPy, Pydantic, Plotly, etc.)
+- Inspired by OpenMC, Serpent, and other nuclear simulation tools
+- Thanks to the nuclear engineering community for feedback and contributions
 
 ## Citation
 
 If you use SMRForge in your research, please cite:
 
 ```bibtex
-@software{smrforge,
-  author = {SMRForge Development Team},
-  title = {SMRForge: Small Modular Reactor Design and Analysis Toolkit},
-  year = {2025},
-  url = {https://github.com/cmwhalen/smrforge},
-  version = {0.1.0}
+@software{smrforge2026,
+  title={SMRForge: Small Modular Reactor Design and Analysis Toolkit},
+  author={SMRForge Development Team},
+  year={2026},
+  url={https://github.com/cmwhalen/smrforge}
 }
 ```
 
-## License
+---
 
-MIT License - see [`LICENSE`](LICENSE) file for details.
-
-## Contact
-
-- **GitHub Issues**: https://github.com/cmwhalen/smrforge/issues
-- **Documentation**: 
-  - GitHub Pages: https://cmwhalen.github.io/smrforge/
-  - Read the Docs: https://smrforge.readthedocs.io
-- **Repository**: https://github.com/cmwhalen/smrforge
+**Made with ❤️ for the nuclear engineering community**
