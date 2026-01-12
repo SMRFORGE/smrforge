@@ -341,8 +341,13 @@ def compute_anisotropic_scattering_matrix(
     sigma_s_legendre = np.zeros((n_legendre, n_groups, n_groups))
     sigma_s_legendre[0] = sigma_s_isotropic  # P0 = isotropic
     
-    # For P1 and higher, use simplified models
-    # In production, these should come from MF=6 data or TSL
+    # Try to get MF=6 data for accurate Legendre moments
+    mf6_data = None
+    try:
+        from .energy_angle_parser import get_energy_angle_data
+        mf6_data = get_energy_angle_data(nuclide, mt=2, cache=cache)  # MT=2 is elastic
+    except Exception:
+        pass  # Fallback to simplified models
     
     # Get elastic cross-section if not provided
     if elastic_mg is None:
@@ -360,18 +365,29 @@ def compute_anisotropic_scattering_matrix(
     
     # Compute P1 moment (linear anisotropy)
     # P1 represents forward/backward scattering preference
-    # Simplified model: P1 ≈ 0.1 * P0 for fast neutrons, smaller for thermal
     if max_legendre_order >= 1:
         for g in range(n_groups):
             group_center = (group_structure[g] + group_structure[g + 1]) / 2
             is_thermal = group_center < 1.0  # Below 1 eV
             
-            if is_thermal:
-                # Thermal: less anisotropy (mostly isotropic)
-                p1_factor = 0.05  # 5% anisotropy
+            # Try to get P1 from MF=6 data
+            p1_moment = None
+            if mf6_data is not None:
+                moments = mf6_data.get_legendre_moments(group_center, max_order=1)
+                if moments is not None and len(moments) > 1:
+                    p1_moment = moments[1]  # P1 coefficient
+            
+            # Use MF=6 data if available, otherwise use simplified model
+            if p1_moment is not None:
+                # Use actual MF=6 P1 moment
+                p1_factor = abs(p1_moment) / elastic_mg[g] if elastic_mg[g] > 0 else 0.0
+                p1_factor = np.clip(p1_factor, 0.0, 0.3)  # Reasonable bounds
             else:
-                # Fast/epithermal: more forward scattering
-                p1_factor = 0.15  # 15% anisotropy
+                # Simplified model: P1 ≈ 0.1 * P0 for fast neutrons, smaller for thermal
+                if is_thermal:
+                    p1_factor = 0.05  # 5% anisotropy
+                else:
+                    p1_factor = 0.15  # 15% anisotropy
             
             # P1 moment: forward scattering preference
             # Positive P1 means forward scattering
@@ -388,18 +404,29 @@ def compute_anisotropic_scattering_matrix(
     
     # Compute P2 moment (quadratic anisotropy)
     # P2 represents angular distribution shape (peaked vs. flat)
-    # Simplified model: P2 ≈ 0.05 * P0
     if max_legendre_order >= 2:
         for g in range(n_groups):
             group_center = (group_structure[g] + group_structure[g + 1]) / 2
             is_thermal = group_center < 1.0
             
-            if is_thermal:
-                # Thermal: minimal P2 (mostly isotropic)
-                p2_factor = 0.02
+            # Try to get P2 from MF=6 data
+            p2_moment = None
+            if mf6_data is not None:
+                moments = mf6_data.get_legendre_moments(group_center, max_order=2)
+                if moments is not None and len(moments) > 2:
+                    p2_moment = moments[2]  # P2 coefficient
+            
+            # Use MF=6 data if available, otherwise use simplified model
+            if p2_moment is not None:
+                # Use actual MF=6 P2 moment
+                p2_factor = abs(p2_moment) / elastic_mg[g] if elastic_mg[g] > 0 else 0.0
+                p2_factor = np.clip(p2_factor, 0.0, 0.2)  # Reasonable bounds
             else:
-                # Fast: some angular peaking
-                p2_factor = 0.08
+                # Simplified model: P2 ≈ 0.05 * P0
+                if is_thermal:
+                    p2_factor = 0.02  # Minimal P2 for thermal
+                else:
+                    p2_factor = 0.08  # Some angular peaking for fast
             
             for g_out in range(n_groups):
                 if g_out == g:

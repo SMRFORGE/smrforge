@@ -72,6 +72,18 @@ except ImportError:
     _MULTIGROUP_ADVANCED_AVAILABLE = False
 
 try:
+    from smrforge.core.energy_angle_parser import (
+        AngularDistribution,
+        ENDFEnergyAngleParser,
+        EnergyAngleData,
+        get_energy_angle_data,
+    )
+
+    _ENERGY_ANGLE_PARSER_AVAILABLE = True
+except ImportError:
+    _ENERGY_ANGLE_PARSER_AVAILABLE = False
+
+try:
     from smrforge.core.endf_parser import (
         ENDFCompatibility,
         ENDFEvaluation,
@@ -146,5 +158,15 @@ if _MULTIGROUP_ADVANCED_AVAILABLE:
             "SPHFactors",
             "EquivalenceTheory",
             "apply_sph_to_multigroup_table",
+        ]
+    )
+
+if _ENERGY_ANGLE_PARSER_AVAILABLE:
+    __all__.extend(
+        [
+            "ENDFEnergyAngleParser",
+            "EnergyAngleData",
+            "AngularDistribution",
+            "get_energy_angle_data",
         ]
     )

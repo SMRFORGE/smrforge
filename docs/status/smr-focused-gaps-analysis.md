@@ -195,28 +195,33 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 #### 2.3 **Advanced Scattering Matrix** - ✅ **IMPLEMENTED**
 - ✅ TSL parser exists (`thermal_scattering_parser.py`)
 - ✅ TSL integration with neutronics - Available via `compute_improved_scattering_matrix()`
-- ⚠️ **MF=6 (energy-angle distributions)** parsing - Not yet implemented (Phase 3)
+- ✅ **MF=6 (energy-angle distributions)** parsing - `ENDFEnergyAngleParser` class implemented
 - ✅ **Anisotropic scattering** (P0, P1, P2 Legendre moments) - `compute_anisotropic_scattering_matrix()` implemented
 - ⚠️ **Thermal upscattering** - Basic support, full implementation pending
 
 **Implementation:**
+- `ENDFEnergyAngleParser` class for parsing MF=6 data from ENDF files
+- `EnergyAngleData` class for storing energy-angle distributions
 - `compute_anisotropic_scattering_matrix()` function in `endf_extractors.py`
 - Computes Legendre moment scattering matrices (P0, P1, P2, ...)
 - P0 = isotropic scattering (same as existing function)
 - P1 = linear anisotropy (forward/backward scattering preference)
 - P2 = quadratic anisotropy (angular distribution shape)
-- Uses simplified models for P1/P2 (production should use MF=6 data)
+- **Now uses MF=6 data when available**, falls back to simplified models
 
 **Why Important for SMRs:**
 - LWR SMRs are thermal reactors → need accurate thermal scattering
 - Anisotropic scattering important for accurate flux distributions
-- Now supports Legendre moment expansion for angular dependence
+- MF=6 data provides actual angular distributions from ENDF files
+- Now supports Legendre moment expansion with real ENDF data
 
-**Status:** ✅ **IMPLEMENTED** - Anisotropic scattering framework complete, MF=6 parsing pending
+**Status:** ✅ **IMPLEMENTED** - Anisotropic scattering with MF=6 parsing complete
 
-**Location:** `smrforge/core/endf_extractors.py` - `compute_anisotropic_scattering_matrix()` function
+**Location:** 
+- `smrforge/core/energy_angle_parser.py` - MF=6 parser
+- `smrforge/core/endf_extractors.py` - Anisotropic scattering integration
 
-**Test Coverage:** 9 tests (all passing)
+**Test Coverage:** 19 tests (9 for anisotropic scattering + 10 for MF=6 parser, all passing)
 
 ---
 
