@@ -8,7 +8,7 @@ Helper functions for extracting specialized data from ENDF files:
 """
 
 import numpy as np
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 
 from .reactor_core import NuclearDataCache, Nuclide, get_thermal_scattering_data
 from .constants import FISSION_SPECTRUM_PARAMS, watt_spectrum
@@ -254,3 +254,162 @@ def compute_improved_scattering_matrix(
             sigma_s[g, :] = sigma_s[g, :] * elastic_mg[g] / row_sum
     
     return sigma_s
+
+
+def compute_anisotropic_scattering_matrix(
+    cache: NuclearDataCache,
+    nuclide: Nuclide,
+    group_structure: np.ndarray,
+    temperature: float,
+    max_legendre_order: int = 2,
+    elastic_mg: Optional[np.ndarray] = None,
+    material_name: Optional[str] = None,
+    use_tsl: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute anisotropic scattering matrix with Legendre moments (P0, P1, P2, ...).
+    
+    For thermal SMRs, anisotropic scattering is important for accurate flux
+    distributions. This function computes scattering matrices for each Legendre
+    moment, allowing the neutronics solver to account for angular dependence.
+    
+    The scattering kernel is expanded in Legendre polynomials:
+    σ_s(E' → E, μ) = Σ_l (2l+1)/2 * σ_s^l(E' → E) * P_l(μ)
+    
+    Where:
+    - P_l(μ) are Legendre polynomials
+    - σ_s^l are the Legendre moments (P0, P1, P2, ...)
+    - μ = cos(θ) is the scattering angle cosine
+    
+    Args:
+        cache: NuclearDataCache instance
+        nuclide: Nuclide instance
+        group_structure: Energy group boundaries [eV]
+        temperature: Temperature [K]
+        max_legendre_order: Maximum Legendre order (0=P0, 1=P1, 2=P2, etc.)
+            Default is 2 (P0, P1, P2)
+        elastic_mg: Pre-computed multi-group elastic cross-section [n_groups]
+            If None, will compute from continuous-energy data
+        material_name: Optional material name for TSL lookup (e.g., "H2O", "graphite")
+        use_tsl: If True, attempt to use TSL data for thermal groups
+    
+    Returns:
+        Tuple of (sigma_s_isotropic, sigma_s_legendre):
+        - sigma_s_isotropic: Isotropic scattering matrix [n_groups, n_groups]
+            This is the P0 moment (same as compute_improved_scattering_matrix)
+        - sigma_s_legendre: Anisotropic scattering matrices [n_legendre, n_groups, n_groups]
+            Where n_legendre = max_legendre_order + 1
+            sigma_s_legendre[0] = P0 (isotropic)
+            sigma_s_legendre[1] = P1 (linear anisotropy)
+            sigma_s_legendre[2] = P2 (quadratic anisotropy)
+            etc.
+    
+    Note:
+        Currently uses simplified models for P1 and P2 moments. In production,
+        these should be computed from MF=6 (energy-angle distributions) data
+        or from TSL data when available.
+    
+    Example:
+        >>> from smrforge.core.reactor_core import NuclearDataCache, Nuclide
+        >>> from smrforge.core.endf_extractors import compute_anisotropic_scattering_matrix
+        >>> import numpy as np
+        >>> 
+        >>> cache = NuclearDataCache()
+        >>> u238 = Nuclide(Z=92, A=238)
+        >>> group_structure = np.array([1e-5, 1.0, 1e6, 2e7])  # 3 groups
+        >>> 
+        >>> sigma_s_iso, sigma_s_leg = compute_anisotropic_scattering_matrix(
+        ...     cache, u238, group_structure, temperature=900.0, max_legendre_order=2
+        ... )
+        >>> 
+        >>> # sigma_s_iso is [3, 3] - isotropic scattering
+        >>> # sigma_s_leg is [3, 3, 3] - P0, P1, P2 moments
+        >>> print(f"P0 matrix shape: {sigma_s_leg[0].shape}")
+        >>> print(f"P1 matrix shape: {sigma_s_leg[1].shape}")
+        >>> print(f"P2 matrix shape: {sigma_s_leg[2].shape}")
+    """
+    n_groups = len(group_structure) - 1
+    n_legendre = max_legendre_order + 1
+    
+    # Get isotropic scattering matrix (P0)
+    sigma_s_isotropic = compute_improved_scattering_matrix(
+        cache, nuclide, group_structure, temperature,
+        elastic_mg=elastic_mg, material_name=material_name, use_tsl=use_tsl
+    )
+    
+    # Initialize Legendre moment matrices
+    sigma_s_legendre = np.zeros((n_legendre, n_groups, n_groups))
+    sigma_s_legendre[0] = sigma_s_isotropic  # P0 = isotropic
+    
+    # For P1 and higher, use simplified models
+    # In production, these should come from MF=6 data or TSL
+    
+    # Get elastic cross-section if not provided
+    if elastic_mg is None:
+        try:
+            energy, sigma_elastic = cache.get_cross_section(
+                nuclide, "elastic", temperature
+            )
+            group_centers = (group_structure[:-1] + group_structure[1:]) / 2
+            elastic_mg = np.array([
+                np.interp(center, energy, sigma_elastic) 
+                for center in group_centers
+            ])
+        except Exception:
+            elastic_mg = np.ones(n_groups) * 5.0  # Default 5 barns
+    
+    # Compute P1 moment (linear anisotropy)
+    # P1 represents forward/backward scattering preference
+    # Simplified model: P1 ≈ 0.1 * P0 for fast neutrons, smaller for thermal
+    if max_legendre_order >= 1:
+        for g in range(n_groups):
+            group_center = (group_structure[g] + group_structure[g + 1]) / 2
+            is_thermal = group_center < 1.0  # Below 1 eV
+            
+            if is_thermal:
+                # Thermal: less anisotropy (mostly isotropic)
+                p1_factor = 0.05  # 5% anisotropy
+            else:
+                # Fast/epithermal: more forward scattering
+                p1_factor = 0.15  # 15% anisotropy
+            
+            # P1 moment: forward scattering preference
+            # Positive P1 means forward scattering
+            for g_out in range(n_groups):
+                if g_out == g:
+                    # Same group: forward scattering
+                    sigma_s_legendre[1, g, g_out] = p1_factor * sigma_s_isotropic[g, g_out]
+                elif g_out < g:
+                    # Downscattering: less forward preference
+                    sigma_s_legendre[1, g, g_out] = -0.5 * p1_factor * sigma_s_isotropic[g, g_out]
+                else:
+                    # Upscattering: forward preference (rare)
+                    sigma_s_legendre[1, g, g_out] = 0.0
+    
+    # Compute P2 moment (quadratic anisotropy)
+    # P2 represents angular distribution shape (peaked vs. flat)
+    # Simplified model: P2 ≈ 0.05 * P0
+    if max_legendre_order >= 2:
+        for g in range(n_groups):
+            group_center = (group_structure[g] + group_structure[g + 1]) / 2
+            is_thermal = group_center < 1.0
+            
+            if is_thermal:
+                # Thermal: minimal P2 (mostly isotropic)
+                p2_factor = 0.02
+            else:
+                # Fast: some angular peaking
+                p2_factor = 0.08
+            
+            for g_out in range(n_groups):
+                if g_out == g:
+                    # Same group: peaked distribution
+                    sigma_s_legendre[2, g, g_out] = p2_factor * sigma_s_isotropic[g, g_out]
+                else:
+                    # Other groups: reduced P2
+                    sigma_s_legendre[2, g, g_out] = 0.5 * p2_factor * sigma_s_isotropic[g, g_out]
+    
+    # Normalize: ensure P0 dominates (sum of all moments should be reasonable)
+    # In production, this normalization would come from actual MF=6 data
+    
+    return sigma_s_isotropic, sigma_s_legendre
