@@ -17,12 +17,14 @@ from scipy.spatial import KDTree
 
 
 class CoreType(Enum):
-    """Types of HTGR core configurations."""
+    """Types of reactor core configurations."""
 
-    PRISMATIC = "prismatic"
-    PEBBLE_BED = "pebble_bed"
-    ANNULAR = "annular"
-    HYBRID = "hybrid"
+    PRISMATIC = "prismatic"  # HTGR prismatic
+    PEBBLE_BED = "pebble_bed"  # HTGR pebble bed
+    ANNULAR = "annular"  # HTGR annular
+    HYBRID = "hybrid"  # HTGR hybrid
+    PWR_SMR = "pwr_smr"  # PWR Small Modular Reactor
+    BWR_SMR = "bwr_smr"  # BWR Small Modular Reactor
 
 
 class LatticeType(Enum):
