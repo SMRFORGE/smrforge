@@ -97,7 +97,7 @@ Download ENDF nuclear data files from NNDC/IAEA.
 - `show_progress` (bool, default=True): Show progress indicators
 - `validate` (bool, default=True): Validate downloaded files
 - `organize` (bool, default=True): Organize files into standard structure
-- `max_workers` (int, default=5): Maximum concurrent downloads (not yet implemented)
+- `max_workers` (int, default=5): Maximum concurrent downloads (parallel downloads enabled)
 
 **Returns:**
 
@@ -295,10 +295,41 @@ download_endf_data(library="ENDF/B-VIII.1", nuclide_set="common_smr")
 
 ---
 
+## Performance Optimizations
+
+### Parallel Downloads ✅
+
+The downloader automatically uses parallel downloads when `max_workers > 1`:
+
+```python
+# Download with 10 parallel workers (faster for many files)
+stats = download_endf_data(
+    library="ENDF/B-VIII.1",
+    isotopes=["U235", "U238", "Pu239", ...],  # Many files
+    max_workers=10,  # Parallel downloads
+    show_progress=True,
+)
+```
+
+**Expected Speedup:** 3-10x faster (depending on network and number of files)
+
+### Connection Pooling ✅
+
+The downloader uses connection pooling to reuse HTTP connections, reducing overhead.
+
+### URL Source Caching ✅
+
+The downloader remembers which source (IAEA or NNDC) works best for each library, trying the preferred source first on subsequent downloads.
+
+### Unified Progress Bar ✅
+
+A single progress bar shows overall progress across all files, with current file name and statistics.
+
+---
+
 ## Future Features (Phase 2)
 
 - **Pre-processed libraries**: Download optimized Zarr libraries
-- **Multi-threaded downloads**: Parallel downloads for faster performance
 - **Full library downloads**: Download entire library automatically
 - **Library hosting**: Pre-processed libraries on GitHub Releases/Zenodo
 

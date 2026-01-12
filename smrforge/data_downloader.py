@@ -22,10 +22,11 @@ Example:
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union, Tuple
 import os
 import hashlib
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 try:
     import requests
@@ -52,6 +53,10 @@ from .core.constants import ELEMENT_SYMBOLS, SYMBOL_TO_Z
 from .utils.logging import get_logger
 
 logger = get_logger("smrforge.data_downloader")
+
+
+# URL source cache: remembers which source works best for each library
+_source_cache: Dict[str, str] = {}  # library.value -> "iaea" or "nndc"
 
 
 # Common SMR nuclides for pre-selected sets
@@ -126,6 +131,44 @@ def _get_nndc_url(nuclide: Nuclide, library: Library) -> str:
     filename = f"{nuclide.name}.endf"
     
     return f"{base_url}/{filename}"
+
+
+def _get_download_urls(nuclide: Nuclide, library: Library) -> List[str]:
+    """
+    Get download URLs with source caching (preferred source first).
+    
+    Args:
+        nuclide: Nuclide instance.
+        library: Nuclear data library enum.
+    
+    Returns:
+        List of URLs, with preferred source first based on cache.
+    """
+    iaea_url = _get_endf_url(nuclide, library)
+    nndc_url = _get_nndc_url(nuclide, library)
+    
+    # Check cache for preferred source
+    preferred_source = _source_cache.get(library.value)
+    
+    if preferred_source == "nndc":
+        return [nndc_url, iaea_url]
+    else:
+        # Default to IAEA first (or if cache says "iaea")
+        return [iaea_url, nndc_url]
+
+
+def _cache_successful_source(url: str, library: Library):
+    """
+    Cache which source was successful for future downloads.
+    
+    Args:
+        url: URL that succeeded.
+        library: Library enum.
+    """
+    if "iaea.org" in url:
+        _source_cache[library.value] = "iaea"
+    elif "nndc.bnl.gov" in url:
+        _source_cache[library.value] = "nndc"
 
 
 def _parse_isotope_string(iso_str: str) -> Optional[Nuclide]:
@@ -218,6 +261,7 @@ def download_file(
     show_progress: bool = True,
     max_retries: int = 3,
     timeout: int = 30,
+    session: Optional[requests.Session] = None,
 ) -> bool:
     """
     Download a file from URL with resume capability and progress indicator.
@@ -239,16 +283,17 @@ def download_file(
             "Install with: pip install requests"
         )
     
-    # Create session with retry strategy
-    session = requests.Session()
-    retry_strategy = Retry(
-        total=max_retries,
-        backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],
-    )
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
+    # Use provided session or create new one
+    if session is None:
+        session = requests.Session()
+        retry_strategy = Retry(
+            total=max_retries,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
     
     # Check if file exists and resume
     headers = {}
@@ -320,7 +365,7 @@ def download_endf_data(
         show_progress: If True, show progress indicators.
         validate: If True, validate downloaded files.
         organize: If True, organize files into standard structure.
-        max_workers: Maximum concurrent downloads (not yet implemented).
+        max_workers: Maximum concurrent downloads (default: 5). Uses parallel downloads when > 1.
     
     Returns:
         Dictionary with download statistics:
@@ -433,42 +478,89 @@ def download_endf_data(
             if validate:
                 # Quick validation check
                 if NuclearDataCache._validate_endf_file(filepath):
-                    stats["skipped"] += 1
-                    continue
+                    continue  # Skip, will count later
                 else:
                     # Invalid file, re-download
                     filepath.unlink()
             else:
-                stats["skipped"] += 1
-                continue
+                continue  # Skip, will count later
         
-        # Try IAEA first, then NNDC
-        urls = [
-            _get_endf_url(nuclide, library),
-            _get_nndc_url(nuclide, library),
-        ]
-        
-        success = False
-        for url in urls:
-            if download_file(url, filepath, resume=resume, show_progress=show_progress):
-                # Validate if requested
-                if validate:
-                    if NuclearDataCache._validate_endf_file(filepath):
-                        success = True
-                        break
+        # Get URLs with caching (preferred source first)
+        urls = _get_download_urls(nuclide, library)
+        download_tasks.append((nuclide, filepath, urls))
+    
+    # Count skipped files
+    skipped_count = len(nuclide_list) - len(download_tasks)
+    
+    # Initialize stats
+    stats = {
+        "downloaded": 0,
+        "skipped": skipped_count,
+        "failed": 0,
+        "total": len(nuclide_list),
+        "output_dir": str(output_dir),
+    }
+    
+    # Create shared session with connection pooling for parallel downloads
+    if download_tasks and max_workers > 1:
+        session = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(
+            pool_connections=max_workers,
+            pool_maxsize=max_workers * 2,
+            max_retries=retry_strategy,
+        )
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+    else:
+        session = None
+    
+    # Download files in parallel or sequentially
+    if max_workers > 1 and len(download_tasks) > 1:
+        # Parallel download
+        _download_parallel(
+            download_tasks,
+            stats,
+            session=session,
+            resume=resume,
+            show_progress=show_progress,
+            validate=validate,
+            library=library,
+            max_workers=max_workers,
+        )
+    else:
+        # Sequential download (original behavior)
+        for nuclide, filepath, urls in download_tasks:
+            success = False
+            for url in urls:
+                if download_file(
+                    url, filepath, resume=resume, show_progress=show_progress, session=session
+                ):
+                    # Validate if requested
+                    if validate:
+                        if NuclearDataCache._validate_endf_file(filepath):
+                            success = True
+                            # Cache successful source
+                            _cache_successful_source(url, library)
+                            break
+                        else:
+                            # Invalid file, try next URL
+                            filepath.unlink()
+                            continue
                     else:
-                        # Invalid file, try next URL
-                        filepath.unlink()
-                        continue
-                else:
-                    success = True
-                    break
-        
-        if success:
-            stats["downloaded"] += 1
-        else:
-            stats["failed"] += 1
-            logger.warning(f"Failed to download {nuclide.name}")
+                        success = True
+                        _cache_successful_source(url, library)
+                        break
+            
+            if success:
+                stats["downloaded"] += 1
+            else:
+                stats["failed"] += 1
+                logger.warning(f"Failed to download {nuclide.name}")
     
     # Organize files if requested
     if organize and stats["downloaded"] > 0:
@@ -488,6 +580,87 @@ def download_endf_data(
     )
     
     return stats
+
+
+def _download_parallel(
+    download_tasks: List[Tuple[Nuclide, Path, List[str]]],
+    stats: Dict[str, int],
+    session: Optional[requests.Session],
+    resume: bool,
+    show_progress: bool,
+    validate: bool,
+    library: Library,
+    max_workers: int,
+):
+    """
+    Download files in parallel using ThreadPoolExecutor.
+    
+    Args:
+        download_tasks: List of (nuclide, filepath, urls) tuples.
+        stats: Statistics dictionary to update.
+        session: Shared requests session.
+        resume: Whether to resume interrupted downloads.
+        show_progress: Whether to show progress.
+        validate: Whether to validate files.
+        library: Library enum.
+        max_workers: Maximum number of parallel workers.
+    """
+    def download_single_file(task: Tuple[Nuclide, Path, List[str]]) -> Tuple[Nuclide, bool, Optional[str]]:
+        """Download a single file and return (nuclide, success, successful_url)."""
+        nuclide, filepath, urls = task
+        for url in urls:
+            if download_file(
+                url, filepath, resume=resume, show_progress=False, session=session
+            ):
+                # Validate if requested
+                if validate:
+                    if NuclearDataCache._validate_endf_file(filepath):
+                        return (nuclide, True, url)
+                    else:
+                        # Invalid file, try next URL
+                        filepath.unlink()
+                        continue
+                else:
+                    return (nuclide, True, url)
+        return (nuclide, False, None)
+    
+    # Create progress bar if requested
+    if show_progress and TQDM_AVAILABLE:
+        pbar = tqdm(total=len(download_tasks), desc="Downloading ENDF files", unit="file")
+    else:
+        pbar = None
+    
+    # Download in parallel
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(download_single_file, task): task for task in download_tasks}
+        
+        for future in as_completed(futures):
+            nuclide, success, successful_url = future.result()
+            
+            if pbar:
+                pbar.set_description(f"Downloading {nuclide.name}")
+                pbar.update(1)
+            
+            if success:
+                stats["downloaded"] += 1
+                if successful_url:
+                    _cache_successful_source(successful_url, library)
+                if pbar:
+                    pbar.set_postfix({
+                        "Downloaded": stats["downloaded"],
+                        "Failed": stats["failed"]
+                    })
+            else:
+                stats["failed"] += 1
+                logger.warning(f"Failed to download {nuclide.name}")
+                if pbar:
+                    pbar.set_postfix({
+                        "Downloaded": stats["downloaded"],
+                        "Failed": stats["failed"]
+                    })
+    
+    if pbar:
+        pbar.close()
 
 
 def download_preprocessed_library(
