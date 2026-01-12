@@ -3591,3 +3591,243 @@ def scan_endf_directory(endf_dir: Path) -> Dict[str, Any]:
     results["library_versions"] = sorted(list(results["library_versions"]))
     
     return results
+
+
+@dataclass
+class NuclideInventoryTracker:
+    """
+    General-purpose nuclide inventory tracking for burnup and material evolution.
+    
+    Tracks atom densities (concentrations) of nuclides over time, independent of
+    the burnup solver. Useful for:
+    - Material composition tracking
+    - Burnup-dependent property calculations
+    - Decay chain evolution
+    - Isotope inventory management
+    
+    This is a general-purpose class that can be used with or without the burnup
+    solver. The burnup solver has its own NuclideInventory class, but this one
+    provides more flexible tracking capabilities.
+    
+    Attributes:
+        nuclides: List of Nuclide instances being tracked
+        atom_densities: Dictionary mapping Nuclide -> atom density [atoms/barn-cm]
+            or [atoms/cm³] depending on units
+        burnup: Current burnup [MWd/kgU] (optional)
+        time: Current time [seconds] (optional)
+        units: Units for atom densities ("atoms/barn-cm" or "atoms/cm³")
+    
+    Example:
+        >>> from smrforge.core.reactor_core import NuclideInventoryTracker, Nuclide
+        >>> 
+        >>> # Create inventory tracker
+        >>> tracker = NuclideInventoryTracker()
+        >>> 
+        >>> # Add initial nuclides
+        >>> u235 = Nuclide(Z=92, A=235)
+        >>> u238 = Nuclide(Z=92, A=238)
+        >>> tracker.add_nuclide(u235, atom_density=0.0005)  # atoms/barn-cm
+        >>> tracker.add_nuclide(u238, atom_density=0.02)
+        >>> 
+        >>> # Get concentration
+        >>> u235_density = tracker.get_atom_density(u235)
+        >>> print(f"U-235: {u235_density:.6f} atoms/barn-cm")
+        >>> 
+        >>> # Update after burnup step
+        >>> tracker.update_nuclide(u235, atom_density=0.0004)
+        >>> tracker.burnup = 10.0  # MWd/kgU
+    """
+    
+    nuclides: List[Nuclide] = None
+    atom_densities: Dict[Nuclide, float] = None
+    burnup: float = 0.0  # MWd/kgU
+    time: float = 0.0  # seconds
+    units: str = "atoms/barn-cm"  # or "atoms/cm³"
+    
+    def __post_init__(self):
+        """Initialize empty dictionaries if not provided."""
+        if self.nuclides is None:
+            self.nuclides = []
+        if self.atom_densities is None:
+            self.atom_densities = {}
+    
+    def add_nuclide(self, nuclide: Nuclide, atom_density: float) -> None:
+        """
+        Add or update a nuclide in the inventory.
+        
+        Args:
+            nuclide: Nuclide instance
+            atom_density: Atom density in units specified by self.units
+        """
+        if nuclide not in self.nuclides:
+            self.nuclides.append(nuclide)
+        self.atom_densities[nuclide] = atom_density
+    
+    def get_atom_density(self, nuclide: Nuclide) -> float:
+        """
+        Get atom density for a nuclide.
+        
+        Args:
+            nuclide: Nuclide instance
+        
+        Returns:
+            Atom density in units specified by self.units.
+            Returns 0.0 if nuclide not in inventory.
+        """
+        return self.atom_densities.get(nuclide, 0.0)
+    
+    def update_nuclide(self, nuclide: Nuclide, atom_density: float) -> None:
+        """
+        Update atom density for an existing nuclide.
+        
+        Args:
+            nuclide: Nuclide instance (must already be in inventory)
+            atom_density: New atom density
+        """
+        if nuclide not in self.nuclides:
+            raise ValueError(f"Nuclide {nuclide.name} not in inventory. Use add_nuclide() first.")
+        self.atom_densities[nuclide] = atom_density
+    
+    def remove_nuclide(self, nuclide: Nuclide) -> None:
+        """
+        Remove a nuclide from the inventory.
+        
+        Args:
+            nuclide: Nuclide instance to remove
+        """
+        if nuclide in self.nuclides:
+            self.nuclides.remove(nuclide)
+        if nuclide in self.atom_densities:
+            del self.atom_densities[nuclide]
+    
+    def get_total_atom_density(self) -> float:
+        """
+        Get total atom density (sum of all nuclides).
+        
+        Returns:
+            Total atom density in units specified by self.units
+        """
+        return sum(self.atom_densities.values())
+    
+    def get_mass_fraction(self, nuclide: Nuclide) -> float:
+        """
+        Get mass fraction of a nuclide.
+        
+        Args:
+            nuclide: Nuclide instance
+        
+        Returns:
+            Mass fraction (dimensionless, 0-1)
+        """
+        n_i = self.get_atom_density(nuclide)
+        if n_i == 0.0:
+            return 0.0
+        
+        # Convert atom density to mass density
+        # Mass density = atom_density * atomic_mass / N_A
+        # Mass fraction = mass_i / total_mass
+        atomic_mass_i = nuclide.A  # Approximate (should use actual atomic mass)
+        mass_i = n_i * atomic_mass_i
+        
+        total_mass = sum(
+            self.get_atom_density(nuc) * nuc.A 
+            for nuc in self.nuclides
+        )
+        
+        return mass_i / total_mass if total_mass > 0 else 0.0
+    
+    def get_heavy_metal_mass(self) -> float:
+        """
+        Get total heavy metal (actinide) mass.
+        
+        Returns:
+            Heavy metal mass [kg] (approximate, uses atomic mass numbers)
+        """
+        # Heavy metals are Z >= 89 (actinium and above)
+        hm_mass = 0.0
+        for nuclide in self.nuclides:
+            if nuclide.Z >= 89:
+                n_i = self.get_atom_density(nuclide)
+                # Convert to mass (approximate)
+                # atoms/barn-cm * atomic_mass [amu] / N_A [atoms/mol] * conversion
+                # Simplified: assume 1 atom/barn-cm ≈ 1.66e-24 g/cm³ (rough approximation)
+                atomic_mass_kg = nuclide.A * 1.660539e-27  # kg per atom
+                hm_mass += n_i * atomic_mass_kg * 1e24  # Convert barn-cm to cm³
+        
+        return hm_mass
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert inventory to dictionary format.
+        
+        Returns:
+            Dictionary with nuclide names as keys and atom densities as values
+        """
+        return {
+            nuclide.name: self.get_atom_density(nuclide)
+            for nuclide in self.nuclides
+        }
+    
+    def from_dict(self, data: Dict[str, float], nuclide_parser: Optional[Any] = None) -> None:
+        """
+        Load inventory from dictionary format.
+        
+        Args:
+            data: Dictionary mapping nuclide names (strings) to atom densities
+            nuclide_parser: Optional function to parse nuclide names to Nuclide instances.
+                If None, uses Nuclide.from_name() if available, or simple parsing.
+        """
+        self.nuclides = []
+        self.atom_densities = {}
+        
+        for name, density in data.items():
+            # Try to parse nuclide name
+            nuclide = self._parse_nuclide_name(name, nuclide_parser)
+            if nuclide is not None:
+                self.add_nuclide(nuclide, density)
+    
+    def _parse_nuclide_name(self, name: str, parser: Optional[Any] = None) -> Optional[Nuclide]:
+        """
+        Parse nuclide name string to Nuclide instance.
+        
+        Args:
+            name: Nuclide name string (e.g., "U235", "U239m1")
+            parser: Optional parser function
+        
+        Returns:
+            Nuclide instance or None if parsing fails
+        """
+        if parser is not None:
+            return parser(name)
+        
+        # Simple parsing: "U235" -> Z=92, A=235
+        # This is a simplified parser - production code should use proper parsing
+        try:
+            # Try to extract Z and A from name
+            # Format: ElementSymbol + MassNumber + optional "m" + metastable index
+            import re
+            match = re.match(r"([A-Z][a-z]?)(\d+)(m(\d+))?", name)
+            if match:
+                element = match.group(1)
+                A = int(match.group(2))
+                m = int(match.group(4)) if match.group(4) else 0
+                
+                # Element to Z mapping (simplified - should use proper periodic table)
+                element_to_z = {
+                    "H": 1, "He": 2, "Li": 3, "Be": 4, "B": 5, "C": 6, "N": 7, "O": 8,
+                    "F": 9, "Ne": 10, "Na": 11, "Mg": 12, "Al": 13, "Si": 14, "P": 15,
+                    "S": 16, "Cl": 17, "Ar": 18, "K": 19, "Ca": 20,
+                    "Sc": 21, "Ti": 22, "V": 23, "Cr": 24, "Mn": 25, "Fe": 26, "Co": 27,
+                    "Ni": 28, "Cu": 29, "Zn": 30,
+                    "Zr": 40, "Cs": 55, "Ba": 56, "La": 57, "Ce": 58, "Pr": 59, "Nd": 60,
+                    "Pm": 61, "Sm": 62, "Eu": 63, "Gd": 64, "U": 92, "Np": 93, "Pu": 94,
+                    "Am": 95, "Cm": 96,
+                }
+                
+                Z = element_to_z.get(element)
+                if Z is not None:
+                    return Nuclide(Z=Z, A=A, m=m)
+        except Exception:
+            pass
+        
+        return None
