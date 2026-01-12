@@ -31,6 +31,8 @@ rich>=13.0.0
 # HTTP requests (for nuclear data downloads)
 requests>=2.25.0
 httpx>=0.24.0  # Async HTTP client for parallel downloads
+tqdm>=4.65.0  # Progress bars for downloads
+pyyaml>=6.0  # Configuration file support (optional)
 
 # Machine learning (for surrogate models)
 scikit-learn>=1.0.0

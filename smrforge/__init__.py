@@ -103,6 +103,18 @@ except ImportError as e:
     _CONVENIENCE_UTILS_AVAILABLE = False
     # Don't warn - these are optional convenience functions
 
+# Data downloader (optional - requires requests)
+try:
+    from smrforge.data_downloader import (
+        download_endf_data,
+        download_preprocessed_library,
+        COMMON_SMR_NUCLIDES,
+    )
+    _DATA_DOWNLOADER_AVAILABLE = True
+except ImportError as e:
+    _DATA_DOWNLOADER_AVAILABLE = False
+    # Don't warn - requests/tqdm may not be installed
+
 __all__ = [
     "__version__",
     "__version_info__",
@@ -138,6 +150,16 @@ if _CONVENIENCE_AVAILABLE:
             "analyze_preset",
             "compare_designs",
             "SimpleReactor",
+        ]
+    )
+
+# Add data downloader if available
+if _DATA_DOWNLOADER_AVAILABLE:
+    __all__.extend(
+        [
+            "download_endf_data",
+            "download_preprocessed_library",
+            "COMMON_SMR_NUCLIDES",
         ]
     )
 

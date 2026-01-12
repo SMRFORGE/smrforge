@@ -15,6 +15,7 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import os
 
 import asyncio
 import numpy as np
@@ -185,6 +186,18 @@ class NuclearDataCache:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
         # Local ENDF directory (e.g., ENDF-B-VIII.1)
+        # Check environment variable if local_endf_dir not provided
+        if local_endf_dir is None:
+            env_dir = os.getenv("SMRFORGE_ENDF_DIR")
+            if env_dir:
+                local_endf_dir = Path(env_dir).expanduser().resolve()
+        
+        # Try to load from config file if still None
+        if local_endf_dir is None:
+            config_dir = self._load_config_dir()
+            if config_dir:
+                local_endf_dir = config_dir
+        
         self.local_endf_dir = Path(local_endf_dir) if local_endf_dir else None
         self._local_file_index: Optional[Dict[str, Path]] = None  # Lazy-loaded index
         self._tsl_file_index: Optional[Dict[str, Path]] = None  # TSL material name -> file path
@@ -212,6 +225,42 @@ class NuclearDataCache:
 
         self.store = LocalStore(str(self.cache_dir))
         self.root = zarr.open(self.store, mode="a")
+
+    @staticmethod
+    def _load_config_dir() -> Optional[Path]:
+        """
+        Load ENDF directory from configuration file.
+        
+        Checks for ~/.smrforge/config.yaml and reads endf.default_directory.
+        
+        Returns:
+            Path to ENDF directory if found in config, None otherwise.
+        """
+        try:
+            config_path = Path.home() / ".smrforge" / "config.yaml"
+            if not config_path.exists():
+                return None
+            
+            # Try to import yaml (optional dependency)
+            try:
+                import yaml
+            except ImportError:
+                logger.debug("PyYAML not installed, skipping config file")
+                return None
+            
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+            
+            if config and 'endf' in config:
+                endf_config = config['endf']
+                if 'default_directory' in endf_config:
+                    dir_path = Path(endf_config['default_directory']).expanduser().resolve()
+                    if dir_path.exists():
+                        return dir_path
+        except Exception as e:
+            logger.debug(f"Error loading config file: {e}")
+        
+        return None
 
     @lru_cache(maxsize=1024)
     def get_cross_section(
