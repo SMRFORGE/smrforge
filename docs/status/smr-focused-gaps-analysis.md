@@ -240,16 +240,23 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 
 ---
 
-#### 3.2 **Control Rod Systems for SMRs**
-- ✅ Basic control rod geometry exists
-- ⚠️ **May not support SMR-specific control systems**
-- ❌ **No control rod cluster assemblies** (PWR SMRs)
-- ❌ **No control blades** (BWR SMRs)
-- ❌ **No SMR-specific scram systems**
+#### 3.2 **Control Rod Systems for SMRs** ✅
+- ✅ Basic control rod geometry exists (HTGR)
+- ✅ **Control rod cluster assemblies** (PWR SMRs) - `ControlRodCluster` class implemented
+- ✅ **Control blades** (BWR SMRs) - `ControlBlade` class implemented
+- ⚠️ **SMR-specific scram systems** - Basic support, advanced features pending
 
-**Impact:** 🟡 **MEDIUM** - SMRs may have different control systems
+**Status:** ✅ **BASIC SUPPORT COMPLETE** - Control rod clusters and blades implemented
 
-**Recommendation:** 🟡 **MEDIUM PRIORITY** - Verify SMR compatibility
+**Implementation:**
+- `ControlRodCluster` class for PWR control rod clusters (RCCA)
+- `ControlBlade` class for BWR control blades (cruciform)
+- Both classes support insertion, worth calculations
+- Full test coverage
+
+**Impact:** ✅ **SUPPORTED** - Basic control systems for LWR SMRs available
+
+**Recommendation:** 🟡 **PHASE 2** - Enhance with advanced scram systems and worth calculations
 
 ---
 
