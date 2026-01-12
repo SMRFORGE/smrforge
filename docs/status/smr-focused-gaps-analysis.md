@@ -220,22 +220,28 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 
 ---
 
-#### 2.4 **Advanced Multi-Group Processing** - **IMPORTANT FOR SMRs**
+#### 2.4 **Advanced Multi-Group Processing** - ✅ **IMPLEMENTED**
 - ✅ Basic multi-group collapse exists
-- ❌ **No superhomogenization (SPH)** method
-- ❌ **No equivalence theory** for group collapse
-- ❌ **No adjoint flux weighting** for importance-weighted collapse
+- ✅ **Superhomogenization (SPH)** method - `SPHMethod` class implemented
+- ✅ **Equivalence theory** - `EquivalenceTheory` class implemented
+- ⚠️ **Adjoint flux weighting** - Not yet implemented (future enhancement)
+
+**Implementation:**
+- `SPHMethod` class for SPH factor calculation and application
+- `EquivalenceTheory` class for fuel pin homogenization
+- Dancoff factor and escape probability calculations
+- Integration with existing `CrossSectionTable` collapse methods
 
 **Why Important for SMRs:**
 - SMRs need accurate multi-group cross-sections for diffusion solver
 - SPH method improves accuracy for heterogeneous assemblies
-- Important for SMR design optimization
+- Equivalence theory essential for fuel pin homogenization
 
-**Impact:** 🟡 **MEDIUM** - Improves accuracy but not critical
+**Status:** ✅ **IMPLEMENTED** - SPH and equivalence theory complete, adjoint weighting pending
 
-**Recommendation:** 🟡 **MEDIUM PRIORITY** - Enhancement for better accuracy
+**Location:** `smrforge/core/multigroup_advanced.py`
 
-**Location:** `smrforge/core/reactor_core.py` - `CrossSectionTable` class
+**Test Coverage:** 12 tests (11 passing, 1 skipped - requires ENDF files)
 
 ---
 
@@ -434,11 +440,12 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
    - **Effort:** Medium-High
    - **Impact:** 🟢 **MEDIUM** - Advanced SMR concepts
 
-10. **Advanced Multi-Group Processing** (`reactor_core.py`)
-    - SPH method
-    - Equivalence theory
-    - **Effort:** Medium
-    - **Impact:** 🟢 **LOW-MEDIUM** - Enhancement
+10. **Advanced Multi-Group Processing** (`reactor_core.py`) ✅
+    - ✅ SPH method - `SPHMethod` class implemented
+    - ✅ Equivalence theory - `EquivalenceTheory` class implemented
+    - **Status:** ✅ **COMPLETE** - Advanced multi-group processing implemented
+    - **Test Coverage:** 12 tests (11 passing, 1 skipped)
+    - **Location:** `smrforge/core/multigroup_advanced.py`
 
 11. **SMR-Specific Mesh Optimization** (Geometry)
     - Compact geometry meshing
@@ -461,7 +468,7 @@ SMRForge is scoped for **Small Modular Reactor (SMR) development and prototyping
 | **Nuclide Inventory Tracking** | ✅ Complete | - | Medium | `reactor_core.py` | All SMRs (burnup) | 13 tests ✅ |
 | **SMR Control Systems** | ✅ Complete | - | Medium | `control_rod_worth.py` | LWR SMRs | 15 tests ✅ |
 | **Fast Reactor SMR** | ❌ Pending | 🟢 Medium | Medium | Geometry | ~10% of SMR market | - |
-| **Advanced Multi-Group** | ❌ Pending | 🟢 Low | Low-Medium | `reactor_core.py` | Enhancement | - |
+| **Advanced Multi-Group** | ✅ Complete | - | Low-Medium | `multigroup_advanced.py` | Enhancement | 12 tests ✅ |
 
 **Legend:**
 - ✅ Complete - Fully implemented with tests
