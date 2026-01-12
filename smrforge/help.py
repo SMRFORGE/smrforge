@@ -27,7 +27,15 @@ _smr_module: Optional[Any] = None
 
 
 def _get_smr_module() -> Optional[Any]:
-    """Lazy import of smrforge module."""
+    """
+    Lazy import of smrforge module.
+    
+    Performs lazy import of the smrforge module to avoid circular dependencies.
+    The import is cached after the first call.
+    
+    Returns:
+        The smrforge module if available, None otherwise.
+    """
     global _CORE_AVAILABLE, _smr_module
     if _CORE_AVAILABLE is None:
         try:
@@ -41,7 +49,12 @@ def _get_smr_module() -> Optional[Any]:
 
 
 def _is_core_available() -> bool:
-    """Check if core modules are available."""
+    """
+    Check if core modules are available.
+    
+    Returns:
+        True if smrforge core modules can be imported, False otherwise.
+    """
     _get_smr_module()
     return _CORE_AVAILABLE is True
 
@@ -910,7 +923,18 @@ def _print_help_plain(
 
 
 def _format_docstring(doc: str) -> str:
-    """Format docstring for better markdown display."""
+    """
+    Format docstring for better markdown display.
+    
+    Processes a docstring to ensure proper markdown formatting, particularly
+    for Python code examples that should be in code blocks.
+    
+    Args:
+        doc: Raw docstring text.
+    
+    Returns:
+        Formatted docstring with proper markdown code block formatting.
+    """
     # Split into sections if needed
     lines = doc.split("\n")
     formatted = []
@@ -944,7 +968,15 @@ def _format_docstring(doc: str) -> str:
 
 
 def _get_examples() -> Dict[str, List[Dict[str, str]]]:
-    """Get examples for various objects."""
+    """
+    Get examples for various objects.
+    
+    Returns a dictionary mapping object names to lists of example dictionaries.
+    Each example dictionary contains 'description' and 'code' keys.
+    
+    Returns:
+        Dictionary mapping object names to their example code snippets.
+    """
     return {
         "create_reactor": [
             {

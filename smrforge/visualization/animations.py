@@ -312,7 +312,25 @@ def animate_3d_transient_plotly(
 
 
 def _save_gif_matplotlib(anim: "animation.FuncAnimation", save_path: Path, fps: int = 10) -> None:
-    """Save matplotlib animation as GIF."""
+    """
+    Save matplotlib animation as GIF file.
+    
+    Extracts frames from a matplotlib FuncAnimation object and saves them
+    as a GIF using imageio. Requires imageio package to be installed.
+    
+    Args:
+        anim: Matplotlib FuncAnimation object.
+        save_path: Path where GIF file should be saved.
+        fps: Frames per second for the GIF. Defaults to 10.
+    
+    Raises:
+        ImportError: If imageio is not available.
+    
+    Example:
+        >>> import matplotlib.animation as animation
+        >>> anim = animation.FuncAnimation(fig, animate, frames=100)
+        >>> _save_gif_matplotlib(anim, Path("output.gif"), fps=15)
+    """
     if not _IMAGEIO_AVAILABLE:
         raise ImportError(
             "imageio is required for GIF export. Install with: pip install imageio[ffmpeg]"

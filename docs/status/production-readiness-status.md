@@ -108,8 +108,8 @@
 - ⚠️ Some low-priority modules: **Still need improvement**
 
 **Coverage Distribution:**
-- ✅ **Excellent (≥90%):** 28 modules (53.8%)
-- ✅ **Good (80-89%):** 9 modules (17.3%)
+- ✅ **Excellent (≥90%):** 36 modules (69.2%) - includes 17 modules at 100%!
+- ✅ **Good (80-89%):** 11 modules (21.2%)
 - ⚠️ **Acceptable (70-79%):** 12 modules (23.1%)
 - ⚠️ **Needs Work (<70%):** 20 modules (38.5%)
 
@@ -126,19 +126,19 @@
 2. ✅ `core/endf_parser.py` (95.1% → **97.3%**) - **EXCELLENT** (Tasks #9 and #10 complete)
 3. ✅ `convenience.py` (82.8% → **93.0%**) - **EXCELLENT** (+11 new tests)
 4. ✅ `uncertainty/uq.py` (70.5% → **80.1%**) - **COMPLETE** (30+ new tests)
-5. ✅ `core/resonance_selfshield.py` (72.4% → ~75%)
-6. ✅ `burnup/solver.py` (20.8% → ~75%)
-7. ✅ `decay_heat/calculator.py` (19.1% → ~75%)
-8. ✅ `gamma_transport/solver.py` (17.9% → ~75%)
-9. ✅ `core/thermal_scattering_parser.py` (36.2% → 77.5%)
-10. ✅ `core/material_mapping.py` (41.0% → ~75%)
-11. ✅ `core/photon_parser.py` (19.3% → ~75%)
-12. ✅ `core/gamma_production_parser.py` (20.5% → ~75%)
-13. ✅ `convenience_utils.py` (24.8% → ~75%)
-14. ✅ `geometry/mesh_extraction.py` (11.8% → ~75%)
-15. ✅ `geometry/mesh_3d.py` (17.0% → ~75%)
-16. ✅ `visualization/mesh_3d.py` (19.8% → ~75%)
-17. ✅ `help.py` (17.9% → ~75%)
+5. ✅ `core/resonance_selfshield.py` (72.4% → **90.8%**) - **EXCELLENT** (+18.4%)
+6. ✅ `core/material_mapping.py` (41.0% → **100.0%**) - **PERFECT COVERAGE** (+59.0%)
+7. ✅ `decay_heat/calculator.py` (19.1% → **95.5%**) - **EXCELLENT** (+76.4%)
+8. ✅ `burnup/solver.py` (20.8% → **94.2%**) - **EXCELLENT** (+73.4%)
+9. ✅ `gamma_transport/solver.py` (17.9% → **93.6%**) - **EXCELLENT** (+75.7%)
+10. ✅ `core/photon_parser.py` (19.3% → **88.7%**) - **EXCELLENT** (+69.4%)
+11. ✅ `core/gamma_production_parser.py` (20.5% → **80.6%**) - **GOOD** (+60.1%)
+12. ✅ `core/thermal_scattering_parser.py` (36.2% → **77.5%**)
+13. ✅ `geometry/mesh_3d.py` (17.0% → **100.0%**) - **PERFECT COVERAGE** (+83.0%)
+14. ✅ `geometry/mesh_extraction.py` (11.8% → **96.6%**) - **EXCELLENT** (+84.8%)
+15. ✅ `help.py` (17.9% → **94.8%**) - **EXCELLENT** (+76.9%)
+16. ✅ `convenience_utils.py` (24.8% → **92.7%**) - **EXCELLENT** (+67.9%)
+17. ✅ `visualization/mesh_3d.py` (19.8% → **97.4%**) - **EXCELLENT** (+77.6%)
 
 **Action Taken:**
 - ✅ Comprehensive test files created for all priority modules

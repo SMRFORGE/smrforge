@@ -427,14 +427,35 @@ class MonteCarloEngine:
             self.weight_window = WeightWindow()
 
     def find_region(self, position: np.ndarray) -> Optional[Region]:
-        """Find which region contains the position"""
+        """
+        Find which region contains the given position.
+        
+        Args:
+            position: 3D position vector [x, y, z] in cm.
+        
+        Returns:
+            Region containing the position, or None if position is outside all regions.
+        """
         for region in self.regions:
             if region.geometry.is_inside(position):
                 return region
         return None
 
     def sample_distance(self, neutron: Neutron, region: Region) -> float:
-        """Sample distance to next collision"""
+        """
+        Sample distance to next collision using exponential distribution.
+        
+        Uses the total macroscopic cross section to sample the distance
+        to the next collision according to: d = -ln(ξ) / Σt where ξ is
+        a random number in [0, 1).
+        
+        Args:
+            neutron: Neutron particle.
+            region: Region containing the neutron.
+        
+        Returns:
+            Distance to next collision in cm, or inf if cross section is zero.
+        """
         xs = region.material.cross_section.interpolate(neutron.energy)
         sigma_t = xs["total"] * region.material.number_density()
 
@@ -444,7 +465,19 @@ class MonteCarloEngine:
         return -np.log(self.rng.random()) / sigma_t
 
     def sample_collision_type(self, neutron: Neutron, region: Region) -> CollisionType:
-        """Sample type of collision"""
+        """
+        Sample the type of collision based on cross sections.
+        
+        Samples collision type probabilistically based on the relative
+        magnitudes of scattering, absorption, and fission cross sections.
+        
+        Args:
+            neutron: Neutron particle.
+            region: Region containing the neutron.
+        
+        Returns:
+            CollisionType (SCATTER, ABSORPTION, or FISSION).
+        """
         xs = region.material.cross_section.interpolate(neutron.energy)
 
         total = xs["scatter"] + xs["absorption"] + xs["fission"]
@@ -461,7 +494,15 @@ class MonteCarloEngine:
             return CollisionType.ABSORPTION
 
     def scatter_neutron(self, neutron: Neutron):
-        """Perform isotropic scattering"""
+        """
+        Perform isotropic elastic scattering.
+        
+        Updates the neutron's direction and energy based on isotropic
+        elastic scattering kinematics. Simplified model.
+        
+        Args:
+            neutron: Neutron particle to scatter (modified in place).
+        """
         # Isotropic scattering in lab frame (simplified)
         mu = 2 * self.rng.random() - 1  # cos(theta)
         phi = 2 * np.pi * self.rng.random()
@@ -477,7 +518,20 @@ class MonteCarloEngine:
         neutron.energy *= 1 - alpha * self.rng.random()
 
     def process_fission(self, neutron: Neutron, region: Region) -> List[Neutron]:
-        """Process fission event"""
+        """
+        Process fission event and generate fission neutrons.
+        
+        Samples the number of neutrons produced from fission based on the
+        average neutrons per fission (nu). Creates new neutron particles
+        with energies sampled from the fission spectrum and isotropic directions.
+        
+        Args:
+            neutron: Neutron that caused the fission.
+            region: Region where fission occurred.
+        
+        Returns:
+            List of newly created fission neutron particles.
+        """
         xs = region.material.cross_section.interpolate(neutron.energy)
         nu = xs["nu"]  # Average neutrons per fission
 
@@ -516,14 +570,35 @@ class MonteCarloEngine:
         return fission_neutrons
 
     def sample_fission_energy(self) -> float:
-        """Sample energy from fission spectrum (Watt spectrum)"""
+        """
+        Sample energy from fission spectrum (Watt spectrum).
+        
+        Currently returns a simplified average fission energy. A full
+        implementation would sample from the Watt spectrum:
+        P(E) ~ exp(-E) * sinh(sqrt(2E))
+        
+        Returns:
+            Fission neutron energy in MeV (currently fixed at 2.0 MeV).
+        """
         # Simplified Watt spectrum for U-235
         # P(E) ~ exp(-E) * sinh(sqrt(2E))
         # For simplicity, use average fission energy
         return 2.0  # MeV (typical)
 
     def transport_neutron(self, neutron: Neutron) -> List[Neutron]:
-        """Transport single neutron to completion"""
+        """
+        Transport single neutron to completion.
+        
+        Advances a neutron particle through the geometry, handling collisions,
+        boundary crossings, and variance reduction until the neutron is
+        absorbed, leaks out, or is terminated.
+        
+        Args:
+            neutron: Neutron particle to transport.
+        
+        Returns:
+            List of fission neutrons produced during transport (empty if no fission).
+        """
         history = []
 
         while neutron.state == ParticleState.ACTIVE:
@@ -586,7 +661,15 @@ class MonteCarloEngine:
         return history
 
     def run_history(self) -> int:
-        """Run single neutron history"""
+        """
+        Run single neutron history.
+        
+        Generates a neutron from the source, transports it, and counts
+        the number of fission neutrons produced.
+        
+        Returns:
+            Number of fission neutrons produced in this history.
+        """
         neutron = self.source()
         self.n_histories += 1
 
@@ -594,7 +677,21 @@ class MonteCarloEngine:
         return len(fission_neutrons)
 
     def run_batch(self, n_histories: int) -> Dict[str, float]:
-        """Run batch of histories"""
+        """
+        Run batch of neutron histories.
+        
+        Runs multiple neutron histories and calculates k-effective based on
+        the ratio of fission neutrons produced to source neutrons.
+        
+        Args:
+            n_histories: Number of neutron histories to run.
+        
+        Returns:
+            Dictionary containing:
+                - k_eff: Calculated k-effective for this batch
+                - n_histories: Number of histories run
+                - n_collisions: Total number of collisions
+        """
         total_fissions = 0
 
         for _ in range(n_histories):
@@ -670,7 +767,25 @@ class ParallelMonteCarlo:
 
 
 def example_bare_sphere_criticality() -> Dict[str, Any]:
-    """Example: Critical mass calculation for bare U-235 sphere"""
+    """
+    Example: Critical mass calculation for bare U-235 sphere.
+    
+    Demonstrates Monte Carlo neutron transport for a bare U-235 sphere.
+    Calculates k-effective using the MonteCarloEngine and variance reduction
+    techniques. Prints results including criticality status and tally statistics.
+    
+    Returns:
+        Dictionary containing:
+            - k_eff_mean: Mean k-effective value
+            - k_eff_std: Standard deviation of k-effective
+            - k_eff_history: List of k-effective values per generation
+            - n_generations: Number of generations run
+            - n_per_generation: Number of particles per generation
+    
+    Example:
+        >>> results = example_bare_sphere_criticality()
+        >>> print(f"k-eff: {results['k_eff_mean']:.5f}")
+    """
 
     # Create U-235 cross sections (simplified)
     energy_grid = np.array([0.001, 0.1, 1.0, 10.0])  # MeV

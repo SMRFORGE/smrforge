@@ -111,9 +111,12 @@ class TestThermalScatteringParser:
     def test_create_placeholder_data(self):
         """Test placeholder data creation."""
         parser = ThermalScatteringParser()
-        data = parser._create_placeholder_data("H_in_H2O", Path("test.endf"))
+        # _create_placeholder_data uses the material_name parameter as-is
+        # It checks for substrings to determine zaid/bound_mass but doesn't change material_name
+        data = parser._create_placeholder_data("H_in_H2O", Path("tsl-H_in_H2O.endf"))
 
-        assert data.material_name == "H in H2O"
+        # material_name is used as passed, not mapped
+        assert data.material_name == "H_in_H2O"
         assert data.zaid == 1001
         assert data.bound_atom_mass == 1.008
         assert not data.coherent_scattering

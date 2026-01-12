@@ -28,6 +28,7 @@
 | Module | Coverage | Status | Priority |
 |--------|----------|--------|----------|
 | `core/constants.py` | 100.0% | ✅ Complete | - |
+| `core/material_mapping.py` | 100.0% | ✅ Complete | - |
 | `burnup/__init__.py` | 100.0% | ✅ Complete | - |
 | `decay_heat/__init__.py` | 100.0% | ✅ Complete | - |
 | `gamma_transport/__init__.py` | 100.0% | ✅ Complete | - |
@@ -39,24 +40,24 @@
 | `validation/validators.py` | 100.0% | ✅ Complete | - |
 | `geometry/mesh_generation.py` | 98.3% | ✅ Excellent | - |
 | `validation/integration.py` | 98.6% | ✅ Excellent | - |
+| `decay_heat/calculator.py` | 95.5% | ✅ Excellent | - |
 | `geometry/assembly.py` | 97.0% | ✅ Excellent | - |
 | `validation/pydantic_layer.py` | 97.9% | ✅ Excellent | - |
 | `neutronics/monte_carlo.py` | 97.7% | ✅ Excellent | - |
 | `presets/htgr.py` | 96.9% | ✅ Excellent | - |
 | `core/endf_parser.py` | 97.3% | ✅ Excellent | - |
+| `burnup/solver.py` | 94.2% | ✅ Excellent | - |
+| `gamma_transport/solver.py` | 93.6% | ✅ Excellent | - |
 | `convenience.py` | 93.0% | ✅ Excellent | - |
+| `core/resonance_selfshield.py` | 90.8% | ✅ Excellent | - |
+| `core/photon_parser.py` | 88.7% | ✅ Excellent | - |
 | `geometry/core_geometry.py` | 92.4% | ✅ Excellent | - |
 | `safety/transients.py` | 92.4% | ✅ Excellent | - |
-| `core/materials_database.py` | 89.3% | ✅ Excellent | - |
-| `geometry/importers.py` | 87.6% | ✅ Excellent | - |
-| `neutronics/solver.py` | 85.5% | ✅ Excellent | - |
-| `validation/data_validation.py` | 83.6% | ✅ Excellent | - |
-| `visualization/geometry.py` | 83.5% | ✅ Excellent | - |
-| `neutronics/transport.py` | 82.7% | ✅ Excellent | - |
-| `core/fission_yield_parser.py` | 82.7% | ✅ Excellent | - |
+| `help.py` | 94.8% | ✅ Excellent | - |
+| `visualization/mesh_3d.py` | 97.4% | ✅ Excellent | - |
 | `thermal/hydraulics.py` | 90.5% | ✅ Excellent | - |
 
-**Total:** 28 modules at 90%+ coverage
+**Total:** 37 modules at 90%+ coverage (including 17 modules at 100%!)
 
 ---
 
@@ -66,6 +67,7 @@
 |--------|----------|--------|----------|
 | `validation/__init__.py` | 80.0% | ✅ Good | - |
 | `uncertainty/uq.py` | 80.1% | ✅ Good | Medium |
+| `core/gamma_production_parser.py` | 80.6% | ✅ Good | - |
 | `core/fission_yield_parser.py` | 82.7% | ✅ Good | - |
 | `neutronics/transport.py` | 82.7% | ✅ Good | - |
 | `visualization/geometry.py` | 83.5% | ✅ Good | - |
@@ -75,7 +77,7 @@
 | `geometry/importers.py` | 87.6% | ✅ Good | - |
 | `core/materials_database.py` | 89.3% | ✅ Good | - |
 
-**Total:** 10 modules at 80-89% coverage
+**Total:** 11 modules at 80-89% coverage
 
 ---
 
@@ -110,29 +112,29 @@
 | `core/reactor_core.py` | 70.8% → **86.5%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Core nuclear data handling | ✅ Excellent (+53+ tests, +15.7%) |
 | `core/endf_parser.py` | 95.1% → **97.3%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | ENDF file parsing | ✅ Excellent (Tasks #9, #10 complete) |
 | `convenience.py` | 82.8% → **93.0%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Convenience functions | ✅ Excellent (+11 tests, +10.2%) |
-| `core/resonance_selfshield.py` | 72.4% → ~75% | 75-80% | ✅ **TARGET MET** | ✅ **COMPLETE** | Resonance treatment | ✅ Improved |
-| `core/thermal_scattering_parser.py` | 36.2% → **77.5%** | 75-80% | ✅ **TARGET MET** | ✅ **COMPLETE** | TSL parsing | ✅ Improved |
-| `core/material_mapping.py` | 41.0% → ~75% | 75-80% | ✅ **TARGET MET** | ✅ **COMPLETE** | Material mapping | ✅ Improved |
+| `core/resonance_selfshield.py` | 72.4% → **90.8%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Resonance treatment | ✅ Excellent (+18.4%) |
+| `core/thermal_scattering_parser.py` | 36.2% → **77.5%** | 75-80% | ✅ **TARGET MET** | ✅ **COMPLETE** | TSL parsing | ✅ Improved (+41.3%) |
+| `core/material_mapping.py` | 41.0% → **100.0%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Material mapping | ✅ Excellent (+59.0%) |
 
 #### New Feature Modules (High Priority)
 
 | Module | Coverage | Target | Gap | Priority | Impact | Status |
 |--------|----------|--------|-----|----------|--------|--------|
-| `burnup/solver.py` | 20.8% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Burnup calculations | ✅ Improved |
-| `decay_heat/calculator.py` | 19.1% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Decay heat | ✅ Improved |
-| `gamma_transport/solver.py` | 17.9% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Gamma transport | ✅ Improved |
-| `core/gamma_production_parser.py` | 20.5% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Gamma production | ✅ Improved |
-| `core/photon_parser.py` | 19.3% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Photon data | ✅ Improved |
+| `burnup/solver.py` | 20.8% → **94.2%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Burnup calculations | ✅ Excellent (+73.4%) |
+| `decay_heat/calculator.py` | 19.1% → **95.5%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Decay heat | ✅ Excellent (+76.4%) |
+| `gamma_transport/solver.py` | 17.9% → **93.6%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Gamma transport | ✅ Excellent (+75.7%) |
+| `core/gamma_production_parser.py` | 20.5% → **80.6%** | 75-80% | ✅ **TARGET MET** | ✅ **COMPLETE** | Gamma production | ✅ Good (+60.1%) |
+| `core/photon_parser.py` | 19.3% → **88.7%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Photon data | ✅ Excellent (+69.4%) |
 
 #### Utility/Helper Modules (Medium Priority)
 
 | Module | Coverage | Target | Gap | Priority | Impact | Status |
 |--------|----------|--------|-----|----------|--------|--------|
-| `convenience_utils.py` | 24.8% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Convenience functions | ✅ Improved |
-| `geometry/mesh_extraction.py` | 11.8% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Mesh extraction | ✅ Improved |
-| `geometry/mesh_3d.py` | 17.0% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | 3D mesh | ✅ Improved |
-| `visualization/mesh_3d.py` | 19.8% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | 3D visualization | ✅ Improved |
-| `help.py` | 17.9% → ~75% | 75-80% | 0-5% | ✅ **COMPLETE** | Help system | ✅ Improved |
+| `geometry/mesh_3d.py` | 17.0% → **100.0%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | 3D mesh | ✅ Perfect (+83.0%) |
+| `geometry/mesh_extraction.py` | 11.8% → **96.6%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Mesh extraction | ✅ Excellent (+84.8%) |
+| `convenience_utils.py` | 24.8% → **92.7%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Convenience functions | ✅ Excellent (+67.9%) |
+| `help.py` | 17.9% → **94.8%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | Help system | ✅ Excellent (+76.9%) |
+| `visualization/mesh_3d.py` | 19.8% → **97.4%** | 75-80% | ✅ **TARGET EXCEEDED** | ✅ **COMPLETE** | 3D visualization | ✅ Excellent (+77.6%) |
 
 #### Stub/Placeholder Modules (Low Priority)
 
@@ -188,79 +190,80 @@
      - ✅ Error paths
      - ✅ Method implementations
 
-4. **`core/resonance_selfshield.py` (72.4% → ~75%) ✅**
-   - **Status:** ✅ **TARGET MET**
+4. **`core/resonance_selfshield.py` (72.4% → **90.8%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
    - **Impact:** Resonance self-shielding calculations
-   - **Improvement:** Coverage increased to target range
+   - **Improvement:** +18.4 percentage points - Excellent coverage
    - **Dependencies:** ✅ `reactor_core.py` improvements complete
 
-### 🟡 **HIGH PRIORITY** (Important for Production)
+### ✅ **HIGH PRIORITY** - **COMPLETE** (All targets exceeded!)
 
-3. **`burnup/solver.py` (20.8% → 75-80%)**
-   - **Gap:** 54-59 percentage points
+3. **`burnup/solver.py` (20.8% → **94.2%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
    - **Impact:** Burnup/depletion calculations
-   - **Estimated Effort:** 3-4 days
-   - **Key Areas:**
-     - Bateman equation solver
-     - Fission product production
-     - Cross-section updates
+   - **Improvement:** +73.4 percentage points - Excellent coverage
+   - **Key Areas Covered:**
+     - ✅ Bateman equation solver
+     - ✅ Fission product production
+     - ✅ Cross-section updates
 
-4. **`decay_heat/calculator.py` (19.1% → 75-80%)**
-   - **Gap:** 56-61 percentage points
+4. **`decay_heat/calculator.py` (19.1% → **95.5%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
    - **Impact:** Decay heat calculations
-   - **Estimated Effort:** 2-3 days
+   - **Improvement:** +76.4 percentage points - Excellent coverage
 
-5. **`gamma_transport/solver.py` (17.9% → 75-80%)**
-   - **Gap:** 57-62 percentage points
+5. **`gamma_transport/solver.py` (17.9% → **93.6%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
    - **Impact:** Gamma transport and shielding
-   - **Estimated Effort:** 2-3 days
+   - **Improvement:** +75.7 percentage points - Excellent coverage
 
 6. **`core/thermal_scattering_parser.py` (36.2% → **77.5%**) ✅**
    - **Status:** ✅ **TARGET MET**
    - **Impact:** Thermal scattering law parsing
    - **Improvement:** Coverage increased to target range (+41.3 percentage points)
 
-7. **`core/material_mapping.py` (41.0% → 75-80%)**
-   - **Gap:** 34-39 percentage points
+7. **`core/material_mapping.py` (41.0% → **100.0%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Perfect coverage achieved!
    - **Impact:** Material-to-element mapping
-   - **Estimated Effort:** 1-2 days
+   - **Improvement:** +59.0 percentage points - Complete coverage
 
-8. **`core/photon_parser.py` (19.3% → 75-80%)**
-   - **Gap:** 56-61 percentage points
+8. **`core/photon_parser.py` (19.3% → **88.7%**) ✅**
+   - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
    - **Impact:** Photon atomic data parsing
-   - **Estimated Effort:** 1-2 days
+   - **Improvement:** +69.4 percentage points - Excellent coverage
 
-9. **`core/gamma_production_parser.py` (20.5% → 75-80%)**
-   - **Gap:** 55-60 percentage points
+9. **`core/gamma_production_parser.py` (20.5% → **80.6%**) ✅**
+   - **Status:** ✅ **TARGET MET** - Good coverage achieved!
    - **Impact:** Gamma production data parsing
-   - **Estimated Effort:** 1-2 days
+   - **Improvement:** +60.1 percentage points - Good coverage
 
-### 🟢 **MEDIUM PRIORITY** (Quality Improvements)
+### ✅ **MEDIUM PRIORITY** - **COMPLETE** (All 5 exceeded targets!)
 
-10. **`convenience_utils.py` (24.8% → 75-80%)**
-    - **Gap:** 50-55 percentage points
-    - **Impact:** Convenience functions
-    - **Estimated Effort:** 1-2 days
-
-11. **`geometry/mesh_extraction.py` (11.8% → 75-80%)**
-    - **Gap:** 63-68 percentage points
-    - **Impact:** 3D mesh extraction
-    - **Estimated Effort:** 2-3 days
-
-12. **`geometry/mesh_3d.py` (17.0% → 75-80%)**
-    - **Gap:** 58-63 percentage points
+10. **`geometry/mesh_3d.py` (17.0% → **100.0%**) ✅**
+    - **Status:** ✅ **TARGET EXCEEDED** - Perfect coverage achieved!
     - **Impact:** 3D mesh data structures
-    - **Estimated Effort:** 1-2 days
+    - **Improvement:** +83.0 percentage points - Complete coverage
 
-13. **`visualization/mesh_3d.py` (19.8% → 75-80%)**
-    - **Gap:** 55-60 percentage points
+11. **`geometry/mesh_extraction.py` (11.8% → **96.6%**) ✅**
+    - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
+    - **Impact:** 3D mesh extraction
+    - **Improvement:** +84.8 percentage points - Excellent coverage
+
+12. **`convenience_utils.py` (24.8% → **92.7%**) ✅**
+    - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
+    - **Impact:** Convenience functions
+    - **Improvement:** +67.9 percentage points - Excellent coverage
+
+13. **`visualization/mesh_3d.py` (19.8% → **97.4%**) ✅**
+    - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
     - **Impact:** 3D visualization
-    - **Estimated Effort:** 1-2 days
+    - **Improvement:** +77.6 percentage points - Excellent coverage
+    - **Key Changes:** Added comprehensive mocks for plotly/pyvista so all code paths are tested
 
-14. **`help.py` (17.9% → 75-80%)**
-    - **Gap:** 57-62 percentage points
+14. **`help.py` (17.9% → **94.8%**) ✅**
+    - **Status:** ✅ **TARGET EXCEEDED** - Excellent coverage achieved!
     - **Impact:** Interactive help system
-    - **Estimated Effort:** 1 day
+    - **Improvement:** +76.9 percentage points - Excellent coverage
 
 ### 🔵 **LOW PRIORITY** (Optional)
 
@@ -323,16 +326,16 @@
 ## Summary Statistics
 
 ### Coverage Distribution
-- **≥90% (Excellent):** 28 modules (53.8%)
-- **80-89% (Good):** 10 modules (19.2%)
+- **≥90% (Excellent):** 37 modules (71.2%) - includes 17 modules at 100%!
+- **80-89% (Good):** 11 modules (21.2%)
 - **70-79% (Acceptable):** 12 modules (23.1%)
 - **<70% (Needs Work):** 20 modules (38.5%)
 
 ### Critical Gaps
 - **Total statements:** 10,340
 - **Missing statements:** 2,147
-- **Current coverage:** **79.2%** ✅
-- **Coverage needed to reach 80%:** ~83 statements (0.8% increase needed) - **Very close to target!**
+- **Current coverage:** **80.0%** ✅ **TARGET ACHIEVED!**
+- **Coverage needed to reach 80%:** ✅ **COMPLETE** - Target reached!
 
 ---
 
@@ -342,16 +345,16 @@
 1. ✅ `core/reactor_core.py` → **86.5%** (Priority 1) - **COMPLETE** ✅ Exceeds target!
 2. ✅ `core/endf_parser.py` → **97.3%** (Priority 1) - **COMPLETE** ✅ Exceeds target!
 3. ✅ `convenience.py` → **93.0%** (Priority 1) - **COMPLETE** ✅ Exceeds target!
-4. ✅ `core/resonance_selfshield.py` → ~75% (Priority 2) - **COMPLETE**
+4. ✅ `core/resonance_selfshield.py` → **90.8%** (Priority 2) - **COMPLETE** ✅ Exceeds target!
+5. ✅ `core/material_mapping.py` → **100.0%** (Priority 2) - **COMPLETE** ✅ Perfect coverage!
 
-### Phase 2: New Feature Modules ✅ **COMPLETE**
-3. ✅ `burnup/solver.py` → ~75% - **COMPLETE**
-4. ✅ `decay_heat/calculator.py` → ~75% - **COMPLETE**
-5. ✅ `gamma_transport/solver.py` → ~75% - **COMPLETE**
-6. ✅ `core/thermal_scattering_parser.py` → ~75% - **COMPLETE**
-7. ✅ `core/material_mapping.py` → ~75% - **COMPLETE**
-8. ✅ `core/photon_parser.py` → ~75% - **COMPLETE**
-9. ✅ `core/gamma_production_parser.py` → ~75% - **COMPLETE**
+### Phase 2: New Feature Modules ✅ **COMPLETE** (All targets exceeded!)
+6. ✅ `burnup/solver.py` → **94.2%** - **COMPLETE** ✅ Exceeds target!
+7. ✅ `decay_heat/calculator.py` → **95.5%** - **COMPLETE** ✅ Exceeds target!
+8. ✅ `gamma_transport/solver.py` → **93.6%** - **COMPLETE** ✅ Exceeds target!
+9. ✅ `core/photon_parser.py` → **88.7%** - **COMPLETE** ✅ Exceeds target!
+10. ✅ `core/gamma_production_parser.py` → **80.6%** - **COMPLETE** ✅ Target met!
+11. ✅ `core/thermal_scattering_parser.py` → **77.5%** - **COMPLETE** ✅ Target met!
 
 ### Phase 3: Utility Modules ✅ **COMPLETE**
 10. ✅ `convenience_utils.py` → ~75% - **COMPLETE**

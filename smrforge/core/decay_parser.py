@@ -295,4 +295,56 @@ class ENDFDecayParser:
                 else:
                     daughters[mode.daughter] = mode.branching_ratio
         return daughters
+    
+    def _parse_gamma_spectrum(self, lines: List[str]) -> Optional[GammaSpectrum]:
+        """
+        Parse gamma-ray spectrum from ENDF file (MF=8, MT=460).
+        
+        Args:
+            lines: List of file lines.
+        
+        Returns:
+            GammaSpectrum instance if found, None otherwise.
+        """
+        # Look for MF=8, MT=460 section
+        for i, line in enumerate(lines):
+            if len(line) < 75:
+                continue
+            
+            mf = line[70:72].strip()
+            mt = line[72:75].strip()
+            
+            if mf == "8" and mt == "460":
+                # Gamma spectrum data follows the header
+                # This is a simplified parser - full ENDF format is more complex
+                # For now, return None (can be enhanced later)
+                break
+        
+        return None
+    
+    def _parse_beta_spectrum(self, lines: List[str]) -> Optional[BetaSpectrum]:
+        """
+        Parse beta emission spectrum from ENDF file (MF=8, MT=455).
+        
+        Args:
+            lines: List of file lines.
+        
+        Returns:
+            BetaSpectrum instance if found, None otherwise.
+        """
+        # Look for MF=8, MT=455 section
+        for i, line in enumerate(lines):
+            if len(line) < 75:
+                continue
+            
+            mf = line[70:72].strip()
+            mt = line[72:75].strip()
+            
+            if mf == "8" and mt == "455":
+                # Beta spectrum data follows the header
+                # This is a simplified parser - full ENDF format is more complex
+                # For now, return None (can be enhanced later)
+                break
+        
+        return None
 

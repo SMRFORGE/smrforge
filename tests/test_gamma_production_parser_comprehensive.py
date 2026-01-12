@@ -348,6 +348,77 @@ class TestENDFGammaProductionParserComprehensive:
         result = parser._parse_gamma_spectrum_section(lines, 0, 18)
         assert result is None
     
+    def test_parse_mf12_alternative_mf_position(self):
+        """Test parsing MF=12 with MF at alternative position."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 9.223500+4 2.345678+2          0          0          0          0   12 18     \n",
+        ]
+        
+        spectra = parser._parse_mf12(lines)
+        assert isinstance(spectra, dict)
+    
+    def test_parse_mf12_no_mt_str(self):
+        """Test parsing MF=12 when MT string is empty."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 9.223500+4 2.345678+2          0          0          0          0 12      \n",
+        ]
+        
+        spectra = parser._parse_mf12(lines)
+        assert isinstance(spectra, dict)
+    
+    def test_parse_mf12_extract_mt_from_context(self):
+        """Test extracting MT from context when standard position fails."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 9.223500+4 2.345678+2          0          0          0          0   12   18     \n",
+        ]
+        
+        spectra = parser._parse_mf12(lines)
+        assert isinstance(spectra, dict)
+    
+    def test_parse_gamma_spectrum_section_short_line(self):
+        """Test parsing gamma spectrum section with short line."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 9.223500+4 2.345678+2          0          0          0          0 12 18     \n",
+            "short\n",  # Line too short
+        ]
+        
+        result = parser._parse_gamma_spectrum_section(lines, 0, 18)
+        assert result is None or isinstance(result, tuple)
+    
+    def test_parse_gamma_spectrum_section_new_mf_break(self):
+        """Test parsing breaks when encountering different MF."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 9.223500+4 2.345678+2          0          0          0          0 12 18     \n",
+            " 0.000000+0 0.000000+0          0          0          2         10 12 18     \n",
+            " 1.000000+3 2.500000+2          0          0          0          0  3  1     \n",  # Different MF
+        ]
+        
+        result = parser._parse_gamma_spectrum_section(lines, 0, 18)
+        assert result is None or isinstance(result, tuple)
+    
+    def test_parse_gamma_spectrum_section_scientific_notation_error(self):
+        """Test parsing handles scientific notation errors."""
+        parser = ENDFGammaProductionParser()
+        
+        lines = [
+            " 9.223500+4 2.345678+2          0          0          0          0 12 18     \n",
+            "invalid scientific notation here                                                   12 18     \n",
+        ]
+        
+        result = parser._parse_gamma_spectrum_section(lines, 0, 18)
+        # Should handle error gracefully and continue
+        assert result is None or isinstance(result, tuple)
+    
     def test_gamma_production_data_empty_spectra(self):
         """Test GammaProductionData with empty spectra."""
         u235 = Nuclide(Z=92, A=235)

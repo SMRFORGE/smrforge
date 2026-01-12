@@ -1,9 +1,10 @@
 # Testing and Coverage Guide
 
-**Last Updated:** January 1, 2026 (After comprehensive improvements)  
-**Current Overall Coverage**: 70-73% (estimated, up from 64.4%)  
+**Last Updated:** January 8, 2026 (After reactor_core.py improvements)  
+**Current Overall Coverage**: **78.3%** (up from 64.4%, excellent progress!)  
 **Target Coverage**: 75-80% for all modules  
-**Progress**: 14 priority modules (9 high + 5 medium) now at target coverage (~75%)
+**Progress**: 14 priority modules (9 high + 5 medium) now at target coverage (~75%)  
+**Gap to 80%**: ~175 statements (1.7% increase needed) - **Very close to target!**
 
 This document consolidates information about test coverage, external data dependencies, and strategies for improving coverage.
 
@@ -22,18 +23,19 @@ This document consolidates information about test coverage, external data depend
 ## Current Coverage Status
 
 ### Overall Coverage
-- **Current**: 70-73% overall (estimated, pending full coverage run)
+- **Current**: **78.3%** overall (up from 64.4%, excellent progress!)
 - **Previous**: 64.4% (8,653 statements, 3,078 missing)
+- **Current**: 78.3% (10,340 statements, 2,240 missing)
 - **Target**: 75-80% for all modules
-- **Gap**: 2-10 percentage points (reduced from 10.6-15.6)
-- **Improvement**: +6-9 percentage points overall
+- **Gap to 80%**: ~175 statements (1.7% increase needed) - **Very close to target!**
+- **Improvement**: +13.9 percentage points overall
 
 ### Module Coverage Summary
 
 **For comprehensive coverage breakdown, see [Test Coverage Summary](docs/status/test-coverage-summary.md)**
 
 #### Critical Modules Status:
-- `reactor_core.py`: 59.0% → ~75% (target: 75-80%) - ✅ **COMPLETE** ✅ **IMPROVED**
+- `reactor_core.py`: 70.8% → **76.0%** (target: 75-80%) - ✅ **SIGNIFICANTLY IMPROVED** (+53 new tests)
 - `resonance_selfshield.py`: 72.4% → ~75% (target: 75-80%) - ✅ **COMPLETE** ✅ **IMPROVED**
 - `endf_parser.py`: 95.1% (target: 75-80%) - ✅ **EXCELLENT**
 - `core/thermal_scattering_parser.py`: 36.2% → ~75% (target: 75-80%) - ✅ **COMPLETE** ✅ **IMPROVED**

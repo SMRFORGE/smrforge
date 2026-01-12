@@ -416,7 +416,21 @@ class ValidatedSolver(ValidatedClass):
         )
 
     def solve_with_validation(self) -> tuple[float, np.ndarray, np.ndarray]:
-        """Solve with automatic output validation."""
+        """
+        Solve with automatic output validation.
+        
+        Runs the internal solver and validates the results before returning.
+        If validation is enabled and errors are found, raises ValueError.
+        
+        Returns:
+            Tuple containing:
+                - k_eff (float): Effective multiplication factor
+                - flux (np.ndarray): Neutron flux distribution
+                - power (np.ndarray): Power distribution
+        
+        Raises:
+            ValueError: If solution validation fails and validation is enabled.
+        """
         # Run solver
         k_eff, flux = self._solve_internal()  # type: ignore
         power = self._compute_power(flux)  # type: ignore
@@ -435,26 +449,90 @@ class ValidatedSolver(ValidatedClass):
 
 # Utility functions for common validation patterns
 def check_positive(value: float, name: str = "value") -> None:
-    """Quick check for positive values."""
+    """
+    Check that a value is positive.
+    
+    Args:
+        value: The value to check.
+        name: Name of the value (used in error message). Defaults to "value".
+    
+    Raises:
+        ValueError: If value is less than or equal to zero.
+    
+    Example:
+        >>> check_positive(5.0, "power")
+        >>> check_positive(-1.0, "power")  # Raises ValueError
+    """
     if value <= 0:
         raise ValueError(f"{name} must be positive, got {value}")
 
 
 def check_range(value: float, min_val: float, max_val: float, name: str = "value") -> None:
-    """Quick range check."""
+    """
+    Check that a value is within a specified range.
+    
+    Args:
+        value: The value to check.
+        min_val: Minimum allowed value (inclusive).
+        max_val: Maximum allowed value (inclusive).
+        name: Name of the value (used in error message). Defaults to "value".
+    
+    Raises:
+        ValueError: If value is outside the range [min_val, max_val].
+    
+    Example:
+        >>> check_range(0.5, 0.0, 1.0, "enrichment")
+        >>> check_range(1.5, 0.0, 1.0, "enrichment")  # Raises ValueError
+    """
     if not (min_val <= value <= max_val):
         raise ValueError(f"{name} must be in [{min_val}, {max_val}], got {value}")
 
 
 def check_normalized(arr: np.ndarray, tolerance: float = 1e-6, name: str = "array") -> None:
-    """Check if array sums to 1."""
+    """
+    Check that an array sums to 1.0 (within tolerance).
+    
+    Useful for validating probability distributions, energy spectra, etc.
+    
+    Args:
+        arr: NumPy array to check.
+        tolerance: Allowed deviation from 1.0. Defaults to 1e-6.
+        name: Name of the array (used in error message). Defaults to "array".
+    
+    Raises:
+        ValueError: If array sum is not within tolerance of 1.0.
+    
+    Example:
+        >>> chi = np.array([0.6, 0.3, 0.08, 0.015, 0.004, 0.001])
+        >>> check_normalized(chi, name="fission_spectrum")
+        >>> chi_bad = np.array([0.5, 0.3, 0.1])  # Sums to 0.9
+        >>> check_normalized(chi_bad)  # Raises ValueError
+    """
     total = np.sum(arr)
     if abs(total - 1.0) > tolerance:
         raise ValueError(f"{name} must sum to 1, got sum={total}")
 
 
 def check_physical_temperature(T: float, name: str = "temperature") -> None:
-    """Quick physical temperature check."""
+    """
+    Check that a temperature is physically reasonable.
+    
+    Validates that temperature is:
+    - Above absolute zero (> 0 K)
+    - Below reasonable upper limit (<= 4000 K)
+    
+    Args:
+        T: Temperature in Kelvin.
+        name: Name of the temperature (used in error message). Defaults to "temperature".
+    
+    Raises:
+        ValueError: If temperature is invalid.
+    
+    Example:
+        >>> check_physical_temperature(1200.0, "core_temperature")
+        >>> check_physical_temperature(-100.0, "temperature")  # Raises ValueError
+        >>> check_physical_temperature(5000.0, "temperature")  # Raises ValueError
+    """
     if T <= 0:
         raise ValueError(f"{name} below absolute zero: {T} K")
     if T > 4000:
@@ -463,13 +541,38 @@ def check_physical_temperature(T: float, name: str = "temperature") -> None:
 
 # Context manager for temporary validation disable
 class ValidationContext:
-    """Context manager to temporarily disable validation."""
+    """
+    Context manager to temporarily disable validation.
+    
+    Allows temporarily disabling validation on a ValidatedClass instance,
+    useful for performance-critical code or constructing objects in temporary
+    invalid states that will be corrected before use.
+    
+    Example:
+        >>> obj = ValidatedReactor(power=1000.0, temp=800.0)
+        >>> with ValidationContext(obj):
+        ...     obj.power = -1.0  # Temporary invalid state
+        ...     obj._fix_state()  # Correct the state
+        ... # Validation is re-enabled when exiting context
+    """
 
     def __init__(self, obj: ValidatedClass) -> None:
+        """
+        Initialize validation context manager.
+        
+        Args:
+            obj: ValidatedClass instance to manage validation for.
+        """
         self.obj = obj
         self.original_state: Optional[bool] = None
 
     def __enter__(self) -> ValidatedClass:
+        """
+        Enter context and disable validation.
+        
+        Returns:
+            The ValidatedClass instance with validation disabled.
+        """
         self.original_state = self.obj._validation_enabled
         self.obj._validation_enabled = False
         return self.obj
@@ -480,6 +583,14 @@ class ValidationContext:
         exc_val: Optional[BaseException], 
         exc_tb: Optional[Any]
     ) -> None:
+        """
+        Exit context and restore validation state.
+        
+        Args:
+            exc_type: Exception type if exception occurred.
+            exc_val: Exception value if exception occurred.
+            exc_tb: Exception traceback if exception occurred.
+        """
         if self.original_state is not None:
             self.obj._validation_enabled = self.original_state
 

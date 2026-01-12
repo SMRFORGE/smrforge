@@ -21,3 +21,8 @@ sphinx-autodoc-typehints>=1.18
 # Jupyter
 jupyter>=1.0
 ipykernel>=6.0
+
+# Optional visualization libraries (for testing visualization/mesh_3d.py)
+# These are optional - tests use mocks, but having them installed improves coverage
+# plotly>=5.0  # Uncomment if you want to test with real plotly
+# pyvista>=0.40.0  # Uncomment if you want to test with real pyvista
