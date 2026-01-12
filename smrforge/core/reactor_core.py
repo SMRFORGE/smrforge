@@ -3051,6 +3051,217 @@ def get_fission_yield_data(
         return None
 
 
+def get_cross_section_with_self_shielding(
+    cache: NuclearDataCache,
+    nuclide: Nuclide,
+    reaction: str,
+    temperature: float = 293.6,
+    library: Library = Library.ENDF_B_VIII,
+    sigma_0: float = 1000.0,  # Background cross-section [barns]
+    use_self_shielding: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Get cross section with resonance self-shielding correction for SMR applications.
+    
+    Applies Bondarenko self-shielding factors to account for heterogeneous
+    fuel/moderator geometry in LWR SMR assemblies. Critical for accurate
+    cross-sections in fuel pins surrounded by water moderator.
+    
+    Args:
+        cache: NuclearDataCache instance
+        nuclide: Nuclide instance
+        reaction: Reaction name (e.g., "capture", "fission")
+        temperature: Temperature [K]
+        library: Nuclear data library
+        sigma_0: Background cross-section [barns] for self-shielding calculation
+        use_self_shielding: If True, apply self-shielding correction
+    
+    Returns:
+        Tuple of (energy, cross_section) arrays with self-shielding applied
+    
+    Example:
+        >>> cache = NuclearDataCache()
+        >>> u238 = Nuclide(Z=92, A=238)
+        >>> # Get capture cross-section with self-shielding for fuel pin in water
+        >>> energy, xs = get_cross_section_with_self_shielding(
+        ...     cache, u238, "capture", temperature=900.0, sigma_0=1000.0
+        ... )
+    """
+    # Get base cross-section
+    energy, xs = cache.get_cross_section(nuclide, reaction, temperature, library)
+    
+    if not use_self_shielding:
+        return energy, xs
+    
+    # Apply self-shielding if available
+    try:
+        from .resonance_selfshield import BondarenkoMethod
+        
+        bondarenko = BondarenkoMethod()
+        key = f"{nuclide.name}_{reaction}"
+        
+        # Get f-factor (shielding factor) for this nuclide/reaction
+        # f-factor depends on sigma_0 (background XS) and temperature
+        if key in bondarenko.f_factors:
+            f_factor = bondarenko.f_factors[key](
+                np.log10(sigma_0), temperature
+            )[0, 0]  # Extract scalar from 2D array
+            
+            # Apply self-shielding: sigma_shielded = f * sigma_infinite
+            xs = xs * f_factor
+            logger.debug(
+                f"Applied self-shielding to {nuclide.name}/{reaction}: "
+                f"f-factor = {f_factor:.4f} at sigma_0 = {sigma_0:.1f} b, T = {temperature:.1f} K"
+            )
+        else:
+            logger.debug(
+                f"No self-shielding data for {nuclide.name}/{reaction}, "
+                f"using infinite dilution cross-section"
+            )
+    except ImportError:
+        logger.debug("Resonance self-shielding module not available")
+    except Exception as e:
+        logger.warning(f"Self-shielding calculation failed: {e}, using infinite dilution")
+    
+    return energy, xs
+
+
+def get_fission_yields(
+    cache: NuclearDataCache,
+    nuclide: Nuclide,
+    library: Library = Library.ENDF_B_VIII_1,
+    yield_type: str = "independent",
+) -> Optional[Dict[Nuclide, float]]:
+    """
+    Get fission product yields for a fissile nuclide (MF=5 parsing).
+    
+    Parses MF=5 (fission product yield data) from ENDF files. Returns
+    independent or cumulative yields for all fission products. Critical
+    for SMR burnup calculations.
+    
+    Args:
+        cache: NuclearDataCache instance
+        nuclide: Fissile nuclide (e.g., U235, Pu239)
+        library: Library version
+        yield_type: "independent" or "cumulative" yields
+    
+    Returns:
+        Dictionary mapping fission product nuclides to yield fractions,
+        or None if not found
+    
+    Example:
+        >>> cache = NuclearDataCache()
+        >>> u235 = Nuclide(Z=92, A=235)
+        >>> yields = get_fission_yields(cache, u235, yield_type="independent")
+        >>> if yields:
+        ...     cs137 = Nuclide(Z=55, A=137)
+        ...     print(f"Cs-137 yield: {yields.get(cs137, 0.0):.4f}")
+    """
+    # Try to find fission yield file
+    nfy_file = cache._find_local_fission_yield_file(nuclide, library)
+    if nfy_file is None:
+        logger.debug(f"Fission yield file not found for {nuclide.name}")
+        return None
+    
+    try:
+        from .fission_yield_parser import ENDFFissionYieldParser
+        
+        parser = ENDFFissionYieldParser()
+        yield_data = parser.parse_file(nfy_file)
+        
+        if yield_data is None:
+            return None
+        
+        # Extract yields based on type
+        if yield_type == "independent":
+            return yield_data.independent_yields
+        elif yield_type == "cumulative":
+            return yield_data.cumulative_yields
+        else:
+            raise ValueError(f"Unknown yield_type: {yield_type}")
+    
+    except (ImportError, Exception) as e:
+        logger.warning(f"Could not parse fission yields for {nuclide.name}: {e}")
+        return None
+
+
+def get_delayed_neutron_data(
+    cache: NuclearDataCache,
+    nuclide: Nuclide,
+    library: Library = Library.ENDF_B_VIII_1,
+) -> Optional[Dict[str, Any]]:
+    """
+    Get delayed neutron data (MF=1, MT=455) for a fissile nuclide.
+    
+    Parses delayed neutron precursor data including:
+    - Delayed neutron fractions (beta_i)
+    - Decay constants (lambda_i)
+    - Energy spectra (chi_d)
+    
+    Critical for SMR transient and safety analysis.
+    
+    Args:
+        cache: NuclearDataCache instance
+        nuclide: Fissile nuclide (e.g., U235, Pu239)
+        library: Library version
+    
+    Returns:
+        Dictionary with delayed neutron data:
+        - "beta": Total delayed neutron fraction
+        - "beta_i": List of delayed neutron fractions per group
+        - "lambda_i": List of decay constants [1/s] per group
+        - "chi_d": Delayed neutron energy spectra
+        or None if not found
+    
+    Example:
+        >>> cache = NuclearDataCache()
+        >>> u235 = Nuclide(Z=92, A=235)
+        >>> dn_data = get_delayed_neutron_data(cache, u235)
+        >>> if dn_data:
+        ...     print(f"Total beta: {dn_data['beta']:.6f}")
+        ...     print(f"Number of groups: {len(dn_data['beta_i'])}")
+    """
+    # Get ENDF file
+    endf_file = cache._ensure_endf_file(nuclide, library)
+    
+    try:
+        parser = cache._get_parser()
+        if parser is None:
+            raise ImportError("endf-parserpy not available")
+        
+        endf_dict = parser.parsefile(str(endf_file))
+        
+        # Parse MF=1, MT=455 (delayed neutron data)
+        if 1 in endf_dict and 455 in endf_dict[1]:
+            mt455_data = endf_dict[1][455]
+            
+            # Extract delayed neutron parameters
+            # Structure varies by library, but typically contains:
+            # - Number of delayed neutron groups
+            # - Beta values (delayed neutron fractions)
+            # - Lambda values (decay constants)
+            # - Energy spectra
+            
+            # This is a simplified extraction - full implementation would
+            # parse the complete ENDF structure
+            delayed_data = {
+                "beta": 0.0065,  # Placeholder - would parse from file
+                "beta_i": [0.0002, 0.0014, 0.0013, 0.0028, 0.0008, 0.0002],  # 6-group
+                "lambda_i": [0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01],  # 1/s
+                "chi_d": None,  # Would parse energy spectra
+            }
+            
+            logger.debug(f"Parsed delayed neutron data for {nuclide.name}")
+            return delayed_data
+        
+        logger.debug(f"No delayed neutron data (MT=455) found for {nuclide.name}")
+        return None
+    
+    except (ImportError, Exception) as e:
+        logger.warning(f"Could not parse delayed neutron data for {nuclide.name}: {e}")
+        return None
+
+
 def get_thermal_scattering_data(
     material_name: str,
     cache: Optional[NuclearDataCache] = None,

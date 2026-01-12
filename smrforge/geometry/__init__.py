@@ -149,6 +149,27 @@ try:
 except ImportError:
     _VALIDATION_AVAILABLE = False
 
+# Import LWR SMR geometry if available
+try:
+    from smrforge.geometry.lwr_smr import (
+        AssemblyType,
+        BWRSMRCore,
+        ControlBlade,
+        ControlRodCluster,
+        FuelAssembly,
+        FuelRod,
+        PWRSMRCore,
+        SpacerGrid,
+        WaterChannel,
+    )
+
+    _LWR_SMR_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import LWR SMR geometry: {e}", ImportWarning)
+    _LWR_SMR_AVAILABLE = False
+
 __all__ = []
 if _GEOMETRY_AVAILABLE:
     __all__.extend(
@@ -254,5 +275,20 @@ if _VALIDATION_AVAILABLE:
             "validate_control_rod_insertion",
             "validate_fuel_loading_pattern",
             "comprehensive_validation",
+        ]
+    )
+
+if _LWR_SMR_AVAILABLE:
+    __all__.extend(
+        [
+            "PWRSMRCore",
+            "BWRSMRCore",
+            "FuelAssembly",
+            "FuelRod",
+            "SpacerGrid",
+            "WaterChannel",
+            "ControlRodCluster",
+            "ControlBlade",
+            "AssemblyType",
         ]
     )
