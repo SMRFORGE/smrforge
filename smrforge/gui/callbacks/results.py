@@ -3,7 +3,7 @@ Results viewer callbacks.
 """
 
 try:
-    from dash import Input, Output, dcc
+    from dash import Input, Output, dcc, State
     from dash.exceptions import PreventUpdate
     import dash_bootstrap_components as dbc
     from dash import html
@@ -13,6 +13,10 @@ try:
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False
+
+from smrforge.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def register_results_callbacks(app):
@@ -27,40 +31,73 @@ def register_results_callbacks(app):
     )
     def update_results_summary(results):
         """Update results summary."""
-        if not results:
+        logger.debug(f"Updating results summary: {list(results.keys()) if results else 'No results'}")
+        
+        if not results or (isinstance(results, dict) and len(results) == 0):
             return dbc.Alert("No results available. Run an analysis first.", color="info")
         
         summary_items = []
         
         if 'neutronics' in results:
-            k_eff = results['neutronics'].get('k_eff', 'N/A')
+            neutronics_data = results['neutronics']
+            k_eff = neutronics_data.get('k_eff', 'N/A')
+            status = neutronics_data.get('status', 'unknown')
+            
+            # Format k_eff display
+            if isinstance(k_eff, (int, float)):
+                k_eff_display = f"{k_eff:.6f}"
+                # Add color coding based on k_eff value
+                if k_eff < 0.95:
+                    color = "danger"  # Subcritical
+                elif k_eff < 0.98:
+                    color = "warning"  # Below critical
+                elif k_eff <= 1.02:
+                    color = "success"  # Near critical
+                else:
+                    color = "warning"  # Supercritical
+            else:
+                k_eff_display = str(k_eff)
+                color = "secondary"
+            
+            card_content = [
+                html.H4("k-effective", className="card-title"),
+                html.H2(k_eff_display),
+            ]
+            
+            # Add warning if validation failed
+            if 'warning' in neutronics_data:
+                card_content.append(
+                    html.P(neutronics_data['warning'], className="text-warning small mb-0")
+                )
+            
             summary_items.append(
                 dbc.Row([
                     dbc.Col([
                         dbc.Card([
-                            dbc.CardBody([
-                                html.H4("k-effective", className="card-title"),
-                                html.H2(f"{k_eff:.6f}" if isinstance(k_eff, (int, float)) else str(k_eff)),
-                            ])
-                        ])
+                            dbc.CardBody(card_content)
+                        ], color=color, outline=True)
                     ], width=4)
                 ])
             )
         
         if 'burnup' in results:
+            burnup_data = results['burnup']
+            message = burnup_data.get('message', 'Burnup analysis completed')
             summary_items.append(
                 dbc.Row([
                     dbc.Col([
-                        dbc.Alert("Burnup analysis completed", color="success")
+                        dbc.Alert(message, color="success")
                     ])
                 ], className="mt-2")
             )
         
         if 'safety' in results:
+            safety_data = results['safety']
+            message = safety_data.get('message', 'Safety analysis completed')
             summary_items.append(
                 dbc.Row([
                     dbc.Col([
-                        dbc.Alert("Safety analysis completed", color="success")
+                        dbc.Alert(message, color="success")
                     ])
                 ], className="mt-2")
             )

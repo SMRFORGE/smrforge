@@ -87,6 +87,7 @@ def create_results_viewer():
                         ),
                     ])
                 ]),
+                html.Div(id="export-feedback", className="mt-3"),
             ])
         ]),
     ], fluid=True)
