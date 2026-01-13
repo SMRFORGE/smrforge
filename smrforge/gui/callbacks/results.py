@@ -155,3 +155,122 @@ def register_results_callbacks(app):
         )
         
         return dcc.Graph(figure=fig)
+    
+    @app.callback(
+        Output('3d-plot-container', 'children'),
+        Input('analysis-results-store', 'data'),
+        prevent_initial_call=True
+    )
+    def update_3d_plot(results):
+        """Update 3D geometry plot."""
+        if not results:
+            return dbc.Alert("No 3D geometry data available.", color="info")
+        
+        # Placeholder for 3D visualization
+        return dbc.Alert(
+            "3D geometry visualization coming soon. Use CLI for 3D visualization: "
+            "from smrforge.visualization import plot_3d_geometry",
+            color="info"
+        )
+    
+    @app.callback(
+        Output('transient-plot-container', 'children'),
+        Input('analysis-results-store', 'data'),
+        prevent_initial_call=True
+    )
+    def update_transient_plot(results):
+        """Update transient results plot."""
+        if not results or 'safety' not in results:
+            return dbc.Alert("No transient data available. Run a safety analysis first.", color="info")
+        
+        # Placeholder for transient visualization
+        return dbc.Alert(
+            "Transient visualization coming soon. Use CLI for transient analysis: "
+            "from smrforge.safety import run_transient",
+            color="info"
+        )
+    
+    @app.callback(
+        Output('export-feedback', 'children'),
+        Input('export-json-button', 'n_clicks'),
+        Input('export-csv-button', 'n_clicks'),
+        Input('export-plots-button', 'n_clicks'),
+        State('analysis-results-store', 'data'),
+        prevent_initial_call=True
+    )
+    def export_results(json_clicks, csv_clicks, plots_clicks, results):
+        """Export results to various formats."""
+        from dash import callback_context as ctx
+        if not ctx.triggered:
+            raise PreventUpdate
+        
+        if not results or (isinstance(results, dict) and len(results) == 0):
+            return dbc.Alert("No results to export. Run an analysis first.", color="warning")
+        
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        logger.info(f"Exporting results: {button_id}")
+        
+        try:
+            import json
+            import csv
+            from pathlib import Path
+            from datetime import datetime
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            if button_id == 'export-json-button':
+                # Export to JSON
+                filename = f"smrforge_results_{timestamp}.json"
+                filepath = Path(filename)
+                with open(filepath, 'w') as f:
+                    json.dump(results, f, indent=2, default=str)
+                
+                logger.info(f"Exported results to {filepath}")
+                return dbc.Alert([
+                    html.Strong("✓ Results exported to JSON"),
+                    html.P(f"Saved to: {filepath.absolute()}")
+                ], color="success")
+            
+            elif button_id == 'export-csv-button':
+                # Export to CSV (flatten results)
+                filename = f"smrforge_results_{timestamp}.csv"
+                filepath = Path(filename)
+                
+                # Flatten results for CSV
+                rows = []
+                for category, data in results.items():
+                    if isinstance(data, dict):
+                        for key, value in data.items():
+                            rows.append({
+                                'Category': category,
+                                'Parameter': key,
+                                'Value': str(value)
+                            })
+                
+                if rows:
+                    with open(filepath, 'w', newline='') as f:
+                        writer = csv.DictWriter(f, fieldnames=['Category', 'Parameter', 'Value'])
+                        writer.writeheader()
+                        writer.writerows(rows)
+                    
+                    logger.info(f"Exported results to {filepath}")
+                    return dbc.Alert([
+                        html.Strong("✓ Results exported to CSV"),
+                        html.P(f"Saved to: {filepath.absolute()}")
+                    ], color="success")
+                else:
+                    return dbc.Alert("No data to export to CSV.", color="warning")
+            
+            elif button_id == 'export-plots-button':
+                # Export plots (placeholder)
+                return dbc.Alert(
+                    "Plot export coming soon. Use CLI: "
+                    "from smrforge.visualization import save_plots",
+                    color="info"
+                )
+            
+            raise PreventUpdate
+        
+        except Exception as e:
+            logger.error(f"Export error: {e}", exc_info=True)
+            return dbc.Alert(f"✗ Export error: {str(e)}", color="danger")
