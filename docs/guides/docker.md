@@ -1,6 +1,6 @@
 # Docker Usage Guide for SMRForge
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 2026
 
 This guide explains how to use SMRForge with Docker Desktop, including setup, usage, and troubleshooting.
 
@@ -224,6 +224,22 @@ environment:
 
 ### Common Build Issues
 
+#### Issue: `apt-get install` fails with exit code 100
+
+If you see errors like "Package 'libgl1-mesa-glx' has no installation candidate":
+
+1. **Debian Trixie compatibility** - The Dockerfile uses `libgl1` instead of `libgl1-mesa-glx` for Debian Trixie (used by python:3.11-slim). This package provides OpenGL support for pyvista visualization.
+
+2. **Update to latest Dockerfile** - Ensure you're using the latest version of the Dockerfile, which includes:
+   - `DEBIAN_FRONTEND=noninteractive` for better error handling
+   - `libgl1` package (replaces deprecated `libgl1-mesa-glx`)
+
+3. **Rebuild from scratch**:
+   ```bash
+   docker compose build --no-cache smrforge
+   docker compose up -d smrforge
+   ```
+
 #### Issue: `pip install` fails with exit code 1
 
 This usually happens when a package fails to build. Common causes:
@@ -270,12 +286,19 @@ Docker volume mounts can be slow on Windows/macOS. Consider:
 
 h5py needs HDF5 development libraries. The Dockerfile includes:
 - `libhdf5-dev`
-- `libhdf5-serial-dev`
 
 If h5py still fails, you may need to set environment variables:
 ```dockerfile
 ENV HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial
 ```
+
+#### OpenGL/Visualization Packages
+
+The Dockerfile includes OpenGL libraries for pyvista visualization support:
+- `libgl1` - OpenGL library (replaces deprecated `libgl1-mesa-glx` in Debian Trixie)
+- `libglib2.0-0` - GLib library
+
+If visualization features don't work, ensure these packages are installed in the container.
 
 #### Numba Compilation Issues
 
