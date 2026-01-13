@@ -289,7 +289,7 @@ def download_file(
     show_progress: bool = True,
     max_retries: int = 3,
     timeout: int = 30,
-    session: Optional[requests.Session] = None,
+    session: Optional["requests.Session"] = None,
 ) -> bool:
     """
     Download a file from URL with resume capability and progress indicator.
