@@ -192,7 +192,11 @@ from smrforge.gui import create_app
 app = create_app()
 if app:
     print("Dashboard app created successfully")
-    app.run_server(debug=True, port=8050)
+    # Dash 3.x uses app.run(), Dash 2.x uses app.run_server()
+    if hasattr(app, 'run'):
+        app.run(debug=True, port=8050)
+    else:
+        app.run_server(debug=True, port=8050)
 else:
     print("Failed to create dashboard app")
 ```
@@ -238,7 +242,11 @@ If issues persist:
    from dash import html
    app = dash.Dash(__name__)
    app.layout = html.Div("Test")
-   app.run_server(debug=True)
+   # Dash 3.x uses app.run(), Dash 2.x uses app.run_server()
+   if hasattr(app, 'run'):
+       app.run(debug=True)
+   else:
+       app.run_server(debug=True)
    ```
 
 4. **Check Documentation:**

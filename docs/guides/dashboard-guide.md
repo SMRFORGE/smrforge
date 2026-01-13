@@ -450,7 +450,11 @@ Create Dash application instance (for advanced usage).
 from smrforge.gui import create_app
 
 app = create_app()
-app.run_server(debug=True)
+# Dash 3.x uses app.run(), Dash 2.x uses app.run_server()
+if hasattr(app, 'run'):
+    app.run(debug=True)
+else:
+    app.run_server(debug=True)
 ```
 
 ---

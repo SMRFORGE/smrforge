@@ -180,7 +180,13 @@ def run_server(
     logger.info(f"Starting SMRForge Dashboard on http://{host}:{port}")
     logger.info("Press Ctrl+C to stop the server")
     
-    app_instance.run_server(host=host, port=port, debug=debug, **kwargs)
+    # Dash 3.x uses app.run() instead of app.run_server()
+    # Check if run() method exists (Dash 3.x+), otherwise use run_server() (Dash 2.x)
+    if hasattr(app_instance, 'run'):
+        app_instance.run(host=host, port=port, debug=debug, **kwargs)
+    else:
+        # Fallback for older Dash versions
+        app_instance.run_server(host=host, port=port, debug=debug, **kwargs)
 
 
 if __name__ == "__main__":
