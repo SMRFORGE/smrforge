@@ -56,21 +56,24 @@ def create_sidebar():
         ]),
         html.Hr(),
         dbc.NavItem([
-            dbc.NavLink(
+            dbc.Button(
                 "📁 Open Project",
-                href="#",
                 id="nav-open-project",
-                className="nav-link"
+                color="link",
+                className="nav-link text-start w-100 px-3",
+                style={"text-decoration": "none", "border": "none", "background": "none"}
             )
         ]),
         dbc.NavItem([
-            dbc.NavLink(
+            dbc.Button(
                 "💾 Save Project",
-                href="#",
                 id="nav-save-project",
-                className="nav-link"
+                color="link",
+                className="nav-link text-start w-100 px-3",
+                style={"text-decoration": "none", "border": "none", "background": "none"}
             )
         ]),
+        html.Div(id="project-feedback", className="px-3 mt-2"),
         html.Hr(),
         # Theme selector
         dbc.NavItem([
