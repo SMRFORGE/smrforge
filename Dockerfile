@@ -33,7 +33,9 @@ ENV PYTHONUNBUFFERED=1 \
 # Install system dependencies
 # Scientific Python packages require various system libraries
 # Added libgl1-mesa-glx and libglib2.0-0 for pyvista visualization support
-RUN apt-get update && apt-get install -y --no-install-recommends \
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
     pkg-config \
