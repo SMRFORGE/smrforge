@@ -32,7 +32,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Install system dependencies
 # Scientific Python packages require various system libraries
-# Added libgl1-mesa-glx and libglib2.0-0 for pyvista visualization support
+# Added libgl1 and libglib2.0-0 for pyvista visualization support
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -44,7 +44,7 @@ RUN apt-get update && \
     liblapack-dev \
     libxml2-dev \
     libpng-dev \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libxrender1 \
     libfontconfig1 \
