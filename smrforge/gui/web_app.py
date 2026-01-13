@@ -19,8 +19,14 @@ try:
     import plotly.express as px
     import numpy as np
     _DASH_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     _DASH_AVAILABLE = False
+    dcc = None
+    html = None
+    dbc = None
+    go = None
+    px = None
+    dash = None
 
 from smrforge.utils.logging import get_logger
 
