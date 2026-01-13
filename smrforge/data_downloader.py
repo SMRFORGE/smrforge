@@ -635,7 +635,7 @@ def download_endf_data(
 def _download_parallel(
     download_tasks: List[Tuple[Nuclide, Path, List[str]]],
     stats: Dict[str, int],
-    session: Optional[requests.Session],
+    session: Optional["requests.Session"],
     resume: bool,
     show_progress: bool,
     validate: bool,
