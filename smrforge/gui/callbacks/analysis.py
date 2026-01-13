@@ -102,37 +102,50 @@ def register_analysis_callbacks(app):
                 # Run neutronics
                 logger.info("Running neutronics analysis")
                 try:
-                    # Try to solve with better error handling
-                    k_eff = reactor.solve_keff()
-                    results['neutronics'] = {
-                        'k_eff': float(k_eff),
-                        'status': 'success'
-                    }
-                    logger.info(f"Neutronics analysis completed: k_eff = {k_eff:.6f}")
-                except ValueError as e:
-                    # Solution validation may fail but k_eff might still be computed
-                    error_msg = str(e)
-                    logger.warning(f"Solution validation warning: {error_msg}")
-                    # Check if k_eff was computed despite validation failure
+                    # solve_keff() may raise ValueError if validation fails, but it handles
+                    # it internally and returns k_eff anyway. We catch it here just in case.
+                    import warnings
+                    with warnings.catch_warnings(record=True) as w:
+                        warnings.simplefilter("always")
+                        k_eff = reactor.solve_keff()
+                        
+                        # Check if there were validation warnings
+                        validation_warning = None
+                        for warning in w:
+                            if "validation" in str(warning.message).lower():
+                                validation_warning = str(warning.message)
+                                logger.warning(f"Solution validation warning: {validation_warning}")
+                        
+                        results['neutronics'] = {
+                            'k_eff': float(k_eff),
+                            'status': 'success'
+                        }
+                        if validation_warning:
+                            results['neutronics']['warning'] = 'Solution validation failed but k_eff computed'
+                        
+                        logger.info(f"Neutronics analysis completed: k_eff = {k_eff:.6f}")
+                except Exception as e:
+                    logger.error(f"Neutronics analysis failed: {e}", exc_info=True)
+                    # Try to get k_eff from solver if it exists
                     if hasattr(reactor, '_solver') and reactor._solver is not None:
                         if hasattr(reactor._solver, 'k_eff') and reactor._solver.k_eff is not None:
                             k_eff = reactor._solver.k_eff
                             results['neutronics'] = {
                                 'k_eff': float(k_eff),
                                 'status': 'success',
-                                'warning': 'Solution validation failed but k_eff computed'
+                                'warning': f'Analysis completed with errors: {str(e)[:100]}'
                             }
-                            logger.info(f"Using k_eff despite validation warning: {k_eff:.6f}")
+                            logger.warning(f"Using k_eff from solver despite error: {k_eff:.6f}")
                         else:
-                            raise
+                            results['neutronics'] = {
+                                'status': 'error',
+                                'error': str(e)
+                            }
                     else:
-                        raise
-                except Exception as e:
-                    logger.error(f"Neutronics analysis failed: {e}", exc_info=True)
-                    results['neutronics'] = {
-                        'status': 'error',
-                        'error': str(e)
-                    }
+                        results['neutronics'] = {
+                            'status': 'error',
+                            'error': str(e)
+                        }
             
             if analysis_type in ['burnup', 'complete']:
                 # Run burnup (simplified)
