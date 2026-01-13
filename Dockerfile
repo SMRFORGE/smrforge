@@ -14,7 +14,11 @@
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
 # - Fixed dashboard preset loading and validation issues
-# - Improved dashboard: custom reactor creation, analysis workflows, results export (JSON/CSV)
+# - Complete dashboard workflow: reactor creation → analysis → results → export
+# - Real data capture: flux and power distributions from solver
+# - Enhanced visualizations: plots use actual solver data, not sample data
+# - Complete exports: JSON/CSV include reactor spec + analysis results
+# - Project save/open: full workflow persistence
 # - Enhanced error handling and user feedback throughout dashboard
 # - Includes support for advanced features (mesh conversion, CAD import - optional)
 # - Test coverage: 79.2% overall, 75-80%+ on priority modules
