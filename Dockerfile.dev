@@ -10,7 +10,8 @@
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
 # - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
 # - Added automated data downloader with parallel downloads (tqdm, pyyaml)
-# - Visualization dependencies (plotly, pyvista, dash) are now required
+# - Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
+# - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Added pytest-asyncio for async test support
 # - Added system libraries for 3D visualization
 # - Optional: mesh conversion (meshio) and CAD import (trimesh) dependencies
