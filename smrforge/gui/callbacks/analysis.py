@@ -71,6 +71,10 @@ def register_analysis_callbacks(app):
             from smrforge.validation.models import ReactorSpecification
             
             # Create reactor from spec
+            # Ensure reactor_spec is a dict and has all required fields
+            if not isinstance(reactor_spec, dict):
+                return {}, dbc.Alert("Invalid reactor specification format.", color="danger"), ""
+            
             spec = ReactorSpecification(**reactor_spec)
             reactor = smr.create_reactor(
                 power_mw=spec.power_thermal / 1e6,
