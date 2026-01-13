@@ -38,7 +38,11 @@ def register_analysis_callbacks(app):
     )
     def update_analysis_options(analysis_type, reactor_spec):
         """Update analysis options based on selected type."""
-        has_reactor = bool(reactor_spec)
+        # Check if reactor_spec has actual data (not just empty dict)
+        has_reactor = bool(reactor_spec) and (
+            isinstance(reactor_spec, dict) and len(reactor_spec) > 0
+        )
+        logger.debug(f"update_analysis_options: has_reactor={has_reactor}, reactor_spec type={type(reactor_spec)}, keys={list(reactor_spec.keys())[:5] if isinstance(reactor_spec, dict) else 'N/A'}")
         
         if analysis_type == 'neutronics':
             return create_neutronics_options(), "", "", not has_reactor
@@ -69,7 +73,9 @@ def register_analysis_callbacks(app):
         """Run analysis."""
         logger.info(f"Running {analysis_type} analysis")
         
-        if not reactor_spec:
+        # Check if reactor_spec has actual data (not just empty dict)
+        if not reactor_spec or (isinstance(reactor_spec, dict) and len(reactor_spec) == 0):
+            logger.warning("No reactor specification available for analysis")
             return {}, dbc.Alert("No reactor specification available. Create a reactor first.", color="warning"), ""
         
         try:
