@@ -10,6 +10,10 @@ try:
 except ImportError:
     _DASH_AVAILABLE = False
 
+from smrforge.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def register_reactor_builder_callbacks(app):
     """Register reactor builder callbacks."""
@@ -47,6 +51,7 @@ def register_reactor_builder_callbacks(app):
             import smrforge as smr
             
             if button_id == 'load-preset-button' and preset:
+                logger.info(f"Loading preset: {preset}")
                 # Load preset
                 reactor = smr.create_reactor(preset)
                 spec_data = reactor.spec.model_dump()
@@ -70,18 +75,34 @@ def register_reactor_builder_callbacks(app):
                     return {}, feedback
             
             elif button_id == 'create-reactor-button':
-                # Create custom reactor
+                logger.info("Creating custom reactor")
+                # Create custom reactor with all required fields
+                # Use sensible defaults for fields not provided in the form
+                power_thermal = (power or 10.0) * 1e6  # Convert MW to W
+                inlet_temp = inlet_temp or 823.15
+                outlet_temp = outlet_temp or 1023.15
+                
                 spec_data = {
                     'name': name or 'Custom-Reactor',
                     'reactor_type': rtype or 'prismatic',
-                    'power_thermal': (power or 10.0) * 1e6,  # Convert to W
+                    'power_thermal': power_thermal,
+                    'power_electric': None,  # Optional, will be calculated if needed
                     'core_height': height or 200.0,
                     'core_diameter': diameter or 100.0,
                     'enrichment': enrichment or 0.195,
-                    'inlet_temperature': inlet_temp or 823.15,
-                    'outlet_temperature': outlet_temp or 1023.15,
+                    'inlet_temperature': inlet_temp,
+                    'outlet_temperature': outlet_temp,
+                    'max_fuel_temperature': outlet_temp + 500.0,  # Reasonable default: outlet + 500K
                     'primary_pressure': pressure or 7.0e6,
+                    'reflector_thickness': 30.0,  # Default 30 cm
+                    'fuel_type': 'UCO',  # Default fuel type
                     'heavy_metal_loading': hm_loading or 150.0,
+                    'coolant_flow_rate': 8.0,  # Default 8 kg/s
+                    'cycle_length': 3650.0,  # Default 10 years
+                    'capacity_factor': 0.95,  # Default 95%
+                    'target_burnup': 150.0,  # Default 150 MWd/kg
+                    'doppler_coefficient': -3.5e-5,  # Default for HTGR
+                    'shutdown_margin': 0.05,  # Default 5% shutdown margin
                 }
                 
                 # Validate using Pydantic
@@ -94,13 +115,20 @@ def register_reactor_builder_callbacks(app):
                     )
                     return spec.model_dump(), feedback
                 except Exception as e:
+                    logger.error(f"Validation error creating reactor: {e}", exc_info=True)
+                    # Extract more detailed error message if it's a Pydantic validation error
+                    error_msg = str(e)
+                    if "validation error" in error_msg.lower():
+                        # Try to extract field-specific errors
+                        error_msg = f"Validation failed: {error_msg[:200]}"
                     feedback = dbc.Alert(
-                        f"✗ Validation error: {str(e)}",
+                        f"✗ Validation error: {error_msg}",
                         color="danger"
                     )
                     return {}, feedback
         
         except Exception as e:
+            logger.error(f"Error in create_reactor callback: {e}", exc_info=True)
             feedback = dbc.Alert(
                 f"✗ Error: {str(e)}",
                 color="danger"
@@ -119,6 +147,55 @@ def register_reactor_builder_callbacks(app):
         if not spec_data:
             return ""
         
+        # Format values for better display
+        def format_value(key, value):
+            """Format values for display."""
+            if value is None:
+                return "N/A"
+            if isinstance(value, float):
+                # Format large numbers and small numbers appropriately
+                if abs(value) >= 1e6:
+                    return f"{value/1e6:.2f} M"
+                elif abs(value) >= 1e3:
+                    return f"{value/1e3:.2f} k"
+                elif abs(value) < 0.01 and abs(value) > 0:
+                    return f"{value:.2e}"
+                else:
+                    return f"{value:.2f}"
+            return str(value)
+        
+        # Group parameters by category for better organization
+        categories = {
+            "Identification": ["name", "reactor_type", "description", "design_reference", "maturity_level"],
+            "Power": ["power_thermal", "power_electric"],
+            "Temperatures": ["inlet_temperature", "outlet_temperature", "max_fuel_temperature"],
+            "Geometry": ["core_height", "core_diameter", "reflector_thickness"],
+            "Fuel": ["fuel_type", "enrichment", "heavy_metal_loading"],
+            "Operating Conditions": ["primary_pressure", "coolant_flow_rate"],
+            "Performance": ["cycle_length", "capacity_factor", "target_burnup"],
+            "Safety": ["doppler_coefficient", "shutdown_margin"],
+            "Economics": ["capital_cost", "fuel_cost"],
+        }
+        
+        rows = []
+        for category, fields in categories.items():
+            category_rows = []
+            for field in fields:
+                if field in spec_data:
+                    value = spec_data[field]
+                    if value is not None:  # Skip None values
+                        category_rows.append(
+                            html.Tr([
+                                html.Td(html.Strong(field.replace('_', ' ').title())),
+                                html.Td(format_value(field, value))
+                            ])
+                        )
+            if category_rows:
+                rows.append(html.Tr([
+                    html.Td(html.Strong(category), colSpan=2, style={"backgroundColor": "#f8f9fa", "fontSize": "1.1em"})
+                ]))
+                rows.extend(category_rows)
+        
         return dbc.Card([
             dbc.CardHeader("Current Reactor Specification"),
             dbc.CardBody([
@@ -129,10 +206,7 @@ def register_reactor_builder_callbacks(app):
                             html.Th("Value"),
                         ])
                     ]),
-                    html.Tbody([
-                        html.Tr([html.Td(k), html.Td(str(v))])
-                        for k, v in spec_data.items()
-                    ])
-                ], bordered=True, hover=True, responsive=True)
+                    html.Tbody(rows)
+                ], bordered=True, hover=True, responsive=True, size="sm")
             ])
         ])

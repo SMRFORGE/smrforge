@@ -11,6 +11,10 @@ try:
 except ImportError:
     _DASH_AVAILABLE = False
 
+from smrforge.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
 from smrforge.gui.components.analysis_panel import (
     create_neutronics_options,
     create_burnup_options,
@@ -63,6 +67,8 @@ def register_analysis_callbacks(app):
     def run_analysis(n_clicks, analysis_type, reactor_spec, max_iter, tolerance,
                      time_steps, power_density, transient_type, transient_time):
         """Run analysis."""
+        logger.info(f"Running {analysis_type} analysis")
+        
         if not reactor_spec:
             return {}, dbc.Alert("No reactor specification available. Create a reactor first.", color="warning"), ""
         
@@ -73,9 +79,12 @@ def register_analysis_callbacks(app):
             # Create reactor from spec
             # Ensure reactor_spec is a dict and has all required fields
             if not isinstance(reactor_spec, dict):
+                logger.error("Invalid reactor specification format")
                 return {}, dbc.Alert("Invalid reactor specification format.", color="danger"), ""
             
             spec = ReactorSpecification(**reactor_spec)
+            logger.info(f"Creating reactor from spec: {spec.name}")
+            
             reactor = smr.create_reactor(
                 power_mw=spec.power_thermal / 1e6,
                 core_height=spec.core_height,
@@ -87,14 +96,24 @@ def register_analysis_callbacks(app):
             
             if analysis_type in ['neutronics', 'complete']:
                 # Run neutronics
-                k_eff = reactor.solve_keff()
-                results['neutronics'] = {
-                    'k_eff': k_eff,
-                    'status': 'success'
-                }
+                logger.info("Running neutronics analysis")
+                try:
+                    k_eff = reactor.solve_keff()
+                    results['neutronics'] = {
+                        'k_eff': k_eff,
+                        'status': 'success'
+                    }
+                    logger.info(f"Neutronics analysis completed: k_eff = {k_eff:.6f}")
+                except Exception as e:
+                    logger.error(f"Neutronics analysis failed: {e}", exc_info=True)
+                    results['neutronics'] = {
+                        'status': 'error',
+                        'error': str(e)
+                    }
             
             if analysis_type in ['burnup', 'complete']:
                 # Run burnup (simplified)
+                logger.info("Running burnup analysis")
                 results['burnup'] = {
                     'status': 'success',
                     'message': 'Burnup analysis completed'
@@ -102,21 +121,46 @@ def register_analysis_callbacks(app):
             
             if analysis_type in ['safety', 'complete']:
                 # Run safety transient (simplified)
+                logger.info("Running safety analysis")
                 results['safety'] = {
                     'status': 'success',
                     'message': 'Safety analysis completed'
                 }
             
-            feedback = dbc.Alert(
-                f"✓ {analysis_type.capitalize()} analysis completed successfully!",
-                color="success"
-            )
+            # Check if any analysis failed
+            has_errors = any(r.get('status') == 'error' for r in results.values())
+            if has_errors:
+                error_details = [f"{k}: {r.get('error', 'Unknown error')}" 
+                               for k, r in results.items() if r.get('status') == 'error']
+                feedback = dbc.Alert(
+                    html.Div([
+                        html.Strong("Analysis completed with errors:"),
+                        html.Ul([html.Li(err) for err in error_details])
+                    ]),
+                    color="warning"
+                )
+            else:
+                feedback = dbc.Alert(
+                    f"✓ {analysis_type.capitalize()} analysis completed successfully!",
+                    color="success"
+                )
             
             return results, feedback, ""
         
         except Exception as e:
+            logger.error(f"Analysis error: {e}", exc_info=True)
+            # Provide more helpful error messages
+            error_msg = str(e)
+            if "validation" in error_msg.lower():
+                error_msg = "Reactor specification validation failed. Please check all required fields are present."
+            elif "solve" in error_msg.lower() or "neutronics" in error_msg.lower():
+                error_msg = f"Neutronics solver error: {error_msg[:200]}"
+            
             feedback = dbc.Alert(
-                f"✗ Analysis error: {str(e)}",
+                html.Div([
+                    html.Strong("Analysis Error:"),
+                    html.P(error_msg)
+                ]),
                 color="danger"
             )
             return {}, feedback, ""
