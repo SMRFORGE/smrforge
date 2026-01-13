@@ -50,11 +50,24 @@ def register_reactor_builder_callbacks(app):
                 # Load preset
                 reactor = smr.create_reactor(preset)
                 spec_data = reactor.spec.model_dump()
-                feedback = dbc.Alert(
-                    f"✓ Preset '{preset}' loaded successfully!",
-                    color="success"
-                )
-                return spec_data, feedback
+                
+                # Validate that all required fields are present
+                from smrforge.validation.models import ReactorSpecification
+                try:
+                    # Re-validate to ensure completeness
+                    validated_spec = ReactorSpecification(**spec_data)
+                    spec_data = validated_spec.model_dump()
+                    feedback = dbc.Alert(
+                        f"✓ Preset '{preset}' loaded successfully!",
+                        color="success"
+                    )
+                    return spec_data, feedback
+                except Exception as e:
+                    feedback = dbc.Alert(
+                        f"✗ Error loading preset '{preset}': {str(e)}",
+                        color="danger"
+                    )
+                    return {}, feedback
             
             elif button_id == 'create-reactor-button':
                 # Create custom reactor
