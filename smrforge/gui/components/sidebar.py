@@ -4,7 +4,7 @@ Sidebar navigation component for SMRForge Dashboard.
 
 try:
     import dash_bootstrap_components as dbc
-    from dash import html
+    from dash import html, dcc
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False

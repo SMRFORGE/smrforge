@@ -83,7 +83,7 @@ def register_theme_callbacks(app):
         """,
         Output('theme-store', 'data', allow_duplicate=True),
         Input('theme-selector', 'value'),
-        prevent_initial_call=False,
+        prevent_initial_call='initial_duplicate',
     )
     
     # Load theme from localStorage on page load
