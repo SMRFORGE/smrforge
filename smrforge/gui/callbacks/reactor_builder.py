@@ -3,7 +3,7 @@ Reactor builder callbacks.
 """
 
 try:
-    from dash import Input, Output, State
+    from dash import Input, Output, State, html
     from dash.exceptions import PreventUpdate
     import dash_bootstrap_components as dbc
     _DASH_AVAILABLE = True
