@@ -114,19 +114,43 @@ def register_results_callbacks(app):
         if not results or 'neutronics' not in results:
             return dbc.Alert("No flux data available.", color="info")
         
-        # Create sample flux plot (in real implementation, use actual flux data)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=np.linspace(0, 200, 100),
-            y=np.random.rand(100) * 1e14,
-            mode='lines',
-            name='Flux'
-        ))
-        fig.update_layout(
-            title="Neutron Flux Distribution",
-            xaxis_title="Position (cm)",
-            yaxis_title="Flux (n/cm²/s)",
-        )
+        neutronics = results.get('neutronics', {})
+        flux_data = neutronics.get('flux')
+        
+        if flux_data and 'sample' in flux_data:
+            # Use actual flux data from solver
+            flux_values = np.array(flux_data['sample'])
+            positions = np.linspace(0, 200, len(flux_values))  # Approximate positions
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=positions,
+                y=flux_values,
+                mode='lines',
+                name='Neutron Flux',
+                line=dict(color='blue', width=2)
+            ))
+            fig.update_layout(
+                title=f"Neutron Flux Distribution (Max: {flux_data.get('max', 0):.2e} n/cm²/s)",
+                xaxis_title="Position (cm)",
+                yaxis_title="Flux (n/cm²/s)",
+                hovermode='x unified'
+            )
+        else:
+            # Fallback: show summary if no detailed data
+            fig = go.Figure()
+            if flux_data:
+                fig.add_annotation(
+                    text=f"Flux Statistics:<br>Max: {flux_data.get('max', 0):.2e}<br>Mean: {flux_data.get('mean', 0):.2e}<br>Min: {flux_data.get('min', 0):.2e}",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=14)
+                )
+            fig.update_layout(
+                title="Neutron Flux Distribution",
+                xaxis_title="Position (cm)",
+                yaxis_title="Flux (n/cm²/s)",
+            )
         
         return dcc.Graph(figure=fig)
     
@@ -140,19 +164,44 @@ def register_results_callbacks(app):
         if not results or 'neutronics' not in results:
             return dbc.Alert("No power data available.", color="info")
         
-        # Create sample power plot
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=np.linspace(0, 200, 100),
-            y=np.random.rand(100) * 40,
-            mode='lines',
-            name='Power Density'
-        ))
-        fig.update_layout(
-            title="Power Distribution",
-            xaxis_title="Position (cm)",
-            yaxis_title="Power Density (W/cm³)",
-        )
+        neutronics = results.get('neutronics', {})
+        power_data = neutronics.get('power')
+        
+        if power_data and 'sample' in power_data:
+            # Use actual power data from solver
+            power_values = np.array(power_data['sample'])
+            positions = np.linspace(0, 200, len(power_values))  # Approximate positions
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=positions,
+                y=power_values,
+                mode='lines',
+                name='Power Density',
+                line=dict(color='red', width=2),
+                fill='tozeroy'
+            ))
+            fig.update_layout(
+                title=f"Power Distribution (Max: {power_data.get('max', 0):.2e} W/cm³)",
+                xaxis_title="Position (cm)",
+                yaxis_title="Power Density (W/cm³)",
+                hovermode='x unified'
+            )
+        else:
+            # Fallback: show summary if no detailed data
+            fig = go.Figure()
+            if power_data:
+                fig.add_annotation(
+                    text=f"Power Statistics:<br>Max: {power_data.get('max', 0):.2e} W/cm³<br>Mean: {power_data.get('mean', 0):.2e} W/cm³<br>Min: {power_data.get('min', 0):.2e} W/cm³",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=14)
+                )
+            fig.update_layout(
+                title="Power Distribution",
+                xaxis_title="Position (cm)",
+                yaxis_title="Power Density (W/cm³)",
+            )
         
         return dcc.Graph(figure=fig)
     
@@ -196,9 +245,10 @@ def register_results_callbacks(app):
         Input('export-csv-button', 'n_clicks'),
         Input('export-plots-button', 'n_clicks'),
         State('analysis-results-store', 'data'),
+        State('reactor-spec-store', 'data'),
         prevent_initial_call=True
     )
-    def export_results(json_clicks, csv_clicks, plots_clicks, results):
+    def export_results(json_clicks, csv_clicks, plots_clicks, results, reactor_spec):
         """Export results to various formats."""
         from dash import callback_context as ctx
         if not ctx.triggered:
@@ -219,11 +269,17 @@ def register_results_callbacks(app):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             
             if button_id == 'export-json-button':
-                # Export to JSON
+                # Export to JSON - include both reactor spec and results
+                export_data = {
+                    'reactor_specification': reactor_spec if reactor_spec else {},
+                    'analysis_results': results,
+                    'export_timestamp': timestamp,
+                    'version': '1.0'
+                }
                 filename = f"smrforge_results_{timestamp}.json"
                 filepath = Path(filename)
                 with open(filepath, 'w') as f:
-                    json.dump(results, f, indent=2, default=str)
+                    json.dump(export_data, f, indent=2, default=str)
                 
                 logger.info(f"Exported results to {filepath}")
                 return dbc.Alert([
@@ -232,20 +288,51 @@ def register_results_callbacks(app):
                 ], color="success")
             
             elif button_id == 'export-csv-button':
-                # Export to CSV (flatten results)
+                # Export to CSV (flatten results and reactor spec)
                 filename = f"smrforge_results_{timestamp}.csv"
                 filepath = Path(filename)
                 
-                # Flatten results for CSV
+                # Flatten results and reactor spec for CSV
                 rows = []
+                
+                # Add reactor specification data
+                if reactor_spec and isinstance(reactor_spec, dict):
+                    for key, value in reactor_spec.items():
+                        rows.append({
+                            'Category': 'Reactor Specification',
+                            'Parameter': key,
+                            'Value': str(value)
+                        })
+                
+                # Add analysis results
                 for category, data in results.items():
                     if isinstance(data, dict):
                         for key, value in data.items():
-                            rows.append({
-                                'Category': category,
-                                'Parameter': key,
-                                'Value': str(value)
-                            })
+                            # Skip large arrays in CSV (keep only summary stats)
+                            if key in ['flux', 'power'] and isinstance(value, dict):
+                                # Include summary statistics
+                                if 'max' in value:
+                                    rows.append({
+                                        'Category': f'{category}_{key}',
+                                        'Parameter': 'max',
+                                        'Value': str(value.get('max', ''))
+                                    })
+                                    rows.append({
+                                        'Category': f'{category}_{key}',
+                                        'Parameter': 'mean',
+                                        'Value': str(value.get('mean', ''))
+                                    })
+                                    rows.append({
+                                        'Category': f'{category}_{key}',
+                                        'Parameter': 'min',
+                                        'Value': str(value.get('min', ''))
+                                    })
+                            else:
+                                rows.append({
+                                    'Category': category,
+                                    'Parameter': key,
+                                    'Value': str(value)
+                                })
                 
                 if rows:
                     with open(filepath, 'w', newline='') as f:

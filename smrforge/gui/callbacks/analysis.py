@@ -81,6 +81,7 @@ def register_analysis_callbacks(app):
         try:
             import smrforge as smr
             from smrforge.validation.models import ReactorSpecification
+            import numpy as np
             
             # Create reactor from spec
             # Ensure reactor_spec is a dict and has all required fields
@@ -122,10 +123,46 @@ def register_analysis_callbacks(app):
                                 validation_warning = str(warning.message)
                                 logger.warning(f"Solution validation warning: {validation_warning}")
                         
+                        # Try to get flux and power distribution from solver
+                        flux_data = None
+                        power_data = None
+                        if hasattr(reactor, '_solver') and reactor._solver is not None:
+                            solver = reactor._solver
+                            if hasattr(solver, 'flux') and solver.flux is not None:
+                                # Extract flux data (flatten for storage)
+                                flux = solver.flux
+                                if flux is not None and flux.size > 0:
+                                    # Store flux statistics and sample data
+                                    flux_data = {
+                                        'max': float(np.max(flux)),
+                                        'min': float(np.min(flux)),
+                                        'mean': float(np.mean(flux)),
+                                        'shape': list(flux.shape),
+                                        'sample': flux.flatten()[:1000].tolist() if flux.size > 1000 else flux.flatten().tolist()
+                                    }
+                            
+                            if hasattr(solver, 'compute_power_distribution'):
+                                try:
+                                    power = solver.compute_power_distribution(spec.power_thermal)
+                                    if power is not None and power.size > 0:
+                                        power_data = {
+                                            'max': float(np.max(power)),
+                                            'min': float(np.min(power)),
+                                            'mean': float(np.mean(power)),
+                                            'shape': list(power.shape),
+                                            'sample': power.flatten()[:1000].tolist() if power.size > 1000 else power.flatten().tolist()
+                                        }
+                                except Exception as e:
+                                    logger.debug(f"Could not compute power distribution: {e}")
+                        
                         results['neutronics'] = {
                             'k_eff': float(k_eff),
                             'status': 'success'
                         }
+                        if flux_data:
+                            results['neutronics']['flux'] = flux_data
+                        if power_data:
+                            results['neutronics']['power'] = power_data
                         if validation_warning:
                             results['neutronics']['warning'] = 'Solution validation failed but k_eff computed'
                         
