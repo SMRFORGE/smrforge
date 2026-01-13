@@ -14,6 +14,8 @@
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
 # - Fixed dashboard preset loading and validation issues
+# - Improved dashboard: custom reactor creation, analysis workflows, results export (JSON/CSV)
+# - Enhanced error handling and user feedback throughout dashboard
 # - Added pytest-asyncio for async test support
 # - Added system libraries for 3D visualization
 # - Optional: mesh conversion (meshio) and CAD import (trimesh) dependencies
