@@ -70,6 +70,52 @@ docker compose exec smrforge-dev bash
 # - Run type checking: mypy smrforge/
 ```
 
+## Installing Optional Dependencies
+
+SMRForge supports optional dependencies via pip extras. The `[viz]` extra is not a Docker Compose service name - it's a pip package extra that must be installed inside the container.
+
+### Installing Visualization Dependencies
+
+To install visualization, dashboard, and 3D visualization dependencies:
+
+```bash
+# After container is running
+docker compose exec smrforge pip install -e ".[viz]"
+```
+
+This installs:
+- `plotly` - Interactive 3D plots
+- `pyvista` - Advanced 3D visualization and VTK export
+- `dash` - Web-based dashboards
+- `dash-bootstrap-components` - Bootstrap styling for Dash
+
+### Installing Other Optional Dependencies
+
+```bash
+# Development dependencies
+docker compose exec smrforge pip install -e ".[dev]"
+
+# Uncertainty quantification
+docker compose exec smrforge pip install -e ".[uq]"
+
+# All optional dependencies
+docker compose exec smrforge pip install -e ".[all]"
+```
+
+### Making Dependencies Persistent
+
+If you want visualization dependencies included in the image permanently, you can:
+
+1. **Modify the Dockerfile** - Uncomment the visualization installation lines in `Dockerfile` (around line 66-77)
+2. **Rebuild the image** - `docker compose build smrforge`
+
+Or create a custom Dockerfile that includes the dependencies:
+
+```dockerfile
+FROM smrforge:latest
+RUN pip install -e ".[viz]"
+```
+
 ## Common Use Cases
 
 ### Running Analysis Scripts
