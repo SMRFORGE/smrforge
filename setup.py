@@ -41,6 +41,11 @@ setup(
         "polars>=0.19.0",
         # Terminal formatting
         "rich>=13.0.0",
+        # Visualization and dashboard (required)
+        "plotly>=5.0",
+        "pyvista>=0.40.0",
+        "dash>=2.0",
+        "dash-bootstrap-components>=1.0.0",
     ],
     extras_require={
         "dev": [
@@ -56,10 +61,8 @@ setup(
             "sphinx-autodoc-typehints>=1.18",
         ],
         "viz": [
-            "plotly>=5.0",
-            "pyvista>=0.40.0",
-            "dash>=2.0",
-            "dash-bootstrap-components>=1.0.0",
+            # Visualization dependencies are now required (moved to install_requires)
+            # This extra is kept for backward compatibility but installs nothing additional
         ],
         "nuclear-data": [
             # Optional nuclear data backends
@@ -72,11 +75,8 @@ setup(
         ],
         "all": [
             # Install all optional dependencies
+            # Note: Visualization dependencies (plotly, pyvista, dash) are now required
             "sandy",
-            "plotly>=5.0",
-            "pyvista>=0.40.0",
-            "dash>=2.0",
-            "dash-bootstrap-components>=1.0.0",
             "SALib>=1.4.0",
             "seaborn>=0.12.0",
         ],

@@ -76,7 +76,7 @@ services:
       - "8050:8050"
     # Install dev dependencies on startup (including pytest-asyncio for async tests)
     # Data downloader dependencies (tqdm, pyyaml) are already in requirements.txt
-    # Optional: Add dashboard/visualization/mesh dependencies with: pip install dash dash-bootstrap-components plotly pyvista meshio joblib trimesh
-    # Or install with [viz] extra: pip install -e ".[viz]"
+    # Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
+    # Optional: Add mesh conversion and CAD import: pip install meshio trimesh
     command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio && bash"
 

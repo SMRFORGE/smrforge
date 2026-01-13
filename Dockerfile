@@ -10,8 +10,8 @@
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
 # - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
 # - Added automated data downloader with parallel downloads and progress indicators
-# - Added support for advanced features (visualization, mesh conversion, CAD import)
-# - Includes optional dependencies for enhanced capabilities
+# - Visualization dependencies (plotly, pyvista, dash) are now required
+# - Includes support for advanced features (mesh conversion, CAD import - optional)
 # - Test coverage: 79.2% overall, 75-80%+ on priority modules
 
 FROM python:3.11-slim
@@ -59,22 +59,15 @@ COPY smrforge/ /app/smrforge/
 RUN pip install --upgrade pip wheel setuptools
 
 # Install SMRForge with all dependencies from setup.py
-# This ensures consistency with the package definition
-# Optionally install visualization extras: pip install -e ".[viz]"
+# This includes visualization dependencies (plotly, pyvista, dash) which are now required
 RUN pip install --no-cache-dir -e .
 
-# Optional: Install visualization and dashboard dependencies
-# Uncomment the next lines to include visualization, dashboard, mesh conversion, and CAD import support:
+# Optional: Install additional mesh conversion and CAD import dependencies
+# Uncomment the next lines to include mesh conversion and CAD import support:
 # RUN pip install --no-cache-dir \
-#     plotly>=5.0 \
-#     pyvista>=0.40.0 \
-#     dash>=2.0 \
-#     dash-bootstrap-components>=1.0.0 \
-#     joblib>=1.0.0 \
 #     meshio>=5.0.0 \
 #     trimesh>=3.0.0
-# Or install with [viz] extra (includes dashboard):
-# RUN pip install --no-cache-dir -e ".[viz]"
+# Note: joblib is already included as a dependency of scikit-learn
 
 # Copy examples (optional - can be mounted as volume instead)
 COPY examples/ /app/examples/
@@ -97,5 +90,5 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge serve --host 0.0.0.0 --port 8050
 #   Or: python -c \"from smrforge.gui import run_server; run_server(host='0.0.0.0', port=8050)\"
 #   Then access at http://localhost:8050 (map port 8050 in docker run -p 8050:8050)
-CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print('Features:'); print('  - Web Dashboard (smrforge serve) with dark/gray mode'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use data downloader'); print('    from smrforge.data_downloader import download_endf_data'); print('    download_endf_data(library=\"ENDF/B-VIII.1\", output_dir=\"/app/endf-data\")'); print('  Option 2: Manual setup'); print('    python -m smrforge.core.endf_setup'); print(''); print('Web Dashboard:'); print('  smrforge serve --host 0.0.0.0 --port 8050'); print('  Access at http://localhost:8050 (map port with -p 8050:8050)'); print(''); print('Optional dependencies:'); print('  - Dashboard & Visualization: pip install dash dash-bootstrap-components plotly pyvista'); print('  - Or install with [viz] extra: pip install -e \".[viz]\"'); print('  - Mesh conversion: pip install meshio joblib'); print('  - CAD import: pip install trimesh')"]
+CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print('Features:'); print('  - Web Dashboard (smrforge serve) with dark/gray mode'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use data downloader'); print('    from smrforge.data_downloader import download_endf_data'); print('    download_endf_data(library=\"ENDF/B-VIII.1\", output_dir=\"/app/endf-data\")'); print('  Option 2: Manual setup'); print('    python -m smrforge.core.endf_setup'); print(''); print('Web Dashboard:'); print('  smrforge serve --host 0.0.0.0 --port 8050'); print('  Access at http://localhost:8050 (map port with -p 8050:8050)'); print(''); print('Optional dependencies:'); print('  - Mesh conversion: pip install meshio'); print('  - CAD import: pip install trimesh'); print('Note: Visualization dependencies (plotly, pyvista, dash) are now required and included automatically')"]
 

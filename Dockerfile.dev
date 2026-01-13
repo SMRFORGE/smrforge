@@ -10,12 +10,10 @@
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
 # - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
 # - Added automated data downloader with parallel downloads (tqdm, pyyaml)
-# - Added visualization dependencies support (plotly, pyvista)
-# - Added dashboard dependencies (dash, dash-bootstrap-components)
-# - Added mesh conversion dependencies (meshio, joblib)
-# - Added CAD import dependencies (trimesh)
+# - Visualization dependencies (plotly, pyvista, dash) are now required
 # - Added pytest-asyncio for async test support
 # - Added system libraries for 3D visualization
+# - Optional: mesh conversion (meshio) and CAD import (trimesh) dependencies
 # - Updated to support latest features and test requirements
 # - Test coverage: 79.2% overall, 75-80%+ on priority modules
 
@@ -66,20 +64,15 @@ RUN pip install --upgrade pip wheel setuptools
 # Note: This will be overridden by volume mount in docker compose, but ensures
 # the image has all dependencies available even without volume mounts
 # Includes pytest, pytest-cov, black, flake8, mypy
+# Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
 RUN pip install --no-cache-dir -e ".[dev]"
 
-# Optional: Install visualization and dashboard dependencies
-# Uncomment the next lines to include visualization, dashboard, mesh conversion, and CAD import support:
+# Optional: Install additional mesh conversion and CAD import dependencies
+# Uncomment the next lines to include mesh conversion and CAD import support:
 # RUN pip install --no-cache-dir \
-#     plotly>=5.0 \
-#     pyvista>=0.40.0 \
-#     dash>=2.0 \
-#     dash-bootstrap-components>=1.0.0 \
-#     joblib>=1.0.0 \
 #     meshio>=5.0.0 \
 #     trimesh>=3.0.0
-# Or install with [viz] extra (includes dashboard):
-# RUN pip install --no-cache-dir -e ".[viz]"
+# Note: joblib is already included as a dependency of scikit-learn
 
 # Optional: Install pytest-asyncio for async test support
 # Uncomment the next line if you need async test support:
