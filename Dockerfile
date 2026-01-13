@@ -12,6 +12,7 @@
 # - Added automated data downloader with parallel downloads and progress indicators
 # - Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
+# - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
 # - Includes support for advanced features (mesh conversion, CAD import - optional)
 # - Test coverage: 79.2% overall, 75-80%+ on priority modules
 
