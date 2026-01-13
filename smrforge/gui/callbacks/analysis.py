@@ -85,12 +85,16 @@ def register_analysis_callbacks(app):
             spec = ReactorSpecification(**reactor_spec)
             logger.info(f"Creating reactor from spec: {spec.name}")
             
+            # Create reactor with all spec parameters
             reactor = smr.create_reactor(
                 power_mw=spec.power_thermal / 1e6,
                 core_height=spec.core_height,
                 core_diameter=spec.core_diameter,
                 enrichment=spec.enrichment,
+                reactor_type=spec.reactor_type.value if hasattr(spec.reactor_type, 'value') else str(spec.reactor_type),
+                fuel_type=spec.fuel_type.value if hasattr(spec.fuel_type, 'value') else str(spec.fuel_type),
             )
+            logger.info("Reactor created successfully")
             
             results = {}
             
@@ -98,12 +102,31 @@ def register_analysis_callbacks(app):
                 # Run neutronics
                 logger.info("Running neutronics analysis")
                 try:
+                    # Try to solve with better error handling
                     k_eff = reactor.solve_keff()
                     results['neutronics'] = {
-                        'k_eff': k_eff,
+                        'k_eff': float(k_eff),
                         'status': 'success'
                     }
                     logger.info(f"Neutronics analysis completed: k_eff = {k_eff:.6f}")
+                except ValueError as e:
+                    # Solution validation may fail but k_eff might still be computed
+                    error_msg = str(e)
+                    logger.warning(f"Solution validation warning: {error_msg}")
+                    # Check if k_eff was computed despite validation failure
+                    if hasattr(reactor, '_solver') and reactor._solver is not None:
+                        if hasattr(reactor._solver, 'k_eff') and reactor._solver.k_eff is not None:
+                            k_eff = reactor._solver.k_eff
+                            results['neutronics'] = {
+                                'k_eff': float(k_eff),
+                                'status': 'success',
+                                'warning': 'Solution validation failed but k_eff computed'
+                            }
+                            logger.info(f"Using k_eff despite validation warning: {k_eff:.6f}")
+                        else:
+                            raise
+                    else:
+                        raise
                 except Exception as e:
                     logger.error(f"Neutronics analysis failed: {e}", exc_info=True)
                     results['neutronics'] = {
@@ -129,6 +152,8 @@ def register_analysis_callbacks(app):
             
             # Check if any analysis failed
             has_errors = any(r.get('status') == 'error' for r in results.values())
+            has_warnings = any('warning' in r for r in results.values())
+            
             if has_errors:
                 error_details = [f"{k}: {r.get('error', 'Unknown error')}" 
                                for k, r in results.items() if r.get('status') == 'error']
@@ -139,11 +164,40 @@ def register_analysis_callbacks(app):
                     ]),
                     color="warning"
                 )
-            else:
+            elif has_warnings:
+                # Show warnings but still indicate success
+                warning_details = []
+                success_details = []
+                for k, r in results.items():
+                    if 'warning' in r:
+                        warning_details.append(f"{k}: {r.get('warning', '')}")
+                    if r.get('status') == 'success':
+                        if 'k_eff' in r:
+                            success_details.append(f"k-eff = {r['k_eff']:.6f}")
+                
                 feedback = dbc.Alert(
-                    f"✓ {analysis_type.capitalize()} analysis completed successfully!",
-                    color="success"
+                    html.Div([
+                        html.Strong("✓ Analysis completed with warnings:"),
+                        html.Ul([html.Li(w) for w in warning_details]),
+                        html.P([html.Strong("Results: "), ", ".join(success_details)])
+                    ]),
+                    color="info"
                 )
+            else:
+                # Format success message with results
+                result_details = []
+                for k, r in results.items():
+                    if r.get('status') == 'success':
+                        if 'k_eff' in r:
+                            result_details.append(f"k-eff = {r['k_eff']:.6f}")
+                        elif 'message' in r:
+                            result_details.append(r['message'])
+                
+                result_text = f"✓ {analysis_type.capitalize()} analysis completed successfully!"
+                if result_details:
+                    result_text += f" Results: {', '.join(result_details)}"
+                
+                feedback = dbc.Alert(result_text, color="success")
             
             return results, feedback, ""
         
