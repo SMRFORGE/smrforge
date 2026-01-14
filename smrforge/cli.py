@@ -8,6 +8,7 @@ All features remain available via Python API and CLI.
 import argparse
 import json
 import sys
+import glob
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -271,20 +272,29 @@ def reactor_analyze(args):
         from smrforge.convenience import create_reactor
         import json
         
-        # Load reactor
-        if args.reactor:
-            if not args.reactor.exists():
-                _print_error(f"Reactor file not found: {args.reactor}")
-                sys.exit(1)
-            
-            with open(args.reactor) as f:
-                reactor_data = json.load(f)
-            
-            # Create reactor from data
-            reactor = create_reactor(**reactor_data)
-        else:
-            _print_error("Must specify --reactor FILE")
+        # Check for batch mode
+        if args.batch:
+            # Batch processing mode - placeholder for future implementation
+            _print_error("Batch processing is not yet fully implemented")
+            _print_info("For batch processing, use the Python API or process files individually")
+            _print_info("Example: for f in *.json; do smrforge reactor analyze --reactor $f; done")
             sys.exit(1)
+        
+        # Single file mode
+        if not args.reactor:
+            _print_error("Must specify --reactor FILE or --batch PATTERN")
+            sys.exit(1)
+        
+        # Load reactor
+        if not args.reactor.exists():
+            _print_error(f"Reactor file not found: {args.reactor}")
+            sys.exit(1)
+        
+        with open(args.reactor) as f:
+            reactor_data = json.load(f)
+        
+        # Create reactor from data
+        reactor = create_reactor(**reactor_data)
         
         results = {}
         
@@ -1367,7 +1377,10 @@ Note: All features are also available via Python API:
         'analyze',
         help='Run analysis on a reactor'
     )
-    analyze_parser.add_argument('--reactor', type=Path, required=True, help='Reactor file (JSON)')
+    analyze_parser.add_argument('--reactor', type=Path, help='Reactor file (JSON)')
+    analyze_parser.add_argument('--batch', nargs='+', type=str, help='Batch process multiple reactor files (glob patterns allowed)')
+    analyze_parser.add_argument('--parallel', action='store_true', help='Process batch in parallel')
+    analyze_parser.add_argument('--workers', type=int, default=4, help='Number of parallel workers (default: 4)')
     analyze_parser.add_argument('--keff', action='store_true', help='Calculate k-effective only')
     analyze_parser.add_argument('--neutronics', action='store_true', help='Full neutronics analysis')
     analyze_parser.add_argument('--burnup', action='store_true', help='Burnup calculation')

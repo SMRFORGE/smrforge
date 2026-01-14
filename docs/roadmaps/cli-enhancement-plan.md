@@ -633,12 +633,12 @@ smrforge workflow run workflow.yaml
 
 These features are marked as optional and can be implemented based on user demand:
 
-- Configuration management (`smrforge config`)
-- Batch processing support
-- Interactive shell mode
-- Workflow scripts
-- Tab completion for shells
-- Additional visualization backends
+- ✅ **IMPLEMENTED:** Configuration management (`smrforge config`) - **COMPLETE** (January 2026)
+- ⚠️ **PARTIAL:** Batch processing support - Parser arguments added, full implementation pending
+- ⚠️ **Remaining:** Interactive shell mode - Optional feature
+- ⚠️ **Remaining:** Workflow scripts - Optional feature
+- ⚠️ **Remaining:** Tab completion for shells - Optional feature
+- ⚠️ **Remaining:** Additional visualization backends - Optional feature
 
 ---
 
