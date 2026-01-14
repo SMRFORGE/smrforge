@@ -881,6 +881,173 @@ def visualize_flux(args):
         sys.exit(1)
 
 
+def burnup_visualize(args):
+    """Visualize burnup results."""
+    try:
+        import json
+        import numpy as np
+        
+        # Load results
+        if not args.results.exists():
+            _print_error(f"Results file not found: {args.results}")
+            sys.exit(1)
+        
+        results_path = args.results
+        results_format = results_path.suffix.lower()
+        
+        _print_info(f"Loading burnup results from {results_path}...")
+        
+        # Load data based on format
+        if results_format in ['.json']:
+            with open(results_path) as f:
+                results_data = json.load(f)
+        elif results_format in ['.h5', '.hdf5']:
+            try:
+                import h5py
+                with h5py.File(results_path, 'r') as f:
+                    # Convert HDF5 groups to dict (simplified)
+                    results_data = {}
+                    for key in f.keys():
+                        if isinstance(f[key], h5py.Group):
+                            results_data[key] = {k: v[()] if hasattr(v, '__getitem__') else v for k, v in f[key].items()}
+                        else:
+                            results_data[key] = f[key][()]
+            except ImportError:
+                _print_error("HDF5 support not available. Install h5py: pip install h5py")
+                sys.exit(1)
+        else:
+            _print_error(f"Unsupported file format: {results_format}")
+            print("Supported formats: json, h5, hdf5")
+            sys.exit(1)
+        
+        _print_info("Generating burnup visualization...")
+        
+        # Determine what to plot
+        plot_types = []
+        if args.composition or (not args.keff and not args.burnup and not args.composition):
+            plot_types.append('composition')
+        if args.keff:
+            plot_types.append('keff')
+        if args.burnup:
+            plot_types.append('burnup')
+        
+        # Plot k-eff evolution
+        if 'keff' in plot_types:
+            if 'k_eff' in results_data or 'k_eff_values' in results_data:
+                try:
+                    import matplotlib.pyplot as plt
+                    
+                    # Extract k-eff data
+                    if 'k_eff_values' in results_data:
+                        k_eff_data = results_data['k_eff_values']
+                        time_steps = results_data.get('time_steps', list(range(len(k_eff_data))))
+                    elif 'k_eff' in results_data:
+                        k_eff_data = results_data['k_eff']
+                        if isinstance(k_eff_data, list):
+                            time_steps = results_data.get('time_steps', list(range(len(k_eff_data))))
+                        else:
+                            k_eff_data = [k_eff_data]
+                            time_steps = [0]
+                    else:
+                        k_eff_data = []
+                    
+                    if k_eff_data:
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        ax.plot(time_steps, k_eff_data, 'b-o', linewidth=2, markersize=6)
+                        ax.axhline(y=1.0, color='r', linestyle='--', label='Critical (k=1.0)')
+                        ax.set_xlabel('Time [days]', fontsize=12)
+                        ax.set_ylabel('k-eff', fontsize=12)
+                        ax.set_title('k-eff Evolution Over Time', fontsize=14, fontweight='bold')
+                        ax.grid(True, alpha=0.3)
+                        ax.legend()
+                        plt.tight_layout()
+                        
+                        if args.output:
+                            output_path = Path(args.output)
+                            if 'keff' not in str(output_path.name).lower():
+                                stem = output_path.stem
+                                suffix = output_path.suffix
+                                output_path = output_path.parent / f"{stem}_keff{suffix}"
+                            fig.savefig(output_path, format=args.format, dpi=300, bbox_inches='tight')
+                            _print_success(f"k-eff plot saved to {output_path}")
+                            plt.close(fig)
+                        else:
+                            plt.show()
+                    else:
+                        _print_info("No k-eff data found in results file")
+                except ImportError:
+                    _print_error("Matplotlib not available. Install matplotlib: pip install matplotlib")
+            else:
+                _print_info("No k-eff data found in results file")
+                _print_info("Use Python API to include k-eff in burnup results")
+        
+        # Plot burnup over time
+        if 'burnup' in plot_types:
+            if 'burnup' in results_data or 'burnup_values' in results_data:
+                try:
+                    import matplotlib.pyplot as plt
+                    
+                    # Extract burnup data
+                    if 'burnup_values' in results_data:
+                        burnup_data = results_data['burnup_values']
+                        time_steps = results_data.get('time_steps', list(range(len(burnup_data))))
+                    elif 'burnup' in results_data:
+                        burnup_data = results_data['burnup']
+                        if isinstance(burnup_data, list):
+                            time_steps = results_data.get('time_steps', list(range(len(burnup_data))))
+                        else:
+                            burnup_data = [burnup_data]
+                            time_steps = [0]
+                    else:
+                        burnup_data = []
+                    
+                    if burnup_data:
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        ax.plot(time_steps, burnup_data, 'g-s', linewidth=2, markersize=6)
+                        ax.set_xlabel('Time [days]', fontsize=12)
+                        ax.set_ylabel('Burnup [MWd/kgU]', fontsize=12)
+                        ax.set_title('Burnup Over Time', fontsize=14, fontweight='bold')
+                        ax.grid(True, alpha=0.3)
+                        plt.tight_layout()
+                        
+                        if args.output:
+                            output_path = Path(args.output)
+                            if 'burnup' not in str(output_path.name).lower():
+                                stem = output_path.stem
+                                suffix = output_path.suffix
+                                output_path = output_path.parent / f"{stem}_burnup{suffix}"
+                            fig.savefig(output_path, format=args.format, dpi=300, bbox_inches='tight')
+                            _print_success(f"Burnup plot saved to {output_path}")
+                            plt.close(fig)
+                        else:
+                            plt.show()
+                    else:
+                        _print_info("No burnup data found in results file")
+                except ImportError:
+                    _print_error("Matplotlib not available. Install matplotlib: pip install matplotlib")
+            else:
+                _print_info("No burnup data found in results file")
+                _print_info("Use Python API to include burnup data in results")
+        
+        # Plot composition (note: requires inventory and geometry, use Python API)
+        if 'composition' in plot_types:
+            _print_info("NOTE: Composition plotting requires inventory data and geometry")
+            _print_info("Use Python API for full composition visualization:")
+            print("  from smrforge.visualization.material_composition import plot_burnup_composition")
+            print("  from smrforge.core.reactor_core import Nuclide")
+            print("  fig = plot_burnup_composition(inventory, geometry, nuclides)")
+        
+    except ImportError as e:
+        _print_error(f"Failed to import visualization modules: {e}")
+        sys.exit(1)
+    except Exception as e:
+        _print_error(f"Failed to visualize burnup results: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -1065,6 +1232,20 @@ Note: All features are also available via Python API:
     burnup_run_parser.add_argument('--nuclide-threshold', type=float, dest='nuclide_threshold', help='Nuclide concentration threshold')
     burnup_run_parser.add_argument('--output', type=Path, help='Output file for results')
     burnup_run_parser.set_defaults(func=burnup_run)
+    
+    # burnup visualize
+    burnup_visualize_parser = burnup_subparsers.add_parser(
+        'visualize',
+        help='Visualize burnup results'
+    )
+    burnup_visualize_parser.add_argument('--results', type=Path, required=True, help='Burnup results file (JSON or HDF5)')
+    burnup_visualize_parser.add_argument('--nuclides', nargs='+', help='Specific nuclides to plot (e.g., U235 U238 Pu239)')
+    burnup_visualize_parser.add_argument('--burnup', action='store_true', help='Plot burnup over time')
+    burnup_visualize_parser.add_argument('--keff', action='store_true', help='Plot k-eff evolution')
+    burnup_visualize_parser.add_argument('--composition', action='store_true', help='Plot composition changes')
+    burnup_visualize_parser.add_argument('--output', type=Path, help='Output file for plot')
+    burnup_visualize_parser.add_argument('--format', type=str, choices=['png', 'pdf', 'svg', 'html'], default='png', help='Output format')
+    burnup_visualize_parser.set_defaults(func=burnup_visualize)
     
     # Validate subcommands
     validate_parser = subparsers.add_parser(
