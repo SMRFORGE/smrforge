@@ -108,6 +108,12 @@ class BurnupOptions:
     max_fission_products: int = 100
     decay_tolerance: float = 1e-8
     integration_method: str = "BDF"  # BDF is good for stiff ODEs (decay chains)
+    # Adaptive nuclide tracking options
+    adaptive_tracking: bool = False  # Enable adaptive nuclide tracking
+    nuclide_threshold: float = 1e15  # Minimum concentration [atoms/cm³] to track
+    nuclide_importance_threshold: float = 1e-3  # Relative importance threshold (fraction of total)
+    adaptive_update_interval: int = 5  # Update nuclide list every N time steps
+    always_track_nuclides: List[Nuclide] = field(default_factory=list)  # Nuclides to always track
 
 
 class BurnupSolver:
@@ -205,9 +211,21 @@ class BurnupSolver:
         # Fission yield data cache
         self._fission_yield_cache: Dict[Nuclide, Optional[Any]] = {}
         
+        # Adaptive tracking state
+        if options.adaptive_tracking:
+            # Initialize set of nuclides to always track
+            self._always_track = set(self.options.always_track_nuclides)
+            self._always_track.update(self.options.fissile_nuclides)
+            self._always_track.add(Nuclide(Z=92, A=238))  # U-238 (fertile)
+            self._last_adaptive_update = 0
+        else:
+            self._always_track = set()
+            self._last_adaptive_update = -1
+        
         logger.info(
             f"Initialized burnup solver: {n_nuclides} nuclides, "
             f"{n_times} time steps, {options.time_steps[-1]:.0f} days total"
+            f"{' (adaptive tracking enabled)' if options.adaptive_tracking else ''}"
         )
     
     def _initialize_nuclides(self):
@@ -318,6 +336,10 @@ class BurnupSolver:
                     logger.info(f"Updated k-eff: {k_eff_new:.6f} (was {self.neutronics.k_eff:.6f})")
                 except Exception as e:
                     logger.warning(f"Failed to re-solve neutronics: {e}. Continuing with previous flux.")
+            
+            # Update adaptive nuclide tracking
+            if self.options.adaptive_tracking:
+                self._update_adaptive_nuclides(step)
             
             # Calculate burnup
             self._update_burnup(step)
@@ -654,4 +676,134 @@ class BurnupSolver:
             decay_heat += N * lambda_decay * E_decay
         
         return decay_heat
+    
+    def _identify_nuclides_to_add(self, time_index: int) -> List[Nuclide]:
+        """
+        Identify nuclides that should be added to tracking.
+        
+        Checks fission yields and decay chains to find nuclides that are
+        being produced but not yet tracked.
+        
+        Args:
+            time_index: Current time step index
+        
+        Returns:
+            List of nuclides that should be added
+        """
+        if not self.options.adaptive_tracking:
+            return []
+        
+        new_nuclides = []
+        
+        # Check fission yields for new products
+        for fissile in self.options.fissile_nuclides:
+            if fissile not in self.nuclides:
+                continue
+            
+            yield_data = self._get_fission_yield_data(fissile)
+            if yield_data is None:
+                continue
+            
+            # Check for high-yield products that aren't tracked
+            for product, yield_val in yield_data.yields.items():
+                if product not in self.nuclides:
+                    # Only add if yield is significant
+                    if yield_val.cumulative_yield > self.options.nuclide_importance_threshold:
+                        new_nuclides.append(product)
+        
+        # Check decay chains for important daughters
+        for parent in self.nuclides:
+            if parent in self._always_track:
+                continue
+            
+            # Get decay daughters
+            daughters = self.decay_data._get_daughters(parent)
+            for daughter, br in daughters:
+                if daughter not in self.nuclides and daughter not in new_nuclides:
+                    # Check if parent has significant concentration
+                    idx_parent = self.nuclides.index(parent)
+                    N_parent = self.concentrations[idx_parent, time_index]
+                    if N_parent > self.options.nuclide_threshold:
+                        new_nuclides.append(daughter)
+        
+        return list(set(new_nuclides))  # Remove duplicates
+    
+    def _identify_nuclides_to_remove(self, time_index: int) -> List[Nuclide]:
+        """
+        Identify nuclides that should be removed from tracking.
+        
+        Checks concentrations against thresholds to find nuclides that are
+        below the tracking threshold.
+        
+        Args:
+            time_index: Current time step index
+        
+        Returns:
+            List of nuclides that should be removed
+        """
+        if not self.options.adaptive_tracking:
+            return []
+        
+        nuclides_to_remove = []
+        total_inventory = np.sum(self.concentrations[:, time_index])
+        
+        for i, nuclide in enumerate(self.nuclides):
+            # Never remove nuclides that are always tracked
+            if nuclide in self._always_track:
+                continue
+            
+            N = self.concentrations[i, time_index]
+            
+            # Check absolute threshold
+            if N < self.options.nuclide_threshold:
+                nuclides_to_remove.append(nuclide)
+                continue
+            
+            # Check relative importance threshold
+            if total_inventory > 0:
+                relative_importance = N / total_inventory
+                if relative_importance < self.options.nuclide_importance_threshold:
+                    nuclides_to_remove.append(nuclide)
+        
+        return nuclides_to_remove
+    
+    def _update_adaptive_nuclides(self, time_index: int):
+        """
+        Update nuclide list based on adaptive tracking criteria.
+        
+        This method identifies nuclides to add/remove and updates the tracking
+        list. Currently logs the changes but doesn't resize arrays (requires
+        significant refactoring to implement fully).
+        
+        Args:
+            time_index: Current time step index
+        """
+        if not self.options.adaptive_tracking:
+            return
+        
+        # Check if it's time to update
+        if time_index - self._last_adaptive_update < self.options.adaptive_update_interval:
+            return
+        
+        # Identify nuclides to add
+        nuclides_to_add = self._identify_nuclides_to_add(time_index)
+        if nuclides_to_add:
+            logger.info(
+                f"Adaptive tracking: {len(nuclides_to_add)} nuclides identified for addition: "
+                f"{[n.name for n in nuclides_to_add[:5]]}"  # Show first 5
+            )
+            # TODO: Implement actual addition with array resizing
+            # This requires refactoring to resize self.concentrations and rebuild matrices
+        
+        # Identify nuclides to remove
+        nuclides_to_remove = self._identify_nuclides_to_remove(time_index)
+        if nuclides_to_remove:
+            logger.info(
+                f"Adaptive tracking: {len(nuclides_to_remove)} nuclides identified for removal: "
+                f"{[n.name for n in nuclides_to_remove[:5]]}"  # Show first 5
+            )
+            # TODO: Implement actual removal with array resizing
+            # This requires refactoring to resize self.concentrations and rebuild matrices
+        
+        self._last_adaptive_update = time_index
 
