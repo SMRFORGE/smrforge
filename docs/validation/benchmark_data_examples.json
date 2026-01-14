@@ -1,0 +1,118 @@
+{
+  "decay_heat_benchmarks": {
+    "example_u235_shutdown": {
+      "test_case": "example_u235_shutdown",
+      "nuclides": {
+        "U235": 1e20
+      },
+      "initial_power": 100.0,
+      "shutdown_time": 0.0,
+      "time_points": [3600, 86400, 604800, 2592000],
+      "benchmark_values": [
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "MW",
+          "source": "ANSI/ANS-5.1 (Example - Replace with actual values)",
+          "notes": "Example structure - replace with actual ANSI/ANS-5.1 standard values"
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "MW",
+          "source": "ANSI/ANS-5.1 (Example - Replace with actual values)",
+          "notes": "Example structure - replace with actual ANSI/ANS-5.1 standard values"
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "MW",
+          "source": "ANSI/ANS-5.1 (Example - Replace with actual values)",
+          "notes": "Example structure - replace with actual ANSI/ANS-5.1 standard values"
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "MW",
+          "source": "ANSI/ANS-5.1 (Example - Replace with actual values)",
+          "notes": "Example structure - replace with actual ANSI/ANS-5.1 standard values"
+        }
+      ],
+      "standard": "ANSI/ANS-5.1"
+    }
+  },
+  "gamma_transport_benchmarks": {
+    "example_simple_shielding": {
+      "test_case": "example_simple_shielding",
+      "geometry_description": "Cylindrical geometry, 10 cm radius, 20 cm height, point source at center",
+      "source_description": "Point source at center, 1 MeV gamma, 1e10 photons/s",
+      "energy_groups": [0.1, 1.0, 10.0],
+      "benchmark_flux": [
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "photons/cm²/s",
+          "source": "MCNP 6.2 (Example - Replace with actual MCNP results)"
+        }
+      ],
+      "benchmark_dose_rate": {
+        "value": 0.0,
+        "uncertainty": null,
+        "unit": "Sv/h",
+        "source": "MCNP 6.2 (Example - Replace with actual MCNP results)"
+      },
+      "reference_code": "MCNP",
+      "reference_version": "6.2"
+    }
+  },
+  "burnup_benchmarks": {
+    "example_simple_burnup": {
+      "test_case": "example_simple_burnup",
+      "problem_description": "Simple UO2 fuel pin burnup problem (Example - Replace with IAEA benchmark)",
+      "initial_composition": {
+        "U235": 0.02,
+        "U238": 0.98
+      },
+      "time_steps": [0, 30, 60, 90],
+      "benchmark_compositions": [
+        {
+          "U235": 0.02,
+          "U238": 0.98
+        },
+        {
+          "U235": 0.0,
+          "U238": 0.0,
+          "note": "Example structure - replace with actual IAEA benchmark compositions"
+        }
+      ],
+      "benchmark_k_eff": [
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)"
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)"
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)"
+        },
+        {
+          "value": 0.0,
+          "uncertainty": null,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)"
+        }
+      ],
+      "reference_source": "IAEA"
+    }
+  },
+  "_note": "This file contains example structures for benchmark data. Replace placeholder values (0.0) with actual benchmark values from ANSI/ANS-5.1, MCNP calculations, or IAEA benchmarks."
+}

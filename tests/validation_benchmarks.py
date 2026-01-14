@@ -24,6 +24,14 @@ from smrforge.geometry import PrismaticCore
 from smrforge.neutronics.solver import MultiGroupDiffusion
 from smrforge.validation.models import CrossSectionData, SolverOptions
 
+# Import standards parser
+try:
+    from smrforge.validation.standards_parser import StandardsParser, StandardType, parse_standards_data
+    from tests.validation_benchmark_data import BenchmarkDatabase
+    _STANDARDS_PARSER_AVAILABLE = True
+except ImportError:
+    _STANDARDS_PARSER_AVAILABLE = False
+
 
 @dataclass
 class TimingResult:
@@ -53,10 +61,21 @@ class ValidationResult:
 class ValidationBenchmarker:
     """Benchmarking and validation utilities."""
     
-    def __init__(self, cache: NuclearDataCache):
-        """Initialize with ENDF cache."""
+    def __init__(self, cache: NuclearDataCache, benchmark_database: Optional[Any] = None):
+        """
+        Initialize with ENDF cache.
+        
+        Args:
+            cache: NuclearDataCache instance for ENDF data
+            benchmark_database: Optional BenchmarkDatabase instance for standards benchmarks
+        """
         self.cache = cache
         self.results: List[ValidationResult] = []
+        self.benchmark_database = benchmark_database
+        if _STANDARDS_PARSER_AVAILABLE:
+            self.standards_parser = StandardsParser()
+        else:
+            self.standards_parser = None
     
     def time_function(self, func, *args, iterations: int = 1, **kwargs) -> TimingResult:
         """Time a function execution."""
@@ -374,6 +393,93 @@ class ValidationBenchmarker:
                 test_name="Burnup solver reference validation",
                 passed=False,
                 message=f"Burnup validation failed: {e}",
+            )
+    
+    def benchmark_k_eff(
+        self,
+        calculated_k_eff: List[float],
+        benchmark,
+        tolerance: float = 0.01,
+    ) -> ValidationResult:
+        """
+        Benchmark calculated k-eff values against reference benchmark.
+        
+        Compares calculated k-eff values at each time step with benchmark
+        reference values from IAEA or other sources.
+        
+        Args:
+            calculated_k_eff: List of calculated k-eff values (one per time step)
+            benchmark: BurnupBenchmark with reference k-eff values
+            tolerance: Relative tolerance for comparison (default: 0.01 = 1%)
+        
+        Returns:
+            ValidationResult with comparison metrics
+        """
+        try:
+            from tests.validation_benchmark_data import compare_with_benchmark, BurnupBenchmark
+            
+            if len(calculated_k_eff) != len(benchmark.benchmark_k_eff):
+                return ValidationResult(
+                    test_name=f"k-eff benchmarking ({benchmark.test_case})",
+                    passed=False,
+                    message=f"Mismatch in number of time steps: calculated={len(calculated_k_eff)}, benchmark={len(benchmark.benchmark_k_eff)}",
+                )
+            
+            # Compare each time step
+            comparisons = []
+            all_within_tolerance = True
+            max_error = 0.0
+            
+            for i, (calc_k, bench_k) in enumerate(zip(calculated_k_eff, benchmark.benchmark_k_eff)):
+                comparison = compare_with_benchmark(calc_k, bench_k, tolerance=tolerance)
+                comparisons.append(comparison)
+                
+                if not comparison["within_tolerance"]:
+                    all_within_tolerance = False
+                
+                max_error = max(max_error, comparison["relative_error"])
+            
+            # Calculate average error
+            avg_error = np.mean([c["relative_error"] for c in comparisons])
+            
+            metrics = {
+                "time_steps": len(calculated_k_eff),
+                "average_relative_error": float(avg_error),
+                "average_relative_error_percent": float(avg_error * 100),
+                "max_relative_error": float(max_error),
+                "max_relative_error_percent": float(max_error * 100),
+                "within_tolerance_count": sum(1 for c in comparisons if c["within_tolerance"]),
+                "total_comparisons": len(comparisons),
+            }
+            
+            comparison_data = {
+                "benchmark_test_case": benchmark.test_case,
+                "reference_source": benchmark.reference_source,
+                "comparisons": [
+                    {
+                        "time_step": i,
+                        "calculated": c["calculated"],
+                        "benchmark": c["benchmark"],
+                        "relative_error_percent": c["relative_error_percent"],
+                        "within_tolerance": c["within_tolerance"],
+                        "within_uncertainty": c.get("within_uncertainty"),
+                    }
+                    for i, c in enumerate(comparisons)
+                ],
+            }
+            
+            return ValidationResult(
+                test_name=f"k-eff benchmarking ({benchmark.test_case})",
+                passed=all_within_tolerance,
+                message=f"k-eff comparison: {metrics['within_tolerance_count']}/{metrics['total_comparisons']} within tolerance, avg error: {metrics['average_relative_error_percent']:.3f}%",
+                metrics=metrics,
+                comparison_data=comparison_data,
+            )
+        except Exception as e:
+            return ValidationResult(
+                test_name=f"k-eff benchmarking ({benchmark.test_case})",
+                passed=False,
+                message=f"k-eff benchmarking failed: {e}",
             )
     
     def generate_report(self, output_file: Optional[Path] = None) -> str:

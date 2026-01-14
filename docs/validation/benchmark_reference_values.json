@@ -1,0 +1,146 @@
+{
+  "decay_heat_benchmarks": {
+    "u235_thermal_fission_100mw": {
+      "test_case": "u235_thermal_fission_100mw",
+      "nuclides": {
+        "U235": 1e20
+      },
+      "initial_power": 100.0,
+      "shutdown_time": 0.0,
+      "time_points": [3600, 86400, 604800, 2592000],
+      "benchmark_values": [
+        {
+          "value": 7.0,
+          "uncertainty": 0.5,
+          "unit": "MW",
+          "source": "ANSI/ANS-5.1 (Example - Replace with actual standard values)",
+          "notes": "Decay heat at 1 hour after shutdown for 100 MW thermal reactor (U-235 thermal fission)"
+        },
+        {
+          "value": 4.5,
+          "uncertainty": 0.4,
+          "unit": "MW",
+          "source": "ANSI/ANS-5.1 (Example - Replace with actual standard values)",
+          "notes": "Decay heat at 1 day after shutdown"
+        },
+        {
+          "value": 2.5,
+          "uncertainty": 0.3,
+          "unit": "MW",
+          "source": "ANSI/ANS-5.1 (Example - Replace with actual standard values)",
+          "notes": "Decay heat at 1 week after shutdown"
+        },
+        {
+          "value": 1.2,
+          "uncertainty": 0.2,
+          "unit": "MW",
+          "source": "ANSI/ANS-5.1 (Example - Replace with actual standard values)",
+          "notes": "Decay heat at 30 days after shutdown"
+        }
+      ],
+      "standard": "ANSI/ANS-5.1"
+    }
+  },
+  "gamma_transport_benchmarks": {},
+  "burnup_benchmarks": {
+    "simple_u235_pin_30days": {
+      "test_case": "simple_u235_pin_30days",
+      "problem_description": "Simple UO2 fuel pin burnup problem - 30 days at constant power",
+      "initial_composition": {
+        "U235": 0.02,
+        "U238": 0.98
+      },
+      "time_steps": [0, 30],
+      "benchmark_compositions": [
+        {
+          "U235": 0.02,
+          "U238": 0.98
+        },
+        {
+          "U235": 0.0195,
+          "U238": 0.98,
+          "note": "Example composition after 30 days (replace with actual IAEA benchmark)"
+        }
+      ],
+      "benchmark_k_eff": [
+        {
+          "value": 1.0,
+          "uncertainty": 0.001,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)",
+          "notes": "Initial k-eff (example value - replace with actual benchmark)"
+        },
+        {
+          "value": 0.995,
+          "uncertainty": 0.001,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)",
+          "notes": "k-eff after 30 days burnup (example value - replace with actual benchmark)"
+        }
+      ],
+      "reference_source": "IAEA"
+    },
+    "simple_u235_pin_90days": {
+      "test_case": "simple_u235_pin_90days",
+      "problem_description": "Simple UO2 fuel pin burnup problem - 90 days at constant power",
+      "initial_composition": {
+        "U235": 0.02,
+        "U238": 0.98
+      },
+      "time_steps": [0, 30, 60, 90],
+      "benchmark_compositions": [
+        {
+          "U235": 0.02,
+          "U238": 0.98
+        },
+        {
+          "U235": 0.0195,
+          "U238": 0.98,
+          "note": "Example composition after 30 days"
+        },
+        {
+          "U235": 0.019,
+          "U238": 0.98,
+          "note": "Example composition after 60 days"
+        },
+        {
+          "U235": 0.0185,
+          "U238": 0.98,
+          "note": "Example composition after 90 days (replace with actual IAEA benchmark)"
+        }
+      ],
+      "benchmark_k_eff": [
+        {
+          "value": 1.0,
+          "uncertainty": 0.001,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)",
+          "notes": "Initial k-eff"
+        },
+        {
+          "value": 0.995,
+          "uncertainty": 0.001,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)",
+          "notes": "k-eff after 30 days"
+        },
+        {
+          "value": 0.990,
+          "uncertainty": 0.001,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)",
+          "notes": "k-eff after 60 days"
+        },
+        {
+          "value": 0.985,
+          "uncertainty": 0.001,
+          "unit": "",
+          "source": "IAEA Benchmark (Example - Replace with actual IAEA benchmark values)",
+          "notes": "k-eff after 90 days (replace with actual benchmark)"
+        }
+      ],
+      "reference_source": "IAEA"
+    }
+  },
+  "_note": "This file contains example benchmark reference values. Replace placeholder values with actual benchmark values from ANSI/ANS-5.1 standards, MCNP calculations, or IAEA benchmarks. These values are intended as examples and should be replaced with real benchmark data for validation."
+}

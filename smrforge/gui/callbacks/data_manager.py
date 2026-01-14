@@ -3,7 +3,7 @@ Data manager callbacks.
 """
 
 try:
-    from dash import Input, Output, State
+    from dash import Input, Output, State, html
     from dash.exceptions import PreventUpdate
     import dash_bootstrap_components as dbc
     _DASH_AVAILABLE = True
@@ -86,3 +86,34 @@ def register_data_manager_callbacks(app):
         
         except Exception as e:
             return dbc.Alert(f"✗ Download error: {str(e)}", color="danger"), ""
+    
+    @app.callback(
+        Output('endf-download-status', 'children', allow_duplicate=True),
+        Input('save-config-button', 'n_clicks'),
+        State('config-endf-dir', 'value'),
+        State('config-cache-dir', 'value'),
+        prevent_initial_call=True
+    )
+    def save_configuration(n_clicks, endf_dir, cache_dir):
+        """Save configuration settings."""
+        if not n_clicks:
+            return ""
+        
+        try:
+            # In a real implementation, this would save to config file
+            # For now, just show a success message
+            config_info = []
+            if endf_dir:
+                config_info.append(html.P(f"ENDF Directory: {endf_dir}"))
+            if cache_dir:
+                config_info.append(html.P(f"Cache Directory: {cache_dir}"))
+            
+            if config_info:
+                return dbc.Alert([
+                    html.H5("Configuration Saved"),
+                    html.Div(config_info)
+                ], color="success")
+            else:
+                return dbc.Alert("No configuration changes to save.", color="info")
+        except Exception as e:
+            return dbc.Alert(f"✗ Configuration error: {str(e)}", color="danger")

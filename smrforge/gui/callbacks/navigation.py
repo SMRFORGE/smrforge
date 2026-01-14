@@ -3,13 +3,17 @@ Navigation callbacks for sidebar.
 """
 
 try:
-    from dash import Input, Output, State
+    from dash import Input, Output, State, html
     from dash.exceptions import PreventUpdate
     from dash import callback_context
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False
     callback_context = None
+
+from smrforge.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 from smrforge.gui.components import (
     create_reactor_builder,
@@ -36,9 +40,11 @@ def register_navigation_callbacks(app):
         """Update main content based on navigation clicks."""
         from dash import callback_context as ctx
         if not ctx.triggered:
+            logger.debug("Initial load: showing reactor builder")
             return create_reactor_builder()
         
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        logger.info(f"Navigation: switching to {button_id}")
         
         if button_id == 'nav-reactor-builder':
             return create_reactor_builder()

@@ -77,7 +77,7 @@ def create_app() -> Optional["dash.Dash"]:
     app.layout = dbc.Container([
         dcc.Store(id='reactor-spec-store', data={}),
         dcc.Store(id='analysis-results-store', data={}),
-        dcc.Store(id='project-store', data={'name': None, 'path': None}),
+        dcc.Store(id='project-store', data={'name': None, 'path': None, 'status': None, 'message': None}),
         dcc.Store(id='theme-store', data={'theme': 'light'}),  # Theme preference
         dcc.Interval(id='progress-interval', interval=1000, disabled=True),
         

@@ -23,6 +23,12 @@ try:
 except ImportError:
     _LWR_BURNUP_AVAILABLE = False
 
+try:
+    from .fuel_management_integration import BurnupFuelManagerIntegration
+    _FUEL_MANAGEMENT_INTEGRATION_AVAILABLE = True
+except ImportError:
+    _FUEL_MANAGEMENT_INTEGRATION_AVAILABLE = False
+
 __all__ = ["BurnupSolver", "BurnupOptions", "NuclideInventory"]
 
 if _LWR_BURNUP_AVAILABLE:
@@ -36,3 +42,6 @@ if _LWR_BURNUP_AVAILABLE:
             "RodWiseBurnupTracker",
         ]
     )
+
+if _FUEL_MANAGEMENT_INTEGRATION_AVAILABLE:
+    __all__.append("BurnupFuelManagerIntegration")

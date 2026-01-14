@@ -108,6 +108,9 @@ class BurnupOptions:
     max_fission_products: int = 100
     decay_tolerance: float = 1e-8
     integration_method: str = "BDF"  # BDF is good for stiff ODEs (decay chains)
+    # ODE solver performance optimization options
+    max_step: Optional[float] = None  # Maximum time step [s] for adaptive stepping (None = automatic)
+    use_sparse_matrices: bool = True  # Use sparse matrices for decay/capture (default: True, already implemented)
     # Adaptive nuclide tracking options
     adaptive_tracking: bool = False  # Enable adaptive nuclide tracking
     nuclide_threshold: float = 1e15  # Minimum concentration [atoms/cm³] to track
@@ -393,14 +396,22 @@ class BurnupSolver:
         
         # Use scipy's ODE solver
         try:
+            # ODE solver with performance optimizations
+            solve_kwargs = {
+                "method": self.options.integration_method,
+                "dense_output": False,
+                "rtol": self.options.decay_tolerance,
+                "atol": self.options.decay_tolerance,
+            }
+            # Add max_step if specified (adaptive time stepping control)
+            if self.options.max_step is not None:
+                solve_kwargs["max_step"] = self.options.max_step
+            
             sol = solve_ivp(
                 dN_dt,
                 [t_start, t_end],
                 N0,
-                method=self.options.integration_method,
-                dense_output=False,
-                rtol=self.options.decay_tolerance,
-                atol=self.options.decay_tolerance,
+                **solve_kwargs
             )
             
             if sol.success:
