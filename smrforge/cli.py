@@ -1048,6 +1048,230 @@ def burnup_visualize(args):
         sys.exit(1)
 
 
+def config_show(args):
+    """Show current configuration."""
+    try:
+        config_dir = Path.home() / ".smrforge"
+        config_file = config_dir / "config.yaml"
+        
+        if not config_file.exists():
+            _print_info("No configuration file found")
+            _print_info(f"Configuration file location: {config_file}")
+            _print_info("Use 'smrforge config init' to create a default configuration file")
+            return
+        
+        if not _YAML_AVAILABLE:
+            _print_error("PyYAML not available. Install PyYAML: pip install pyyaml")
+            sys.exit(1)
+        
+        with open(config_file, 'r') as f:
+            config = yaml.safe_load(f) or {}
+        
+        if args.key:
+            # Show specific key
+            keys = args.key.split('.')
+            value = config
+            for key in keys:
+                if isinstance(value, dict) and key in value:
+                    value = value[key]
+                else:
+                    _print_error(f"Configuration key not found: {args.key}")
+                    sys.exit(1)
+            
+            if _RICH_AVAILABLE:
+                console.print(f"[cyan]{args.key}[/cyan]: {value}")
+            else:
+                print(f"{args.key}: {value}")
+        else:
+            # Show all config
+            if _RICH_AVAILABLE:
+                table = Table(title="SMRForge Configuration")
+                table.add_column("Key", style="cyan")
+                table.add_column("Value", style="green")
+                
+                def add_config_rows(data, prefix=""):
+                    for key, value in data.items():
+                        full_key = f"{prefix}.{key}" if prefix else key
+                        if isinstance(value, dict):
+                            add_config_rows(value, full_key)
+                        else:
+                            table.add_row(full_key, str(value))
+                
+                add_config_rows(config)
+                console.print(table)
+            else:
+                print("\nSMRForge Configuration:")
+                print("=" * 60)
+                
+                def print_config(data, prefix=""):
+                    for key, value in data.items():
+                        full_key = f"{prefix}.{key}" if prefix else key
+                        if isinstance(value, dict):
+                            print_config(value, full_key)
+                        else:
+                            print(f"{full_key}: {value}")
+                
+                print_config(config)
+                print("=" * 60)
+            
+            _print_info(f"\nConfiguration file: {config_file}")
+    
+    except Exception as e:
+        _print_error(f"Failed to show configuration: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def config_set(args):
+    """Set configuration value."""
+    try:
+        if not _YAML_AVAILABLE:
+            _print_error("PyYAML not available. Install PyYAML: pip install pyyaml")
+            sys.exit(1)
+        
+        config_dir = Path.home() / ".smrforge"
+        config_file = config_dir / "config.yaml"
+        
+        # Load existing config or create new
+        if config_file.exists():
+            with open(config_file, 'r') as f:
+                config = yaml.safe_load(f) or {}
+        else:
+            config = {}
+            config_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Parse key and set value
+        keys = args.key.split('.')
+        value = args.value
+        
+        # Convert value to appropriate type
+        try:
+            # Try to convert to number
+            if '.' in value:
+                value = float(value)
+            else:
+                value = int(value)
+        except ValueError:
+            # Keep as string, but check for boolean strings
+            if value.lower() in ('true', 'yes', 'on'):
+                value = True
+            elif value.lower() in ('false', 'no', 'off'):
+                value = False
+        
+        # Navigate/create nested structure
+        current = config
+        for key in keys[:-1]:
+            if key not in current:
+                current[key] = {}
+            current = current[key]
+        
+        # Set the value
+        old_value = current.get(keys[-1], None)
+        current[keys[-1]] = value
+        
+        # Save config
+        with open(config_file, 'w') as f:
+            yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
+        
+        if old_value is not None:
+            _print_success(f"Updated {args.key}: {old_value} -> {value}")
+        else:
+            _print_success(f"Set {args.key} = {value}")
+        
+        _print_info(f"Configuration saved to: {config_file}")
+    
+    except Exception as e:
+        _print_error(f"Failed to set configuration: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def config_init(args):
+    """Initialize configuration file."""
+    try:
+        if not _YAML_AVAILABLE:
+            _print_error("PyYAML not available. Install PyYAML: pip install pyyaml")
+            sys.exit(1)
+        
+        config_dir = Path.home() / ".smrforge"
+        config_file = config_dir / "config.yaml"
+        
+        if config_file.exists() and not args.force:
+            _print_error(f"Configuration file already exists: {config_file}")
+            _print_info("Use --force to overwrite existing configuration")
+            sys.exit(1)
+        
+        # Create default config
+        default_config = {
+            'endf': {
+                'default_directory': str(Path.home() / "ENDF-Data"),
+                'default_library': 'ENDF-B-VIII.1',
+            },
+            'cache': {
+                'directory': str(config_dir / "cache"),
+            },
+            'output': {
+                'default_directory': './results',
+            },
+            'log_level': 'INFO',
+        }
+        
+        # Template-specific configs
+        if args.template == 'production':
+            default_config['log_level'] = 'WARNING'
+            default_config['cache'] = {
+                'directory': str(config_dir / "cache"),
+                'cleanup_interval_days': 30,
+            }
+        elif args.template == 'development':
+            default_config['log_level'] = 'DEBUG'
+        
+        # Create directory
+        config_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Write config
+        with open(config_file, 'w') as f:
+            yaml.safe_dump(default_config, f, default_flow_style=False, sort_keys=False)
+        
+        _print_success(f"Initialized configuration file: {config_file}")
+        
+        if _RICH_AVAILABLE:
+            console.print(f"\n[bold]Default configuration:[/bold]")
+            table = Table(show_header=False, box=None)
+            table.add_column("", style="cyan")
+            table.add_column("", style="green")
+            for key, value in default_config.items():
+                if isinstance(value, dict):
+                    for subkey, subvalue in value.items():
+                        table.add_row(f"  {key}.{subkey}", str(subvalue))
+                else:
+                    table.add_row(key, str(value))
+            console.print(table)
+        else:
+            print("\nDefault configuration:")
+            for key, value in default_config.items():
+                if isinstance(value, dict):
+                    for subkey, subvalue in value.items():
+                        print(f"  {key}.{subkey}: {subvalue}")
+                else:
+                    print(f"  {key}: {value}")
+        
+        _print_info("\nYou can modify the configuration using:")
+        print("  smrforge config set <key> <value>")
+        print("  smrforge config show")
+    
+    except Exception as e:
+        _print_error(f"Failed to initialize configuration: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -1296,6 +1520,39 @@ Note: All features are also available via Python API:
     visualize_flux_parser.add_argument('--format', type=str, choices=['png', 'pdf', 'svg'], default='png', help='Output format')
     visualize_flux_parser.add_argument('--group', type=int, help='Energy group index')
     visualize_flux_parser.set_defaults(func=visualize_flux)
+    
+    # Config subcommands
+    config_parser = subparsers.add_parser(
+        'config',
+        help='Configuration management'
+    )
+    config_subparsers = config_parser.add_subparsers(dest='config_command', help='Config commands')
+    
+    # config show
+    config_show_parser = config_subparsers.add_parser(
+        'show',
+        help='Show current configuration'
+    )
+    config_show_parser.add_argument('--key', type=str, help='Show specific configuration key (e.g., endf.default_directory)')
+    config_show_parser.set_defaults(func=config_show)
+    
+    # config set
+    config_set_parser = config_subparsers.add_parser(
+        'set',
+        help='Set configuration value'
+    )
+    config_set_parser.add_argument('key', type=str, help='Configuration key (e.g., endf.default_directory)')
+    config_set_parser.add_argument('value', type=str, help='Configuration value')
+    config_set_parser.set_defaults(func=config_set)
+    
+    # config init
+    config_init_parser = config_subparsers.add_parser(
+        'init',
+        help='Initialize configuration file'
+    )
+    config_init_parser.add_argument('--template', type=str, choices=['default', 'production', 'development'], default='default', help='Configuration template')
+    config_init_parser.add_argument('--force', action='store_true', help='Overwrite existing configuration file')
+    config_init_parser.set_defaults(func=config_init)
     
     args = parser.parse_args()
     
