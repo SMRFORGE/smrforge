@@ -75,8 +75,10 @@ services:
     ports:
       - "8050:8050"
     # Install dev dependencies on startup (including pytest-asyncio for async tests)
-    # Data downloader dependencies (tqdm, pyyaml) are already in requirements.txt
+    # Data downloader dependencies (tqdm, pyyaml, rich) are already in requirements.txt
+    # CLI dependencies (rich, pyyaml) are already in requirements.txt
     # Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
     # Optional: Add mesh conversion and CAD import: pip install meshio trimesh
-    command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio && bash"
+    # Optional: Add IPython for enhanced shell: pip install ipython
+    command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio ipython && bash"
 

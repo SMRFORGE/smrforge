@@ -5,6 +5,14 @@
 # Run:   docker run -it smrforge:latest
 #
 # Last Updated: January 2026
+# - Added comprehensive CLI with nested subcommands (reactor, data, burnup, validate, visualize, config, shell, workflow)
+# - Added batch processing support for reactor analysis
+# - Added interactive shell mode (IPython/REPL) via `smrforge shell`
+# - Added workflow scripts support (YAML-based workflows) via `smrforge workflow run`
+# - Added configuration management (`smrforge config show/set/init`)
+# - Added validation testing framework with benchmark comparison
+# - Added tab completion scripts (Bash/Zsh and PowerShell)
+# - Enhanced CLI with Rich library (colored output, tables, progress bars)
 # - Added Dash web dashboard with dark/gray mode support
 # - Added CLI command (smrforge serve) for dashboard
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
@@ -62,6 +70,8 @@ RUN apt-get update && \
 # Copy package metadata first (for better layer caching)
 COPY setup.py pyproject.toml README.md MANIFEST.in /app/
 COPY smrforge/ /app/smrforge/
+# Copy CLI scripts and utilities (validation scripts, completion scripts, etc.)
+COPY scripts/ /app/scripts/
 
 # Install Python dependencies
 # Upgrade pip and install wheel first (helps with some packages)
@@ -92,12 +102,23 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 
 # Default command (can be overridden)
 # Note: ENDF files can be downloaded automatically using the data downloader
-# Run: python -c \"from smrforge.data_downloader import download_endf_data; download_endf_data(library='ENDF/B-VIII.1', output_dir='/app/endf-data')\"
-# Or set up manually: python -m smrforge.core.endf_setup
+# Run: smrforge data download --library ENDF-B-VIII.1 --output /app/endf-data
+# Or: python -c "from smrforge.data_downloader import download_endf_data; download_endf_data(library='ENDF/B-VIII.1', output_dir='/app/endf-data')"
+# Or set up manually: smrforge data setup
 # 
 # To run the web dashboard:
 #   smrforge serve --host 0.0.0.0 --port 8050
-#   Or: python -c \"from smrforge.gui import run_server; run_server(host='0.0.0.0', port=8050)\"
+#   Or: python -c "from smrforge.gui import run_server; run_server(host='0.0.0.0', port=8050)"
 #   Then access at http://localhost:8050 (map port 8050 in docker run -p 8050:8050)
-CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print('Features:'); print('  - Web Dashboard (smrforge serve) with dark/gray mode'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use data downloader'); print('    from smrforge.data_downloader import download_endf_data'); print('    download_endf_data(library=\"ENDF/B-VIII.1\", output_dir=\"/app/endf-data\")'); print('  Option 2: Manual setup'); print('    python -m smrforge.core.endf_setup'); print(''); print('Web Dashboard:'); print('  smrforge serve --host 0.0.0.0 --port 8050'); print('  Access at http://localhost:8050 (map port with -p 8050:8050)'); print(''); print('Optional dependencies:'); print('  - Mesh conversion: pip install meshio'); print('  - CAD import: pip install trimesh'); print('Note: Visualization dependencies (plotly, pyvista, dash) are now required and included automatically')"]
+#
+# CLI Commands available:
+#   smrforge reactor create/list/analyze/compare
+#   smrforge data setup/download/validate
+#   smrforge burnup run/visualize
+#   smrforge validate run
+#   smrforge visualize geometry/flux
+#   smrforge config show/set/init
+#   smrforge shell (interactive IPython/REPL)
+#   smrforge workflow run (YAML workflows)
+CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print(''); print('Features:'); print('  - Comprehensive CLI with nested subcommands'); print('  - Web Dashboard (smrforge serve) with dark/gray mode'); print('  - Interactive shell (smrforge shell)'); print('  - Workflow scripts (smrforge workflow run)'); print('  - Batch processing support'); print('  - Configuration management (smrforge config)'); print('  - Validation framework with benchmark comparison'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use CLI'); print('    smrforge data download --library ENDF-B-VIII.1 --output /app/endf-data'); print('  Option 2: Interactive setup'); print('    smrforge data setup'); print(''); print('Web Dashboard:'); print('  smrforge serve --host 0.0.0.0 --port 8050'); print('  Access at http://localhost:8050 (map port with -p 8050:8050)'); print(''); print('CLI Examples:'); print('  smrforge reactor list'); print('  smrforge reactor create --preset valar-10 --output reactor.json'); print('  smrforge reactor analyze --reactor reactor.json --keff'); print('  smrforge validate run --endf-dir /app/endf-data'); print('  smrforge shell  # Interactive Python shell'); print(''); print('Optional dependencies:'); print('  - Mesh conversion: pip install meshio'); print('  - CAD import: pip install trimesh'); print('Note: Visualization dependencies (plotly, pyvista, dash) are now required and included automatically')"]
 

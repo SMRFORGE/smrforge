@@ -5,6 +5,14 @@
 # Or use: docker compose up smrforge-dev
 #
 # Last Updated: January 2026
+# - Added comprehensive CLI with nested subcommands (reactor, data, burnup, validate, visualize, config, shell, workflow)
+# - Added batch processing support for reactor analysis
+# - Added interactive shell mode (IPython/REPL) via `smrforge shell`
+# - Added workflow scripts support (YAML-based workflows) via `smrforge workflow run`
+# - Added configuration management (`smrforge config show/set/init`)
+# - Added validation testing framework with benchmark comparison
+# - Added tab completion scripts (Bash/Zsh and PowerShell)
+# - Enhanced CLI with Rich library (colored output, tables, progress bars)
 # - Added Dash web dashboard with dark/gray mode support
 # - Added CLI command (smrforge serve) for dashboard
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
@@ -65,6 +73,8 @@ RUN apt-get update && \
 # Copy package metadata first (for better layer caching)
 COPY setup.py pyproject.toml README.md MANIFEST.in /app/
 COPY smrforge/ /app/smrforge/
+# Copy CLI scripts and utilities (validation scripts, completion scripts, etc.)
+COPY scripts/ /app/scripts/
 
 # Install Python dependencies
 RUN pip install --upgrade pip wheel setuptools
@@ -98,15 +108,32 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 
 # Default to bash shell for interactive development
 # Note: ENDF files can be downloaded automatically using the data downloader
-# Run: python -c "from smrforge.data_downloader import download_endf_data; download_endf_data(library='ENDF/B-VIII.1', output_dir='/app/endf-data')"
-# Or set up manually: python -m smrforge.core.endf_setup
+# Run: smrforge data download --library ENDF-B-VIII.1 --output /app/endf-data
+# Or: python -c "from smrforge.data_downloader import download_endf_data; download_endf_data(library='ENDF/B-VIII.1', output_dir='/app/endf-data')"
+# Or set up manually: smrforge data setup
 # 
 # To run the web dashboard:
 #   smrforge serve --host 0.0.0.0 --port 8050
 #   Or: python -c "from smrforge.gui import run_server; run_server(host='0.0.0.0', port=8050)"
 #   Then access at http://localhost:8050 (map port 8050 in docker compose)
-# Features:
+#
+# CLI Commands available:
+#   smrforge reactor create/list/analyze/compare
+#   smrforge data setup/download/validate
+#   smrforge burnup run/visualize
+#   smrforge validate run
+#   smrforge visualize geometry/flux
+#   smrforge config show/set/init
+#   smrforge shell (interactive IPython/REPL)
+#   smrforge workflow run (YAML workflows)
+#
+# Development Features:
 #   - Web Dashboard (smrforge serve) with dark/gray mode
+#   - Comprehensive CLI with nested subcommands
+#   - Interactive shell (smrforge shell)
+#   - Workflow scripts (smrforge workflow run)
+#   - Batch processing support
+#   - Validation framework with benchmark comparison
 #   - LWR SMR transient analysis (PWR/BWR/Integral SMR)
 #   - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)
 #   - Automated ENDF data downloader
