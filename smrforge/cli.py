@@ -11,6 +11,7 @@ import sys
 import glob
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 try:
     import yaml
@@ -351,6 +352,216 @@ def reactor_analyze(args):
         sys.exit(1)
     except Exception as e:
         _print_error(f"Failed to analyze reactor: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def _reactor_analyze_batch(args):
+    """Run batch analysis on multiple reactors."""
+    try:
+        from smrforge.convenience import create_reactor
+        import json
+        
+        # Expand glob patterns to file list
+        reactor_files = []
+        for pattern in args.batch:
+            # Expand glob pattern
+            matched_files = glob.glob(pattern, recursive=True)
+            if not matched_files:
+                _print_warning(f"No files matched pattern: {pattern}")
+                continue
+            reactor_files.extend([Path(f) for f in matched_files])
+        
+        # Remove duplicates and filter for JSON/YAML files
+        reactor_files = list(set(reactor_files))
+        reactor_files = [f for f in reactor_files if f.suffix.lower() in ['.json', '.yaml', '.yml'] and f.exists()]
+        
+        if not reactor_files:
+            _print_error("No valid reactor files found")
+            sys.exit(1)
+        
+        _print_info(f"Found {len(reactor_files)} reactor files to process")
+        
+        # Determine output directory
+        output_dir = None
+        if args.output:
+            if args.output.is_dir() or (args.output.exists() and args.output.is_dir()):
+                output_dir = args.output
+            else:
+                # Assume it's a directory name
+                output_dir = Path(args.output)
+            output_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            output_dir = Path('results')
+            output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Process function for single reactor
+        def process_reactor(reactor_file: Path):
+            """Process a single reactor file."""
+            try:
+                with open(reactor_file) as f:
+                    if reactor_file.suffix.lower() in ['.yaml', '.yml']:
+                        if not _YAML_AVAILABLE:
+                            return reactor_file, None, "YAML not available. Install PyYAML: pip install pyyaml"
+                        reactor_data = yaml.safe_load(f)
+                    else:
+                        reactor_data = json.load(f)
+                
+                reactor = create_reactor(**reactor_data)
+                results = {'reactor_file': str(reactor_file)}
+                
+                # Run requested analyses
+                if args.keff or args.full:
+                    k_eff = reactor.solve_keff()
+                    results['k_eff'] = float(k_eff)
+                
+                if args.full or args.neutronics:
+                    full_results = reactor.solve()
+                    results.update({k: v for k, v in full_results.items() if k != 'k_eff'})
+                    if 'k_eff' not in results:
+                        results['k_eff'] = float(full_results.get('k_eff', 0.0))
+                
+                if args.full or args.burnup:
+                    results['burnup_note'] = "Burnup requires Python API"
+                
+                if args.full or args.safety:
+                    results['safety_note'] = "Safety requires Python API"
+                
+                return reactor_file, results, None
+            except Exception as e:
+                return reactor_file, None, str(e)
+        
+        # Process reactors
+        all_results = {}
+        errors = {}
+        
+        if args.parallel and len(reactor_files) > 1:
+            # Parallel processing
+            _print_info(f"Processing {len(reactor_files)} reactors in parallel ({args.workers} workers)...")
+            
+            if _RICH_AVAILABLE:
+                from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TaskProgressColumn(),
+                    console=console
+                ) as progress:
+                    task = progress.add_task("Processing reactors...", total=len(reactor_files))
+                    
+                    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+                        futures = {executor.submit(process_reactor, f): f for f in reactor_files}
+                        
+                        for future in as_completed(futures):
+                            reactor_file, result, error = future.result()
+                            progress.update(task, advance=1)
+                            
+                            if error:
+                                errors[reactor_file] = error
+                            else:
+                                all_results[reactor_file] = result
+            else:
+                with ThreadPoolExecutor(max_workers=args.workers) as executor:
+                    futures = {executor.submit(process_reactor, f): f for f in reactor_files}
+                    
+                    for i, future in enumerate(as_completed(futures), 1):
+                        reactor_file, result, error = future.result()
+                        print(f"Processed {i}/{len(reactor_files)}: {reactor_file.name}")
+                        
+                        if error:
+                            errors[reactor_file] = error
+                        else:
+                            all_results[reactor_file] = result
+        else:
+            # Sequential processing
+            _print_info(f"Processing {len(reactor_files)} reactors sequentially...")
+            
+            if _RICH_AVAILABLE:
+                from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TaskProgressColumn(),
+                    console=console
+                ) as progress:
+                    task = progress.add_task("Processing reactors...", total=len(reactor_files))
+                    
+                    for reactor_file in reactor_files:
+                        reactor_file, result, error = process_reactor(reactor_file)
+                        progress.update(task, advance=1)
+                        
+                        if error:
+                            errors[reactor_file] = error
+                        else:
+                            all_results[reactor_file] = result
+            else:
+                for i, reactor_file in enumerate(reactor_files, 1):
+                    print(f"Processing {i}/{len(reactor_files)}: {reactor_file.name}")
+                    reactor_file, result, error = process_reactor(reactor_file)
+                    
+                    if error:
+                        errors[reactor_file] = error
+                    else:
+                        all_results[reactor_file] = result
+        
+        # Save results
+        batch_results = {
+            'processed': len(all_results),
+            'failed': len(errors),
+            'results': {str(k): v for k, v in all_results.items()},
+            'errors': {str(k): v for k, v in errors.items()} if errors else {}
+        }
+        
+        # Save summary
+        summary_file = output_dir / 'batch_results.json'
+        with open(summary_file, 'w') as f:
+            json.dump(batch_results, f, indent=2)
+        _print_success(f"Batch results saved to {summary_file}")
+        
+        # Save individual results
+        for reactor_file, result in all_results.items():
+            result_file = output_dir / f"{reactor_file.stem}_results.json"
+            with open(result_file, 'w') as f:
+                json.dump(result, f, indent=2)
+        
+        # Display summary
+        if _RICH_AVAILABLE:
+            table = Table(title="Batch Analysis Summary")
+            table.add_column("Reactor", style="cyan")
+            table.add_column("k-eff", style="green")
+            table.add_column("Status", style="yellow")
+            
+            for reactor_file, result in all_results.items():
+                k_eff = result.get('k_eff', 'N/A')
+                table.add_row(reactor_file.name, str(k_eff), "✓ Success")
+            
+            for reactor_file, error in errors.items():
+                error_msg = error[:50] + "..." if len(error) > 50 else error
+                table.add_row(reactor_file.name, "N/A", f"✗ Error: {error_msg}")
+            
+            console.print(table)
+        else:
+            print("\nBatch Analysis Summary:")
+            print("=" * 70)
+            print(f"Processed: {len(all_results)}")
+            print(f"Failed: {len(errors)}")
+            for reactor_file, result in all_results.items():
+                k_eff = result.get('k_eff', 'N/A')
+                print(f"  {reactor_file.name}: k-eff = {k_eff}")
+        
+        if errors:
+            _print_warning(f"Failed to process {len(errors)} reactor(s)")
+            return 1
+        else:
+            _print_success(f"Successfully processed {len(all_results)} reactor(s)")
+            return 0
+    
+    except Exception as e:
+        _print_error(f"Failed to run batch analysis: {e}")
         if args.verbose if hasattr(args, 'verbose') else False:
             import traceback
             traceback.print_exc()
@@ -1282,6 +1493,232 @@ def config_init(args):
         sys.exit(1)
 
 
+def shell_interactive(args):
+    """Launch interactive Python shell with SMRForge pre-loaded."""
+    try:
+        # Try IPython first (better UX)
+        try:
+            from IPython import embed
+            from IPython.terminal.embed import InteractiveShellEmbed
+            
+            # Pre-import SMRForge modules
+            import smrforge as smr
+            from smrforge.convenience import create_reactor, list_presets
+            from smrforge.burnup import BurnupSolver, BurnupOptions
+            from smrforge.visualization import plot_core_layout
+            
+            # Setup banner
+            banner = """
+╔═══════════════════════════════════════════════════════════════╗
+║           SMRForge Interactive Shell (IPython)                ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Pre-loaded objects:
+  • smr - SMRForge main module
+  • create_reactor() - Create reactor from preset or config
+  • list_presets() - List available preset designs
+  • BurnupSolver, BurnupOptions - Burnup calculation
+  • plot_core_layout() - Visualization
+
+Quick start:
+  >>> reactor = create_reactor("valar-10")
+  >>> k_eff = reactor.solve_keff()
+  >>> print(f"k-eff: {k_eff:.6f}")
+
+Type 'help(smr)' for more information or 'exit' to quit.
+"""
+            exit_msg = "\nExiting SMRForge shell. Goodbye!"
+            
+            # Launch IPython shell
+            ipshell = InteractiveShellEmbed(banner1=banner, exit_msg=exit_msg)
+            ipshell()
+            
+        except ImportError:
+            # Fallback to standard Python REPL
+            import code
+            import sys
+            
+            # Pre-import SMRForge modules
+            import smrforge as smr
+            from smrforge.convenience import create_reactor, list_presets
+            
+            # Setup banner
+            banner = """
+╔═══════════════════════════════════════════════════════════════╗
+║           SMRForge Interactive Shell (Python REPL)            ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Pre-loaded objects:
+  • smr - SMRForge main module
+  • create_reactor() - Create reactor from preset or config
+  • list_presets() - List available preset designs
+
+Quick start:
+  >>> reactor = create_reactor("valar-10")
+  >>> k_eff = reactor.solve_keff()
+  >>> print(f"k-eff: {k_eff:.6f}")
+
+Note: Install IPython for enhanced features: pip install ipython
+Type 'help(smr)' for more information or 'exit()' to quit.
+"""
+            
+            print(banner)
+            
+            # Launch standard Python REPL with pre-loaded globals
+            variables = {
+                'smr': smr,
+                'create_reactor': create_reactor,
+                'list_presets': list_presets,
+                'exit': sys.exit,
+                'quit': sys.exit,
+            }
+            
+            shell = code.InteractiveConsole(variables)
+            shell.interact(banner='')
+    
+    except ImportError as e:
+        _print_error(f"Failed to import SMRForge modules: {e}")
+        sys.exit(1)
+    except Exception as e:
+        _print_error(f"Failed to launch interactive shell: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_run(args):
+    """Run workflow from YAML file."""
+    try:
+        if not _YAML_AVAILABLE:
+            _print_error("YAML support not available. Install PyYAML: pip install pyyaml")
+            sys.exit(1)
+        
+        # Load workflow file
+        if not args.workflow.exists():
+            _print_error(f"Workflow file not found: {args.workflow}")
+            sys.exit(1)
+        
+        with open(args.workflow) as f:
+            workflow_data = yaml.safe_load(f)
+        
+        if not workflow_data or 'steps' not in workflow_data:
+            _print_error("Invalid workflow file: must contain 'steps' key")
+            sys.exit(1)
+        
+        _print_info(f"Running workflow: {args.workflow}")
+        _print_info(f"Steps: {len(workflow_data['steps'])}")
+        
+        # Import required modules
+        import smrforge as smr
+        from smrforge.convenience import create_reactor
+        
+        # Execute workflow steps
+        context = {}  # Store intermediate results
+        
+        for i, step in enumerate(workflow_data['steps'], 1):
+            step_type = step.get('type', '')
+            _print_info(f"\nStep {i}/{len(workflow_data['steps'])}: {step_type}")
+            
+            if step_type == 'create_reactor':
+                preset = step.get('preset')
+                config = step.get('config')
+                output = step.get('output')
+                
+                if preset:
+                    reactor = create_reactor(preset)
+                    _print_success(f"Created reactor from preset: {preset}")
+                elif config:
+                    config_path = Path(config)
+                    if not config_path.exists():
+                        _print_error(f"Config file not found: {config_path}")
+                        continue
+                    
+                    with open(config_path) as f:
+                        if config_path.suffix.lower() in ['.yaml', '.yml']:
+                            config_data = yaml.safe_load(f)
+                        else:
+                            config_data = json.load(f)
+                    
+                    reactor = create_reactor(**config_data)
+                    _print_success(f"Created reactor from config: {config_path}")
+                else:
+                    _print_error("create_reactor step requires 'preset' or 'config'")
+                    continue
+                
+                context['reactor'] = reactor
+                
+                if output:
+                    # Save reactor
+                    output_path = Path(output)
+                    reactor_dict = {
+                        'name': reactor.spec.name if hasattr(reactor, 'spec') else 'reactor',
+                        'power_thermal': reactor.spec.power_thermal if hasattr(reactor, 'spec') else 0,
+                        'enrichment': reactor.spec.enrichment if hasattr(reactor, 'spec') else 0,
+                        'reactor_type': str(reactor.spec.reactor_type) if hasattr(reactor, 'spec') else 'unknown',
+                    }
+                    
+                    with open(output_path, 'w') as f:
+                        if output_path.suffix.lower() in ['.yaml', '.yml']:
+                            yaml.safe_dump(reactor_dict, f)
+                        else:
+                            json.dump(reactor_dict, f, indent=2)
+                    _print_success(f"Saved reactor to: {output_path}")
+            
+            elif step_type == 'analyze':
+                if 'reactor' not in context:
+                    _print_error("No reactor in context. Create reactor first.")
+                    continue
+                
+                reactor = context['reactor']
+                results = {}
+                
+                if step.get('keff', False) or step.get('full', False):
+                    _print_info("Running k-eff calculation...")
+                    k_eff = reactor.solve_keff()
+                    results['k_eff'] = float(k_eff)
+                    _print_success(f"k-eff: {k_eff:.6f}")
+                
+                if step.get('neutronics', False) or step.get('full', False):
+                    _print_info("Running neutronics analysis...")
+                    full_results = reactor.solve()
+                    results.update({k: v for k, v in full_results.items() if k != 'k_eff'})
+                    if 'k_eff' not in results:
+                        results['k_eff'] = float(full_results.get('k_eff', 0.0))
+                
+                context['results'] = results
+                
+                # Save results if output specified
+                output = step.get('output')
+                if output:
+                    output_path = Path(output)
+                    with open(output_path, 'w') as f:
+                        json.dump(results, f, indent=2)
+                    _print_success(f"Saved results to: {output_path}")
+            
+            elif step_type == 'visualize':
+                _print_info("Visualization step (use Python API for full visualization)")
+                # Visualization would need full implementation
+                output = step.get('output')
+                if output:
+                    _print_info(f"Visualization output would be saved to: {output}")
+            
+            else:
+                _print_warning(f"Unknown step type: {step_type}")
+        
+        _print_success("\nWorkflow completed successfully!")
+    
+    except ImportError as e:
+        _print_error(f"Failed to import required modules: {e}")
+        sys.exit(1)
+    except Exception as e:
+        _print_error(f"Failed to run workflow: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -1347,6 +1784,28 @@ Note: All features are also available via Python API:
         help='Enable debug mode'
     )
     serve_parser.set_defaults(func=serve_dashboard)
+    
+    # Shell command
+    shell_parser = subparsers.add_parser(
+        'shell',
+        help='Launch interactive Python shell with SMRForge pre-loaded'
+    )
+    shell_parser.set_defaults(func=shell_interactive)
+    
+    # Workflow subcommands
+    workflow_parser = subparsers.add_parser(
+        'workflow',
+        help='Workflow operations'
+    )
+    workflow_subparsers = workflow_parser.add_subparsers(dest='workflow_command', help='Workflow commands')
+    
+    # workflow run
+    workflow_run_parser = workflow_subparsers.add_parser(
+        'run',
+        help='Run workflow from YAML file'
+    )
+    workflow_run_parser.add_argument('workflow', type=Path, help='Workflow YAML file')
+    workflow_run_parser.set_defaults(func=workflow_run)
     
     # Reactor subcommands
     reactor_parser = subparsers.add_parser(
