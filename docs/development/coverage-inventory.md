@@ -499,9 +499,79 @@ Task #2 (Fix Zarr API)
   - Placeholder code exists for some methods (low priority)
 
 ### Coverage Statistics (Latest)
-- **Overall Project**: ~76.0% (approaching 80% target)
-- **uncertainty/uq.py**: **80.1%** ✅
-- **reactor_core.py**: **76.0%** ✅ (up from 70.8%, +5.2% improvement)
-- **reactor_core.py**: 70.8% (needs ~9.2% more for 80%)
-- **endf_parser.py**: 95.1% ✅
+- **Overall Project**: **79.2%** ✅ (target: 75-80% - **ACHIEVED**)
+- **uncertainty/uq.py**: **80.1%** ✅ (target exceeded)
+- **reactor_core.py**: **86.5%** ✅ (target exceeded, up from 70.8%)
+- **endf_parser.py**: **97.3%** ✅ (excellent coverage)
+
+### New Modules Added (Phase 1 & 2 - January 2026)
+
+#### ⚠️ Modules Requiring Initial Test Coverage
+
+| Module | Current Coverage | Target | Priority | Status | Notes |
+|--------|-----------------|--------|----------|--------|-------|
+| `workflows/parameter_sweep.py` | 0% | 75-80% | 🟡 Medium | ⚠️ **Needs Tests** | Parameter sweep workflow - core functionality should be tested |
+| `workflows/templates.py` | 0% | 75-80% | 🟡 Medium | ⚠️ **Needs Tests** | Template library system - template creation, validation should be tested |
+| `validation/constraints.py` | 0% | 75-80% | 🟡 Medium | ⚠️ **Needs Tests** | Design constraints validation - constraint checking logic should be tested |
+| `io/converters.py` | 0% | 50-75% | 🟢 Low | ⚠️ **Needs Tests** | I/O converters (placeholder implementations) - basic functionality tests |
+| `burnup/solver.py` (checkpointing) | ~75% | 75-80% | 🟡 Medium | ⚠️ **Needs Tests** | Checkpointing and resume functionality added - needs test coverage |
+
+#### Implementation Notes
+
+**Parameter Sweep (`workflows/parameter_sweep.py`):**
+- Core classes: `ParameterSweep`, `SweepConfig`, `SweepResult`
+- Key methods to test:
+  - `SweepConfig.get_parameter_values()` - parameter range parsing
+  - `SweepConfig.get_all_combinations()` - combination generation
+  - `ParameterSweep._run_single_case()` - single simulation execution
+  - `ParameterSweep.run()` - full sweep execution (sequential and parallel)
+  - `ParameterSweep._calculate_summary_stats()` - statistics calculation
+  - Result saving (JSON/Parquet)
+
+**Templates (`workflows/templates.py`):**
+- Core classes: `ReactorTemplate`, `TemplateLibrary`
+- Key methods to test:
+  - `ReactorTemplate.from_preset()` - preset to template conversion
+  - `ReactorTemplate.instantiate()` - parameter substitution
+  - `ReactorTemplate.validate()` - template validation
+  - `ReactorTemplate.save()` / `load()` - file I/O (JSON/YAML)
+  - `TemplateLibrary` CRUD operations
+
+**Design Constraints (`validation/constraints.py`):**
+- Core classes: `ConstraintSet`, `DesignValidator`, `ValidationResult`, `ConstraintViolation`
+- Key methods to test:
+  - `ConstraintSet.get_regulatory_limits()` / `get_safety_margins()` - predefined sets
+  - `DesignValidator.validate()` - constraint checking logic
+  - Violation detection (max/min constraints)
+  - Warning vs error severity classification
+  - Metrics extraction from reactor results
+
+**I/O Converters (`io/converters.py`):**
+- Core classes: `SerpentConverter`, `OpenMCConverter`
+- Key methods to test:
+  - Export/import placeholder implementations
+  - Error handling for unimplemented features
+  - File format validation
+
+**Burnup Checkpointing (`burnup/solver.py`):**
+- New methods added:
+  - `BurnupSolver.solve(resume_from_checkpoint)` - resume support
+  - `BurnupSolver._save_checkpoint()` - checkpoint file creation
+  - `BurnupSolver._load_checkpoint()` - checkpoint file loading
+  - `BurnupSolver.resume_from_checkpoint()` - resume wrapper
+- `BurnupOptions` fields: `checkpoint_interval`, `checkpoint_dir`
+- Key functionality to test:
+  - Checkpoint file creation (HDF5 format)
+  - State serialization (nuclides, concentrations, times, burnup)
+  - Checkpoint loading and state restoration
+  - Resume from checkpoint continuation
+  - Checkpoint interval timing logic
+
+**Test Strategy:**
+- Use mocking for reactor creation and analysis calls
+- Test parameter parsing and combination generation with various formats
+- Test template I/O with temporary files
+- Test constraint validation with mock reactor results
+- Test checkpointing with temporary HDF5 files
+- Use fixtures for common test data (reactor specs, constraint sets)
 
