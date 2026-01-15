@@ -214,13 +214,24 @@ class DesignValidator:
                 else:
                     continue
             
-            # Check constraint
+            # Check constraint (skip if value is None or not a number)
+            if value is None or not isinstance(value, (int, float, np.number)):
+                continue
+            
             if constraint_type == "max":
                 violation = value > limit
-                severity = "warning" if value > limit * 0.9 else "error"
+                if violation:
+                    # Error if exceeds limit significantly, warning if just over
+                    severity = "warning" if limit * 0.9 < value <= limit * 1.1 else "error"
+                else:
+                    severity = None  # No violation
             elif constraint_type == "min":
                 violation = value < limit
-                severity = "warning" if value < limit * 1.1 else "error"
+                if violation:
+                    # Error if below limit significantly, warning if just under
+                    severity = "error" if value < limit * 0.9 else "warning"
+                else:
+                    severity = None  # No violation
             else:
                 continue
             
