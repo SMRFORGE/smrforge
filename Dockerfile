@@ -13,6 +13,12 @@
 # - Added validation testing framework with benchmark comparison
 # - Added tab completion scripts (Bash/Zsh and PowerShell)
 # - Enhanced CLI with Rich library (colored output, tables, progress bars)
+# - Added Parameter Sweep Workflow (smrforge sweep) - automated parameter sweeps with parallel execution
+# - Enhanced Design Comparison & Trade Studies (smrforge reactor compare) - multi-design comparison with metrics
+# - Added Template Library System (smrforge reactor template) - parameterized reactor design templates
+# - Added Simulation Checkpointing & Resume - automatic checkpointing for long burnup simulations
+# - Added Design Constraints & Validation (smrforge validate) - automated constraint checking
+# - Added I/O Converters Framework - Serpent/OpenMC format support (framework ready)
 # - Added Dash web dashboard with dark/gray mode support
 # - Added CLI command (smrforge serve) for dashboard
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
@@ -113,12 +119,15 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #
 # CLI Commands available:
 #   smrforge reactor create/list/analyze/compare
+#   smrforge reactor template create/modify/validate (template library)
 #   smrforge data setup/download/validate
-#   smrforge burnup run/visualize
-#   smrforge validate run
+#   smrforge burnup run/visualize (with checkpointing support)
+#   smrforge validate run (validation framework)
+#   smrforge validate (design constraints validation)
 #   smrforge visualize geometry/flux
 #   smrforge config show/set/init
 #   smrforge shell (interactive IPython/REPL)
 #   smrforge workflow run (YAML workflows)
-CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print(''); print('Features:'); print('  - Comprehensive CLI with nested subcommands'); print('  - Web Dashboard (smrforge serve) with dark/gray mode'); print('  - Interactive shell (smrforge shell)'); print('  - Workflow scripts (smrforge workflow run)'); print('  - Batch processing support'); print('  - Configuration management (smrforge config)'); print('  - Validation framework with benchmark comparison'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use CLI'); print('    smrforge data download --library ENDF-B-VIII.1 --output /app/endf-data'); print('  Option 2: Interactive setup'); print('    smrforge data setup'); print(''); print('Web Dashboard:'); print('  smrforge serve --host 0.0.0.0 --port 8050'); print('  Access at http://localhost:8050 (map port with -p 8050:8050)'); print(''); print('CLI Examples:'); print('  smrforge reactor list'); print('  smrforge reactor create --preset valar-10 --output reactor.json'); print('  smrforge reactor analyze --reactor reactor.json --keff'); print('  smrforge validate run --endf-dir /app/endf-data'); print('  smrforge shell  # Interactive Python shell'); print(''); print('Optional dependencies:'); print('  - Mesh conversion: pip install meshio'); print('  - CAD import: pip install trimesh'); print('Note: Visualization dependencies (plotly, pyvista, dash) are now required and included automatically')"]
+#   smrforge sweep (parameter sweep and sensitivity analysis)
+CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print(''); print('Features:'); print('  - Comprehensive CLI with nested subcommands'); print('  - Web Dashboard (smrforge serve) with dark/gray mode'); print('  - Interactive shell (smrforge shell)'); print('  - Workflow scripts (smrforge workflow run)'); print('  - Batch processing support'); print('  - Configuration management (smrforge config)'); print('  - Validation framework with benchmark comparison'); print('  - Parameter Sweep Workflow (smrforge sweep)'); print('  - Enhanced Design Comparison (smrforge reactor compare)'); print('  - Template Library System (smrforge reactor template)'); print('  - Simulation Checkpointing & Resume'); print('  - Design Constraints & Validation (smrforge validate)'); print('  - I/O Converters Framework (Serpent/OpenMC)'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use CLI'); print('    smrforge data download --library ENDF-B-VIII.1 --output /app/endf-data'); print('  Option 2: Interactive setup'); print('    smrforge data setup'); print(''); print('Web Dashboard:'); print('  smrforge serve --host 0.0.0.0 --port 8050'); print('  Access at http://localhost:8050 (map port with -p 8050:8050)'); print(''); print('CLI Examples:'); print('  smrforge reactor list'); print('  smrforge reactor create --preset valar-10 --output reactor.json'); print('  smrforge reactor analyze --reactor reactor.json --keff'); print('  smrforge reactor compare --presets valar-10 htr-pm-200 --metrics k_eff'); print('  smrforge reactor template create --from-preset valar-10 --output template.json'); print('  smrforge sweep --reactor reactor.json --params enrichment:0.10:0.25:0.05 --analysis keff'); print('  smrforge burnup run --reactor reactor.json --checkpoint-interval 100 --checkpoint-dir checkpoints/'); print('  smrforge validate --reactor reactor.json --output validation_report.json'); print('  smrforge validate run --endf-dir /app/endf-data'); print('  smrforge shell  # Interactive Python shell'); print(''); print('Optional dependencies:'); print('  - Mesh conversion: pip install meshio'); print('  - CAD import: pip install trimesh'); print('Note: Visualization dependencies (plotly, pyvista, dash) are now required and included automatically')"]
 

@@ -13,6 +13,12 @@
 # - Added validation testing framework with benchmark comparison
 # - Added tab completion scripts (Bash/Zsh and PowerShell)
 # - Enhanced CLI with Rich library (colored output, tables, progress bars)
+# - Added Parameter Sweep Workflow (smrforge sweep) - automated parameter sweeps with parallel execution
+# - Enhanced Design Comparison & Trade Studies (smrforge reactor compare) - multi-design comparison with metrics
+# - Added Template Library System (smrforge reactor template) - parameterized reactor design templates
+# - Added Simulation Checkpointing & Resume - automatic checkpointing for long burnup simulations
+# - Added Design Constraints & Validation (smrforge validate) - automated constraint checking
+# - Added I/O Converters Framework - Serpent/OpenMC format support (framework ready)
 # - Added Dash web dashboard with dark/gray mode support
 # - Added CLI command (smrforge serve) for dashboard
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
@@ -119,13 +125,16 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #
 # CLI Commands available:
 #   smrforge reactor create/list/analyze/compare
+#   smrforge reactor template create/modify/validate (template library)
 #   smrforge data setup/download/validate
-#   smrforge burnup run/visualize
-#   smrforge validate run
+#   smrforge burnup run/visualize (with checkpointing support)
+#   smrforge validate run (validation framework)
+#   smrforge validate (design constraints validation)
 #   smrforge visualize geometry/flux
 #   smrforge config show/set/init
 #   smrforge shell (interactive IPython/REPL)
 #   smrforge workflow run (YAML workflows)
+#   smrforge sweep (parameter sweep and sensitivity analysis)
 #
 # Development Features:
 #   - Web Dashboard (smrforge serve) with dark/gray mode
@@ -133,6 +142,12 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - Interactive shell (smrforge shell)
 #   - Workflow scripts (smrforge workflow run)
 #   - Batch processing support
+#   - Parameter Sweep Workflow (smrforge sweep)
+#   - Enhanced Design Comparison (smrforge reactor compare)
+#   - Template Library System (smrforge reactor template)
+#   - Simulation Checkpointing & Resume
+#   - Design Constraints & Validation (smrforge validate)
+#   - I/O Converters Framework (Serpent/OpenMC)
 #   - Validation framework with benchmark comparison
 #   - LWR SMR transient analysis (PWR/BWR/Integral SMR)
 #   - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)
