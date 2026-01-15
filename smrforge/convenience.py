@@ -73,13 +73,20 @@ def list_presets() -> List[str]:
     List all available preset reactor designs.
 
     Returns:
-        List of preset design names
+        List of preset design names as strings.
+
+    Raises:
+        ImportError: If preset designs module is not available.
 
     Example:
         >>> import smrforge as smr
         >>> designs = smr.list_presets()
         >>> print(designs)
         ['valar-10', 'gt-mhr-350', 'htr-pm-200', 'micro-htgr-1']
+        
+        >>> # Iterate over available presets
+        >>> for design in smr.list_presets():
+        ...     print(f"Available design: {design}")
     """
     return _get_library().list_designs()
 
@@ -89,14 +96,24 @@ def get_preset(name: str) -> ReactorSpecification:
     Get a preset reactor design specification.
 
     Args:
-        name: Name of preset design (use list_presets() to see available)
+        name: Name of preset design (use list_presets() to see available).
 
     Returns:
-        ReactorSpecification object
+        ReactorSpecification object containing reactor design parameters.
+
+    Raises:
+        ImportError: If preset designs module is not available.
+        ValueError: If the specified preset name is not found.
 
     Example:
         >>> spec = smr.get_preset("valar-10")
         >>> print(f"Power: {spec.power_thermal/1e6:.1f} MWth")
+        >>> print(f"Fuel: {spec.fuel_type}")
+        >>> print(f"Enrichment: {spec.enrichment:.2f}%")
+        
+        >>> # Check if preset exists before getting it
+        >>> if "valar-10" in smr.list_presets():
+        ...     spec = smr.get_preset("valar-10")
     """
     return _get_library().get_design(name)
 
@@ -112,30 +129,38 @@ def create_reactor(
     """
     Create a reactor with sensible defaults.
 
-    Either provide a preset name, or custom parameters.
+    Either provide a preset name, or custom parameters. This is the main entry
+    point for creating reactor models in SMRForge.
 
     Args:
-        name: Preset design name (e.g., "valar-10") or None for custom
-        power_mw: Thermal power in MW (for custom designs)
-        core_height: Core height in cm
-        core_diameter: Core diameter in cm
-        enrichment: Fuel enrichment (0-1)
-        **kwargs: Additional parameters for custom designs
+        name: Preset design name (e.g., "valar-10") or None for custom designs.
+              Use list_presets() to see available presets.
+        power_mw: Thermal power in MW (for custom designs only).
+        core_height: Core height in cm (for custom designs only).
+        core_diameter: Core diameter in cm (for custom designs only).
+        enrichment: Fuel enrichment (0-1, for custom designs only).
+        **kwargs: Additional parameters for custom designs (passed to SimpleReactor).
 
     Returns:
-        SimpleReactor object with easy-to-use methods
+        SimpleReactor object with easy-to-use methods for analysis.
+
+    Raises:
+        ImportError: If preset designs module is not available.
+        ValueError: If the specified preset name is not found or parameters are invalid.
 
     Examples:
-        # Use preset
+        # Use preset design
         >>> reactor = smr.create_reactor("valar-10")
+        >>> k_eff = reactor.solve_keff()
 
-        # Custom design
+        # Create custom design
         >>> reactor = smr.create_reactor(
         ...     power_mw=10,
         ...     core_height=200,
         ...     core_diameter=100,
         ...     enrichment=0.195
         ... )
+        >>> results = reactor.solve()
     """
     if name:
         # Use preset
@@ -172,20 +197,33 @@ def quick_keff(
     """
     Quick one-liner to get k-eff for a simple reactor.
 
+    This is a convenience function that creates a reactor and solves for k-eff
+    in a single call. Useful for quick calculations or parameter sweeps.
+
     Args:
-        power_mw: Thermal power in MW
-        enrichment: Fuel enrichment (0-1)
-        core_height: Core height in cm
-        core_diameter: Core diameter in cm
-        **kwargs: Additional reactor parameters
+        power_mw: Thermal power in MW (default: 10.0).
+        enrichment: Fuel enrichment (0-1, default: 0.195 = 19.5%).
+        core_height: Core height in cm (default: 200.0).
+        core_diameter: Core diameter in cm (default: 100.0).
+        **kwargs: Additional reactor parameters passed to create_reactor().
 
     Returns:
-        k-eff value
+        k-eff value as a float.
+
+    Raises:
+        ImportError: If required modules are not available.
+        RuntimeError: If solver fails to converge.
 
     Example:
         >>> import smrforge as smr
         >>> k = smr.quick_keff(power_mw=10, enrichment=0.195)
         >>> print(f"k-eff = {k:.6f}")
+        
+        >>> # Parameter sweep
+        >>> enrichments = [0.10, 0.15, 0.20, 0.25]
+        >>> for enr in enrichments:
+        ...     k = smr.quick_keff(enrichment=enr)
+        ...     print(f"Enrichment {enr:.2f}: k-eff = {k:.6f}")
     """
     reactor = create_reactor(
         power_mw=power_mw,
@@ -201,15 +239,34 @@ def analyze_preset(design_name: str) -> Dict:
     """
     Analyze a preset design with one line.
 
+    Creates a reactor from a preset design and runs a full analysis,
+    returning all results in a dictionary. This is the simplest way
+    to analyze a preset reactor design.
+
     Args:
-        design_name: Name of preset design
+        design_name: Name of preset design (use list_presets() to see available).
 
     Returns:
-        Dictionary with analysis results (k_eff, flux, power, etc.)
+        Dictionary with analysis results containing:
+            - k_eff: Effective multiplication factor
+            - flux: Neutron flux distribution
+            - power: Power distribution
+            - Other solver-specific results
+
+    Raises:
+        ImportError: If preset designs module is not available.
+        ValueError: If the specified preset name is not found.
+        RuntimeError: If solver fails to converge.
 
     Example:
         >>> results = smr.analyze_preset("valar-10")
         >>> print(f"k-eff: {results['k_eff']:.6f}")
+        >>> print(f"Power peak: {results['power'].max():.2f} W/cm³")
+        
+        >>> # Compare multiple presets
+        >>> for design in ["valar-10", "htr-pm-200"]:
+        ...     results = smr.analyze_preset(design)
+        ...     print(f"{design}: k-eff = {results['k_eff']:.6f}")
     """
     reactor = create_reactor(design_name)
     return reactor.solve()
@@ -219,16 +276,29 @@ def compare_designs(design_names: List[str]) -> Dict[str, Dict]:
     """
     Compare multiple designs side-by-side.
 
+    Analyzes multiple preset designs and returns their results in a
+    dictionary for easy comparison. Useful for design trade studies.
+
     Args:
-        design_names: List of preset design names
+        design_names: List of preset design names to compare.
 
     Returns:
-        Dictionary mapping design names to their analysis results
+        Dictionary mapping design names to their analysis results.
+        Each value is a dictionary with k_eff, flux, power, etc.
+
+    Raises:
+        ImportError: If preset designs module is not available.
+        ValueError: If any specified preset name is not found.
+        RuntimeError: If solver fails to converge for any design.
 
     Example:
         >>> results = smr.compare_designs(["valar-10", "htr-pm-200"])
         >>> for name, data in results.items():
         ...     print(f"{name}: k-eff = {data['k_eff']:.6f}")
+        
+        >>> # Extract specific metrics
+        >>> k_effs = {name: r['k_eff'] for name, r in results.items()}
+        >>> print(f"Best k-eff: {max(k_effs, key=k_effs.get)}")
     """
     results = {}
     for name in design_names:

@@ -955,49 +955,122 @@ def burnup_run(args):
 
 
 def validate_run(args):
-    """Run validation tests."""
+    """
+    Run validation tests with real ENDF files.
+    
+    This command executes comprehensive validation tests using the validation
+    framework. It can use real ENDF files and generate benchmark comparison reports.
+    
+    Args:
+        args: Parsed command-line arguments containing:
+            - endf_dir: Path to ENDF-B-VIII.1 directory (optional)
+            - tests: Specific test suites to run (optional)
+            - benchmarks: Benchmark database file for comparison (optional)
+            - output: Output file for validation report (optional)
+            - verbose: Enable verbose output (flag)
+    
+    Raises:
+        SystemExit: If validation tests fail or dependencies are missing
+    
+    Example:
+        >>> # Run validation with ENDF files
+        >>> smrforge validate run --endf-dir ~/ENDF-B-VIII.1 --verbose
+        
+        >>> # Run with benchmark comparison
+        >>> smrforge validate run --endf-dir ~/ENDF-B-VIII.1 --benchmarks benchmarks.json --output report.txt
+    """
     try:
         import subprocess
         from pathlib import Path
         
-        # Build pytest command
-        cmd = ['pytest', 'tests/test_validation_comprehensive.py', '-v']
+        # Use the run_validation.py script for proper validation execution
+        script_path = Path(__file__).parent.parent / "scripts" / "run_validation.py"
+        
+        if not script_path.exists():
+            _print_error(f"Validation script not found: {script_path}")
+            _print_info("Fallback: Running pytest directly...")
+            
+            # Fallback to direct pytest
+            cmd = ['pytest', 'tests/test_validation_comprehensive.py', 'tests/test_endf_workflows_e2e.py', '-v']
+            
+            if args.endf_dir:
+                import os
+                os.environ['LOCAL_ENDF_DIR'] = str(Path(args.endf_dir).absolute())
+                _print_info(f"Using ENDF directory: {args.endf_dir}")
+            
+            if args.verbose:
+                cmd.append('-s')  # Don't capture output
+            else:
+                cmd.append('-q')  # Quiet mode
+            
+            if args.tests:
+                # Replace default tests with specified ones
+                cmd = cmd[:-2]  # Remove default test files
+                cmd.extend(args.tests)
+            
+            _print_info("Running validation tests...")
+            result = subprocess.run(cmd, cwd=Path(__file__).parent.parent)
+            
+            if result.returncode == 0:
+                _print_success("Validation tests passed")
+            else:
+                _print_error("Validation tests failed")
+                sys.exit(result.returncode)
+            
+            return
+        
+        # Build command for run_validation.py script
+        cmd = ['python', str(script_path)]
         
         if args.endf_dir:
-            import os
-            os.environ['LOCAL_ENDF_DIR'] = str(args.endf_dir)
+            cmd.extend(['--endf-dir', str(Path(args.endf_dir).absolute())])
+            _print_info(f"Using ENDF directory: {args.endf_dir}")
         
         if args.tests:
-            # Filter to specific test classes (would need more sophisticated parsing)
-            _print_info(f"NOTE: --tests filter not yet fully implemented")
+            cmd.extend(['--tests'] + args.tests)
         
-        if args.benchmarks:
-            _print_info(f"NOTE: Benchmark comparison requires Python API integration")
+        if args.output:
+            cmd.extend(['--output', str(args.output)])
         
         if args.verbose:
-            cmd.append('-v')
-        else:
-            cmd.append('-q')
+            cmd.append('--verbose')
         
-        _print_info("Running validation tests...")
-        _print_info(f"Command: {' '.join(cmd)}")
+        _print_info("Running comprehensive validation tests...")
+        if _RICH_AVAILABLE:
+            console.print(f"[dim]Command: {' '.join(cmd)}[/dim]")
         
-        # Run pytest
-        result = subprocess.run(cmd, cwd=Path(__file__).parent.parent)
+        # Run validation script
+        result = subprocess.run(
+            cmd,
+            cwd=Path(__file__).parent.parent,
+            capture_output=not args.verbose
+        )
+        
+        # Print output if not verbose (script will print its own output if verbose)
+        if not args.verbose and result.stdout:
+            print(result.stdout.decode('utf-8', errors='ignore'))
         
         if result.returncode == 0:
-            _print_success("Validation tests passed")
+            _print_success("Validation tests completed successfully")
+            
+            if args.output and Path(args.output).exists():
+                _print_success(f"Validation report saved to {args.output}")
+            
+            if args.benchmarks:
+                _print_info("\nTo generate benchmark comparison report:")
+                if args.output:
+                    print(f"  python scripts/generate_validation_report.py --results {args.output} --benchmarks {args.benchmarks}")
+                else:
+                    print(f"  python scripts/generate_validation_report.py --benchmarks {args.benchmarks}")
         else:
             _print_error("Validation tests failed")
+            if result.stderr:
+                print(result.stderr.decode('utf-8', errors='ignore'))
             sys.exit(result.returncode)
         
-        # Generate report if requested
-        if args.output:
-            _print_info(f"\nNOTE: Report generation requires:")
-            print(f"  python scripts/generate_validation_report.py --results results.json")
-        
-    except FileNotFoundError:
-        _print_error("pytest not found. Install pytest: pip install pytest")
+    except FileNotFoundError as e:
+        _print_error(f"Required tool not found: {e}")
+        _print_info("Install pytest: pip install pytest")
         sys.exit(1)
     except Exception as e:
         _print_error(f"Failed to run validation tests: {e}")

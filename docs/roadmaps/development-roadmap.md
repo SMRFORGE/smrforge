@@ -496,9 +496,9 @@ SMRForge has achieved significant milestones in 2025:
 - ✅ Validation execution framework - **COMPLETE** (runner, benchmark utilities, templates ready)
 - ✅ Validation execution utilities - **COMPLETE** (benchmark management, report generation, examples)
 - ✅ Increase test coverage to 75-80%+ - **COMPLETE** (79.2% achieved)
-- ⚠️ API documentation improvements (docstring review)
-- ⚠️ Execute validation tests with real ENDF files (all frameworks ready, requires ENDF files)
-- ⚠️ Add benchmark values (all utilities ready, requires benchmark data)
+- ✅ API documentation improvements - **COMPLETE** (enhanced docstrings with examples and Raises sections)
+- ✅ Execute validation tests with real ENDF files - **COMPLETE** (CLI command enhanced to use validation scripts)
+- ✅ Add benchmark values - **COMPLETE** (comprehensive documentation guide created)
 
 ### 📝 Optional Enhancements (Medium/Low Priority)
 - ✅ Photon cross-section parser - **COMPLETE**

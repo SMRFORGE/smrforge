@@ -1,293 +1,324 @@
-# Adding Benchmark Reference Values
+# Adding Benchmark Values to Validation Database
 
-This guide explains how to add benchmark reference values from various sources to the validation benchmark database.
+**Last Updated:** January 2026  
+**Status:** ✅ Complete - All utilities available
 
 ---
 
 ## Overview
 
-The validation framework supports benchmark values from three main sources:
-1. **ANSI/ANS-5.1 Standards** - Decay heat benchmark values
-2. **MCNP Calculations** - Gamma transport benchmark values
-3. **IAEA Benchmark Problems** - Burnup benchmark values
+The SMRForge validation framework supports comprehensive benchmarking against reference values from:
+- **ANSI/ANS-5.1** standards (decay heat)
+- **MCNP** comparisons (gamma transport)
+- **IAEA benchmarks** (burnup and k-eff)
+
+This guide explains how to add benchmark values to the validation database.
 
 ---
 
 ## Quick Start
 
-### Step 1: Create Template Files
+### 1. Create a Template
 
-Create template files for the benchmark format you want to use:
+Create a template benchmark file:
 
 ```bash
-python scripts/add_benchmark_from_sources.py --create-templates templates/
+python scripts/add_benchmark_values.py create-template --output benchmarks_template.json
 ```
 
-This creates three template files:
-- `templates/ansi_ans_template.json` - ANSI/ANS-5.1 format
-- `templates/mcnp_template.json` - MCNP format
-- `templates/iaea_template.json` - IAEA format
+### 2. Add Benchmark Values
 
-### Step 2: Fill in Benchmark Values
-
-Edit the template files with actual benchmark values from your source:
-- ANSI/ANS-5.1: Values from the ANSI/ANS-5.1 standard
-- MCNP: Results from MCNP calculations
-- IAEA: Values from IAEA benchmark problems
-
-### Step 3: Add to Database
-
-Add the benchmark values to the database:
+#### Interactive Addition (Decay Heat)
 
 ```bash
-# Add ANSI/ANS-5.1 benchmarks
-python scripts/add_benchmark_from_sources.py --ansi-ans --file templates/ansi_ans_data.json --output benchmarks.json
+python scripts/add_benchmark_values.py add-decay-heat --file validation_benchmarks.json
+```
 
-# Add MCNP benchmarks
-python scripts/add_benchmark_from_sources.py --mcnp --file templates/mcnp_data.json --output benchmarks.json --append
+Follow the interactive prompts to add decay heat benchmark values.
 
-# Add IAEA benchmarks
-python scripts/add_benchmark_from_sources.py --iaea --file templates/iaea_data.json --output benchmarks.json --append
+#### From JSON Files
+
+```bash
+# Add from ANSI/ANS-5.1 format
+python scripts/add_benchmark_from_sources.py --ansi-ans input.json --output benchmarks.json
+
+# Add from MCNP format
+python scripts/add_benchmark_from_sources.py --mcnp input.json --output benchmarks.json
+
+# Add from IAEA format
+python scripts/add_benchmark_from_sources.py --iaea input.json --output benchmarks.json
+```
+
+### 3. Load Multiple Files
+
+Load benchmark files from a directory:
+
+```bash
+python scripts/load_benchmark_references.py --dir benchmarks/ --output validation_benchmarks.json
 ```
 
 ---
 
-## ANSI/ANS-5.1 Format
+## Detailed Instructions
 
-### Structure
+### Decay Heat Benchmarks (ANSI/ANS-5.1)
+
+Decay heat benchmarks follow the ANSI/ANS-5.1 standard format.
+
+**Template Structure:**
 
 ```json
 {
-  "test_cases": [
-    {
-      "test_case": "u235_thermal_100mw",
+  "decay_heat_benchmarks": {
+    "example_u235_shutdown": {
+      "test_case": "example_u235_shutdown",
       "nuclides": {"U235": 1e20},
       "initial_power": 100.0,
       "shutdown_time": 0.0,
-      "time_points": [3600, 86400, 604800, 2592000],
+      "time_points": [3600, 86400, 604800],
       "benchmark_values": [
         {
-          "value": 7.0,
-          "uncertainty": 0.5,
+          "value": 1.23,
+          "uncertainty": 0.01,
           "unit": "MW",
           "source": "ANSI/ANS-5.1",
-          "notes": "Decay heat at 1 hour after shutdown"
+          "notes": "Reference value from ANSI/ANS-5.1 standard"
         }
-      ]
+      ],
+      "standard": "ANSI/ANS-5.1"
     }
-  ]
+  }
 }
 ```
 
-### Fields
+**Adding Values:**
 
-- **test_case**: Unique identifier for the test case
-- **nuclides**: Dictionary mapping nuclide names (e.g., "U235") to concentrations [atoms/cm³]
-- **initial_power**: Initial reactor power [MW]
-- **shutdown_time**: Time at shutdown [seconds]
-- **time_points**: List of time points after shutdown [seconds]
-- **benchmark_values**: List of benchmark values (one per time point)
-  - **value**: Benchmark value [MW]
-  - **uncertainty**: Uncertainty in benchmark value [MW] (optional)
-  - **unit**: Unit of measurement (default: "MW")
-  - **source**: Source of benchmark value (default: "ANSI/ANS-5.1")
-  - **notes**: Additional notes (optional)
+1. Use the interactive tool:
+   ```bash
+   python scripts/add_benchmark_values.py add-decay-heat --file benchmarks.json
+   ```
 
-### Where to Find ANSI/ANS-5.1 Values
+2. Or edit JSON directly and load:
+   ```bash
+   python scripts/load_benchmark_references.py --file my_benchmarks.json --output benchmarks.json --append
+   ```
 
-- ANSI/ANS-5.1 standard document (ANSI/ANS-5.1-2014)
-- Standard decay heat tables
-- Published validation studies
+### Gamma Transport Benchmarks (MCNP)
 
----
+Gamma transport benchmarks compare against MCNP Monte Carlo results.
 
-## MCNP Format
-
-### Structure
+**Template Structure:**
 
 ```json
 {
-  "test_cases": [
-    {
-      "test_case": "simple_shielding",
-      "geometry_description": "Cylindrical geometry, 10 cm radius, 20 cm height",
-      "source_description": "Point source at center, 1 MeV gamma, 1e10 photons/s",
+  "gamma_transport_benchmarks": {
+    "example_simple_shielding": {
+      "test_case": "example_simple_shielding",
+      "geometry_description": "1m x 1m x 1m lead shield",
+      "source_description": "Point source, 1 MeV gamma",
       "energy_groups": [0.1, 1.0, 10.0],
       "benchmark_flux": [
         {
-          "value": 1e10,
-          "uncertainty": 1e8,
+          "value": 1e12,
+          "uncertainty": 0.05,
           "unit": "photons/cm²/s",
           "source": "MCNP 6.2"
         }
       ],
       "benchmark_dose_rate": {
-        "value": 1.23,
-        "uncertainty": 0.01,
+        "value": 1e-6,
+        "uncertainty": 0.02,
         "unit": "Sv/h",
         "source": "MCNP 6.2"
       },
+      "reference_code": "MCNP",
       "reference_version": "6.2"
     }
-  ]
+  }
 }
 ```
 
-### Fields
+**Adding Values:**
 
-- **test_case**: Unique identifier for the test case
-- **geometry_description**: Description of geometry
-- **source_description**: Description of gamma source
-- **energy_groups**: Energy group boundaries [MeV]
-- **benchmark_flux**: List of benchmark flux values
-  - **value**: Flux value
-  - **uncertainty**: Uncertainty (optional)
-  - **unit**: Unit (default: "photons/cm²/s")
-  - **source**: Source (default: "MCNP")
-- **benchmark_dose_rate**: Benchmark dose rate value
-  - **value**: Dose rate value
-  - **uncertainty**: Uncertainty (optional)
-  - **unit**: Unit (default: "Sv/h")
-  - **source**: Source (default: "MCNP")
-- **reference_version**: MCNP version used (optional)
+```bash
+python scripts/add_benchmark_from_sources.py --mcnp mcnp_results.json --output benchmarks.json
+```
 
-### Where to Find MCNP Values
+### Burnup Benchmarks (IAEA)
 
-- MCNP calculation results
-- Published MCNP benchmark problems
-- MCNP validation studies
+Burnup benchmarks compare against IAEA benchmark problems.
 
----
-
-## IAEA Format
-
-### Structure
+**Template Structure:**
 
 ```json
 {
-  "test_cases": [
-    {
-      "test_case": "u235_pin_30days",
-      "problem_description": "Simple UO2 fuel pin burnup problem - 30 days at constant power",
+  "burnup_benchmarks": {
+    "example_simple_burnup": {
+      "test_case": "example_simple_burnup",
+      "problem_description": "Simple PWR pin cell",
       "initial_composition": {"U235": 0.02, "U238": 0.98},
       "time_steps": [0, 30, 60, 90],
+      "benchmark_compositions": [
+        {"U235": 0.0195, "U238": 0.9805}
+      ],
       "benchmark_k_eff": [
         {
-          "value": 1.0,
-          "uncertainty": 0.001,
+          "value": 1.00123,
+          "uncertainty": 0.0001,
           "unit": "",
           "source": "IAEA Benchmark"
         }
       ],
-      "benchmark_compositions": [
-        {"U235": 0.02, "U238": 0.98}
-      ]
+      "reference_source": "IAEA"
     }
-  ]
+  }
 }
 ```
 
-### Fields
+**Adding Values:**
 
-- **test_case**: Unique identifier for the test case
-- **problem_description**: Description of benchmark problem
-- **initial_composition**: Dictionary mapping nuclide names to initial atom fractions
-- **time_steps**: List of time steps [days]
-- **benchmark_k_eff**: List of benchmark k-eff values (one per time step)
-  - **value**: k-eff value
-  - **uncertainty**: Uncertainty (optional)
-  - **unit**: Unit (default: "")
-  - **source**: Source (default: "IAEA Benchmark")
-- **benchmark_compositions**: List of benchmark compositions (one per time step) (optional)
-
-### Where to Find IAEA Values
-
-- IAEA benchmark problem specifications
-- IAEA benchmark problem results
-- Published IAEA benchmark studies
-
----
-
-## Using Python API
-
-You can also add benchmarks programmatically:
-
-```python
-from pathlib import Path
-from tests.validation_benchmark_data import (
-    BenchmarkDatabase,
-    DecayHeatBenchmark,
-    BenchmarkValue,
-)
-
-# Create or load database
-db = BenchmarkDatabase(Path("benchmarks.json"))
-
-# Add decay heat benchmark
-benchmark = DecayHeatBenchmark(
-    test_case="u235_shutdown",
-    nuclides={"U235": 1e20},
-    initial_power=100.0,
-    shutdown_time=0.0,
-    time_points=[3600, 86400],
-    benchmark_values=[
-        BenchmarkValue(
-            value=7.0,
-            uncertainty=0.5,
-            unit="MW",
-            source="ANSI/ANS-5.1",
-        ),
-        BenchmarkValue(
-            value=4.5,
-            uncertainty=0.4,
-            unit="MW",
-            source="ANSI/ANS-5.1",
-        ),
-    ],
-)
-db.add_decay_heat_benchmark(benchmark)
-
-# Save database
-db.save(Path("benchmarks.json"))
+```bash
+python scripts/add_benchmark_from_sources.py --iaea iaea_benchmark.json --output benchmarks.json
 ```
 
 ---
 
 ## Validation
 
-After adding benchmarks, validate the database:
+Validate benchmark files before use:
 
 ```bash
 python scripts/add_benchmark_values.py validate benchmarks.json
 ```
 
+This checks:
+- File structure is correct
+- Required fields are present
+- Data can be loaded into `BenchmarkDatabase`
+
 ---
 
-## Using Benchmarks in Validation
+## Integration with Validation Tests
 
-Once benchmarks are added to the database, they can be used in validation:
+Once benchmark values are added, use them in validation tests:
 
 ```python
-from pathlib import Path
 from tests.validation_benchmark_data import BenchmarkDatabase
-from tests.validation_benchmarks import ValidationBenchmarker
-from smrforge.core.reactor_core import NuclearDataCache
+from smrforge.validation.validation_benchmarks import ValidationBenchmarker
 
 # Load benchmark database
-db = BenchmarkDatabase(Path("benchmarks.json"))
+benchmark_db = BenchmarkDatabase("validation_benchmarks.json")
 
-# Create benchmarker with database
-cache = NuclearDataCache()
-benchmarker = ValidationBenchmarker(cache, benchmark_database=db)
+# Create benchmarker
+benchmarker = ValidationBenchmarker(
+    endf_dir=Path("~/ENDF-B-VIII.1"),
+    benchmark_database=benchmark_db
+)
 
-# Run validations (benchmarks will be automatically used for comparison)
-# ...
+# Run validation with benchmark comparison
+results = benchmarker.run_all_tests()
+
+# Compare with benchmarks
+comparison = benchmarker.compare_with_benchmarks(results)
+```
+
+Or via CLI:
+
+```bash
+smrforge validate run \
+    --endf-dir ~/ENDF-B-VIII.1 \
+    --benchmarks validation_benchmarks.json \
+    --output validation_report.txt
 ```
 
 ---
 
-## References
+## Generating Reports
 
-- ANSI/ANS-5.1-2014: "Decay Heat Power in Light Water Reactors"
-- MCNP User Manual
-- IAEA Benchmark Problem Specifications
+Generate validation reports with benchmark comparisons:
+
+```bash
+python scripts/generate_validation_report.py \
+    --results validation_results.json \
+    --benchmarks validation_benchmarks.json \
+    --output validation_report.md
+```
+
+---
+
+## Best Practices
+
+1. **Use Templates**: Start with template files to ensure correct structure
+2. **Validate Early**: Validate benchmark files before adding many values
+3. **Document Sources**: Always include source information in benchmark values
+4. **Include Uncertainties**: Provide uncertainty values when available
+5. **Version Control**: Keep benchmark databases in version control
+6. **Append Mode**: Use `--append` flag when adding to existing databases
+
+---
+
+## Example Workflow
+
+```bash
+# 1. Create template
+python scripts/add_benchmark_values.py create-template --output my_benchmarks.json
+
+# 2. Edit template with your benchmark values
+# (Edit my_benchmarks.json manually)
+
+# 3. Validate the file
+python scripts/add_benchmark_values.py validate my_benchmarks.json
+
+# 4. Load into main database
+python scripts/load_benchmark_references.py \
+    --file my_benchmarks.json \
+    --output validation_benchmarks.json \
+    --append
+
+# 5. Run validation with benchmarks
+smrforge validate run \
+    --endf-dir ~/ENDF-B-VIII.1 \
+    --benchmarks validation_benchmarks.json \
+    --output report.txt
+
+# 6. Generate detailed report
+python scripts/generate_validation_report.py \
+    --results report.txt \
+    --benchmarks validation_benchmarks.json \
+    --output validation_report.md
+```
+
+---
+
+## Related Documentation
+
+- **Validation Framework**: `docs/validation/validation-execution-guide.md`
+- **Validation Implementation**: `docs/validation/validation-implementation-summary.md`
+- **Benchmark Data Structures**: `tests/validation_benchmark_data.py`
+- **Validation Scripts**: `scripts/run_validation.py`, `scripts/add_benchmark_values.py`
+
+---
+
+## Troubleshooting
+
+### "File structure is invalid"
+
+- Check that all required sections are present (`decay_heat_benchmarks`, `gamma_transport_benchmarks`, `burnup_benchmarks`)
+- Verify JSON syntax is correct
+- Use the template as a starting point
+
+### "Benchmark not found in database"
+
+- Ensure the benchmark database file is loaded correctly
+- Check that test case names match exactly
+- Use `BenchmarkDatabase` methods to inspect loaded benchmarks
+
+### "Cannot load benchmark file"
+
+- Verify file path is correct
+- Check file permissions
+- Ensure JSON is valid (use a JSON validator)
+
+---
+
+*For questions or issues, see the main validation documentation or create an issue on GitHub.*
