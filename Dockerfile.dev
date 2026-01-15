@@ -43,6 +43,7 @@
 # - Advanced error handling and async edge case coverage
 # - New test files: test_parameter_sweep, test_templates, test_constraints, test_converters, test_burnup_checkpointing
 # - Advanced tests: test_reactor_core_advanced_error_handling, test_reactor_core_async_edge_cases
+# - Manual testing framework: 13 test scripts for feature validation (testing/ directory)
 
 FROM python:3.11-slim
 
@@ -85,6 +86,10 @@ COPY setup.py pyproject.toml README.md MANIFEST.in /app/
 COPY smrforge/ /app/smrforge/
 # Copy CLI scripts and utilities (validation scripts, completion scripts, etc.)
 COPY scripts/ /app/scripts/
+
+# Copy testing infrastructure (manual test scripts and documentation)
+COPY testing/ /app/testing/
+COPY docs/testing/ /app/docs/testing/
 
 # Install Python dependencies
 RUN pip install --upgrade pip wheel setuptools
@@ -161,9 +166,10 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
 #     * Advanced error handling tests: file operations, copy failures, validation errors
 #     * Async edge case tests: partial failures, exception propagation, timeouts, concurrent access
+#   - Manual testing framework: 13 test scripts for feature validation
 #
-# Running Tests:
-#   pytest  # Run all tests
+# Running Automated Tests:
+#   pytest  # Run all automated tests
 #   pytest tests/test_parameter_sweep.py -v  # Test parameter sweep workflow
 #   pytest tests/test_templates.py -v  # Test template library
 #   pytest tests/test_constraints.py -v  # Test design constraints
@@ -171,5 +177,21 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   pytest tests/test_reactor_core_advanced_error_handling.py -v  # Test error handling
 #   pytest tests/test_reactor_core_async_edge_cases.py -v  # Test async operations
 #   pytest --cov=smrforge --cov-report=html  # Coverage report
+#
+# Running Manual Tests:
+#   python testing/test_01_cli_commands.py  # Test CLI commands
+#   python testing/test_02_reactor_creation.py  # Test reactor creation/analysis
+#   python testing/test_03_burnup.py  # Test burnup calculations
+#   python testing/test_04_parameter_sweep.py  # Test parameter sweep
+#   python testing/test_05_templates.py  # Test template library
+#   python testing/test_06_constraints.py  # Test design constraints
+#   python testing/test_07_io_converters.py  # Test I/O converters
+#   python testing/test_08_data_management.py  # Test data management
+#   python testing/test_09_validation.py  # Test validation framework
+#   python testing/test_10_visualization.py  # Test visualization
+#   python testing/test_11_workflows.py  # Test workflow scripts
+#   python testing/test_12_config.py  # Test configuration
+#   python testing/test_13_advanced.py  # Test advanced features
+#   # See docs/testing/MANUAL_TESTING_CHECKLIST.md for complete guide
 CMD ["/bin/bash"]
 
