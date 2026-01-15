@@ -39,6 +39,10 @@
 # - Optional: mesh conversion (meshio) and CAD import (trimesh) dependencies
 # - Updated to support latest features and test requirements
 # - Test coverage: 79.2% overall, 75-80%+ on priority modules
+# - Comprehensive test suite: 133+ test files including Phase 1/2 module tests
+# - Advanced error handling and async edge case coverage
+# - New test files: test_parameter_sweep, test_templates, test_constraints, test_converters, test_burnup_checkpointing
+# - Advanced tests: test_reactor_core_advanced_error_handling, test_reactor_core_async_edge_cases
 
 FROM python:3.11-slim
 
@@ -99,9 +103,8 @@ RUN pip install --no-cache-dir -e ".[dev]"
 #     trimesh>=3.0.0
 # Note: joblib is already included as a dependency of scikit-learn
 
-# Optional: Install pytest-asyncio for async test support
-# Uncomment the next line if you need async test support:
-# RUN pip install --no-cache-dir pytest-asyncio
+# Install pytest-asyncio for async test support (required for async edge case tests)
+RUN pip install --no-cache-dir pytest-asyncio
 
 # Create directories for data/output and ENDF storage
 # ENDF data can be mounted as volume or stored in container
