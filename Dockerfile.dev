@@ -157,5 +157,19 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - Automated ENDF data downloader
 #   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
 #   - Enhanced mesh generation
+#   - Comprehensive test suite (133+ test files, 79.2% coverage)
+#     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
+#     * Advanced error handling tests: file operations, copy failures, validation errors
+#     * Async edge case tests: partial failures, exception propagation, timeouts, concurrent access
+#
+# Running Tests:
+#   pytest  # Run all tests
+#   pytest tests/test_parameter_sweep.py -v  # Test parameter sweep workflow
+#   pytest tests/test_templates.py -v  # Test template library
+#   pytest tests/test_constraints.py -v  # Test design constraints
+#   pytest tests/test_burnup_checkpointing.py -v  # Test checkpointing
+#   pytest tests/test_reactor_core_advanced_error_handling.py -v  # Test error handling
+#   pytest tests/test_reactor_core_async_edge_cases.py -v  # Test async operations
+#   pytest --cov=smrforge --cov-report=html  # Coverage report
 CMD ["/bin/bash"]
 
