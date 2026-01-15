@@ -583,6 +583,7 @@ SMRForge has achieved significant milestones in 2025:
 
 ## 📚 Related Documentation
 
+- **⭐ CONSOLIDATED ROADMAP:** `docs/roadmaps/CONSOLIDATED-ROADMAP.md` - **Unified view of all roadmaps with pain point-driven feature suggestions**
 - **Next Features:** `docs/roadmaps/NEXT-FEATURES.md` - **Priority list of missing features and next implementation targets**
 - **CLI Enhancement Plan:** `docs/roadmaps/cli-enhancement-plan.md` - **Complete CLI implementation guide and status**
 - **ENDF File Types Analysis:** `docs/validation/endf-file-types-analysis.md`
@@ -596,5 +597,5 @@ SMRForge has achieved significant milestones in 2025:
 
 ---
 
-*This document consolidates NEXT_STEPS.md, FEATURE_STATUS.md, and NEXT_WORK_OPTIONS.md into a single comprehensive roadmap.*
+*This document consolidates NEXT_STEPS.md, FEATURE_STATUS.md, and NEXT_WORK_OPTIONS.md into a single comprehensive roadmap. For a unified view of all roadmaps with pain point-driven future features, see CONSOLIDATED-ROADMAP.md.*
 
