@@ -11,6 +11,7 @@ concentrations over time, accounting for:
 
 import warnings
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -117,6 +118,9 @@ class BurnupOptions:
     nuclide_importance_threshold: float = 1e-3  # Relative importance threshold (fraction of total)
     adaptive_update_interval: int = 5  # Update nuclide list every N time steps
     always_track_nuclides: List[Nuclide] = field(default_factory=list)  # Nuclides to always track
+    # Checkpointing options
+    checkpoint_interval: Optional[float] = None  # Checkpoint every N days (None = no checkpointing)
+    checkpoint_dir: Optional[Path] = None  # Directory for checkpoint files
 
 
 class BurnupSolver:
@@ -299,22 +303,32 @@ class BurnupSolver:
             if nuc not in [u235, u238_nuc]:
                 self.concentrations[i, 0] = 0.0
     
-    def solve(self) -> NuclideInventory:
+    def solve(self, resume_from_checkpoint: Optional[Path] = None) -> NuclideInventory:
         """
         Solve burnup problem.
+        
+        Args:
+            resume_from_checkpoint: Optional path to checkpoint file to resume from
         
         Returns:
             NuclideInventory with concentrations over time
         """
-        logger.info("Starting burnup calculation...")
-        
-        # Solve neutronics for initial flux
-        logger.info("Solving initial neutronics...")
-        k_eff, flux = self.neutronics.solve_steady_state()
-        logger.info(f"Initial k-eff: {k_eff:.6f}")
+        # Resume from checkpoint if provided
+        if resume_from_checkpoint:
+            self._load_checkpoint(resume_from_checkpoint)
+            start_step = self._checkpoint_step
+            logger.info(f"Resuming from checkpoint at step {start_step}")
+        else:
+            start_step = 1
+            logger.info("Starting burnup calculation...")
+            
+            # Solve neutronics for initial flux
+            logger.info("Solving initial neutronics...")
+            k_eff, flux = self.neutronics.solve_steady_state()
+            logger.info(f"Initial k-eff: {k_eff:.6f}")
         
         # Time stepping
-        for step in range(1, len(self.time_steps_sec)):
+        for step in range(start_step, len(self.time_steps_sec)):
             t_start = self.time_steps_sec[step - 1]
             t_end = self.time_steps_sec[step]
             dt = t_end - t_start
@@ -346,6 +360,13 @@ class BurnupSolver:
             
             # Calculate burnup
             self._update_burnup(step)
+            
+            # Checkpoint if enabled
+            if self.options.checkpoint_interval is not None:
+                t_days = self.time_steps_sec[step] / (24 * 3600)
+                if (step % max(1, int(self.options.checkpoint_interval / dt * (24 * 3600))) == 0 or 
+                    step == len(self.time_steps_sec) - 1):
+                    self._save_checkpoint(step, t_days)
         
         logger.info("Burnup calculation complete!")
         
@@ -355,6 +376,106 @@ class BurnupSolver:
             times=self.time_steps_sec,
             burnup=self.burnup_mwd_per_kg,
         )
+    
+    def _save_checkpoint(self, step: int, t_days: float):
+        """Save checkpoint to file."""
+        if self.options.checkpoint_dir is None:
+            return
+        
+        checkpoint_dir = Path(self.options.checkpoint_dir)
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        
+        checkpoint_file = checkpoint_dir / f"checkpoint_{t_days:.0f}days.h5"
+        
+        try:
+            import h5py
+            with h5py.File(checkpoint_file, 'w') as f:
+                # Save state
+                f.attrs['step'] = step
+                f.attrs['time_days'] = t_days
+                f.attrs['n_nuclides'] = len(self.nuclides)
+                
+                # Save nuclide list
+                nuclide_names = [nuc.name for nuc in self.nuclides]
+                f.create_dataset('nuclide_names', data=[n.encode('utf-8') for n in nuclide_names])
+                
+                # Save concentrations
+                f.create_dataset('concentrations', data=self.concentrations[:, :step+1])
+                f.create_dataset('times', data=self.time_steps_sec[:step+1])
+                f.create_dataset('burnup', data=self.burnup_mwd_per_kg[:step+1])
+                
+                # Save options (as JSON string)
+                import json
+                from dataclasses import asdict
+                opts_dict = asdict(self.options)
+                # Remove non-serializable items
+                opts_dict.pop('fissile_nuclides', None)
+                opts_dict.pop('always_track_nuclides', None)
+                f.attrs['options'] = json.dumps(opts_dict)
+            
+            logger.info(f"Checkpoint saved: {checkpoint_file}")
+        except ImportError:
+            logger.warning("h5py not available, cannot save checkpoint")
+        except Exception as e:
+            logger.warning(f"Failed to save checkpoint: {e}")
+    
+    def _load_checkpoint(self, checkpoint_file: Path):
+        """Load checkpoint from file."""
+        checkpoint_file = Path(checkpoint_file)
+        
+        if not checkpoint_file.exists():
+            raise FileNotFoundError(f"Checkpoint file not found: {checkpoint_file}")
+        
+        try:
+            import h5py
+            with h5py.File(checkpoint_file, 'r') as f:
+                self._checkpoint_step = int(f.attrs['step'])
+                t_days = float(f.attrs['time_days'])
+                
+                # Load nuclide names and recreate Nuclide objects
+                nuclide_names = [n.decode('utf-8') for n in f['nuclide_names'][:]]
+                from ..core.reactor_core import Nuclide
+                from ..core.constants import ELEMENT_SYMBOLS_REVERSE
+                
+                self.nuclides = []
+                for name in nuclide_names:
+                    # Parse nuclide name (e.g., "U235")
+                    # Simple parser (may need enhancement)
+                    element = ''.join(filter(str.isalpha, name))
+                    mass = int(''.join(filter(str.isdigit, name.split('m')[0])))
+                    m = 1 if 'm' in name else 0
+                    Z = ELEMENT_SYMBOLS_REVERSE.get(element, 0)
+                    if Z > 0:
+                        self.nuclides.append(Nuclide(Z=Z, A=mass, m=m))
+                
+                # Load concentrations
+                n_nuclides = len(self.nuclides)
+                n_times = len(self.time_steps_sec)
+                self.concentrations = np.zeros((n_nuclides, n_times))
+                checkpoint_concentrations = f['concentrations'][:]
+                self.concentrations[:, :checkpoint_concentrations.shape[1]] = checkpoint_concentrations
+                
+                # Load burnup
+                checkpoint_burnup = f['burnup'][:]
+                self.burnup_mwd_per_kg[:len(checkpoint_burnup)] = checkpoint_burnup
+                
+            logger.info(f"Loaded checkpoint from step {self._checkpoint_step} (t={t_days:.1f} days)")
+        except ImportError:
+            raise ImportError("h5py required for checkpoint loading. Install: pip install h5py")
+        except Exception as e:
+            raise RuntimeError(f"Failed to load checkpoint: {e}")
+    
+    def resume_from_checkpoint(self, checkpoint_file: Path) -> NuclideInventory:
+        """
+        Resume burnup calculation from checkpoint.
+        
+        Args:
+            checkpoint_file: Path to checkpoint file
+        
+        Returns:
+            NuclideInventory with concentrations over time
+        """
+        return self.solve(resume_from_checkpoint=checkpoint_file)
     
     def _solve_time_step(self, step: int, t_start: float, t_end: float, dt: float):
         """

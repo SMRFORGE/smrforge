@@ -12,6 +12,7 @@ import glob
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import numpy as np
 
 try:
     import yaml
@@ -647,47 +648,137 @@ def reactor_list(args):
 
 
 def reactor_compare(args):
-    """Compare multiple reactor designs."""
+    """Compare multiple reactor designs with enhanced metrics."""
     try:
         import smrforge as smr
         from smrforge.convenience import create_reactor, compare_designs
         import json
         
+        designs_to_compare = []
+        design_names = []
+        
         if args.presets:
             # Compare presets
-            comparison = compare_designs(args.presets)
+            design_names = args.presets
+            for preset_name in args.presets:
+                reactor = create_reactor(preset_name)
+                results = reactor.solve()
+                designs_to_compare.append({
+                    "name": preset_name,
+                    "reactor": reactor,
+                    "results": results
+                })
         elif args.reactors:
             # Compare reactor files
-            reactors = []
             for reactor_file in args.reactors:
                 if not reactor_file.exists():
                     _print_error(f"Reactor file not found: {reactor_file}")
                     sys.exit(1)
+                design_names.append(reactor_file.stem)
                 with open(reactor_file) as f:
                     reactor_data = json.load(f)
-                reactors.append(create_reactor(**reactor_data))
-            # Comparison logic would need to be implemented
-            _print_error("Comparing reactor files not yet implemented")
-            print("Use --presets for preset comparison")
-            sys.exit(1)
+                reactor = create_reactor(**reactor_data)
+                results = reactor.solve()
+                designs_to_compare.append({
+                    "name": reactor_file.stem,
+                    "reactor": reactor,
+                    "results": results
+                })
         else:
             _print_error("Must specify --presets or --reactors")
             sys.exit(1)
         
-        # Display comparison
+        # Extract metrics
+        metrics = args.metrics or ["k_eff", "power", "temperature"]
+        comparison = {}
+        
+        for design in designs_to_compare:
+            name = design["name"]
+            results = design["results"]
+            comparison[name] = {}
+            
+            for metric in metrics:
+                if metric == "k_eff" and "k_eff" in results:
+                    comparison[name]["k_eff"] = float(results["k_eff"])
+                elif metric == "power_density" and "power" in results:
+                    power_array = results["power"]
+                    if isinstance(power_array, np.ndarray):
+                        comparison[name]["max_power_density"] = float(np.max(power_array))
+                        comparison[name]["avg_power_density"] = float(np.mean(power_array))
+                elif metric == "temperature_peak" and "temperature" in results:
+                    temp_array = results["temperature"]
+                    if isinstance(temp_array, np.ndarray):
+                        comparison[name]["temperature_peak"] = float(np.max(temp_array))
+                elif metric in results:
+                    comparison[name][metric] = results[metric]
+        
+        # Display comparison table
         if _RICH_AVAILABLE:
-            console.print("\n[bold cyan]Design Comparison[/bold cyan]")
-            console.print(json.dumps(comparison, indent=2, default=str))
+            from rich.table import Table
+            table = Table(title="Design Comparison")
+            table.add_column("Design", style="cyan")
+            for metric in metrics:
+                table.add_column(metric.replace("_", " ").title(), justify="right")
+            
+            for name, metrics_dict in comparison.items():
+                row = [name]
+                for metric in metrics:
+                    value = metrics_dict.get(metric, metrics_dict.get(metric.replace("_", "_"), "N/A"))
+                    if isinstance(value, (int, float)):
+                        row.append(f"{value:.6f}")
+                    else:
+                        row.append(str(value))
+                table.add_row(*row)
+            
+            console.print("\n")
+            console.print(table)
         else:
             print("\nDesign Comparison:")
             print("=" * 70)
-            print(json.dumps(comparison, indent=2, default=str))
+            for name, metrics_dict in comparison.items():
+                print(f"\n{name}:")
+                for metric, value in metrics_dict.items():
+                    print(f"  {metric}: {value}")
         
         # Save if output specified
         if args.output:
-            with open(args.output, 'w') as f:
-                json.dump(comparison, f, indent=2, default=str)
-            _print_success(f"Comparison saved to {args.output}")
+            output_path = Path(args.output)
+            if output_path.suffix == '.html':
+                # Generate HTML report
+                html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Design Comparison Report</title>
+    <style>
+        table {{ border-collapse: collapse; width: 100%; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+        th {{ background-color: #4CAF50; color: white; }}
+    </style>
+</head>
+<body>
+    <h1>Design Comparison Report</h1>
+    <table>
+        <tr><th>Design</th>"""
+                for metric in metrics:
+                    html_content += f"<th>{metric.replace('_', ' ').title()}</th>"
+                html_content += "</tr>"
+                for name, metrics_dict in comparison.items():
+                    html_content += f"<tr><td>{name}</td>"
+                    for metric in metrics:
+                        value = metrics_dict.get(metric, metrics_dict.get(metric.replace("_", "_"), "N/A"))
+                        html_content += f"<td>{value}</td>"
+                    html_content += "</tr>"
+                html_content += """
+    </table>
+</body>
+</html>"""
+                with open(output_path, 'w') as f:
+                    f.write(html_content)
+                _print_success(f"HTML comparison report saved to {args.output}")
+            else:
+                with open(args.output, 'w') as f:
+                    json.dump(comparison, f, indent=2, default=str)
+                _print_success(f"Comparison saved to {args.output}")
         
     except ImportError as e:
         _print_error(f"Failed to import SMRForge modules: {e}")
@@ -911,24 +1002,34 @@ def burnup_run(args):
         else:
             time_steps = [0, 365, 730, 1095]  # Default: 0, 1, 2, 3 years
         
-        # Create burnup options
+        # Create burnup options with checkpointing support
         burnup_options = BurnupOptions(
             time_steps=time_steps,
             power_density=args.power_density or 1e6,
             adaptive_tracking=args.adaptive_tracking,
             nuclide_threshold=args.nuclide_threshold or 1e15,
+            checkpoint_interval=args.checkpoint_interval,
+            checkpoint_dir=args.checkpoint_dir,
         )
         
         _print_info(f"Running burnup calculation...")
         _print_info(f"  Time steps: {time_steps} days")
         _print_info(f"  Power density: {burnup_options.power_density:.2e} W/cm³")
         _print_info(f"  Adaptive tracking: {burnup_options.adaptive_tracking}")
+        if args.checkpoint_interval:
+            _print_info(f"  Checkpoint interval: {args.checkpoint_interval} days")
+            _print_info(f"  Checkpoint directory: {args.checkpoint_dir or 'checkpoints/'}")
+        if args.resume_from:
+            _print_info(f"  Resuming from checkpoint: {args.resume_from}")
         
         _print_info("\nNOTE: Burnup calculation requires geometry and cross-section data.")
         _print_info("For full burnup calculations, use the Python API:")
         print("  from smrforge.burnup import BurnupSolver, BurnupOptions")
         print("  burnup = BurnupSolver(neutronics_solver, burnup_options)")
-        print("  inventory = burnup.solve()")
+        if args.resume_from:
+            print(f"  inventory = burnup.resume_from_checkpoint('{args.resume_from}')")
+        else:
+            print("  inventory = burnup.solve()")
         
         # Save options if output specified
         if args.output:
@@ -1792,6 +1893,234 @@ def workflow_run(args):
         sys.exit(1)
 
 
+def sweep_run(args):
+    """Run parameter sweep workflow."""
+    try:
+        from smrforge.workflows import ParameterSweep, SweepConfig
+        from pathlib import Path
+        
+        # Parse parameters
+        parameters = {}
+        if args.params:
+            for param_spec in args.params:
+                # Format: name:start:end:step or name:val1,val2,val3
+                parts = param_spec.split(':')
+                if len(parts) == 4:
+                    name, start, end, step = parts
+                    parameters[name] = (float(start), float(end), float(step))
+                elif len(parts) == 2:
+                    name, values_str = parts
+                    values = [float(v) for v in values_str.split(',')]
+                    parameters[name] = values
+        
+        # Get reactor template
+        reactor_template = None
+        if args.reactor:
+            if Path(args.reactor).exists():
+                import json
+                with open(args.reactor) as f:
+                    reactor_template = json.load(f)
+            else:
+                reactor_template = {"name": args.reactor}  # Try as preset
+        
+        # Create sweep config
+        config = SweepConfig(
+            parameters=parameters,
+            analysis_types=args.analysis or ["keff"],
+            reactor_template=reactor_template,
+            output_dir=Path(args.output) if args.output else Path("sweep_results"),
+            parallel=not args.no_parallel,
+            max_workers=args.workers
+        )
+        
+        # Run sweep
+        sweep = ParameterSweep(config)
+        results = sweep.run()
+        
+        # Save results
+        output_file = Path(args.output) / "sweep_results.json" if args.output else Path("sweep_results/sweep_results.json")
+        results.save(output_file)
+        
+        _print_success(f"\nSweep complete! Results saved to {output_file}")
+        _print_info(f"Total cases: {len(results.results)}")
+        _print_info(f"Failed cases: {len(results.failed_cases)}")
+        
+    except ImportError as e:
+        _print_error(f"Failed to import required modules: {e}")
+        sys.exit(1)
+    except Exception as e:
+        _print_error(f"Failed to run parameter sweep: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def template_create(args):
+    """Create reactor template from preset or existing design."""
+    try:
+        from smrforge.workflows.templates import ReactorTemplate, TemplateLibrary
+        
+        if args.from_preset:
+            template = ReactorTemplate.from_preset(args.from_preset, name=args.name)
+        elif args.from_file:
+            from pathlib import Path
+            import json
+            with open(Path(args.from_file)) as f:
+                reactor_data = json.load(f)
+            template = ReactorTemplate(
+                name=args.name or "template",
+                description=args.description or "Template from file",
+                base_preset=reactor_data.get("name"),
+                parameters={}
+            )
+        else:
+            _print_error("Must specify --from-preset or --from-file")
+            sys.exit(1)
+        
+        # Save template
+        output_file = Path(args.output) if args.output else Path(f"{template.name}.json")
+        template.save(output_file)
+        
+        if args.library:
+            library = TemplateLibrary()
+            library.save_template(template)
+            _print_success(f"Template saved to library and {output_file}")
+        else:
+            _print_success(f"Template saved to {output_file}")
+        
+    except Exception as e:
+        _print_error(f"Failed to create template: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def template_modify(args):
+    """Modify reactor template parameters."""
+    try:
+        from smrforge.workflows.templates import ReactorTemplate
+        
+        template = ReactorTemplate.load(Path(args.template))
+        
+        # Modify parameters
+        if args.param:
+            for param_spec in args.param:
+                # Format: name=value
+                if '=' not in param_spec:
+                    _print_error(f"Invalid parameter format: {param_spec}. Use name=value")
+                    sys.exit(1)
+                name, value = param_spec.split('=', 1)
+                # Try to convert to number
+                try:
+                    value = float(value) if '.' in value else int(value)
+                except ValueError:
+                    pass  # Keep as string
+                
+                if name not in template.parameters:
+                    template.parameters[name] = {"default": value, "type": type(value).__name__, "description": ""}
+                else:
+                    template.parameters[name]["default"] = value
+        
+        # Save modified template
+        template.save(Path(args.template))
+        _print_success(f"Template modified: {args.template}")
+        
+    except Exception as e:
+        _print_error(f"Failed to modify template: {e}")
+        sys.exit(1)
+
+
+def template_validate(args):
+    """Validate reactor template."""
+    try:
+        from smrforge.workflows.templates import ReactorTemplate
+        
+        template = ReactorTemplate.load(Path(args.template))
+        errors = template.validate()
+        
+        if errors:
+            _print_error("Template validation failed:")
+            for error in errors:
+                _print_error(f"  - {error}")
+            sys.exit(1)
+        else:
+            _print_success("Template is valid!")
+        
+    except Exception as e:
+        _print_error(f"Failed to validate template: {e}")
+        sys.exit(1)
+
+
+def validate_design(args):
+    """Validate reactor design against constraints."""
+    try:
+        from smrforge.validation.constraints import DesignValidator, ConstraintSet
+        from smrforge.convenience import create_reactor
+        import json
+        
+        # Load reactor
+        if args.reactor:
+            with open(Path(args.reactor)) as f:
+                reactor_data = json.load(f)
+            reactor = create_reactor(**reactor_data)
+        elif args.preset:
+            reactor = create_reactor(args.preset)
+        else:
+            _print_error("Must specify --reactor or --preset")
+            sys.exit(1)
+        
+        # Load constraint set
+        if args.constraints:
+            with open(Path(args.constraints)) as f:
+                constraints_data = json.load(f)
+            constraint_set = ConstraintSet(**constraints_data)
+        else:
+            # Use default regulatory limits
+            constraint_set = ConstraintSet.get_regulatory_limits()
+        
+        # Run validation
+        validator = DesignValidator(constraint_set)
+        validation = validator.validate(reactor)
+        
+        # Display results
+        if validation.passed:
+            _print_success("Design validation passed!")
+        else:
+            _print_error("Design validation failed!")
+            if validation.violations:
+                _print_error("\nViolations:")
+                for viol in validation.violations:
+                    _print_error(f"  - {viol.message}")
+        
+        if validation.warnings:
+            _print_warning("\nWarnings:")
+            for warn in validation.warnings:
+                _print_warning(f"  - {warn.message}")
+        
+        # Save report if output specified
+        if args.output:
+            report = {
+                "passed": validation.passed,
+                "violations": [{"constraint": v.constraint_name, "message": v.message} 
+                              for v in validation.violations],
+                "warnings": [{"constraint": w.constraint_name, "message": w.message} 
+                            for w in validation.warnings],
+                "metrics": validation.metrics
+            }
+            with open(Path(args.output), 'w') as f:
+                json.dump(report, f, indent=2)
+            _print_success(f"Validation report saved to {args.output}")
+        
+    except Exception as e:
+        _print_error(f"Failed to validate design: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -1939,8 +2268,10 @@ Note: All features are also available via Python API:
     )
     compare_parser.add_argument('--presets', nargs='+', help='Preset design names to compare')
     compare_parser.add_argument('--reactors', nargs='+', type=Path, help='Reactor files to compare')
-    compare_parser.add_argument('--metrics', nargs='+', help='Metrics to compare')
-    compare_parser.add_argument('--output', type=Path, help='Output file for comparison')
+    compare_parser.add_argument('--metrics', nargs='+', help='Metrics to compare (e.g., keff,power_density,temperature_peak)', 
+                               default=['k_eff'])
+    compare_parser.add_argument('--output', type=Path, help='Output file for comparison (JSON or HTML)')
+    compare_parser.add_argument('--visualize', action='store_true', help='Generate visualization (future feature)')
     compare_parser.set_defaults(func=reactor_compare)
     
     # Data subcommands
@@ -1997,6 +2328,12 @@ Note: All features are also available via Python API:
     burnup_run_parser.add_argument('--reactor', type=Path, required=True, help='Reactor file (JSON)')
     burnup_run_parser.add_argument('--time-steps', nargs='+', dest='time_steps', help='Time steps [days]')
     burnup_run_parser.add_argument('--power-density', type=float, dest='power_density', help='Power density [W/cm³]')
+    burnup_run_parser.add_argument('--checkpoint-interval', type=float, dest='checkpoint_interval', 
+                                  help='Checkpoint every N days (enables checkpointing)')
+    burnup_run_parser.add_argument('--checkpoint-dir', type=Path, dest='checkpoint_dir', 
+                                  help='Directory for checkpoint files')
+    burnup_run_parser.add_argument('--resume-from', type=Path, dest='resume_from', 
+                                  help='Resume from checkpoint file')
     burnup_run_parser.add_argument('--adaptive-tracking', action='store_true', dest='adaptive_tracking', help='Enable adaptive nuclide tracking')
     burnup_run_parser.add_argument('--nuclide-threshold', type=float, dest='nuclide_threshold', help='Nuclide concentration threshold')
     burnup_run_parser.add_argument('--output', type=Path, help='Output file for results')
@@ -2065,6 +2402,70 @@ Note: All features are also available via Python API:
     visualize_flux_parser.add_argument('--format', type=str, choices=['png', 'pdf', 'svg'], default='png', help='Output format')
     visualize_flux_parser.add_argument('--group', type=int, help='Energy group index')
     visualize_flux_parser.set_defaults(func=visualize_flux)
+    
+    # Sweep subcommands
+    sweep_parser = subparsers.add_parser(
+        'sweep',
+        help='Parameter sweep and sensitivity analysis'
+    )
+    sweep_parser.add_argument('--reactor', type=str, help='Reactor file or preset name')
+    sweep_parser.add_argument('--params', nargs='+', required=True, 
+                            help='Parameter ranges (format: name:start:end:step or name:val1,val2,val3)')
+    sweep_parser.add_argument('--analysis', nargs='+', default=['keff'], 
+                            help='Analysis types to run (default: keff)')
+    sweep_parser.add_argument('--output', type=Path, help='Output directory for results')
+    sweep_parser.add_argument('--no-parallel', action='store_true', dest='no_parallel',
+                            help='Disable parallel execution')
+    sweep_parser.add_argument('--workers', type=int, help='Number of parallel workers')
+    sweep_parser.set_defaults(func=sweep_run)
+    
+    # Reactor template subcommands
+    template_parser = reactor_subparsers.add_parser(
+        'template',
+        help='Template-based reactor design library'
+    )
+    template_subparsers = template_parser.add_subparsers(dest='template_command', help='Template commands')
+    
+    # template create
+    template_create_parser = template_subparsers.add_parser(
+        'create',
+        help='Create reactor template'
+    )
+    template_create_parser.add_argument('--from-preset', dest='from_preset', type=str, help='Create from preset')
+    template_create_parser.add_argument('--from-file', dest='from_file', type=str, help='Create from reactor file')
+    template_create_parser.add_argument('--name', type=str, help='Template name')
+    template_create_parser.add_argument('--description', type=str, help='Template description')
+    template_create_parser.add_argument('--output', type=Path, help='Output file')
+    template_create_parser.add_argument('--library', action='store_true', help='Save to template library')
+    template_create_parser.set_defaults(func=template_create)
+    
+    # template modify
+    template_modify_parser = template_subparsers.add_parser(
+        'modify',
+        help='Modify reactor template'
+    )
+    template_modify_parser.add_argument('template', type=Path, help='Template file')
+    template_modify_parser.add_argument('--param', nargs='+', help='Parameters to modify (format: name=value)')
+    template_modify_parser.set_defaults(func=template_modify)
+    
+    # template validate
+    template_validate_parser = template_subparsers.add_parser(
+        'validate',
+        help='Validate reactor template'
+    )
+    template_validate_parser.add_argument('template', type=Path, help='Template file')
+    template_validate_parser.set_defaults(func=template_validate)
+    
+    # Validate subcommands
+    validate_parser = subparsers.add_parser(
+        'validate',
+        help='Validate reactor design against constraints'
+    )
+    validate_parser.add_argument('--reactor', type=Path, help='Reactor file')
+    validate_parser.add_argument('--preset', type=str, help='Preset name')
+    validate_parser.add_argument('--constraints', type=Path, help='Constraint set file (JSON)')
+    validate_parser.add_argument('--output', type=Path, help='Output file for validation report')
+    validate_parser.set_defaults(func=validate_design)
     
     # Config subcommands
     config_parser = subparsers.add_parser(
