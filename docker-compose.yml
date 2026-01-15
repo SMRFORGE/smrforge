@@ -74,13 +74,19 @@ services:
     # Expose dashboard port (8050)
     ports:
       - "8050:8050"
-    # Install dev dependencies on startup (including pytest-asyncio for async tests)
+    # Install dev dependencies on startup
+    # - pytest-asyncio: Required for async test support (async edge case tests)
+    # - ipython: Enhanced interactive shell for smrforge shell command
+    # - h5py: Required for burnup checkpointing functionality
     # Data downloader dependencies (tqdm, pyyaml, rich) are already in requirements.txt
     # CLI dependencies (rich, pyyaml) are already in requirements.txt
     # Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
     # Parameter sweep dependencies (pandas) are already in requirements.txt
+    # Test suite (133+ test files, 79.2% coverage) includes:
+    #   - Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
+    #   - Advanced error handling: file operations, copy failures, validation errors
+    #   - Async edge cases: partial failures, exception propagation, timeouts, concurrent access
     # Optional: Add mesh conversion and CAD import: pip install meshio trimesh
-    # Optional: Add IPython for enhanced shell: pip install ipython
-    # Optional: Add h5py for checkpoint support: pip install h5py
+    # Optional: Add parquet support: pip install pyarrow or fastparquet
     command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio ipython h5py && bash"
 
