@@ -1,11 +1,17 @@
-# Coverage Completion Inventory: reactor_core.py, endf_parser.py, and uncertainty/uq.py
+# Coverage Completion Inventory: reactor_core.py, endf_parser.py, uncertainty/uq.py, and new feature modules
 
-**Last Updated**: January 9, 2026 (After comprehensive test improvements)  
+**Last Updated**: January 2026 (After Phase 1 and Phase 2 feature implementation)  
 **Target**: 75-80% coverage for priority modules  
 **Status**: 
 - ✅ `uncertainty/uq.py`: **80.1%** (target exceeded!)
 - ✅ `endf_parser.py`: **97.3%** (excellent coverage, Tasks #9 and #10 complete)
 - ✅ `reactor_core.py`: **86.5%** (target exceeded!)
+- ⚠️ **New Modules** (Phase 1 & 2): Need initial test coverage
+  - `workflows/parameter_sweep.py`: **0%** (new module - needs tests)
+  - `workflows/templates.py`: **0%** (new module - needs tests)
+  - `validation/constraints.py`: **0%** (new module - needs tests)
+  - `io/converters.py`: **0%** (new module - needs tests)
+  - `burnup/solver.py`: Updated with checkpointing (existing coverage ~75%)
 
 ---
 
@@ -370,6 +376,37 @@
 - [ ] Fix `_collapse_to_multigroup` bug (task #15)
 - [ ] Verify coverage targets met (75-80%)
 - [ ] Update documentation
+
+### Phase 5: New Feature Module Coverage (2-3 weeks) ⚠️ **NEW**
+- [ ] **workflows/parameter_sweep.py**: Add comprehensive tests for parameter sweep functionality
+  - Test `SweepConfig` parameter parsing (ranges, lists)
+  - Test combination generation
+  - Test single case execution (mocked reactor)
+  - Test parallel vs sequential execution
+  - Test result aggregation and statistics
+  - Test result saving (JSON/Parquet)
+- [ ] **workflows/templates.py**: Add tests for template system
+  - Test template creation from preset
+  - Test template instantiation with parameters
+  - Test template validation
+  - Test template I/O (save/load JSON/YAML)
+  - Test template library CRUD operations
+- [ ] **validation/constraints.py**: Add tests for constraint validation
+  - Test constraint set creation (regulatory, safety)
+  - Test design validator with mock reactors
+  - Test violation detection (max/min constraints)
+  - Test warning vs error classification
+  - Test metrics extraction
+- [ ] **io/converters.py**: Add basic tests for converter framework
+  - Test placeholder export/import methods
+  - Test error handling for unimplemented features
+- [ ] **burnup/solver.py**: Add tests for checkpointing functionality
+  - Test checkpoint creation (HDF5 format)
+  - Test checkpoint loading and state restoration
+  - Test resume from checkpoint
+  - Test checkpoint interval timing
+  - Test checkpoint directory creation
+  - Test error handling (missing files, corrupted checkpoints)
 
 ---
 
