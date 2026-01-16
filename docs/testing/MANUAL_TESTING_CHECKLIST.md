@@ -1,6 +1,6 @@
 # Manual Testing Checklist for SMRForge Features
 
-This document provides a comprehensive checklist for manually testing all SMRForge features. Each feature has a corresponding Jupyter notebook with example code and instructions.
+This document provides a comprehensive checklist for manually testing all SMRForge features. Each feature has a corresponding Python test script (`test_*.py` in the `testing/` directory). Jupyter notebooks are optional and can be created from the Python scripts for interactive testing.
 
 ## Testing Overview
 
@@ -11,8 +11,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 **Prerequisites**:
 - SMRForge installed (`pip install -e .`)
 - ENDF data set up (run `smrforge data setup` or use test data)
-- Jupyter notebook installed (`pip install jupyter`)
 - All dependencies installed
+- Jupyter notebook installed (`pip install jupyter`) - **Optional**, only needed for interactive notebook testing
 
 ## Feature Categories
 
@@ -30,7 +30,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Templates
 - [ ] I/O converters
 
-**Notebook**: `testing/01_CLI_Commands.ipynb`
+**Test Script**: `testing/test_01_cli_commands.py`  
+**Optional Notebook**: `testing/01_CLI_Commands.ipynb` (example for interactive testing)
 
 ### 2. Reactor Creation and Analysis
 - [ ] Create reactor from preset
@@ -41,7 +42,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Compare multiple reactor designs
 - [ ] Batch analysis of multiple reactors
 
-**Notebook**: `testing/02_Reactor_Creation_Analysis.ipynb`
+**Test Script**: `testing/test_02_reactor_creation.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 3. Burnup Calculations
 - [ ] Basic burnup calculation
@@ -50,7 +52,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Burnup visualization (k-eff evolution, burnup over time)
 - [ ] Custom burnup options (time steps, power density, adaptive tracking)
 
-**Notebook**: `testing/03_Burnup_Calculations.ipynb`
+**Test Script**: `testing/test_03_burnup.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 4. Parameter Sweep Workflow
 - [ ] Single parameter sweep
@@ -59,7 +62,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Results analysis and export
 - [ ] Sensitivity analysis
 
-**Notebook**: `testing/04_Parameter_Sweep.ipynb`
+**Test Script**: `testing/test_04_parameter_sweep.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 5. Template Library System
 - [ ] Create template from preset
@@ -69,7 +73,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Validate template
 - [ ] Save and load templates
 
-**Notebook**: `testing/05_Template_Library.ipynb`
+**Test Script**: `testing/test_05_templates.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 6. Design Constraints & Validation
 - [ ] Create constraint set (regulatory limits, safety margins)
@@ -77,7 +82,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Warning vs error classification
 - [ ] Multiple constraint types (k-eff, power density, etc.)
 
-**Notebook**: `testing/06_Design_Constraints.ipynb`
+**Test Script**: `testing/test_06_constraints.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 7. I/O Converters
 - [ ] Convert to Serpent format
@@ -86,7 +92,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Convert from OpenMC format (if available)
 - [ ] Verify output file formats
 
-**Notebook**: `testing/07_IO_Converters.ipynb`
+**Test Script**: `testing/test_07_io_converters.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 8. Data Management
 - [ ] ENDF data setup (interactive)
@@ -95,7 +102,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Bulk ENDF file organization
 - [ ] Data directory scanning
 
-**Notebook**: `testing/08_Data_Management.ipynb`
+**Test Script**: `testing/test_08_data_management.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 9. Validation Framework
 - [ ] Run validation tests
@@ -105,7 +113,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Decay heat validation
 - [ ] Burnup validation
 
-**Notebook**: `testing/09_Validation_Framework.ipynb`
+**Test Script**: `testing/test_09_validation.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 10. Visualization
 - [ ] Geometry visualization (2D/3D)
@@ -114,7 +123,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Interactive 3D viewers
 - [ ] Multiple backends (Matplotlib, Plotly, PyVista)
 
-**Notebook**: `testing/10_Visualization.ipynb`
+**Test Script**: `testing/test_10_visualization.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 11. Workflow Scripts
 - [ ] Create YAML workflow
@@ -123,7 +133,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Workflow context passing
 - [ ] Error handling in workflows
 
-**Notebook**: `testing/11_Workflow_Scripts.ipynb`
+**Test Script**: `testing/test_11_workflows.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 12. Configuration Management
 - [ ] Show current configuration
@@ -132,7 +143,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Nested configuration keys
 - [ ] Configuration persistence
 
-**Notebook**: `testing/12_Configuration_Management.ipynb`
+**Test Script**: `testing/test_12_config.py`  
+**Optional Notebook**: Create from test script if needed
 
 ### 13. Advanced Features
 - [ ] Batch processing
@@ -141,7 +153,8 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Progress indicators
 - [ ] Export formats (JSON, HDF5, CSV, Parquet)
 
-**Notebook**: `testing/13_Advanced_Features.ipynb`
+**Test Script**: `testing/test_13_advanced.py`  
+**Optional Notebook**: Create from test script if needed
 
 ## Testing Notes
 

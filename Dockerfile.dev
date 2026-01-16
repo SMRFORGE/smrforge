@@ -43,7 +43,8 @@
 # - Advanced error handling and async edge case coverage
 # - New test files: test_parameter_sweep, test_templates, test_constraints, test_converters, test_burnup_checkpointing
 # - Advanced tests: test_reactor_core_advanced_error_handling, test_reactor_core_async_edge_cases
-# - Manual testing framework: 13 test scripts + Jupyter notebooks for feature validation (testing/ directory)
+# - Manual testing framework: 13 test scripts (test_*.py) for feature validation (testing/ directory)
+#   Optional Jupyter notebooks available for interactive testing (01_CLI_Commands.ipynb)
 # - Quick start validation guide for running tests with real ENDF data (docs/validation/QUICK_START_VALIDATION.md)
 
 FROM python:3.11-slim
@@ -193,7 +194,8 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   python testing/test_11_workflows.py  # Test workflow scripts
 #   python testing/test_12_config.py  # Test configuration
 #   python testing/test_13_advanced.py  # Test advanced features
-#   # Jupyter notebooks: testing/01_CLI_Commands.ipynb, testing/04_Parameter_Sweep.ipynb
+#   # Optional Jupyter notebooks: testing/01_CLI_Commands.ipynb (example for interactive testing)
+#   # Notebooks are optional - Python scripts (test_*.py) are the primary testing method
 #   # See docs/testing/MANUAL_TESTING_CHECKLIST.md for complete guide
 #   # See docs/validation/QUICK_START_VALIDATION.md for ENDF validation testing
 CMD ["/bin/bash"]
