@@ -86,7 +86,8 @@ services:
     #   - Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
     #   - Advanced error handling: file operations, copy failures, validation errors
     #   - Async edge cases: partial failures, exception propagation, timeouts, concurrent access
-    #   - Manual testing framework: 13 test scripts in testing/ directory for feature validation
+    #   - Manual testing framework: 13 test scripts + Jupyter notebooks in testing/ directory for feature validation
+    #   - Quick start validation guide: docs/validation/QUICK_START_VALIDATION.md for ENDF validation testing
     # Optional: Add mesh conversion and CAD import: pip install meshio trimesh
     # Optional: Add parquet support: pip install pyarrow or fastparquet
     command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio ipython h5py && bash"
