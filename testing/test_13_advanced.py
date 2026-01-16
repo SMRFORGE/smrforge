@@ -29,7 +29,7 @@ def test_batch_processing():
         
         for preset in presets:
             try:
-                reactor = smr.create_reactor(preset=preset)
+                reactor = smr.create_reactor(preset)
                 reactors.append((preset, reactor))
                 print(f"   Created {preset}")
             except Exception as e:
@@ -68,7 +68,7 @@ def test_export_formats():
     """Test different export formats."""
     print("\n2. Testing export formats...")
     try:
-        reactor = smr.create_reactor(preset='valar-10')
+        reactor = smr.create_reactor('valar-10')
         
         # Export to JSON
         json_file = Path('export_reactor.json')
@@ -155,7 +155,7 @@ def test_error_recovery():
     try:
         # Test with invalid preset
         try:
-            reactor = smr.create_reactor(preset='nonexistent_preset')
+            reactor = smr.create_reactor('nonexistent_preset')
             print("❌ Should have raised error for invalid preset")
             return False
         except (ValueError, KeyError, Exception) as e:
@@ -188,7 +188,7 @@ def test_cli_batch_mode():
     try:
         for preset in ['valar-10', 'htr-pm-200']:
             try:
-                reactor = smr.create_reactor(preset=preset)
+                reactor = smr.create_reactor(preset)
                 reactor_file = Path(f'batch_{preset}.json')
                 with open(reactor_file, 'w') as f:
                     if hasattr(reactor, 'to_dict'):

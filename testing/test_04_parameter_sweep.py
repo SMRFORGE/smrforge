@@ -24,7 +24,7 @@ def test_create_reactor():
     """Create reactor for parameter sweep."""
     print("\n1. Creating reactor for parameter sweep...")
     try:
-        reactor = smr.create_reactor(preset='valar-10')
+        reactor = smr.create_reactor('valar-10')
         print(f"✅ Created reactor: {type(reactor)}")
         return reactor
     except Exception as e:

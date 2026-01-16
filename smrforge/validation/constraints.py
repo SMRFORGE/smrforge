@@ -5,8 +5,10 @@ Provides automated constraint checking for reactor designs,
 including safety margins and regulatory compliance checks.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional, Any, Tuple
+from pathlib import Path
+import json
 import numpy as np
 
 from ..utils.logging import get_logger
@@ -112,6 +114,31 @@ class ConstraintSet:
             "Power peaking factor"
         )
         
+        return constraints
+    
+    def save(self, file_path: Path):
+        """Save constraint set to JSON file."""
+        data = {
+            "name": self.name,
+            "description": self.description,
+            "constraints": self.constraints
+        }
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Saved constraint set '{self.name}' to {file_path}")
+    
+    @classmethod
+    def load(cls, file_path: Path) -> "ConstraintSet":
+        """Load constraint set from JSON file."""
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        
+        constraints = cls(
+            name=data["name"],
+            description=data.get("description", ""),
+            constraints=data.get("constraints", {})
+        )
+        logger.info(f"Loaded constraint set '{constraints.name}' from {file_path}")
         return constraints
 
 

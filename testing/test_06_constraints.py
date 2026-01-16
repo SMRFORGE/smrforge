@@ -15,7 +15,7 @@ from pathlib import Path
 try:
     import smrforge as smr
     from smrforge.validation.constraints import (
-        DesignConstraintValidator, ConstraintSet, DesignValidator
+        ConstraintSet, DesignValidator
     )
 except ImportError:
     print("ERROR: SMRForge not installed. Run: pip install -e .")
@@ -26,7 +26,7 @@ def test_create_reactor():
     """Create reactor for constraint testing."""
     print("\n1. Creating reactor for constraint testing...")
     try:
-        reactor = smr.create_reactor(preset='valar-10')
+        reactor = smr.create_reactor('valar-10')
         print(f"✅ Created reactor: {type(reactor)}")
         return reactor
     except Exception as e:
@@ -38,30 +38,10 @@ def test_create_constraint_set():
     """Test creating a constraint set."""
     print("\n2. Testing create constraint set...")
     try:
-        constraints = ConstraintSet(
-            name="test_constraints",
-            constraints=[
-                {
-                    "name": "k_eff_min",
-                    "type": "min",
-                    "value": 1.0,
-                    "metric": "k_eff"
-                },
-                {
-                    "name": "k_eff_max",
-                    "type": "max",
-                    "value": 1.2,
-                    "metric": "k_eff"
-                },
-                {
-                    "name": "power_density_max",
-                    "type": "max",
-                    "value": 200.0,
-                    "metric": "max_power_density",
-                    "units": "MW/m³"
-                }
-            ]
-        )
+        constraints = ConstraintSet(name="test_constraints")
+        constraints.add_constraint("k_eff_min", 1.0, "min", "", "Minimum k-eff")
+        constraints.add_constraint("k_eff_max", 1.2, "max", "", "Maximum k-eff")
+        constraints.add_constraint("power_density_max", 200.0, "max", "MW/m³", "Maximum power density")
         
         print(f"✅ Created constraint set: {constraints.name}")
         print(f"   Constraints: {len(constraints.constraints)}")
@@ -103,8 +83,8 @@ def test_validate_design(reactor, constraints):
         
         print(f"✅ Validation completed!")
         print(f"   Passed: {result.passed}")
-        print(f"   Errors: {result.error_count}")
-        print(f"   Warnings: {result.warning_count}")
+        print(f"   Errors: {len([v for v in result.violations if v.severity == 'error'])}")
+        print(f"   Warnings: {len(result.warnings)}")
         
         return True
     except Exception as e:
@@ -123,17 +103,8 @@ def test_constraint_violations(reactor):
     
     try:
         # Create constraints that will likely be violated
-        strict_constraints = ConstraintSet(
-            name="strict_constraints",
-            constraints=[
-                {
-                    "name": "k_eff_max",
-                    "type": "max",
-                    "value": 0.5,  # Very low, will likely fail
-                    "metric": "k_eff"
-                }
-            ]
-        )
+        strict_constraints = ConstraintSet(name="strict_constraints")
+        strict_constraints.add_constraint("k_eff_max", 0.5, "max", "", "Maximum k-eff (strict)")
         
         validator = DesignValidator(strict_constraints)
         
@@ -148,7 +119,7 @@ def test_constraint_violations(reactor):
         
         if not result.passed:
             print(f"✅ Correctly detected constraint violation!")
-            print(f"   Errors: {result.error_count}")
+            print(f"   Errors: {len([v for v in result.violations if v.severity == 'error'])}")
         else:
             print(f"⚠️  Expected violation but design passed")
         

@@ -24,7 +24,7 @@ def test_create_reactor():
     """Create reactor for conversion testing."""
     print("\n1. Creating reactor for conversion...")
     try:
-        reactor = smr.create_reactor(preset='valar-10')
+        reactor = smr.create_reactor('valar-10')
         
         # Save reactor to JSON for testing
         reactor_file = Path('test_reactor_for_conversion.json')

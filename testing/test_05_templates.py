@@ -26,7 +26,7 @@ def test_create_template_from_preset():
     try:
         template = ReactorTemplate.from_preset('valar-10')
         print(f"✅ Created template: {type(template)}")
-        print(f"   Template ID: {template.template_id}")
+        print(f"   Template Name: {template.name}")
         print(f"   Parameters: {list(template.parameters.keys())}")
         
         # Save template
@@ -51,7 +51,7 @@ def test_load_template(template_file):
     
     try:
         template = ReactorTemplate.load(template_file)
-        print(f"✅ Loaded template: {template.template_id}")
+        print(f"✅ Loaded template: {template.name}")
         return template
     except Exception as e:
         print(f"❌ Error: {e}")
@@ -129,11 +129,11 @@ def test_template_library():
         template = ReactorTemplate.from_preset('valar-10')
         
         # Add to library
-        library.add_template('test-template', template)
+        library.save_template(template)
         print(f"✅ Added template to library")
         
         # Get from library
-        retrieved = library.get_template('test-template')
+        retrieved = library.load_template(template.name)
         if retrieved is not None:
             print(f"✅ Retrieved template from library")
         

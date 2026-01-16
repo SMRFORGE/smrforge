@@ -47,7 +47,7 @@ def test_create_from_preset():
     """Test creating reactor from preset."""
     print("\n3. Testing create reactor from preset...")
     try:
-        reactor = smr.create_reactor(preset='valar-10')
+        reactor = smr.create_reactor('valar-10')
         print(f"✅ Created reactor: {type(reactor)}")
         
         # Save to file
@@ -99,7 +99,7 @@ def test_quick_keff():
     """Test quick k-eff calculation."""
     print("\n5. Testing quick k-eff calculation...")
     try:
-        reactor = smr.create_reactor(preset='valar-10')
+        reactor = smr.create_reactor('valar-10')
         keff = smr.quick_keff(reactor)
         print(f"✅ k-eff: {keff}")
         return True

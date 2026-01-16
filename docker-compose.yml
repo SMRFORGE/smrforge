@@ -71,9 +71,10 @@ services:
       # Dashboard will be available at http://localhost:8050 when running
     stdin_open: true
     tty: true
-    # Expose dashboard port (8050)
+    # Expose dashboard port (8050) and Jupyter port (8888)
     ports:
       - "8050:8050"
+      - "8888:8888"
     # Install dev dependencies on startup
     # - pytest-asyncio: Required for async test support (async edge case tests)
     # - ipython: Enhanced interactive shell for smrforge shell command

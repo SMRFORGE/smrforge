@@ -6,6 +6,7 @@ All features remain available via Python API and CLI.
 """
 
 import argparse
+import smrforge
 import json
 import sys
 import glob
@@ -2160,6 +2161,7 @@ Note: All features are also available via Python API:
     )
     
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+    parser.add_argument('--version', action='version', version=f'%(prog)s {smrforge.__version__}')
     
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
@@ -2456,16 +2458,17 @@ Note: All features are also available via Python API:
     template_validate_parser.add_argument('template', type=Path, help='Template file')
     template_validate_parser.set_defaults(func=template_validate)
     
-    # Validate subcommands
-    validate_parser = subparsers.add_parser(
-        'validate',
+    # validate design (add to existing validate_subparsers from line 2361)
+    # Note: validate_parser and validate_subparsers are already defined at line 2357-2361
+    validate_design_parser = validate_subparsers.add_parser(
+        'design',
         help='Validate reactor design against constraints'
     )
-    validate_parser.add_argument('--reactor', type=Path, help='Reactor file')
-    validate_parser.add_argument('--preset', type=str, help='Preset name')
-    validate_parser.add_argument('--constraints', type=Path, help='Constraint set file (JSON)')
-    validate_parser.add_argument('--output', type=Path, help='Output file for validation report')
-    validate_parser.set_defaults(func=validate_design)
+    validate_design_parser.add_argument('--reactor', type=Path, help='Reactor file')
+    validate_design_parser.add_argument('--preset', type=str, help='Preset name')
+    validate_design_parser.add_argument('--constraints', type=Path, help='Constraint set file (JSON)')
+    validate_design_parser.add_argument('--output', type=Path, help='Output file for validation report')
+    validate_design_parser.set_defaults(func=validate_design)
     
     # Config subcommands
     config_parser = subparsers.add_parser(

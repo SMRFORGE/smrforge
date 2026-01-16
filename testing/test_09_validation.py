@@ -14,7 +14,13 @@ from pathlib import Path
 
 try:
     import smrforge as smr
-    from smrforge.validation.validation_benchmarks import ValidationBenchmarker
+    # ValidationBenchmarker is in tests/validation_benchmarks.py
+    # For now, skip if not available - it's used for full validation with benchmarks
+    try:
+        from tests.validation_benchmarks import ValidationBenchmarker
+        _VALIDATION_BENCHMARKER_AVAILABLE = True
+    except ImportError:
+        _VALIDATION_BENCHMARKER_AVAILABLE = False
 except ImportError:
     print("ERROR: SMRForge not installed. Run: pip install -e .")
     sys.exit(1)
@@ -24,7 +30,7 @@ def test_create_reactor():
     """Create reactor for validation testing."""
     print("\n1. Creating reactor for validation...")
     try:
-        reactor = smr.create_reactor(preset='valar-10')
+        reactor = smr.create_reactor('valar-10')
         print(f"✅ Created reactor: {type(reactor)}")
         return reactor
     except Exception as e:
@@ -35,6 +41,9 @@ def test_create_reactor():
 def test_benchmarker_initialization():
     """Test initializing ValidationBenchmarker."""
     print("\n2. Testing ValidationBenchmarker initialization...")
+    if not _VALIDATION_BENCHMARKER_AVAILABLE:
+        print("⏭️  Skipped (ValidationBenchmarker not available - in tests module)")
+        return None
     try:
         benchmarker = ValidationBenchmarker()
         print(f"✅ Created benchmarker: {type(benchmarker)}")

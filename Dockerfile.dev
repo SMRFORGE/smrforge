@@ -17,7 +17,7 @@
 # - Enhanced Design Comparison & Trade Studies (smrforge reactor compare) - multi-design comparison with metrics
 # - Added Template Library System (smrforge reactor template) - parameterized reactor design templates
 # - Added Simulation Checkpointing & Resume - automatic checkpointing for long burnup simulations
-# - Added Design Constraints & Validation (smrforge validate) - automated constraint checking
+# - Added Design Constraints & Validation (smrforge validate design) - automated constraint checking
 # - Added I/O Converters Framework - Serpent/OpenMC format support (framework ready)
 # - Added Dash web dashboard with dark/gray mode support
 # - Added CLI command (smrforge serve) for dashboard
@@ -138,8 +138,8 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge reactor template create/modify/validate (template library)
 #   smrforge data setup/download/validate
 #   smrforge burnup run/visualize (with checkpointing support)
-#   smrforge validate run (validation framework)
-#   smrforge validate (design constraints validation)
+#   smrforge validate run (validation framework - run validation tests)
+#   smrforge validate design (design constraints validation)
 #   smrforge visualize geometry/flux
 #   smrforge config show/set/init
 #   smrforge shell (interactive IPython/REPL)
@@ -156,7 +156,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - Enhanced Design Comparison (smrforge reactor compare)
 #   - Template Library System (smrforge reactor template)
 #   - Simulation Checkpointing & Resume
-#   - Design Constraints & Validation (smrforge validate)
+#   - Design Constraints & Validation (smrforge validate design)
 #   - I/O Converters Framework (Serpent/OpenMC)
 #   - Validation framework with benchmark comparison
 #   - LWR SMR transient analysis (PWR/BWR/Integral SMR)
