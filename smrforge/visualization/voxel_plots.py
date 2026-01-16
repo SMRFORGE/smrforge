@@ -159,11 +159,19 @@ def _plot_voxel_plotly(voxel_grid, color_by, data, field_name, colors, backgroun
         else:
             # Default material colors
             unique_materials = np.unique(material_ids)
-            color_map = {mat: f"hsl({i*360/len(unique_materials)}, 70%, 50%)" 
+            # Convert numpy scalars to Python ints for dictionary keys
+            color_map = {int(mat): f"hsl({i*360/len(unique_materials)}, 70%, 50%)" 
                         for i, mat in enumerate(unique_materials)}
         
-        colors_array = np.array([[color_map.get(mat, "gray") for mat in row] 
-                                for row in material_ids])
+        # Convert material_ids to integers and create color array
+        # Use numpy operations to avoid list comprehension with numpy arrays
+        material_ids_int = material_ids.astype(int)
+        colors_array = np.empty_like(material_ids, dtype=object)
+        
+        # Fill color array using vectorized operations where possible
+        for mat_id in np.unique(material_ids_int):
+            mask = material_ids_int == mat_id
+            colors_array[mask] = color_map.get(int(mat_id), "gray")
     else:
         colors_array = material_ids  # Use material IDs as colors
     

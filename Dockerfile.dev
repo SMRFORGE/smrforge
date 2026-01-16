@@ -181,16 +181,20 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   pytest --cov=smrforge --cov-report=html  # Coverage report
 #
 # Running Manual Tests:
+#   # First, generate test data files (required for some tests):
+#   python testing/generate_test_data.py  # Generate burnup, flux, sweep, and checkpoint data
+#   # This creates: burnup_results.json, flux_results.json, sweep_results.json, checkpoints/checkpoint_5.0.h5
+#   
 #   python testing/test_01_cli_commands.py  # Test CLI commands
 #   python testing/test_02_reactor_creation.py  # Test reactor creation/analysis
-#   python testing/test_03_burnup.py  # Test burnup calculations
-#   python testing/test_04_parameter_sweep.py  # Test parameter sweep
+#   python testing/test_03_burnup.py  # Test burnup calculations (uses generated burnup_results.json)
+#   python testing/test_04_parameter_sweep.py  # Test parameter sweep (uses generated sweep_results.json)
 #   python testing/test_05_templates.py  # Test template library
 #   python testing/test_06_constraints.py  # Test design constraints
 #   python testing/test_07_io_converters.py  # Test I/O converters
 #   python testing/test_08_data_management.py  # Test data management
 #   python testing/test_09_validation.py  # Test validation framework
-#   python testing/test_10_visualization.py  # Test visualization
+#   python testing/test_10_visualization.py  # Test visualization (uses generated burnup_results.json and flux_results.json)
 #   python testing/test_11_workflows.py  # Test workflow scripts
 #   python testing/test_12_config.py  # Test configuration
 #   python testing/test_13_advanced.py  # Test advanced features

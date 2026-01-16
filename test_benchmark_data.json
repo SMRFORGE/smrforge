@@ -1,0 +1,11 @@
+{
+  "description": "Mock benchmark data for validation testing",
+  "benchmarks": {
+    "test_benchmark": {
+      "k_eff": 1.05,
+      "uncertainty": 0.001,
+      "source": "Mock benchmark",
+      "description": "Test benchmark for validation testing"
+    }
+  }
+}

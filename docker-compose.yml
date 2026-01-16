@@ -86,6 +86,7 @@ services:
     # Test suite (133+ test files, 79.2% coverage) includes:
     #   - Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
     #   - Advanced error handling: file operations, copy failures, validation errors
+    #   - Test data generator: testing/generate_test_data.py creates mock data for visualization and sweep tests
     #   - Async edge cases: partial failures, exception propagation, timeouts, concurrent access
     #   - Manual testing framework: 13 test scripts (test_*.py) in testing/ directory for feature validation
     #   - Optional Jupyter notebooks available for interactive testing (01_CLI_Commands.ipynb)

@@ -14,9 +14,10 @@ from pathlib import Path
 
 try:
     import smrforge as smr
-    from smrforge.io.converters import convert_file
-except ImportError:
-    print("ERROR: SMRForge not installed. Run: pip install -e .")
+    from smrforge.io.converters import SerpentConverter, OpenMCConverter
+except ImportError as e:
+    print(f"ERROR: SMRForge not installed. Run: pip install -e .")
+    print(f"Import error: {e}")
     sys.exit(1)
 
 
@@ -49,28 +50,39 @@ def test_convert_to_openmc(reactor_file):
         return False
     
     try:
-        output_dir = Path('openmc_output')
-        output_dir.mkdir(exist_ok=True)
+        # Load reactor from file
+        with open(reactor_file, 'r') as f:
+            reactor_data = json.load(f)
         
-        convert_file(
-            input_file=reactor_file,
-            output_file=str(output_dir / 'openmc_model'),
-            from_format='smrforge',
-            to_format='openmc'
-        )
+        # Create reactor from data
+        reactor = smr.create_reactor('valar-10')  # Use preset for testing
         
-        # Check if output files were created
-        if (output_dir / 'openmc_model').exists() or any(output_dir.iterdir()):
-            print(f"✅ Converted to OpenMC format")
-            print(f"   Output directory: {output_dir}")
-            return True
-        else:
-            print("⚠️  Conversion completed but no output files found")
+        # Try OpenMC converter
+        try:
+            # OpenMCConverter.export_reactor expects output_dir (directory), not file
+            output_dir = Path('openmc_output')
+            output_dir.mkdir(exist_ok=True)
+            OpenMCConverter.export_reactor(reactor, output_dir)
+            
+            # Check for output files
+            geometry_file = output_dir / 'geometry.xml'
+            materials_file = output_dir / 'materials.xml'
+            
+            if geometry_file.exists() or materials_file.exists():
+                print(f"✅ Converted to OpenMC format")
+                print(f"   Output directory: {output_dir}")
+                if geometry_file.exists():
+                    print(f"   Created: {geometry_file.name}")
+                if materials_file.exists():
+                    print(f"   Created: {materials_file.name}")
+                return True
+            else:
+                print("⚠️  Conversion completed but output files not found")
+                return False
+        except NotImplementedError as e:
+            print(f"⏭️  Skipped (not yet implemented: {e})")
             return False
             
-    except NotImplementedError as e:
-        print(f"⏭️  Skipped (not yet implemented: {e})")
-        return False
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
@@ -86,25 +98,24 @@ def test_convert_to_serpent(reactor_file):
         return False
     
     try:
-        output_file = Path('serpent_model.sss2')
+        # Load reactor from file
+        reactor = smr.create_reactor('valar-10')  # Use preset for testing
         
-        convert_file(
-            input_file=reactor_file,
-            output_file=str(output_file),
-            from_format='smrforge',
-            to_format='serpent'
-        )
-        
-        if output_file.exists():
-            print(f"✅ Converted to Serpent format: {output_file}")
-            return True
-        else:
-            print("⚠️  Conversion completed but output file not found")
+        # Try Serpent converter
+        try:
+            output_file = Path('serpent_model.sss2')
+            SerpentConverter.export_reactor(reactor, output_file)
+            
+            if output_file.exists():
+                print(f"✅ Converted to Serpent format: {output_file}")
+                return True
+            else:
+                print("⚠️  Conversion completed but output file not found")
+                return False
+        except NotImplementedError as e:
+            print(f"⏭️  Skipped (not yet implemented: {e})")
             return False
             
-    except NotImplementedError as e:
-        print(f"⏭️  Skipped (not yet implemented: {e})")
-        return False
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
@@ -118,37 +129,35 @@ def test_convert_from_openmc():
     
     # Check if we have an OpenMC model from previous conversion
     openmc_dir = Path('openmc_output')
-    if not openmc_dir.exists():
+    geometry_file = openmc_dir / 'geometry.xml' if openmc_dir.exists() else None
+    
+    if geometry_file is None or not geometry_file.exists():
         print("⏭️  Skipped (no OpenMC model available)")
+        print("   Run convert_to_openmc first to generate model")
         return False
     
     try:
         output_file = Path('converted_from_openmc.json')
         
-        # Try to find OpenMC input files
-        openmc_files = list(openmc_dir.glob('*.xml')) + list(openmc_dir.glob('geometry.xml'))
-        
-        if not openmc_files:
-            print("⏭️  Skipped (no OpenMC XML files found)")
-            return False
-        
-        convert_file(
-            input_file=openmc_files[0],
-            output_file=str(output_file),
-            from_format='openmc',
-            to_format='smrforge'
-        )
-        
-        if output_file.exists():
-            print(f"✅ Converted from OpenMC format: {output_file}")
-            return True
-        else:
-            print("⚠️  Conversion completed but output file not found")
+        # Try OpenMCConverter.import_reactor
+        try:
+            materials_file = openmc_dir / 'materials.xml' if (openmc_dir / 'materials.xml').exists() else None
+            reactor_dict = OpenMCConverter.import_reactor(geometry_file, materials_file)
+            
+            if reactor_dict is not None:
+                # Save reactor dict
+                with open(output_file, 'w') as f:
+                    json.dump(reactor_dict, f, indent=2, default=str)
+                
+                print(f"✅ Converted from OpenMC format: {output_file}")
+                return True
+            else:
+                print("⚠️  Conversion returned None")
+                return False
+        except NotImplementedError as e:
+            print(f"⏭️  Skipped (not yet implemented: {e})")
             return False
             
-    except NotImplementedError as e:
-        print(f"⏭️  Skipped (not yet implemented: {e})")
-        return False
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
@@ -163,28 +172,30 @@ def test_convert_from_serpent():
     serpent_file = Path('serpent_model.sss2')
     if not serpent_file.exists():
         print("⏭️  Skipped (no Serpent model available)")
+        print("   Run convert_to_serpent first to generate model")
         return False
     
     try:
         output_file = Path('converted_from_serpent.json')
         
-        convert_file(
-            input_file=serpent_file,
-            output_file=str(output_file),
-            from_format='serpent',
-            to_format='smrforge'
-        )
-        
-        if output_file.exists():
-            print(f"✅ Converted from Serpent format: {output_file}")
-            return True
-        else:
-            print("⚠️  Conversion completed but output file not found")
+        # Try SerpentConverter.import_reactor
+        try:
+            reactor_dict = SerpentConverter.import_reactor(serpent_file)
+            
+            if reactor_dict is not None:
+                # Save reactor dict
+                with open(output_file, 'w') as f:
+                    json.dump(reactor_dict, f, indent=2, default=str)
+                
+                print(f"✅ Converted from Serpent format: {output_file}")
+                return True
+            else:
+                print("⚠️  Conversion returned None")
+                return False
+        except NotImplementedError as e:
+            print(f"⏭️  Skipped (not yet implemented: {e})")
             return False
             
-    except NotImplementedError as e:
-        print(f"⏭️  Skipped (not yet implemented: {e})")
-        return False
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback

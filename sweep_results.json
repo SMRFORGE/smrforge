@@ -1,0 +1,139 @@
+{
+  "config": {
+    "parameters": {
+      "enrichment": [
+        0.1,
+        0.15,
+        0.2,
+        0.25
+      ],
+      "power_mw": [
+        50,
+        75,
+        100
+      ]
+    },
+    "analysis_types": [
+      "keff"
+    ],
+    "reactor_template": {
+      "name": "valar-10"
+    },
+    "output_dir": "sweep_results",
+    "parallel": false,
+    "max_workers": null,
+    "save_intermediate": true
+  },
+  "results": [
+    {
+      "enrichment": 0.1,
+      "power_mw": 50.0,
+      "k_eff": 0.8778171907043926,
+      "success": true,
+      "case_id": 1
+    },
+    {
+      "enrichment": 0.1,
+      "power_mw": 75.0,
+      "k_eff": 0.9012149027975027,
+      "success": true,
+      "case_id": 2
+    },
+    {
+      "enrichment": 0.1,
+      "power_mw": 100.0,
+      "k_eff": 0.9265031974133721,
+      "success": true,
+      "case_id": 3
+    },
+    {
+      "enrichment": 0.15,
+      "power_mw": 50.0,
+      "k_eff": 0.977354348419338,
+      "success": true,
+      "case_id": 4
+    },
+    {
+      "enrichment": 0.15,
+      "power_mw": 75.0,
+      "k_eff": 0.9975051055100486,
+      "success": true,
+      "case_id": 5
+    },
+    {
+      "enrichment": 0.15,
+      "power_mw": 100.0,
+      "k_eff": 1.0154926985683776,
+      "success": true,
+      "case_id": 6
+    },
+    {
+      "enrichment": 0.2,
+      "power_mw": 50.0,
+      "k_eff": 1.067385735363985,
+      "success": true,
+      "case_id": 7
+    },
+    {
+      "enrichment": 0.2,
+      "power_mw": 75.0,
+      "k_eff": 1.1153704029382714,
+      "success": true,
+      "case_id": 8
+    },
+    {
+      "enrichment": 0.2,
+      "power_mw": 100.0,
+      "k_eff": 1.1366377205854425,
+      "success": true,
+      "case_id": 9
+    },
+    {
+      "enrichment": 0.25,
+      "power_mw": 50.0,
+      "k_eff": 1.1587986615766614,
+      "success": true,
+      "case_id": 10
+    },
+    {
+      "enrichment": 0.25,
+      "power_mw": 75.0,
+      "k_eff": 1.1950488809007347,
+      "success": true,
+      "case_id": 11
+    },
+    {
+      "enrichment": 0.25,
+      "power_mw": 100.0,
+      "k_eff": 1.2262249699536611,
+      "success": true,
+      "case_id": 12
+    }
+  ],
+  "failed_cases": [],
+  "summary_stats": {
+    "total_cases": 12,
+    "successful_cases": 12,
+    "failed_cases": 0,
+    "k_eff": {
+      "mean": 1.0496128178943156,
+      "std": 0.1126464452162491,
+      "min": 0.8778171907043926,
+      "max": 1.2262249699536611
+    },
+    "enrichment": {
+      "mean": 0.17499999999999996,
+      "range": [
+        0.1,
+        0.25
+      ]
+    },
+    "power_mw": {
+      "mean": 75.0,
+      "range": [
+        50.0,
+        100.0
+      ]
+    }
+  }
+}
