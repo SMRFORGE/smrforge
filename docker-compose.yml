@@ -91,6 +91,8 @@ services:
     #   - Manual testing framework: 13 test scripts (test_*.py) in testing/ directory for feature validation
     #   - Optional Jupyter notebooks available for interactive testing (01_CLI_Commands.ipynb)
     #   - Quick start validation guide: docs/validation/QUICK_START_VALIDATION.md for ENDF validation testing
+    #   - API Style Guide: docs/guides/API_STYLE_GUIDE.md (comprehensive API design guidelines)
+    #   - API Consistency Report: docs/status/API_CONSISTENCY_REPORT.md (detailed API analysis)
     # Optional: Add mesh conversion and CAD import: pip install meshio trimesh
     # Optional: Add parquet support: pip install pyarrow or fastparquet
     command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio ipython h5py && bash"
