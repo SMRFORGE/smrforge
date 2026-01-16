@@ -202,5 +202,11 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   # Notebooks are optional - Python scripts (test_*.py) are the primary testing method
 #   # See docs/testing/MANUAL_TESTING_CHECKLIST.md for complete guide
 #   # See docs/validation/QUICK_START_VALIDATION.md for ENDF validation testing
+#
+# API Documentation:
+#   - API Style Guide: docs/guides/API_STYLE_GUIDE.md (comprehensive API design guidelines)
+#   - API Consistency Report: docs/status/API_CONSISTENCY_REPORT.md (detailed API analysis)
+#   - All functions document units clearly (power_mw -> watts, time_steps -> days)
+#   - Dual API patterns documented (visualization, nuclear data access)
 CMD ["/bin/bash"]
 
