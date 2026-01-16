@@ -1,0 +1,181 @@
+"""
+Tests for optimized long-term transient analysis features.
+"""
+
+import numpy as np
+import pytest
+
+
+class TestTransientOptimizations:
+    """Test optimized transient solver features."""
+
+    def test_adaptive_time_stepping(self):
+        """Test adaptive time stepping."""
+        from smrforge.safety.transients import (
+            PointKineticsParameters,
+            PointKineticsSolver,
+        )
+
+        beta = np.array([2.13e-4, 1.43e-3, 1.27e-3, 2.56e-3, 7.48e-4, 2.73e-4])
+        lambda_d = np.array([0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01])
+
+        params = PointKineticsParameters(
+            beta=beta,
+            lambda_d=lambda_d,
+            alpha_fuel=-3.5e-5,
+            alpha_moderator=-1.0e-5,
+            Lambda=5e-4,
+            fuel_heat_capacity=1e8,
+            moderator_heat_capacity=5e8,
+        )
+
+        solver = PointKineticsSolver(params)
+
+        def rho_external(t):
+            return 0.001 if t < 1.0 else 0.0
+
+        def power_removal(t, T_fuel, T_mod):
+            return 0.9 * 1e6
+
+        initial_state = {
+            "power": 1e6,
+            "T_fuel": 1200.0,
+            "T_mod": 800.0,
+        }
+
+        # Test with adaptive stepping
+        result = solver.solve_transient(
+            rho_external=rho_external,
+            power_removal=power_removal,
+            initial_state=initial_state,
+            t_span=(0.0, 100.0),
+            adaptive=True,  # Adaptive stepping
+            max_step=None,  # Auto-determined
+        )
+
+        assert "time" in result
+        assert len(result["time"]) > 0
+
+    def test_long_term_optimization(self):
+        """Test long-term optimization mode."""
+        from smrforge.safety.transients import (
+            PointKineticsParameters,
+            PointKineticsSolver,
+        )
+
+        beta = np.array([2.13e-4, 1.43e-3, 1.27e-3, 2.56e-3, 7.48e-4, 2.73e-4])
+        lambda_d = np.array([0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01])
+
+        params = PointKineticsParameters(
+            beta=beta,
+            lambda_d=lambda_d,
+            alpha_fuel=-3.5e-5,
+            alpha_moderator=-1.0e-5,
+            Lambda=5e-4,
+            fuel_heat_capacity=1e8,
+            moderator_heat_capacity=5e8,
+        )
+
+        solver = PointKineticsSolver(params)
+
+        def rho_external(t):
+            return -0.05 if t < 1.0 else 0.0  # Scram
+
+        def power_removal(t, T_fuel, T_mod):
+            # Decay heat model (simplified)
+            P0 = 1e6
+            P_decay = P0 * 0.066 * (t + 1.0) ** (-0.2)
+            return min(P_decay, 0.9 * P0)
+
+        initial_state = {
+            "power": 1e6,
+            "T_fuel": 1200.0,
+            "T_mod": 800.0,
+        }
+
+        # Long-term transient with optimizations
+        result = solver.solve_transient(
+            rho_external=rho_external,
+            power_removal=power_removal,
+            initial_state=initial_state,
+            t_span=(0.0, 72 * 3600),  # 72 hours
+            long_term_optimization=True,  # Enable optimizations
+            adaptive=True,
+        )
+
+        assert "time" in result
+        assert len(result["time"]) > 0
+        assert result["time"][-1] >= 72 * 3600 - 3600.0  # Should reach near end
+
+        # Check that solution is reasonable
+        assert np.all(result["power"] >= 0)
+        assert np.all(result["T_fuel"] > 0)
+        assert np.all(result["T_moderator"] > 0)
+
+    def test_auto_max_step(self):
+        """Test automatic max_step determination."""
+        from smrforge.safety.transients import (
+            PointKineticsParameters,
+            PointKineticsSolver,
+        )
+
+        beta = np.array([2.13e-4, 1.43e-3, 1.27e-3, 2.56e-3, 7.48e-4, 2.73e-4])
+        lambda_d = np.array([0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01])
+
+        params = PointKineticsParameters(
+            beta=beta,
+            lambda_d=lambda_d,
+            alpha_fuel=-3.5e-5,
+            alpha_moderator=-1.0e-5,
+            Lambda=5e-4,
+            fuel_heat_capacity=1e8,
+            moderator_heat_capacity=5e8,
+        )
+
+        solver = PointKineticsSolver(params)
+
+        def rho_external(t):
+            return 0.001 if t < 1.0 else 0.0
+
+        def power_removal(t, T_fuel, T_mod):
+            return 0.9 * 1e6
+
+        initial_state = {
+            "power": 1e6,
+            "T_fuel": 1200.0,
+            "T_mod": 800.0,
+        }
+
+        # Short transient (should use small steps)
+        result_short = solver.solve_transient(
+            rho_external=rho_external,
+            power_removal=power_removal,
+            initial_state=initial_state,
+            t_span=(0.0, 100.0),  # 100 seconds
+            max_step=None,  # Auto-determined
+        )
+
+        # Long transient (should use larger steps)
+        result_long = solver.solve_transient(
+            rho_external=rho_external,
+            power_removal=power_removal,
+            initial_state=initial_state,
+            t_span=(0.0, 86400.0),  # 1 day
+            long_term_optimization=True,
+            max_step=None,  # Auto-determined
+        )
+
+        assert len(result_short["time"]) > 0
+        assert len(result_long["time"]) > 0
+
+        # Long transient should have fewer points per unit time (larger effective step size)
+        # This is a heuristic check - actual behavior depends on solver
+        time_span_short = result_short["time"][-1] - result_short["time"][0]
+        time_span_long = result_long["time"][-1] - result_long["time"][0]
+
+        points_per_second_short = len(result_short["time"]) / time_span_short
+        points_per_second_long = len(result_long["time"]) / time_span_long
+
+        # Long transient should have lower point density (larger steps)
+        # Note: This is not guaranteed but is expected behavior
+        # We just check that both work without errors

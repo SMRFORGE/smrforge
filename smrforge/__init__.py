@@ -185,6 +185,16 @@ if _CONVENIENCE_UTILS_AVAILABLE:
         ]
     )
 
+# Add transient convenience functions if available
+if _TRANSIENT_CONVENIENCE_AVAILABLE:
+    __all__.extend(
+        [
+            "quick_transient",
+            "reactivity_insertion",
+            "decay_heat_removal",
+        ]
+    )
+
 # Decay heat and gamma transport (always available)
 try:
     from smrforge.decay_heat import DecayHeatCalculator, DecayHeatResult

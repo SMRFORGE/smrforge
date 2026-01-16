@@ -360,7 +360,9 @@ class PointKineticsSolver:
         power_removal: Callable[[float, float, float], float],
         initial_state: Dict,
         t_span: Tuple[float, float],
-        max_step: float = 0.1,
+        max_step: Optional[float] = None,
+        adaptive: bool = True,
+        long_term_optimization: bool = False,
     ) -> Dict:
         """
         Solve point kinetics equations with temperature feedback.
@@ -384,7 +386,11 @@ class PointKineticsSolver:
                 - "precursors" (optional): Initial delayed neutron precursor concentrations
                   as numpy array. If not provided, computed from steady-state balance.
             t_span: Tuple (t_start, t_end) defining simulation time span in seconds.
-            max_step: Maximum time step for ODE integrator in seconds (default: 0.1).
+            max_step: Maximum time step for ODE integrator in seconds (default: None for adaptive).
+                If None and long_term_optimization is True, uses adaptive stepping based on time scale.
+            adaptive: Use adaptive time stepping for efficiency (default: True).
+            long_term_optimization: Optimize for long transients (>1 day) with larger time steps
+                and decay heat approximations (default: False).
 
         Returns:
             Dictionary containing time history with keys:
@@ -458,6 +464,16 @@ class PointKineticsSolver:
         if t_span[1] <= t_span[0]:
             raise ValueError(f"t_span[1] must be > t_span[0], got {t_span}")
 
+        # Set default max_step based on time span and optimization mode
+        total_time = t_span[1] - t_span[0]
+        if max_step is None:
+            if long_term_optimization and total_time > 86400:  # > 1 day
+                # For long transients, use adaptive stepping with larger initial step
+                max_step = min(3600.0, 0.01 * total_time)  # 1 hour or 1% of span
+            else:
+                # For short transients, use smaller steps
+                max_step = min(0.1, 0.001 * total_time)  # 0.1s or 0.1% of span
+        
         if max_step <= 0:
             raise ValueError(f"max_step must be > 0, got {max_step}")
 
@@ -513,17 +529,61 @@ class PointKineticsSolver:
             return np.concatenate([[dP_dt, dT_fuel_dt, dT_mod_dt], dC_dt])
 
         # Solve stiff ODE system
+        # For long transients, use adaptive stepping with relaxed tolerances
+        if long_term_optimization and total_time > 86400:  # > 1 day
+            # Relaxed tolerances for long transients (decay heat is slowly varying)
+            rtol = 1e-5
+            atol = 1e-7
+            # Use adaptive stepping (dense_output allows interpolation)
+            adaptive_stepping = True
+        else:
+            # Standard tolerances for short transients
+            rtol = 1e-6
+            atol = 1e-8
+            adaptive_stepping = adaptive
+
         try:
-            sol = solve_ivp(
-                derivatives,
-                t_span,
-                y0,
-                method="BDF",  # Backward differentiation (good for stiff)
-                max_step=max_step,
-                dense_output=True,
-                rtol=1e-6,
-                atol=1e-8,
-            )
+            if adaptive_stepping:
+                # Adaptive time stepping (more efficient for long transients)
+                sol = solve_ivp(
+                    derivatives,
+                    t_span,
+                    y0,
+                    method="BDF",  # Backward differentiation (good for stiff)
+                    max_step=max_step,
+                    dense_output=True,
+                    rtol=rtol,
+                    atol=atol,
+                )
+            else:
+                # Fixed time steps (for short, fast transients)
+                t_eval = np.arange(t_span[0], t_span[1], max_step)
+                if len(t_eval) > 100000:  # Limit number of evaluation points
+                    # For very long fixed-step runs, use adaptive instead
+                    logger.warning(
+                        f"Too many fixed time steps ({len(t_eval)}). "
+                        f"Switching to adaptive stepping."
+                    )
+                    sol = solve_ivp(
+                        derivatives,
+                        t_span,
+                        y0,
+                        method="BDF",
+                        max_step=max_step,
+                        dense_output=True,
+                        rtol=rtol,
+                        atol=atol,
+                    )
+                else:
+                    sol = solve_ivp(
+                        derivatives,
+                        t_span,
+                        y0,
+                        t_eval=t_eval,
+                        method="BDF",
+                        rtol=rtol,
+                        atol=atol,
+                    )
         except ValueError as e:
             # Re-raise with more context
             if "max_step" in str(e):

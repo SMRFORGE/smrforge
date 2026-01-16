@@ -2054,6 +2054,214 @@ def template_validate(args):
         sys.exit(1)
 
 
+def transient_run(args):
+    """Run transient analysis using simplified API."""
+    try:
+        from smrforge.convenience.transients import quick_transient
+        
+        kwargs = {
+            "power": args.power,
+            "temperature": args.temperature,
+            "transient_type": args.type,
+            "duration": args.duration,
+            "scram_available": args.scram_available,
+            "scram_delay": args.scram_delay,
+        }
+        
+        if args.reactivity is not None:
+            kwargs["reactivity_insertion"] = args.reactivity
+        
+        if args.long_term:
+            kwargs["long_term_optimization"] = True
+        
+        _print_info(f"Running {args.type} transient analysis...")
+        _print_info(f"  Power: {args.power/1e6:.2f} MWth")
+        _print_info(f"  Temperature: {args.temperature:.1f} K")
+        _print_info(f"  Duration: {args.duration:.1f} s")
+        
+        result = quick_transient(**kwargs)
+        
+        _print_success("Transient analysis complete")
+        
+        # Print summary
+        peak_power = np.max(result["power"])
+        final_power = result["power"][-1]
+        peak_temp = np.max(result["T_fuel"])
+        final_temp = result["T_fuel"][-1]
+        
+        if _RICH_AVAILABLE:
+            table = Table(title="Transient Results Summary")
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="magenta")
+            table.add_row("Peak Power", f"{peak_power/1e6:.2f} MW")
+            table.add_row("Final Power", f"{final_power/1e6:.2f} MW")
+            table.add_row("Peak Temperature", f"{peak_temp:.1f} K ({peak_temp-273:.1f}°C)")
+            table.add_row("Final Temperature", f"{final_temp:.1f} K ({final_temp-273:.1f}°C)")
+            console.print(table)
+        else:
+            print("\nTransient Results Summary:")
+            print(f"  Peak Power: {peak_power/1e6:.2f} MW")
+            print(f"  Final Power: {final_power/1e6:.2f} MW")
+            print(f"  Peak Temperature: {peak_temp:.1f} K ({peak_temp-273:.1f}°C)")
+            print(f"  Final Temperature: {final_temp:.1f} K ({final_temp-273:.1f}°C)")
+        
+        # Save results if output specified
+        if args.output:
+            output_data = {
+                "transient_type": args.type,
+                "time": result["time"].tolist(),
+                "power": result["power"].tolist(),
+                "T_fuel": result["T_fuel"].tolist(),
+                "T_moderator": result["T_moderator"].tolist(),
+                "reactivity": result.get("reactivity", result.get("rho_external", [])).tolist() if isinstance(result.get("reactivity"), np.ndarray) else None,
+            }
+            
+            with open(args.output, 'w') as f:
+                json.dump(output_data, f, indent=2)
+            _print_success(f"Results saved to {args.output}")
+        
+    except Exception as e:
+        _print_error(f"Transient analysis failed: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def thermal_lumped(args):
+    """Run lumped-parameter thermal-hydraulics analysis."""
+    try:
+        from smrforge.thermal.lumped import (
+            LumpedThermalHydraulics,
+            ThermalLump,
+            ThermalResistance,
+        )
+        
+        if args.config:
+            # Load configuration from file
+            if not args.config.exists():
+                _print_error(f"Config file not found: {args.config}")
+                sys.exit(1)
+            
+            if args.config.suffix in ['.yaml', '.yml']:
+                if not _YAML_AVAILABLE:
+                    _print_error("YAML support not available. Install PyYAML: pip install pyyaml")
+                    sys.exit(1)
+                with open(args.config) as f:
+                    config = yaml.safe_load(f)
+            else:
+                with open(args.config) as f:
+                    config = json.load(f)
+            
+            # Build lumps and resistances from config
+            lumps = {}
+            for lump_config in config.get("lumps", []):
+                # Parse heat source function (simplified: constant or lambda expression)
+                heat_source_str = lump_config.get("heat_source", "lambda t: 0.0")
+                if isinstance(heat_source_str, str):
+                    heat_source = eval(heat_source_str)
+                else:
+                    heat_source = lambda t: heat_source_str
+                
+                lump = ThermalLump(
+                    name=lump_config["name"],
+                    capacitance=lump_config["capacitance"],
+                    temperature=lump_config["temperature"],
+                    heat_source=heat_source,
+                )
+                lumps[lump.name] = lump
+            
+            resistances = []
+            for res_config in config.get("resistances", []):
+                resistance = ThermalResistance(
+                    name=res_config["name"],
+                    resistance=res_config["resistance"],
+                    lump1_name=res_config["lump1_name"],
+                    lump2_name=res_config["lump2_name"],
+                )
+                resistances.append(resistance)
+            
+            ambient_temp = config.get("ambient_temperature", 300.0)
+        else:
+            # Use default 2-lump system (fuel + moderator)
+            _print_info("Using default 2-lump system (fuel + moderator)")
+            
+            fuel = ThermalLump(
+                name="fuel",
+                capacitance=1e8,  # J/K
+                temperature=1200.0,  # K
+                heat_source=lambda t: 1e6 if t < 10 else 0.1e6  # Decay heat
+            )
+            
+            moderator = ThermalLump(
+                name="moderator",
+                capacitance=5e8,  # J/K
+                temperature=800.0,  # K
+                heat_source=lambda t: 0.0
+            )
+            
+            resistance = ThermalResistance(
+                name="fuel_to_moderator",
+                resistance=1e-6,  # K/W
+                lump1_name="fuel",
+                lump2_name="moderator"
+            )
+            
+            lumps = {"fuel": fuel, "moderator": moderator}
+            resistances = [resistance]
+            ambient_temp = 300.0
+        
+        solver = LumpedThermalHydraulics(
+            lumps=lumps,
+            resistances=resistances,
+            ambient_temperature=ambient_temp
+        )
+        
+        _print_info(f"Running lumped-parameter thermal-hydraulics analysis...")
+        _print_info(f"  Duration: {args.duration:.1f} s")
+        _print_info(f"  Lumps: {len(lumps)}")
+        _print_info(f"  Resistances: {len(resistances)}")
+        
+        result = solver.solve_transient(
+            t_span=(0.0, args.duration),
+            max_step=args.max_step,
+            adaptive=args.adaptive,
+        )
+        
+        _print_success("Thermal-hydraulics analysis complete")
+        
+        # Print summary
+        for lump_name in lumps.keys():
+            T_key = f"T_{lump_name}"
+            if T_key in result:
+                T_final = result[T_key][-1]
+                T_initial = result[T_key][0]
+                if _RICH_AVAILABLE:
+                    console.print(f"  {lump_name.capitalize()}: {T_initial:.1f} → {T_final:.1f} K")
+                else:
+                    print(f"  {lump_name.capitalize()}: {T_initial:.1f} → {T_final:.1f} K")
+        
+        # Save results if output specified
+        if args.output:
+            output_data = {
+                "time": result["time"].tolist(),
+            }
+            for key, value in result.items():
+                if key != "time":
+                    output_data[key] = value.tolist()
+            
+            with open(args.output, 'w') as f:
+                json.dump(output_data, f, indent=2)
+            _print_success(f"Results saved to {args.output}")
+        
+    except Exception as e:
+        _print_error(f"Thermal-hydraulics analysis failed: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def validate_design(args):
     """Validate reactor design against constraints."""
     try:
@@ -2502,6 +2710,49 @@ Note: All features are also available via Python API:
     config_init_parser.add_argument('--template', type=str, choices=['default', 'production', 'development'], default='default', help='Configuration template')
     config_init_parser.add_argument('--force', action='store_true', help='Overwrite existing configuration file')
     config_init_parser.set_defaults(func=config_init)
+    
+    # Transient subcommands (NEW)
+    transient_parser = subparsers.add_parser(
+        'transient',
+        help='Transient analysis operations'
+    )
+    transient_subparsers = transient_parser.add_subparsers(dest='transient_command', help='Transient commands')
+    
+    # transient run
+    transient_run_parser = transient_subparsers.add_parser(
+        'run',
+        help='Run transient analysis'
+    )
+    transient_run_parser.add_argument('--power', type=float, required=True, help='Initial reactor power [W]')
+    transient_run_parser.add_argument('--temperature', type=float, required=True, help='Initial temperature [K]')
+    transient_run_parser.add_argument('--type', type=str, choices=['reactivity_insertion', 'reactivity_step', 'power_change', 'decay_heat'], 
+                                     default='reactivity_insertion', help='Transient type')
+    transient_run_parser.add_argument('--reactivity', type=float, help='Reactivity inserted [dk/k] (for reactivity_insertion/step)')
+    transient_run_parser.add_argument('--duration', type=float, default=100.0, help='Simulation duration [s]')
+    transient_run_parser.add_argument('--scram-available', action='store_true', dest='scram_available', default=True, help='Scram available (default: True)')
+    transient_run_parser.add_argument('--scram-delay', type=float, default=1.0, dest='scram_delay', help='Scram delay [s]')
+    transient_run_parser.add_argument('--long-term', action='store_true', dest='long_term', help='Enable long-term optimizations (>1 day)')
+    transient_run_parser.add_argument('--output', type=Path, help='Output file for results (JSON)')
+    transient_run_parser.set_defaults(func=transient_run)
+    
+    # Thermal subcommands (NEW)
+    thermal_parser = subparsers.add_parser(
+        'thermal',
+        help='Thermal-hydraulics operations'
+    )
+    thermal_subparsers = thermal_parser.add_subparsers(dest='thermal_command', help='Thermal commands')
+    
+    # thermal lumped
+    thermal_lumped_parser = thermal_subparsers.add_parser(
+        'lumped',
+        help='Run lumped-parameter thermal-hydraulics analysis'
+    )
+    thermal_lumped_parser.add_argument('--config', type=Path, help='Configuration file (JSON/YAML) with lump definitions')
+    thermal_lumped_parser.add_argument('--duration', type=float, default=3600.0, help='Simulation duration [s]')
+    thermal_lumped_parser.add_argument('--max-step', type=float, help='Maximum time step [s] (default: adaptive)')
+    thermal_lumped_parser.add_argument('--adaptive', action='store_true', default=True, help='Use adaptive time stepping (default: True)')
+    thermal_lumped_parser.add_argument('--output', type=Path, help='Output file for results (JSON)')
+    thermal_lumped_parser.set_defaults(func=thermal_lumped)
     
     args = parser.parse_args()
     
