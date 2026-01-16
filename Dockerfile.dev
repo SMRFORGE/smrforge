@@ -46,6 +46,9 @@
 # - Manual testing framework: 13 test scripts (test_*.py) for feature validation (testing/ directory)
 #   Optional Jupyter notebooks available for interactive testing (01_CLI_Commands.ipynb)
 # - Quick start validation guide for running tests with real ENDF data (docs/validation/QUICK_START_VALIDATION.md)
+# - API consistency improvements: Enhanced docstrings with unit documentation, dual API pattern examples
+# - API Style Guide: Comprehensive guide for consistent API design (docs/guides/API_STYLE_GUIDE.md)
+# - API Consistency Report: Detailed analysis of API patterns (docs/status/API_CONSISTENCY_REPORT.md)
 
 FROM python:3.11-slim
 
