@@ -48,7 +48,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 - **Validation**: Pydantic-based input validation with physics checks
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
-- **Quality Assurance**: 70-73% test coverage overall, 75-80%+ on priority modules
+- **Quality Assurance**: 79.2% test coverage overall, 75-80%+ on priority modules, comprehensive manual testing framework
 - **NEW: Web Dashboard** (January 2026):
   - Interactive web-based interface
   - Reactor builder with preset support
@@ -419,7 +419,9 @@ All examples are runnable and include comments explaining each step.
 
 ## Testing
 
-SMRForge has comprehensive test coverage with 70-73% overall coverage and 75-80%+ on priority modules. All critical modules are well-tested with extensive edge case coverage.
+SMRForge has comprehensive test coverage with 79.2% overall coverage and 75-80%+ on priority modules. All critical modules are well-tested with extensive edge case coverage.
+
+### Automated Testing
 
 ```bash
 # Run all tests
@@ -441,7 +443,39 @@ pytest tests/test_neutronics.py
 - **All Priority Modules**: Comprehensive test coverage completed
 - **Critical Modules**: All critical modules exceed target coverage (75-80%+)
 
-See coverage documentation:
+### Manual Testing Framework
+
+SMRForge includes a comprehensive manual testing framework for feature validation:
+
+```bash
+# Generate test data files (required for some tests)
+python testing/generate_test_data.py
+
+# Run manual test scripts
+python testing/test_01_cli_commands.py      # CLI commands
+python testing/test_02_reactor_creation.py  # Reactor creation/analysis
+python testing/test_03_burnup.py            # Burnup calculations
+python testing/test_04_parameter_sweep.py   # Parameter sweep
+python testing/test_10_visualization.py     # Visualization
+# ... and 9 more test scripts
+```
+
+**Manual Test Results (January 2026):**
+- ✅ **9 tests at 100% pass rate** (CLI, Reactor Creation, Burnup, Parameter Sweep, Constraints, Data Management, Visualization, Configuration, Advanced)
+- ✅ **3 tests at 50-83% pass rate** (Templates, I/O Converters, Validation) - Expected skips for placeholder features
+- ✅ **Test Data Generator** - Automatically generates mock data for burnup, flux, parameter sweep, and checkpoint testing
+
+**Test Data Generator:**
+The `testing/generate_test_data.py` script creates mock test data files needed for visualization and parameter sweep tests:
+- `burnup_results.json` - Mock burnup results with k-eff history
+- `flux_results.json` - Mock flux distribution data
+- `sweep_results.json` - Mock parameter sweep results
+- `checkpoints/checkpoint_5.0.h5` - Mock checkpoint file for burnup resume testing
+
+See testing documentation:
+- [`testing/README.md`](testing/README.md) - Manual testing guide
+- [`docs/testing/MANUAL_TESTING_CHECKLIST.md`](docs/testing/MANUAL_TESTING_CHECKLIST.md) - Complete testing checklist
+- [`testing/FINAL_TEST_RESULTS.md`](testing/FINAL_TEST_RESULTS.md) - Detailed test results
 - [`docs/status/test-coverage-summary.md`](docs/status/test-coverage-summary.md) - Detailed coverage metrics
 - [`docs/status/comprehensive-coverage-inventory.md`](docs/status/comprehensive-coverage-inventory.md) - Full module-by-module breakdown
 - [`docs/status/coverage-completion-plan.md`](docs/status/coverage-completion-plan.md) - Plan to reach 80% target
