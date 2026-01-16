@@ -148,6 +148,16 @@ try:
 except ImportError:
     _TALLY_DATA_AVAILABLE = False
 
+try:
+    from smrforge.visualization.transients import (
+        plot_lumped_thermal,
+        plot_transient,
+    )
+
+    _TRANSIENT_VIS_AVAILABLE = True
+except ImportError:
+    _TRANSIENT_VIS_AVAILABLE = False
+
 __all__ = []
 
 if _GEOMETRY_VIS_AVAILABLE:
@@ -256,5 +266,13 @@ if _TALLY_DATA_AVAILABLE:
             "plot_spatial_distribution",
             "plot_time_dependent_tally",
             "plot_uncertainty",
+        ]
+    )
+
+if _TRANSIENT_VIS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_transient",
+            "plot_lumped_thermal",
         ]
     )

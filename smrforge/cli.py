@@ -2074,6 +2074,14 @@ def transient_run(args):
         if args.long_term:
             kwargs["long_term_optimization"] = True
         
+        # Add plotting options
+        if args.plot:
+            kwargs["plot"] = True
+        if args.plot_output:
+            kwargs["plot_output"] = str(args.plot_output)
+            kwargs["plot"] = True  # Enable plotting if output specified
+        kwargs["plot_backend"] = args.plot_backend
+        
         _print_info(f"Running {args.type} transient analysis...")
         _print_info(f"  Power: {args.power/1e6:.2f} MWth")
         _print_info(f"  Temperature: {args.temperature:.1f} K")
@@ -2240,6 +2248,22 @@ def thermal_lumped(args):
                     console.print(f"  {lump_name.capitalize()}: {T_initial:.1f} → {T_final:.1f} K")
                 else:
                     print(f"  {lump_name.capitalize()}: {T_initial:.1f} → {T_final:.1f} K")
+        
+        # Generate plot if requested
+        if args.plot or args.plot_output:
+            try:
+                from smrforge.visualization.transients import plot_lumped_thermal
+                plot_lumped_thermal(
+                    result,
+                    output=str(args.plot_output) if args.plot_output else None,
+                    backend=args.plot_backend,
+                    show_plot=args.plot and args.plot_output is None,
+                )
+                if args.plot_output:
+                    _print_success(f"Plot saved to {args.plot_output}")
+            except ImportError as e:
+                _print_error(f"Plotting not available: {e}")
+                _print_info("Install matplotlib or plotly for visualization: pip install matplotlib plotly")
         
         # Save results if output specified
         if args.output:
@@ -2733,6 +2757,9 @@ Note: All features are also available via Python API:
     transient_run_parser.add_argument('--scram-delay', type=float, default=1.0, dest='scram_delay', help='Scram delay [s]')
     transient_run_parser.add_argument('--long-term', action='store_true', dest='long_term', help='Enable long-term optimizations (>1 day)')
     transient_run_parser.add_argument('--output', type=Path, help='Output file for results (JSON)')
+    transient_run_parser.add_argument('--plot', action='store_true', help='Generate and display plot')
+    transient_run_parser.add_argument('--plot-output', type=Path, dest='plot_output', help='Save plot to file (PNG, HTML, PDF, SVG)')
+    transient_run_parser.add_argument('--plot-backend', type=str, choices=['plotly', 'matplotlib'], default='plotly', dest='plot_backend', help='Plotting backend (default: plotly)')
     transient_run_parser.set_defaults(func=transient_run)
     
     # Thermal subcommands (NEW)
@@ -2752,6 +2779,9 @@ Note: All features are also available via Python API:
     thermal_lumped_parser.add_argument('--max-step', type=float, help='Maximum time step [s] (default: adaptive)')
     thermal_lumped_parser.add_argument('--adaptive', action='store_true', default=True, help='Use adaptive time stepping (default: True)')
     thermal_lumped_parser.add_argument('--output', type=Path, help='Output file for results (JSON)')
+    thermal_lumped_parser.add_argument('--plot', action='store_true', help='Generate and display plot')
+    thermal_lumped_parser.add_argument('--plot-output', type=Path, dest='plot_output', help='Save plot to file (PNG, HTML, PDF, SVG)')
+    thermal_lumped_parser.add_argument('--plot-backend', type=str, choices=['plotly', 'matplotlib'], default='plotly', dest='plot_backend', help='Plotting backend (default: plotly)')
     thermal_lumped_parser.set_defaults(func=thermal_lumped)
     
     args = parser.parse_args()

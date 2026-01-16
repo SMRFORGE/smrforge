@@ -33,6 +33,9 @@ def quick_transient(
     duration: float = 100.0,
     scram_available: bool = True,
     scram_delay: float = 1.0,
+    plot: bool = False,
+    plot_output: Optional[str] = None,
+    plot_backend: str = "plotly",
     **kwargs,
 ) -> Dict:
     """
@@ -64,6 +67,11 @@ def quick_transient(
             - "T_fuel": Fuel temperature array [K]
             - "T_moderator": Moderator temperature array [K]
             - "reactivity": Total reactivity array [dk/k]
+    
+    Keyword Args:
+        plot: Whether to generate and display plot (default: False).
+        plot_output: Output file path for plot (optional, e.g., "transient.png" or "transient.html").
+        plot_backend: Plotting backend ("plotly" or "matplotlib", default: "plotly").
 
     Raises:
         ImportError: If safety module is not available.
@@ -208,6 +216,23 @@ def quick_transient(
         max_step=kwargs.pop("max_step", None),
         **kwargs,  # Pass any remaining kwargs
     )
+
+    # Generate plot if requested
+    if plot or plot_output:
+        try:
+            from smrforge.visualization.transients import plot_transient
+            plot_transient(
+                result,
+                output=plot_output,
+                backend=plot_backend,
+                show_plot=plot and plot_output is None,
+            )
+        except ImportError as e:
+            import warnings
+            warnings.warn(
+                f"Plotting not available: {e}. Install matplotlib or plotly for visualization.",
+                UserWarning
+            )
 
     return result
 
