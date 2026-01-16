@@ -55,6 +55,11 @@ def plot_voxel(
     Creates a voxelized representation of the geometry, similar to OpenMC's
     voxel plots. Can export to HDF5 format for conversion to VTK.
     
+    **Dual API Pattern:**
+    This function is part of the standalone function API for quick one-off plots.
+    For reusable plot configurations, consider using the class-based `Plot` API
+    from `smrforge.visualization.plot_api` instead.
+    
     Args:
         geometry: Reactor geometry (PrismaticCore, PebbleBedCore, Mesh3D, etc.)
         origin: View origin point (x, y, z) [cm]
@@ -71,7 +76,8 @@ def plot_voxel(
     Returns:
         Figure object (backend-dependent)
     
-    Example:
+    Examples:
+        # Standalone function API (simpler for quick plots)
         >>> from smrforge.visualization.voxel_plots import plot_voxel
         >>> 
         >>> fig = plot_voxel(
@@ -81,6 +87,12 @@ def plot_voxel(
         ...     color_by='material',
         ...     backend='plotly'
         ... )
+        
+        # Alternative: Class-based API (better for reusable configurations)
+        >>> from smrforge.visualization.plot_api import create_plot
+        >>> plot = create_plot(plot_type='voxel', origin=(0, 0, 0),
+        ...                    width=(300, 300, 400), color_by='material')
+        >>> fig = plot.plot(core)
     """
     # Create voxel grid
     voxel_grid = _create_voxel_grid(geometry, origin, width, **kwargs)

@@ -136,6 +136,8 @@ def create_reactor(
         name: Preset design name (e.g., "valar-10") or None for custom designs.
               Use list_presets() to see available presets.
         power_mw: Thermal power in MW (for custom designs only).
+                  **Note:** This is converted internally to watts (power_thermal = power_mw * 1e6)
+                  for the ReactorSpecification model. The internal model uses watts for precision.
         core_height: Core height in cm (for custom designs only).
         core_diameter: Core diameter in cm (for custom designs only).
         enrichment: Fuel enrichment (0-1, for custom designs only).
@@ -155,7 +157,7 @@ def create_reactor(
 
         # Create custom design
         >>> reactor = smr.create_reactor(
-        ...     power_mw=10,
+        ...     power_mw=10,  # 10 MW thermal power (converted to 1e7 W internally)
         ...     core_height=200,
         ...     core_diameter=100,
         ...     enrichment=0.195

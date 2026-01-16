@@ -312,17 +312,27 @@ def create_simple_burnup_solver(
 
     Args:
         neutronics_solver: MultiGroupDiffusion solver (creates if None)
-        time_steps_days: List of time points [days] (default: [0, 365, 730])
-        power_density: Power density [W/cm³]
-        initial_enrichment: Initial U-235 enrichment
+        time_steps_days: List of time points **[days]** (default: [0, 365, 730]).
+                         **Note:** Parameter name is explicitly `time_steps_days` to make
+                         the unit clear. This is passed to `BurnupOptions.time_steps` which
+                         also uses days. For consistency, see `BurnupOptions` documentation.
+        power_density: Power density **[W/cm³]** (default: 1e6 W/cm³ = 1 MW/cm³)
+        initial_enrichment: Initial U-235 enrichment (fraction, default: 0.195 = 19.5%)
         cache: NuclearDataCache instance (creates if None)
 
     Returns:
         BurnupSolver instance
 
     Example:
+        >>> # Create with default time steps (0, 1 year, 2 years in days)
         >>> burnup = create_simple_burnup_solver()
         >>> inventory = burnup.solve()
+        
+        >>> # Create with custom time steps (in days)
+        >>> burnup = create_simple_burnup_solver(
+        ...     time_steps_days=[0, 90, 180, 365, 730],  # 0, 3, 6, 12, 24 months
+        ...     power_density=1e6  # 1 MW/cm³
+        ... )
     """
     if not _CORE_AVAILABLE:
         raise ImportError("Burnup module not available")

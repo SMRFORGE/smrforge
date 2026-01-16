@@ -286,6 +286,21 @@ def create_plot(
     
     Convenience function for creating Plot objects, similar to OpenMC's API.
     
+    **Dual API Pattern:**
+    SMRForge provides two visualization APIs for flexibility:
+    
+    1. **Class-based API (Recommended for reusable plots):**
+       - Use `Plot` class or `create_plot()` function
+       - Better for creating reusable plot configurations
+       - Supports saving configuration for later use
+       
+    2. **Standalone function API (Recommended for quick plots):**
+       - Use standalone functions like `plot_voxel()`, `plot_ray_traced_geometry()`
+       - Better for one-off plots or quick visualization
+       - More concise for simple use cases
+    
+    Both APIs support the same parameters and backends. Choose based on your use case.
+    
     Args:
         plot_type: Type of plot - 'slice', 'voxel', 'ray_trace', 'unstructured'
         origin: View origin point (x, y, z) [cm]
@@ -301,7 +316,8 @@ def create_plot(
     Returns:
         Plot instance
     
-    Example:
+    Examples:
+        # Class-based API (recommended for reusable configurations)
         >>> from smrforge.visualization.plot_api import create_plot
         >>> 
         >>> plot = create_plot(
@@ -312,6 +328,11 @@ def create_plot(
         ...     backend='plotly'
         ... )
         >>> fig = plot.plot(geometry)
+        
+        # Alternative: Standalone function API (simpler for one-off plots)
+        >>> from smrforge.visualization.voxel_plots import plot_voxel
+        >>> fig = plot_voxel(geometry, origin=(0, 0, 0), width=(300, 300, 400),
+        ...                  color_by='material', backend='plotly')
     """
     return Plot(
         plot_type=plot_type,

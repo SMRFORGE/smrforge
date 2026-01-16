@@ -3061,6 +3061,22 @@ def get_fission_yield_data(
     Loads and parses fission product yield data from ENDF files.
     Returns independent and cumulative yields for all fission products.
     
+    **Data Access Pattern:**
+    SMRForge provides two ways to access nuclear data:
+    
+    1. **Cache methods (Preferred for multiple operations):**
+       - Use `cache.get_*()` methods when you have a NuclearDataCache instance
+       - More efficient when accessing multiple nuclides
+       - Example: `cache.get_cross_section_table(nuclide, library='endfb8.1')`
+    
+    2. **Standalone functions (Convenient for single operations):**
+       - Use standalone functions like `get_fission_yield_data()` for one-off access
+       - Automatically creates a cache if not provided
+       - Example: `get_fission_yield_data(nuclide, cache=None)`
+    
+    Both patterns are valid. Prefer cache methods when working with multiple nuclides
+    or when you already have a cache instance.
+    
     Args:
         nuclide: Fissile nuclide (e.g., U235, Pu239).
         cache: Optional NuclearDataCache instance. If not provided, creates a new one.
@@ -3069,7 +3085,8 @@ def get_fission_yield_data(
     Returns:
         FissionYieldData instance with yield information, or None if not found.
     
-    Example:
+    Examples:
+        # Standalone function (convenient for single access)
         >>> from smrforge.core.reactor_core import Nuclide, get_fission_yield_data
         >>> u235 = Nuclide(Z=92, A=235)
         >>> yield_data = get_fission_yield_data(u235)
@@ -3077,6 +3094,12 @@ def get_fission_yield_data(
         ...     cs137 = Nuclide(Z=55, A=137)
         ...     yield_cs137 = yield_data.get_yield(cs137)
         ...     print(f"Cs-137 yield: {yield_cs137:.4f}")
+        
+        # Cache method (preferred for multiple operations)
+        >>> from smrforge.core.reactor_core import NuclearDataCache, Nuclide
+        >>> cache = NuclearDataCache(local_endf_dir=Path('/path/to/ENDF'))
+        >>> u235 = Nuclide(Z=92, A=235)
+        >>> # Cache methods provide direct access when you have a cache instance
     """
     if cache is None:
         cache = NuclearDataCache()
@@ -3356,6 +3379,10 @@ def get_thermal_scattering_data(
     This data is essential for accurate thermal reactor calculations, especially
     for moderator materials like H2O, graphite, and D2O.
     
+    **Data Access Pattern:**
+    See `get_fission_yield_data()` documentation for information on cache methods
+    vs standalone functions. This function follows the standalone pattern for convenience.
+    
     Args:
         material_name: Material name (e.g., "H_in_H2O", "C_in_graphite", "D_in_D2O").
             Use get_tsl_material_name() from thermal_scattering_parser to map common names.
@@ -3365,7 +3392,8 @@ def get_thermal_scattering_data(
     Returns:
         ScatteringLawData instance with S(α,β) data, or None if not found.
     
-    Example:
+    Examples:
+        # Standalone function (convenient for single access)
         >>> from smrforge.core.reactor_core import get_thermal_scattering_data
         >>> from smrforge.core.thermal_scattering_parser import get_tsl_material_name
         >>> 
@@ -3376,6 +3404,10 @@ def get_thermal_scattering_data(
         >>> if tsl_data:
         ...     print(f"Material: {tsl_data.material_name}")
         ...     print(f"Temperature: {tsl_data.temperature} K")
+        
+        # With existing cache (more efficient for multiple operations)
+        >>> cache = NuclearDataCache(local_endf_dir=Path('/path/to/ENDF'))
+        >>> tsl_data = get_thermal_scattering_data(tsl_name, cache=cache)
     """
     if cache is None:
         cache = NuclearDataCache()

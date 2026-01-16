@@ -86,8 +86,12 @@ class BurnupOptions:
     Configuration options for burnup calculations.
     
     Attributes:
-        time_steps: List of time points [days] for burnup calculation
-        power_density: Power density [W/cm³] (constant) or array [n_time_steps]
+        time_steps: List of time points **[days]** for burnup calculation.
+                    **Important:** All values must be in days. Example: [0, 30, 60, 90, 365]
+                    represents time points at 0 days, 30 days (1 month), 60 days (2 months),
+                    90 days (3 months), and 365 days (1 year).
+        power_density: Power density **[W/cm³]** (constant) or array [n_time_steps].
+                       Default: 1e6 W/cm³ (1 MW/cm³).
         initial_enrichment: Initial U-235 enrichment (fraction, e.g., 0.195 for 19.5%)
         fissile_nuclides: List of fissile nuclides (default: U235, Pu239)
         track_fission_products: If True, track fission products (default: True)
@@ -95,9 +99,19 @@ class BurnupOptions:
         max_fission_products: Maximum number of fission products to track (default: 100)
         decay_tolerance: Tolerance for decay matrix solver (default: 1e-8)
         integration_method: ODE solver method ('RK45', 'BDF', 'Radau', default: 'BDF')
+    
+    Note on Time Units:
+        The `time_steps` parameter uses days as the unit. This is consistent across all
+        burnup-related functions. If you need to specify time in other units, convert first:
+        
+        Example:
+            >>> # For hours: convert to days
+            >>> hours = [0, 720, 1440, 2160]  # 0, 30, 60, 90 days in hours
+            >>> days = [h / 24.0 for h in hours]  # Convert to days
+            >>> options = BurnupOptions(time_steps=days, ...)
     """
     
-    time_steps: List[float]  # days
+    time_steps: List[float]  # days - IMPORTANT: All values must be in days
     power_density: float = 1e6  # W/cm³ (default: 1 MW/cm³)
     initial_enrichment: float = 0.195  # 19.5% U-235
     fissile_nuclides: List[Nuclide] = field(default_factory=lambda: [
