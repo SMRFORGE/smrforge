@@ -16,6 +16,7 @@ Main modules:
 - control: Control systems (✅ Implemented - PID, load-following)
 - mechanics: Structural mechanics (✅ Implemented - fuel rod mechanics)
 - economics: Cost modeling (✅ Implemented - capital, operating, LCOE)
+- fuel_cycle: Fuel cycle optimization and long-term simulation (✅ Implemented - optimization, material aging)
 
 ⚠️ Feature Status: See FEATURE_STATUS.md for detailed status of each module.
 """
@@ -360,6 +361,28 @@ try:
 except ImportError as e:
     _ECONOMICS_AVAILABLE = False
     # Don't warn - economics module may not be available
+
+# Fuel cycle optimization and long-term simulation (optional)
+try:
+    from smrforge.fuel_cycle import (
+        FuelCycleOptimizer,
+        LongTermThermalCoupling,
+        MaterialAging,
+        RefuelingStrategyOptimizer,
+    )
+
+    __all__.extend(
+        [
+            "FuelCycleOptimizer",
+            "RefuelingStrategyOptimizer",
+            "LongTermThermalCoupling",
+            "MaterialAging",
+        ]
+    )
+    _FUEL_CYCLE_AVAILABLE = True
+except ImportError as e:
+    _FUEL_CYCLE_AVAILABLE = False
+    # Don't warn - fuel_cycle module may not be available
 
 # Photon and gamma production parsers (always available)
 try:
