@@ -33,6 +33,10 @@
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
 # - Fixed dashboard preset loading and validation issues
+# - Fixed create_reactor and list_presets import resolution (convenience module conflict)
+# - Fixed dashboard State component initialization (all analysis options always in layout)
+# - Fixed LumpedThermalHydraulics parameter passing (adaptive/max_step moved to solve_transient)
+# - Improved validation warning messages (show actual validation details)
 # - Complete dashboard workflow: reactor creation → analysis → results → export
 # - Real data capture: flux and power distributions from solver
 # - Enhanced visualizations: plots use actual solver data, not sample data
