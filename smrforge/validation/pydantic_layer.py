@@ -522,6 +522,21 @@ class SolverOptions(BaseModel):
     skip_solution_validation: bool = Field(
         default=False, description="Skip solution validation (for testing)"
     )
+    parallel: bool = Field(
+        default=True, description="Enable parallel execution"
+    )
+    parallel_group_solve: bool = Field(
+        default=True, description="Parallel energy group solve"
+    )
+    parallel_spatial: bool = Field(
+        default=True, description="Parallel spatial operations"
+    )
+    num_threads: Optional[int] = Field(
+        default=None, ge=1, description="Number of threads (None = auto)"
+    )
+    use_mpi: bool = Field(
+        default=False, description="Use MPI for distributed memory"
+    )
 
     @field_validator("tolerance")
     @classmethod

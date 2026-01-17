@@ -209,6 +209,15 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #     * Refueling strategy optimization (batch configuration, frequency)
 #     * Material aging models (graphite, zircaloy, fuel)
 #     * Enhanced thermal-hydraulics coupling for long transients
+#   - Parallel multi-group diffusion solver:
+#     * Parallel energy group solve with red-black ordering (ThreadPoolExecutor)
+#     * Parallel spatial operations with Numba prange
+#     * Parallel scattering source updates
+#     * Expected 4-8x speedup on multi-core CPUs
+#   - MPI support (optional):
+#     * Distributed memory support via mpi4py
+#     * Helper functions for MPI rank, size, root detection
+#     * Graceful fallback if MPI not available
 #   - Automated ENDF data downloader
 #   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
 #   - Enhanced mesh generation

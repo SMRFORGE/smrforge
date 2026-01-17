@@ -11,6 +11,8 @@ This module provides:
 """
 
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from multiprocessing import cpu_count
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -18,6 +20,14 @@ from numba import njit, prange
 from pydantic import ValidationError
 from scipy.sparse import csr_matrix, diags
 from scipy.sparse import linalg as sparse_linalg
+
+# Try to import MPI (optional)
+try:
+    from mpi4py import MPI
+    _MPI_AVAILABLE = True
+except ImportError:
+    _MPI_AVAILABLE = False
+    MPI = None
 
 from ..utils.logging import get_logger
 
@@ -341,9 +351,14 @@ class MultiGroupDiffusion:
         for iteration in range(self.options.max_iterations):
             self._update_fission_source(k_old)
 
-            for g in range(self.ng):
-                self._update_scattering_source(g)
-                self.flux[:, :, g] = self._solve_group(g)
+            # Use parallel group solve if enabled
+            if self.options.parallel_group_solve and self.ng > 1:
+                self.flux = self._solve_groups_parallel_red_black(self.flux)
+            else:
+                # Serial fallback
+                for g in range(self.ng):
+                    self._update_scattering_source(g)
+                    self.flux[:, :, g] = self._solve_group(g)
             
             # Check if flux became zero (shouldn't happen, but handle gracefully)
             max_flux = np.max(self.flux)
@@ -500,24 +515,42 @@ class MultiGroupDiffusion:
         k_eff_safe = max(k_eff, 1e-6)
         self.source = chi_map * fission_rate / k_eff_safe
 
-    def _update_scattering_source(self, g: int) -> None:
+    def _update_scattering_source(self, g: int, flux: Optional[np.ndarray] = None) -> None:
         """
         Update scattering source for group g.
 
         Optimized using vectorized operations for ~5-50x speedup depending on number of groups.
+        Can use parallel Numba version for large problems.
+        
+        Args:
+            g: Energy group index
+            flux: Optional flux array (if None, uses self.flux)
         """
-        # Vectorized: sigma_s is [n_materials, ng, ng]
-        # flux is [nz, nr, ng]
-        # material_map is [nz, nr]
+        if flux is None:
+            flux = self.flux
+        
+        # Use parallel version for large problems if enabled
+        if self.options.parallel_spatial and self.nz * self.nr > 1000:
+            _update_scattering_source_parallel_numba(
+                flux,
+                self.xs.sigma_s,
+                self.material_map,
+                self.source,
+                g,
+            )
+        else:
+            # Vectorized: sigma_s is [n_materials, ng, ng]
+            # flux is [nz, nr, ng]
+            # material_map is [nz, nr]
 
-        # Get scattering matrix for each cell: [nz, nr, ng]
-        # sigma_s[mat, :, g] selects all source groups -> target group g for each material
-        sigma_s_mat = self.xs.sigma_s[self.material_map, :, g]  # [nz, nr, ng]
+            # Get scattering matrix for each cell: [nz, nr, ng]
+            # sigma_s[mat, :, g] selects all source groups -> target group g for each material
+            sigma_s_mat = self.xs.sigma_s[self.material_map, :, g]  # [nz, nr, ng]
 
-        # Dot product along group dimension: [nz, nr]
-        scatter_in = np.sum(sigma_s_mat * self.flux, axis=2)
+            # Dot product along group dimension: [nz, nr]
+            scatter_in = np.sum(sigma_s_mat * flux, axis=2)
 
-        self.source[:, :, g] += scatter_in
+            self.source[:, :, g] += scatter_in
 
     def _solve_group(self, g: int) -> np.ndarray:
         """Solve single-group diffusion equation."""
@@ -536,6 +569,84 @@ class MultiGroupDiffusion:
 
         flux_2d = flux_1d.reshape(self.nz, self.nr)
         return flux_2d
+
+    def _solve_group_with_source(self, g: int, flux: np.ndarray) -> np.ndarray:
+        """
+        Solve single group with given flux (for parallel execution).
+        
+        Args:
+            g: Energy group index
+            flux: Current flux array [nz, nr, ng]
+            
+        Returns:
+            Solved flux for group g [nz, nr]
+        """
+        self._update_scattering_source(g, flux)
+        return self._solve_group(g)
+
+    def _solve_groups_parallel_red_black(self, flux_old: np.ndarray) -> np.ndarray:
+        """
+        Solve energy groups using red-black ordering for parallelization.
+        
+        Algorithm:
+        1. Pass 1: Solve even groups in parallel (groups 0, 2, 4, ...)
+        2. Pass 2: Solve odd groups in parallel (groups 1, 3, 5, ...)
+        
+        This maintains accuracy while enabling parallelism.
+        
+        Args:
+            flux_old: Previous iteration flux [nz, nr, ng]
+        
+        Returns:
+            New flux [nz, nr, ng]
+        """
+        flux_new = np.copy(flux_old)
+        ng = self.ng
+        
+        # Separate even and odd groups
+        even_groups = list(range(0, ng, 2))
+        odd_groups = list(range(1, ng, 2))
+        
+        # Determine number of threads
+        num_threads = self.options.num_threads
+        if num_threads is None:
+            num_threads = cpu_count()
+        
+        # Pass 1: Solve even groups in parallel
+        if len(even_groups) > 1 and self.options.parallel:
+            with ThreadPoolExecutor(max_workers=min(len(even_groups), num_threads)) as executor:
+                futures = {
+                    executor.submit(self._solve_group_with_source, g, flux_new): g
+                    for g in even_groups
+                }
+                for future in as_completed(futures):
+                    g = futures[future]
+                    flux_g = future.result()
+                    flux_new[:, :, g] = flux_g
+        else:
+            # Serial fallback
+            for g in even_groups:
+                self._update_scattering_source(g, flux_new)
+                flux_new[:, :, g] = self._solve_group(g)
+        
+        # Pass 2: Solve odd groups in parallel (can use updated even group fluxes)
+        if len(odd_groups) > 1 and self.options.parallel:
+            with ThreadPoolExecutor(max_workers=min(len(odd_groups), num_threads)) as executor:
+                futures = {
+                    executor.submit(self._solve_group_with_source, g, flux_new): g
+                    for g in odd_groups
+                }
+                for future in as_completed(futures):
+                    g = futures[future]
+                    flux_g = future.result()
+                    flux_new[:, :, g] = flux_g
+        else:
+            # Serial fallback
+            for g in odd_groups:
+                self._update_scattering_source(g, flux_new)
+                flux_new[:, :, g] = self._solve_group(g)
+        
+        return flux_new
 
     def _build_group_system(self, g: int) -> Tuple[csr_matrix, np.ndarray]:
         """
@@ -938,3 +1049,70 @@ if __name__ == "__main__":
         console.print(f"     {str(e).split(chr(10))[0]}")
 
     console.print("\n[bold green]Solver updated with Pydantic validation![/bold green]")
+
+
+# Numba-accelerated parallel functions
+@njit(parallel=True, cache=True)
+def _update_scattering_source_parallel_numba(
+    flux: np.ndarray,
+    sigma_s: np.ndarray,
+    material_map: np.ndarray,
+    source: np.ndarray,
+    g: int,
+) -> None:
+    """
+    Parallel scattering source update using Numba.
+    
+    Args:
+        flux: Flux array [nz, nr, ng]
+        sigma_s: Scattering matrix [n_materials, ng, ng]
+        material_map: Material map [nz, nr]
+        source: Source array [nz, nr, ng] (modified in-place)
+        g: Target energy group
+    """
+    nz, nr = material_map.shape
+    ng = flux.shape[2]
+    
+    # Parallelize over spatial cells
+    for iz in prange(nz):
+        for ir in prange(nr):
+            mat = material_map[iz, ir]
+            scatter_in = 0.0
+            
+            # Sum scattering from all source groups
+            for g_prime in range(ng):
+                scatter_in += sigma_s[mat, g_prime, g] * flux[iz, ir, g_prime]
+            
+            source[iz, ir, g] += scatter_in
+
+
+# MPI support functions (optional)
+def _get_mpi_comm():
+    """Get MPI communicator if available."""
+    if _MPI_AVAILABLE and MPI is not None:
+        return MPI.COMM_WORLD
+    return None
+
+
+def _is_mpi_root():
+    """Check if this is the MPI root process."""
+    comm = _get_mpi_comm()
+    if comm is not None:
+        return comm.Get_rank() == 0
+    return True
+
+
+def _mpi_rank():
+    """Get MPI rank."""
+    comm = _get_mpi_comm()
+    if comm is not None:
+        return comm.Get_rank()
+    return 0
+
+
+def _mpi_size():
+    """Get MPI size."""
+    comm = _get_mpi_comm()
+    if comm is not None:
+        return comm.Get_size()
+    return 1
