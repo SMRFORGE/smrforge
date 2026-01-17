@@ -193,6 +193,8 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling)
 #   - Advanced control systems (PID controllers, load-following, reactor control)
 #   - Economics cost modeling (capital costs, operating costs, LCOE calculations)
+#   - Advanced two-phase flow models (drift-flux, two-fluid, enhanced boiling correlations, CHF)
+#   - Fuel cycle optimization and long-term simulation (optimization algorithms, material aging)
 #   - Automated ENDF data downloader
 #   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
 #   - Enhanced mesh generation

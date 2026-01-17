@@ -38,6 +38,8 @@
 # - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling)
 # - Advanced control systems (PID controllers, load-following, reactor control)
 # - Economics cost modeling (capital costs, operating costs, LCOE calculations)
+# - Advanced two-phase flow models (drift-flux, two-fluid, enhanced boiling correlations)
+# - Fuel cycle optimization and long-term simulation (optimization, material aging)
 # - Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
@@ -158,6 +160,8 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   Structural mechanics: Fuel rod analysis (thermal expansion, stress/strain, PCI, fuel swelling)
 #   Control systems: PID controllers, load-following, reactor control (integrated with transients)
 #   Economics: Capital cost estimation, operating costs, LCOE calculations
+#   Advanced two-phase flow: Drift-flux models, two-fluid models, enhanced boiling correlations, CHF predictions
+#   Fuel cycle optimization: Cycle length optimization, refueling strategy, material aging models
 #   smrforge validate design (design constraints validation)
 #   smrforge visualize geometry/flux
 #   smrforge config show/set/init

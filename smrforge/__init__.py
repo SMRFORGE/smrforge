@@ -384,6 +384,32 @@ except ImportError as e:
     _FUEL_CYCLE_AVAILABLE = False
     # Don't warn - fuel_cycle module may not be available
 
+# Advanced two-phase flow models (optional - requires thermal module)
+try:
+    from smrforge.thermal.two_phase_advanced import (
+        BoilingHeatTransfer,
+        DriftFluxModel,
+        TwoFluidModel,
+        TwoPhaseThermalHydraulics,
+    )
+    from smrforge.thermal.two_phase_integration import (
+        integrate_two_phase_with_thermal_hydraulics,
+    )
+
+    __all__.extend(
+        [
+            "DriftFluxModel",
+            "TwoFluidModel",
+            "BoilingHeatTransfer",
+            "TwoPhaseThermalHydraulics",
+            "integrate_two_phase_with_thermal_hydraulics",
+        ]
+    )
+    _TWO_PHASE_ADVANCED_AVAILABLE = True
+except ImportError as e:
+    _TWO_PHASE_ADVANCED_AVAILABLE = False
+    # Don't warn - two-phase advanced module may not be available
+
 # Photon and gamma production parsers (always available)
 try:
     from smrforge.core.photon_parser import ENDFPhotonParser, PhotonCrossSection

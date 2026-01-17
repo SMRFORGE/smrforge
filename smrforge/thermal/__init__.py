@@ -51,3 +51,30 @@ if _LUMPED_THERMAL_AVAILABLE:
             "ThermalResistance",
         ]
     )
+
+# Try to import advanced two-phase flow models (optional)
+try:
+    from smrforge.thermal.two_phase_advanced import (
+        BoilingHeatTransfer,
+        DriftFluxModel,
+        TwoFluidModel,
+        TwoPhaseThermalHydraulics,
+    )
+    from smrforge.thermal.two_phase_integration import (
+        integrate_two_phase_with_thermal_hydraulics,
+    )
+
+    _TWO_PHASE_ADVANCED_AVAILABLE = True
+except ImportError:
+    _TWO_PHASE_ADVANCED_AVAILABLE = False
+
+if _TWO_PHASE_ADVANCED_AVAILABLE:
+    __all__.extend(
+        [
+            "DriftFluxModel",
+            "TwoFluidModel",
+            "BoilingHeatTransfer",
+            "TwoPhaseThermalHydraulics",
+            "integrate_two_phase_with_thermal_hydraulics",
+        ]
+    )
