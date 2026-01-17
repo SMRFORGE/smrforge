@@ -103,6 +103,19 @@ except ImportError as e:
     _CONVENIENCE_UTILS_AVAILABLE = False
     # Don't warn - these are optional convenience functions
 
+# Transient convenience functions (optional - requires safety module)
+try:
+    from smrforge.convenience.transients import (
+        quick_transient,
+        reactivity_insertion,
+        decay_heat_removal,
+    )
+
+    _TRANSIENT_CONVENIENCE_AVAILABLE = True
+except ImportError as e:
+    _TRANSIENT_CONVENIENCE_AVAILABLE = False
+    # Don't warn - safety module may not be available
+
 # Data downloader (optional - requires requests)
 try:
     from smrforge.data_downloader import (
