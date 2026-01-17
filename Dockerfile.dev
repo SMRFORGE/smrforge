@@ -166,6 +166,12 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge shell (interactive IPython/REPL)
 #   smrforge workflow run (YAML workflows)
 #   smrforge sweep (parameter sweep and sensitivity analysis)
+#   All new modules available via Python imports:
+#     - smrforge.mechanics (FuelRodMechanics, ThermalExpansion, StressStrain, PCI, FuelSwelling)
+#     - smrforge.control (PIDController, ReactorController, LoadFollowingController)
+#     - smrforge.economics (CapitalCostEstimator, OperatingCostEstimator, LCOECalculator)
+#     - smrforge.fuel_cycle (FuelCycleOptimizer, RefuelingStrategyOptimizer, MaterialAging)
+#     - smrforge.thermal.two_phase_advanced (DriftFluxModel, TwoFluidModel, BoilingHeatTransfer)
 #
 # Development Features:
 #   - Web Dashboard (smrforge serve) with dark/gray mode
@@ -192,9 +198,17 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #     * Memory pooling (50-70% reduction)
 #   - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling)
 #   - Advanced control systems (PID controllers, load-following, reactor control)
-#   - Economics cost modeling (capital costs, operating costs, LCOE calculations)
-#   - Advanced two-phase flow models (drift-flux, two-fluid, enhanced boiling correlations, CHF)
-#   - Fuel cycle optimization and long-term simulation (optimization algorithms, material aging)
+#   - Economics cost modeling (capital costs, operating costs, LCOE calculations with SMR-specific factors)
+#   - Advanced two-phase flow models:
+#     * Drift-flux models (Zuber-Findlay, Chexal-Lellouche, Ishii-Mishima)
+#     * Two-fluid models for detailed analysis
+#     * Enhanced boiling heat transfer correlations (Chen, Forster-Zuber, Gorenflo)
+#     * Critical Heat Flux (CHF) predictions (Bowring, Biasi, Groeneveld)
+#   - Fuel cycle optimization and long-term simulation:
+#     * Fuel cycle optimization algorithms (cycle length, enrichment, multi-objective)
+#     * Refueling strategy optimization (batch configuration, frequency)
+#     * Material aging models (graphite, zircaloy, fuel)
+#     * Enhanced thermal-hydraulics coupling for long transients
 #   - Automated ENDF data downloader
 #   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
 #   - Enhanced mesh generation

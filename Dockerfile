@@ -38,8 +38,8 @@
 # - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling)
 # - Advanced control systems (PID controllers, load-following, reactor control)
 # - Economics cost modeling (capital costs, operating costs, LCOE calculations)
-# - Advanced two-phase flow models (drift-flux, two-fluid, enhanced boiling correlations)
-# - Fuel cycle optimization and long-term simulation (optimization, material aging)
+# - Advanced two-phase flow models (drift-flux, two-fluid, enhanced boiling correlations, CHF)
+# - Fuel cycle optimization and long-term simulation (optimization algorithms, material aging)
 # - Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
