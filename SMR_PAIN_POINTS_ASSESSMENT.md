@@ -341,7 +341,7 @@ However, there are **critical gaps** that limit its readiness for regulatory/lic
 
 1. ✅ **Advanced Control Systems** - **IMPLEMENTED:** PID controllers, load-following, reactor control
 2. **Two-Phase Flow** - Enhanced models for BWR/LOCA
-3. **Long-Term Simulations** - Fuel cycle optimization, material aging
+3. ✅ **Long-Term Simulations** - **IMPLEMENTED:** Fuel cycle optimization, refueling strategy, material aging, long-term thermal coupling
 4. ✅ **Economics** - **IMPLEMENTED:** Capital costs, operating costs, LCOE calculations
 
 ---
