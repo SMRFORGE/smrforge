@@ -24,6 +24,11 @@
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
 # - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
 # - Added automated data downloader with parallel downloads and progress indicators
+# - Added Pint-based unit checking (pint>=0.20.0)
+# - Added lumped-parameter thermal hydraulics (fast 0-D thermal circuits)
+# - Added simplified point kinetics API (quick transient analysis)
+# - Added transient and thermal visualization capabilities
+# - Updated dashboard with quick transient and lumped thermal analysis interfaces
 # - Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
@@ -133,6 +138,8 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge reactor template create/modify/validate (template library)
 #   smrforge data setup/download/validate
 #   smrforge burnup run/visualize (with checkpointing support)
+#   smrforge transient run (quick transient analysis - reactivity insertion, decay heat, etc.)
+#   smrforge thermal lumped (lumped-parameter thermal hydraulics)
 #   smrforge validate run (validation framework - run validation tests)
 #   smrforge validate design (design constraints validation)
 #   smrforge visualize geometry/flux
