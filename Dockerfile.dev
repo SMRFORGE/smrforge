@@ -190,6 +190,9 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #     * Vectorized particle tracking
 #     * Parallel processing with Numba
 #     * Memory pooling (50-70% reduction)
+#   - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling)
+#   - Advanced control systems (PID controllers, load-following, reactor control)
+#   - Economics cost modeling (capital costs, operating costs, LCOE calculations)
 #   - Automated ENDF data downloader
 #   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
 #   - Enhanced mesh generation

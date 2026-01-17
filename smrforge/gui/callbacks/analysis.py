@@ -49,18 +49,63 @@ def register_analysis_callbacks(app):
         logger.debug(f"update_analysis_options: has_reactor={has_reactor}, reactor_spec type={type(reactor_spec)}, keys={list(reactor_spec.keys())[:5] if isinstance(reactor_spec, dict) else 'N/A'}")
         
         # Quick transient and lumped thermal don't require a reactor spec
+        # Note: All option components are always in the layout (hidden initially)
+        # We just update their visibility based on analysis type
+        # Always return all components to keep them in DOM for State validation
         if analysis_type == 'neutronics':
-            return create_neutronics_options(), "", "", "", "", not has_reactor
+            return (
+                create_neutronics_options(),
+                create_burnup_options(),  # Keep in DOM, just hidden
+                create_quick_transient_options(),  # Keep in DOM, just hidden
+                create_safety_options(),  # Keep in DOM, just hidden
+                create_lumped_thermal_options(),  # Keep in DOM, just hidden
+                not has_reactor
+            )
         elif analysis_type == 'burnup':
-            return "", create_burnup_options(), "", "", "", not has_reactor
+            return (
+                create_neutronics_options(),  # Keep in DOM, just hidden
+                create_burnup_options(),
+                create_quick_transient_options(),  # Keep in DOM, just hidden
+                create_safety_options(),  # Keep in DOM, just hidden
+                create_lumped_thermal_options(),  # Keep in DOM, just hidden
+                not has_reactor
+            )
         elif analysis_type == 'quick_transient':
-            return "", "", create_quick_transient_options(), "", "", False
+            return (
+                create_neutronics_options(),  # Keep in DOM, just hidden
+                create_burnup_options(),  # Keep in DOM, just hidden
+                create_quick_transient_options(),
+                create_safety_options(),  # Keep in DOM, just hidden
+                create_lumped_thermal_options(),  # Keep in DOM, just hidden
+                False
+            )
         elif analysis_type == 'safety':
-            return "", "", "", create_safety_options(), "", not has_reactor
+            return (
+                create_neutronics_options(),  # Keep in DOM, just hidden
+                create_burnup_options(),  # Keep in DOM, just hidden
+                create_quick_transient_options(),  # Keep in DOM, just hidden
+                create_safety_options(),
+                create_lumped_thermal_options(),  # Keep in DOM, just hidden
+                not has_reactor
+            )
         elif analysis_type == 'lumped_thermal':
-            return "", "", "", "", create_lumped_thermal_options(), False
+            return (
+                create_neutronics_options(),  # Keep in DOM, just hidden
+                create_burnup_options(),  # Keep in DOM, just hidden
+                create_quick_transient_options(),  # Keep in DOM, just hidden
+                create_safety_options(),  # Keep in DOM, just hidden
+                create_lumped_thermal_options(),
+                False
+            )
         else:  # complete
-            return create_neutronics_options(), create_burnup_options(), "", create_safety_options(), "", not has_reactor
+            return (
+                create_neutronics_options(),
+                create_burnup_options(),
+                create_quick_transient_options(),  # Keep in DOM, just hidden
+                create_safety_options(),
+                create_lumped_thermal_options(),  # Keep in DOM, just hidden
+                not has_reactor
+            )
     
     @app.callback(
         Output('analysis-results-store', 'data'),
@@ -198,7 +243,13 @@ def register_analysis_callbacks(app):
                         if power_data:
                             results['neutronics']['power'] = power_data
                         if validation_warning:
-                            results['neutronics']['warning'] = 'Solution validation failed but k_eff computed'
+                            # Use the actual warning message, or provide a more informative one
+                            warning_msg = str(validation_warning)
+                            # Extract key info if available (k_eff value, etc.)
+                            if "k_eff" in warning_msg:
+                                results['neutronics']['warning'] = warning_msg
+                            else:
+                                results['neutronics']['warning'] = f"Solution validation warning: {warning_msg[:200]}"
                         
                         logger.info(f"Neutronics analysis completed: k_eff = {k_eff:.6f}")
                 except Exception as e:
@@ -311,13 +362,16 @@ def register_analysis_callbacks(app):
                     )
                     
                     solver = LumpedThermalHydraulics(
-                        lumps=[fuel, moderator],
+                        lumps={"fuel": fuel, "moderator": moderator},
                         resistances=[resistance],
-                        adaptive=adaptive,
-                        max_step=max_step if not adaptive else None,
                     )
                     
-                    thermal_result = solver.solve_transient(t_span=(0.0, duration))
+                    # Pass adaptive and max_step to solve_transient, not __init__
+                    thermal_result = solver.solve_transient(
+                        t_span=(0.0, duration),
+                        max_step=max_step if not adaptive else None,
+                        adaptive=adaptive
+                    )
                     
                     results['lumped_thermal'] = {
                         'status': 'success',

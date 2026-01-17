@@ -35,6 +35,9 @@
 #   * Parallel processing with Numba (scales with CPU cores)
 #   * Pre-computed cross-section lookup tables
 #   * Batch tally processing
+# - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling)
+# - Advanced control systems (PID controllers, load-following, reactor control)
+# - Economics cost modeling (capital costs, operating costs, LCOE calculations)
 # - Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
@@ -152,6 +155,9 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge thermal lumped (lumped-parameter thermal hydraulics)
 #   smrforge validate run (validation framework - run validation tests)
 #   Optimized Monte Carlo: Use OptimizedMonteCarloSolver for 5-10x faster calculations
+#   Structural mechanics: Fuel rod analysis (thermal expansion, stress/strain, PCI, fuel swelling)
+#   Control systems: PID controllers, load-following, reactor control (integrated with transients)
+#   Economics: Capital cost estimation, operating costs, LCOE calculations
 #   smrforge validate design (design constraints validation)
 #   smrforge visualize geometry/flux
 #   smrforge config show/set/init

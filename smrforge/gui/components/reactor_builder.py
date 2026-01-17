@@ -22,12 +22,6 @@ def create_reactor_builder():
     if not _DASH_AVAILABLE:
         return html.Div("Dash not available")
     
-    try:
-        import smrforge as smr
-        presets = smr.list_presets()
-    except:
-        presets = []
-    
     return dbc.Container([
         html.H2("Reactor Builder", className="mb-4"),
         
@@ -40,8 +34,8 @@ def create_reactor_builder():
                         dbc.Label("Select Preset Design"),
                         dcc.Dropdown(
                             id="preset-dropdown",
-                            options=[{"label": p, "value": p} for p in presets],
-                            placeholder="Select a preset or create custom...",
+                            options=[],  # Will be populated by callback
+                            placeholder="Loading presets...",
                             clearable=True,
                         ),
                     ], width=6),

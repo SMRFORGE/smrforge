@@ -1,20 +1,26 @@
 """
-Control systems and reactor protection
+Advanced control systems for reactor operation.
 
-⚠️ EXPERIMENTAL / NOT IMPLEMENTED ⚠️
+This module provides:
+- PID controllers for reactor control
+- Feedback control logic
+- Load-following algorithms
+- Integration with transient solvers
 
-This module is currently a placeholder with no implementation.
-For control system needs, implement custom controllers as needed.
-
-Planned features:
-- Reactor control algorithms
-- Protection system models
-- Control rod worth calculations
-- Reactivity control
-
-See FEATURE_STATUS.md for current status.
+Classes:
+    PIDController: Proportional-Integral-Derivative controller
+    ReactorController: Reactor power and temperature control system
+    LoadFollowingController: Load-following control algorithms
 """
 
-__all__ = []
+from smrforge.control.controllers import (
+    LoadFollowingController,
+    PIDController,
+    ReactorController,
+)
 
-# TODO: Implement control systems if needed
+__all__ = [
+    "PIDController",
+    "ReactorController",
+    "LoadFollowingController",
+]

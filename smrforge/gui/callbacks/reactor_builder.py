@@ -21,6 +21,75 @@ def register_reactor_builder_callbacks(app):
         return
     
     @app.callback(
+        Output('preset-dropdown', 'options'),
+        Input('reactor-spec-store', 'data'),
+        prevent_initial_call=False
+    )
+    def load_presets(_):
+        """Load available presets for dropdown."""
+        try:
+            # Try multiple import strategies
+            presets = None
+            
+            # Strategy 1: Try from top-level smrforge module
+            try:
+                import smrforge as smr
+                if hasattr(smr, 'list_presets'):
+                    presets = smr.list_presets()
+                    logger.info(f"Loaded presets from smrforge module: {presets}")
+            except Exception as e1:
+                logger.debug(f"Failed to load from smrforge module: {e1}")
+            
+            # Strategy 2: Try importing convenience module directly
+            if presets is None:
+                try:
+                    from smrforge import convenience as conv_mod
+                    # Check if it's the file or the directory
+                    import inspect
+                    if hasattr(conv_mod, 'list_presets'):
+                        presets = conv_mod.list_presets()
+                        logger.info(f"Loaded presets from convenience module: {presets}")
+                    else:
+                        # It's the directory package, try to get the file module
+                        import importlib
+                        import sys
+                        # Force reload the file module
+                        if 'smrforge.convenience' in sys.modules:
+                            del sys.modules['smrforge.convenience']
+                        # Import as a package submodule
+                        import smrforge.convenience as conv_file
+                        if hasattr(conv_file, 'list_presets'):
+                            presets = conv_file.list_presets()
+                except Exception as e2:
+                    logger.debug(f"Failed to load from convenience module: {e2}")
+            
+            # Strategy 3: Try using the DesignLibrary directly
+            if presets is None:
+                try:
+                    from smrforge.presets.htgr import DesignLibrary
+                    library = DesignLibrary()
+                    presets = library.list_designs()
+                    logger.info(f"Loaded presets from DesignLibrary: {presets}")
+                except Exception as e3:
+                    logger.debug(f"Failed to load from DesignLibrary: {e3}")
+            
+            if presets is None or len(presets) == 0:
+                logger.warning("No presets found - preset list is empty")
+                # Return empty list with a placeholder
+                return [{"label": "No presets available", "value": None, "disabled": True}]
+            
+            options = [{"label": p, "value": p} for p in presets]
+            logger.info(f"Successfully loaded {len(options)} presets: {presets}")
+            return options
+            
+        except Exception as e:
+            logger.warning(f"Failed to load presets: {e}", exc_info=True)
+            # Return empty list if presets can't be loaded
+            import traceback
+            logger.debug(f"Preset loading error traceback: {traceback.format_exc()}")
+            return [{"label": "Error loading presets", "value": None, "disabled": True}]
+    
+    @app.callback(
         Output('reactor-spec-store', 'data'),
         Output('reactor-builder-feedback', 'children'),
         Input('create-reactor-button', 'n_clicks'),

@@ -13,8 +13,9 @@ Main modules:
 - fuel: Fuel performance modeling (❌ Not implemented)
 - optimization: Design optimization (❌ Not implemented)
 - io: Input/output utilities (❌ Not implemented)
-- control: Control systems (❌ Not implemented)
-- economics: Cost modeling (❌ Not implemented)
+- control: Control systems (✅ Implemented - PID, load-following)
+- mechanics: Structural mechanics (✅ Implemented - fuel rod mechanics)
+- economics: Cost modeling (✅ Implemented - capital, operating, LCOE)
 
 ⚠️ Feature Status: See FEATURE_STATUS.md for detailed status of each module.
 """
@@ -57,17 +58,63 @@ except ImportError as e:
 
 # Convenience functions and classes for easy usage
 try:
-    from smrforge.convenience import (  # Factory functions; High-level class
-        SimpleReactor,
-        analyze_preset,
-        compare_designs,
-        create_reactor,
-        get_preset,
-        list_presets,
-        quick_keff,
-    )
+    # Try importing from convenience package (which re-exports from convenience.py file)
+    try:
+        from smrforge.convenience import (  # Factory functions; High-level class
+            SimpleReactor,
+            analyze_preset,
+            compare_designs,
+            create_reactor,
+            get_preset,
+            list_presets,
+            quick_keff,
+        )
+        _CONVENIENCE_AVAILABLE = True
+    except (ImportError, AttributeError) as e1:
+        # Fallback: import directly from convenience.py file module as a package submodule
+        # This properly handles relative imports by loading it as part of smrforge package
+        import importlib
+        import sys
+        from pathlib import Path
+        
+        # Use importlib to import convenience.py as smrforge.convenience_file module
+        # This allows relative imports to work correctly
+        convenience_file = Path(__file__).parent / "convenience.py"
+        if convenience_file.exists():
+            # Import as a proper package submodule using importlib
+            # This makes relative imports work
+            package_name = __name__  # Should be 'smrforge'
+            module_name = f"{package_name}.convenience_file"
+            
+            # Use importlib to load the module as a package member
+            loader = importlib.machinery.SourceFileLoader(module_name, str(convenience_file))
+            spec = importlib.util.spec_from_loader(module_name, loader)
+            convenience_mod = importlib.util.module_from_spec(spec)
+            
+            # Set __package__ to make relative imports work
+            convenience_mod.__package__ = package_name
+            convenience_mod.__name__ = module_name
+            
+            # Add parent to sys.modules so relative imports resolve correctly
+            sys.modules[module_name] = convenience_mod
+            
+            try:
+                spec.loader.exec_module(convenience_mod)
+                
+                SimpleReactor = convenience_mod.SimpleReactor
+                analyze_preset = convenience_mod.analyze_preset
+                compare_designs = convenience_mod.compare_designs
+                create_reactor = convenience_mod.create_reactor
+                get_preset = convenience_mod.get_preset
+                list_presets = convenience_mod.list_presets
+                quick_keff = convenience_mod.quick_keff
+                _CONVENIENCE_AVAILABLE = True
+            except Exception as e2:
+                # If that fails, raise the original error
+                raise e1 from e2
+        else:
+            raise ImportError(f"Could not find convenience.py file: {convenience_file}")
 
-    _CONVENIENCE_AVAILABLE = True
 except ImportError as e:
     import warnings
 
@@ -241,6 +288,78 @@ try:
 except ImportError:
     _GUI_AVAILABLE = False
     # Don't warn - dash is optional
+
+# Control systems (optional - requires control module)
+try:
+    from smrforge.control import (
+        LoadFollowingController,
+        PIDController,
+        ReactorController,
+    )
+    from smrforge.control.integration import (
+        create_controlled_reactivity,
+        create_load_following_reactivity,
+    )
+
+    __all__.extend(
+        [
+            "PIDController",
+            "ReactorController",
+            "LoadFollowingController",
+            "create_controlled_reactivity",
+            "create_load_following_reactivity",
+        ]
+    )
+    _CONTROL_AVAILABLE = True
+except ImportError as e:
+    _CONTROL_AVAILABLE = False
+    # Don't warn - control module may not be available
+
+# Structural mechanics (optional - requires mechanics module)
+try:
+    from smrforge.mechanics import (
+        FuelRodMechanics,
+        FuelSwelling,
+        PelletCladdingInteraction,
+        StressStrain,
+        ThermalExpansion,
+    )
+
+    __all__.extend(
+        [
+            "FuelRodMechanics",
+            "ThermalExpansion",
+            "StressStrain",
+            "PelletCladdingInteraction",
+            "FuelSwelling",
+        ]
+    )
+    _MECHANICS_AVAILABLE = True
+except ImportError as e:
+    _MECHANICS_AVAILABLE = False
+    # Don't warn - mechanics module may not be available
+
+# Economics (optional - requires economics module)
+try:
+    from smrforge.economics import (
+        CapitalCostEstimator,
+        CostBreakdown,
+        LCOECalculator,
+        OperatingCostEstimator,
+    )
+
+    __all__.extend(
+        [
+            "CapitalCostEstimator",
+            "OperatingCostEstimator",
+            "LCOECalculator",
+            "CostBreakdown",
+        ]
+    )
+    _ECONOMICS_AVAILABLE = True
+except ImportError as e:
+    _ECONOMICS_AVAILABLE = False
+    # Don't warn - economics module may not be available
 
 # Photon and gamma production parsers (always available)
 try:

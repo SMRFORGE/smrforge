@@ -45,20 +45,46 @@ def create_analysis_panel():
             ])
         ], className="mb-4"),
         
-        # Neutronics options
-        html.Div(id="neutronics-options", className="mb-4"),
+        # Neutronics options (always present in layout for State validation)
+        html.Div(
+            create_neutronics_options(),
+            id="neutronics-options",
+            className="mb-4",
+            style={'display': 'block'}  # Visible initially (default analysis type)
+        ),
         
-        # Burnup options
-        html.Div(id="burnup-options", className="mb-4"),
+        # Burnup options (always present in layout for State validation)
+        html.Div(
+            create_burnup_options(),
+            id="burnup-options",
+            className="mb-4",
+            style={'display': 'none'}  # Hidden initially, callback will show/hide
+        ),
         
-        # Quick transient options
-        html.Div(id="quick-transient-options", className="mb-4"),
+        # Quick transient options (always present but conditionally visible)
+        # Initialize with empty to avoid callback validation errors
+        html.Div(
+            create_quick_transient_options(),
+            id="quick-transient-options",
+            className="mb-4",
+            style={'display': 'none'}  # Hidden initially
+        ),
         
-        # Safety transient options
-        html.Div(id="safety-options", className="mb-4"),
+        # Safety transient options (always present in layout for State validation)
+        html.Div(
+            create_safety_options(),
+            id="safety-options",
+            className="mb-4",
+            style={'display': 'none'}  # Hidden initially, callback will show/hide
+        ),
         
-        # Lumped thermal options
-        html.Div(id="lumped-thermal-options", className="mb-4"),
+        # Lumped thermal options (always present in layout for State validation)
+        html.Div(
+            create_lumped_thermal_options(),
+            id="lumped-thermal-options",
+            className="mb-4",
+            style={'display': 'none'}  # Hidden initially, callback will show/hide
+        ),
         
         # Run button
         dbc.Row([

@@ -1,20 +1,30 @@
 """
-Economic analysis and cost modeling
+Economic cost modeling for SMR designs.
 
-⚠️ EXPERIMENTAL / NOT IMPLEMENTED ⚠️
+This module provides capabilities for:
+- Capital cost estimation (overnight costs, construction)
+- Operating cost estimation (fuel, O&M, staffing)
+- Levelized Cost of Electricity (LCOE) calculations
+- SMR-specific cost factors (modularity, learning curve)
+- Cost breakdowns and sensitivity analysis
 
-This module is currently a placeholder with no implementation.
-For economic analysis, implement custom cost models as needed.
-
-Planned features:
-- Levelized cost of electricity (LCOE)
-- Capital cost estimation
-- Operating cost models
-- Economic optimization
-
-See FEATURE_STATUS.md for current status.
+Classes:
+    CapitalCostEstimator: Capital cost estimation
+    OperatingCostEstimator: Operating cost estimation
+    LCOECalculator: Levelized Cost of Electricity calculator
+    CostBreakdown: Cost breakdown analysis
 """
 
-__all__ = []
+from smrforge.economics.cost_modeling import (
+    CapitalCostEstimator,
+    CostBreakdown,
+    LCOECalculator,
+    OperatingCostEstimator,
+)
 
-# TODO: Implement economics models if needed
+__all__ = [
+    "CapitalCostEstimator",
+    "OperatingCostEstimator",
+    "LCOECalculator",
+    "CostBreakdown",
+]
