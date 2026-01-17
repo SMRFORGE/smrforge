@@ -40,6 +40,8 @@
 # - Economics cost modeling (capital costs, operating costs, LCOE calculations)
 # - Advanced two-phase flow models (drift-flux, two-fluid, enhanced boiling correlations, CHF)
 # - Fuel cycle optimization and long-term simulation (optimization algorithms, material aging)
+# - Parallel multi-group diffusion solver (red-black group ordering, Numba prange)
+# - MPI support for distributed memory (optional, via mpi4py)
 # - Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
