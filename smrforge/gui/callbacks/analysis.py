@@ -18,7 +18,9 @@ logger = get_logger(__name__)
 from smrforge.gui.components.analysis_panel import (
     create_neutronics_options,
     create_burnup_options,
+    create_quick_transient_options,
     create_safety_options,
+    create_lumped_thermal_options,
 )
 
 
@@ -30,7 +32,9 @@ def register_analysis_callbacks(app):
     @app.callback(
         Output('neutronics-options', 'children'),
         Output('burnup-options', 'children'),
+        Output('quick-transient-options', 'children'),
         Output('safety-options', 'children'),
+        Output('lumped-thermal-options', 'children'),
         Output('run-analysis-button', 'disabled'),
         Input('analysis-type-radio', 'value'),
         Input('reactor-spec-store', 'data'),
@@ -44,14 +48,19 @@ def register_analysis_callbacks(app):
         )
         logger.debug(f"update_analysis_options: has_reactor={has_reactor}, reactor_spec type={type(reactor_spec)}, keys={list(reactor_spec.keys())[:5] if isinstance(reactor_spec, dict) else 'N/A'}")
         
+        # Quick transient and lumped thermal don't require a reactor spec
         if analysis_type == 'neutronics':
-            return create_neutronics_options(), "", "", not has_reactor
+            return create_neutronics_options(), "", "", "", "", not has_reactor
         elif analysis_type == 'burnup':
-            return "", create_burnup_options(), "", not has_reactor
+            return "", create_burnup_options(), "", "", "", not has_reactor
+        elif analysis_type == 'quick_transient':
+            return "", "", create_quick_transient_options(), "", "", False
         elif analysis_type == 'safety':
-            return "", "", create_safety_options(), not has_reactor
+            return "", "", "", create_safety_options(), "", not has_reactor
+        elif analysis_type == 'lumped_thermal':
+            return "", "", "", "", create_lumped_thermal_options(), False
         else:  # complete
-            return create_neutronics_options(), create_burnup_options(), create_safety_options(), not has_reactor
+            return create_neutronics_options(), create_burnup_options(), "", create_safety_options(), "", not has_reactor
     
     @app.callback(
         Output('analysis-results-store', 'data'),
@@ -64,46 +73,71 @@ def register_analysis_callbacks(app):
         State('neutronics-tolerance', 'value'),
         State('burnup-time-steps', 'value'),
         State('burnup-power-density', 'value'),
+        State('quick-transient-type-dropdown', 'value'),
+        State('quick-transient-duration', 'value'),
+        State('quick-transient-power', 'value'),
+        State('quick-transient-temperature', 'value'),
+        State('quick-transient-reactivity', 'value'),
+        State('quick-transient-scram-available', 'value'),
+        State('quick-transient-scram-delay', 'value'),
+        State('quick-transient-long-term', 'value'),
         State('transient-type-dropdown', 'value'),
         State('transient-time', 'value'),
+        State('lumped-thermal-duration', 'value'),
+        State('lumped-thermal-max-step', 'value'),
+        State('lumped-thermal-adaptive', 'value'),
         prevent_initial_call=True
     )
     def run_analysis(n_clicks, analysis_type, reactor_spec, max_iter, tolerance,
-                     time_steps, power_density, transient_type, transient_time):
+                     time_steps, power_density,
+                     quick_transient_type, quick_transient_duration,
+                     quick_transient_power, quick_transient_temperature,
+                     quick_transient_reactivity, quick_transient_scram_available,
+                     quick_transient_scram_delay, quick_transient_long_term,
+                     transient_type, transient_time,
+                     lumped_thermal_duration, lumped_thermal_max_step, lumped_thermal_adaptive):
         """Run analysis."""
         logger.info(f"Running {analysis_type} analysis")
         
+        # Quick transient and lumped thermal don't require reactor spec
+        requires_reactor = analysis_type in ['neutronics', 'burnup', 'safety', 'complete']
+        
         # Check if reactor_spec has actual data (not just empty dict)
-        if not reactor_spec or (isinstance(reactor_spec, dict) and len(reactor_spec) == 0):
+        if requires_reactor and (not reactor_spec or (isinstance(reactor_spec, dict) and len(reactor_spec) == 0)):
             logger.warning("No reactor specification available for analysis")
             return {}, dbc.Alert("No reactor specification available. Create a reactor first.", color="warning"), ""
         
+        results = {}
+        
         try:
-            import smrforge as smr
-            from smrforge.validation.models import ReactorSpecification
             import numpy as np
             
-            # Create reactor from spec
-            # Ensure reactor_spec is a dict and has all required fields
-            if not isinstance(reactor_spec, dict):
-                logger.error("Invalid reactor specification format")
-                return {}, dbc.Alert("Invalid reactor specification format.", color="danger"), ""
-            
-            spec = ReactorSpecification(**reactor_spec)
-            logger.info(f"Creating reactor from spec: {spec.name}")
-            
-            # Create reactor with all spec parameters
-            reactor = smr.create_reactor(
-                power_mw=spec.power_thermal / 1e6,
-                core_height=spec.core_height,
-                core_diameter=spec.core_diameter,
-                enrichment=spec.enrichment,
-                reactor_type=spec.reactor_type.value if hasattr(spec.reactor_type, 'value') else str(spec.reactor_type),
-                fuel_type=spec.fuel_type.value if hasattr(spec.fuel_type, 'value') else str(spec.fuel_type),
-            )
-            logger.info("Reactor created successfully")
-            
-            results = {}
+            # Only create reactor if needed
+            if requires_reactor:
+                import smrforge as smr
+                from smrforge.validation.models import ReactorSpecification
+                
+                # Create reactor from spec
+                # Ensure reactor_spec is a dict and has all required fields
+                if not isinstance(reactor_spec, dict):
+                    logger.error("Invalid reactor specification format")
+                    return {}, dbc.Alert("Invalid reactor specification format.", color="danger"), ""
+                
+                spec = ReactorSpecification(**reactor_spec)
+                logger.info(f"Creating reactor from spec: {spec.name}")
+                
+                # Create reactor with all spec parameters
+                reactor = smr.create_reactor(
+                    power_mw=spec.power_thermal / 1e6,
+                    core_height=spec.core_height,
+                    core_diameter=spec.core_diameter,
+                    enrichment=spec.enrichment,
+                    reactor_type=spec.reactor_type.value if hasattr(spec.reactor_type, 'value') else str(spec.reactor_type),
+                    fuel_type=spec.fuel_type.value if hasattr(spec.fuel_type, 'value') else str(spec.fuel_type),
+                )
+                logger.info("Reactor created successfully")
+            else:
+                reactor = None
             
             if analysis_type in ['neutronics', 'complete']:
                 # Run neutronics
@@ -197,6 +231,108 @@ def register_analysis_callbacks(app):
                     'status': 'success',
                     'message': 'Burnup analysis completed'
                 }
+            
+            if analysis_type in ['quick_transient']:
+                # Run quick transient analysis
+                logger.info("Running quick transient analysis")
+                try:
+                    from smrforge.convenience.transients import quick_transient
+                    
+                    # Use parameters from UI
+                    power = float(quick_transient_power) if quick_transient_power else 1e6
+                    temperature = float(quick_transient_temperature) if quick_transient_temperature else 1200.0
+                    transient_type_val = quick_transient_type if quick_transient_type else "reactivity_insertion"
+                    duration = float(quick_transient_duration) if quick_transient_duration else 100.0
+                    reactivity = float(quick_transient_reactivity) if quick_transient_reactivity else 0.001
+                    scram_available = bool(quick_transient_scram_available) if quick_transient_scram_available else True
+                    scram_delay = float(quick_transient_scram_delay) if quick_transient_scram_delay else 1.0
+                    long_term = bool(quick_transient_long_term) if quick_transient_long_term else False
+                    
+                    transient_result = quick_transient(
+                        power=power,
+                        temperature=temperature,
+                        transient_type=transient_type_val,
+                        reactivity_insertion=reactivity if transient_type_val in ["reactivity_insertion", "reactivity_step"] else None,
+                        duration=duration,
+                        scram_available=scram_available,
+                        scram_delay=scram_delay,
+                        long_term_optimization=long_term if duration > 86400 else False,
+                        plot=False,  # Plot will be handled separately in UI
+                    )
+                    
+                    results['quick_transient'] = {
+                        'status': 'success',
+                        'time': transient_result.get('time', []),
+                        'power': transient_result.get('power', []),
+                        'T_fuel': transient_result.get('T_fuel', []),
+                        'T_moderator': transient_result.get('T_moderator', []),
+                        'reactivity': transient_result.get('reactivity', []),
+                    }
+                except Exception as e:
+                    logger.error(f"Quick transient analysis failed: {e}", exc_info=True)
+                    results['quick_transient'] = {
+                        'status': 'error',
+                        'error': str(e)
+                    }
+            
+            if analysis_type in ['lumped_thermal']:
+                # Run lumped thermal hydraulics
+                logger.info("Running lumped thermal hydraulics analysis")
+                try:
+                    from smrforge.thermal.lumped import (
+                        LumpedThermalHydraulics,
+                        ThermalLump,
+                        ThermalResistance
+                    )
+                    
+                    # Use parameters from UI
+                    duration = float(lumped_thermal_duration) if lumped_thermal_duration else 3600.0
+                    max_step = float(lumped_thermal_max_step) if lumped_thermal_max_step else 3600.0
+                    adaptive = bool(lumped_thermal_adaptive) if lumped_thermal_adaptive else True
+                    
+                    # Create default 2-lump system (fuel + moderator)
+                    fuel = ThermalLump(
+                        name="fuel",
+                        capacitance=1e8,  # J/K
+                        temperature=1200.0,  # K
+                        heat_source=lambda t: 1e6 if t < 100.0 else 1e5  # Decay heat
+                    )
+                    moderator = ThermalLump(
+                        name="moderator",
+                        capacitance=5e7,  # J/K
+                        temperature=800.0,  # K
+                        heat_source=lambda t: 0.0
+                    )
+                    resistance = ThermalResistance(
+                        name="fuel_to_moderator",
+                        resistance=1e-3,  # K/W
+                        lump1_name="fuel",
+                        lump2_name="moderator"
+                    )
+                    
+                    solver = LumpedThermalHydraulics(
+                        lumps=[fuel, moderator],
+                        resistances=[resistance],
+                        adaptive=adaptive,
+                        max_step=max_step if not adaptive else None,
+                    )
+                    
+                    thermal_result = solver.solve_transient(t_span=(0.0, duration))
+                    
+                    results['lumped_thermal'] = {
+                        'status': 'success',
+                        'result': {
+                            'time': thermal_result.get('time', []),
+                            'T_fuel': thermal_result.get('T_fuel', []),
+                            'T_moderator': thermal_result.get('T_moderator', []),
+                        }
+                    }
+                except Exception as e:
+                    logger.error(f"Lumped thermal analysis failed: {e}", exc_info=True)
+                    results['lumped_thermal'] = {
+                        'status': 'error',
+                        'error': str(e)
+                    }
             
             if analysis_type in ['safety', 'complete']:
                 # Run safety transient (simplified)
