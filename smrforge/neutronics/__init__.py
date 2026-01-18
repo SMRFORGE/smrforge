@@ -51,6 +51,23 @@ except ImportError as e:
     warnings.warn(f"Could not import transport solver: {e}", ImportWarning)
     _TRANSPORT_AVAILABLE = False
 
+# Adaptive sampling (Phase 2 optimization)
+try:
+    from smrforge.neutronics.adaptive_sampling import (
+        AdaptiveMonteCarloSolver,
+        ImportanceMap,
+        create_adaptive_solver,
+    )
+
+    _ADAPTIVE_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(
+        f"Could not import adaptive sampling: {e}", ImportWarning
+    )
+    _ADAPTIVE_AVAILABLE = False
+
 __all__ = []
 if _SOLVER_AVAILABLE:
     __all__.extend(["NeutronicsSolver", "MultiGroupDiffusion"])
@@ -60,3 +77,5 @@ if _MC_OPTIMIZED_AVAILABLE:
     __all__.extend(["OptimizedMonteCarloSolver", "ParticleBank"])
 if _TRANSPORT_AVAILABLE:
     __all__.append("Transport")
+if _ADAPTIVE_AVAILABLE:
+    __all__.extend(["AdaptiveMonteCarloSolver", "ImportanceMap", "create_adaptive_solver"])
