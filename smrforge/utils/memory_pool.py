@@ -173,6 +173,9 @@ class MemoryPoolManager:
         
         Returns:
             ParticleMemoryPool instance
+        
+        Raises:
+            ValueError: If capacity is invalid (<= 0).
         """
         if name not in self.pools:
             pool_capacity = capacity if capacity is not None else self.default_capacity

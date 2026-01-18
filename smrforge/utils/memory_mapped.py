@@ -206,14 +206,38 @@ def load_memory_mapped_cross_sections(
     Load existing memory-mapped cross-section files.
     
     Args:
-        path: Base path for files
+        path: Base path for files (e.g., 'xs_data' -> 'xs_data_sigma_t.dat')
         n_materials: Number of materials
         n_groups: Number of energy groups
-        dtype: Data type
-        mode: Access mode ('r' = read, 'w+' = read/write)
+        dtype: NumPy dtype for arrays (default: float64)
+        mode: Access mode ('r' for read-only, 'r+' for read-write)
     
     Returns:
-        Tuple of (sigma_t, sigma_s, sigma_f) memory-mapped arrays
+        Tuple of (sigma_t, sigma_s, sigma_f) MemoryMappedArray objects
+    
+    Raises:
+        FileNotFoundError: If cross-section files don't exist.
+        OSError: If files cannot be opened.
+        ValueError: If mode is invalid or dimensions are invalid (<= 0).
+    
+    Example:
+        >>> from smrforge.utils.memory_mapped import load_memory_mapped_cross_sections
+        >>> 
+        >>> # Load existing memory-mapped arrays
+        >>> sigma_t, sigma_s, sigma_f = load_memory_mapped_cross_sections(
+        ...     path="xs_data",
+        ...     n_materials=3,
+        ...     n_groups=4,
+        ...     mode='r'  # Read-only
+        ... )
+        >>> 
+        >>> # Read data
+        >>> xs_value = sigma_t[0, 0]  # Material 0, group 0
+        >>> 
+        >>> # Close when done
+        >>> sigma_t.close()
+        >>> sigma_s.close()
+        >>> sigma_f.close()
     """
     base_path = Path(path)
     
