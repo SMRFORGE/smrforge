@@ -143,8 +143,53 @@ def reactor_create(args):
     """Create a reactor from preset or configuration."""
     try:
         import smrforge as smr
-        from smrforge.convenience import create_reactor, list_presets
         from smrforge.validation.models import ReactorSpecification
+        
+        # Try multiple import strategies for convenience functions
+        create_reactor = None
+        list_presets = None
+        
+        # Strategy 1: Try from top-level smrforge module
+        try:
+            if hasattr(smr, 'create_reactor'):
+                create_reactor = smr.create_reactor
+            if hasattr(smr, 'list_presets'):
+                list_presets = smr.list_presets
+        except Exception:
+            pass
+        
+        # Strategy 2: Try from convenience module
+        if create_reactor is None or list_presets is None:
+            try:
+                from smrforge.convenience import create_reactor, list_presets
+            except ImportError:
+                pass
+        
+        # Strategy 3: Fallback - try importing convenience.py directly
+        if create_reactor is None or list_presets is None:
+            try:
+                import importlib.util
+                from pathlib import Path
+                convenience_file = Path(__file__).parent.parent / "convenience.py"
+                if convenience_file.exists():
+                    spec = importlib.util.spec_from_file_location("_convenience_cli", convenience_file)
+                    convenience_mod = importlib.util.module_from_spec(spec)
+                    # Add parent to path so relative imports work
+                    parent_dir = str(convenience_file.parent)
+                    if parent_dir not in sys.path:
+                        sys.path.insert(0, parent_dir)
+                    spec.loader.exec_module(convenience_mod)
+                    create_reactor = convenience_mod.create_reactor
+                    list_presets = convenience_mod.list_presets
+            except Exception:
+                pass
+        
+        # Final check - if still None, raise error
+        if create_reactor is None or list_presets is None:
+            raise ImportError(
+                "Could not import create_reactor and list_presets. "
+                "Try: import smrforge as smr; smr.create_reactor()"
+            )
         
         # Check if preset is provided
         if args.preset:
@@ -1678,7 +1723,29 @@ def shell_interactive(args):
             
             # Pre-import SMRForge modules
             import smrforge as smr
-            from smrforge.convenience import create_reactor, list_presets
+            
+            # Try multiple import strategies for convenience functions
+            create_reactor = getattr(smr, 'create_reactor', None)
+            list_presets = getattr(smr, 'list_presets', None)
+            
+            if create_reactor is None or list_presets is None:
+                try:
+                    from smrforge.convenience import create_reactor, list_presets
+                except ImportError:
+                    # Fallback to direct import
+                    import importlib.util
+                    from pathlib import Path
+                    convenience_file = Path(__file__).parent.parent / "convenience.py"
+                    if convenience_file.exists():
+                        spec = importlib.util.spec_from_file_location("_convenience_shell", convenience_file)
+                        convenience_mod = importlib.util.module_from_spec(spec)
+                        parent_dir = str(convenience_file.parent)
+                        if parent_dir not in sys.path:
+                            sys.path.insert(0, parent_dir)
+                        spec.loader.exec_module(convenience_mod)
+                        create_reactor = convenience_mod.create_reactor
+                        list_presets = convenience_mod.list_presets
+            
             from smrforge.burnup import BurnupSolver, BurnupOptions
             from smrforge.visualization import plot_core_layout
             
@@ -1715,7 +1782,28 @@ Type 'help(smr)' for more information or 'exit' to quit.
             
             # Pre-import SMRForge modules
             import smrforge as smr
-            from smrforge.convenience import create_reactor, list_presets
+            
+            # Try multiple import strategies for convenience functions
+            create_reactor = getattr(smr, 'create_reactor', None)
+            list_presets = getattr(smr, 'list_presets', None)
+            
+            if create_reactor is None or list_presets is None:
+                try:
+                    from smrforge.convenience import create_reactor, list_presets
+                except ImportError:
+                    # Fallback to direct import
+                    import importlib.util
+                    from pathlib import Path
+                    convenience_file = Path(__file__).parent.parent / "convenience.py"
+                    if convenience_file.exists():
+                        spec = importlib.util.spec_from_file_location("_convenience_shell_repl", convenience_file)
+                        convenience_mod = importlib.util.module_from_spec(spec)
+                        parent_dir = str(convenience_file.parent)
+                        if parent_dir not in sys.path:
+                            sys.path.insert(0, parent_dir)
+                        spec.loader.exec_module(convenience_mod)
+                        create_reactor = convenience_mod.create_reactor
+                        list_presets = convenience_mod.list_presets
             
             # Setup banner
             banner = """
