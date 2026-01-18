@@ -185,6 +185,8 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   Fuel cycle optimization: Cycle length optimization, refueling strategy, material aging models
 #   Parallel multi-group diffusion: Red-black group ordering, parallel spatial operations (4-8x speedup)
 #   MPI support: Optional distributed memory support via mpi4py
+#   Phase 2: Adaptive sampling (2-5x faster) and Hybrid solver (10-100x faster than pure MC)
+#   Phase 3: Implicit Monte Carlo (5-10x faster transients), Enhanced memory pooling (5-10% speedup), Memory-mapped files (large datasets)
 #   smrforge validate design (design constraints validation)
 #   smrforge visualize geometry/flux
 #   smrforge config show/set/init
