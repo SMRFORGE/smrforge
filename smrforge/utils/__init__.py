@@ -35,3 +35,24 @@ try:
     __all__.extend(["batch_process", "batch_solve_keff"])
 except ImportError:
     pass
+
+# Optimization utilities (optional import)
+try:
+    from smrforge.utils.optimization_utils import (
+        ensure_contiguous,
+        vectorized_cross_section_lookup,
+        vectorized_normalize,
+        batch_vectorized_operations,
+        zero_copy_slice,
+        smart_array_copy,
+    )
+    __all__.extend([
+        "ensure_contiguous",
+        "vectorized_cross_section_lookup",
+        "vectorized_normalize",
+        "batch_vectorized_operations",
+        "zero_copy_slice",
+        "smart_array_copy",
+    ])
+except ImportError:
+    pass
