@@ -90,7 +90,32 @@ def track_particles_vectorized(...):
 
 ---
 
-### 3. `_update_scattering_source_parallel_numba()` ✅
+### 3. `sample_isotropic_direction()` ✅
+
+**File:** `smrforge/neutronics/monte_carlo_optimized.py`
+
+**Before:**
+```python
+@njit(cache=True)
+def sample_isotropic_direction(...):
+    ...
+```
+
+**After:**
+```python
+@njit(cache=True, fastmath=True, boundscheck=False, nogil=True)
+def sample_isotropic_direction(...):
+    ...
+```
+
+**Benefits:**
+- Faster direction sampling (called frequently in tracking)
+- True parallelism
+- ~5-10% speedup for direction sampling
+
+---
+
+### 4. `_update_scattering_source_parallel_numba()` ✅
 
 **File:** `smrforge/neutronics/solver.py`
 
@@ -128,6 +153,7 @@ def _update_scattering_source_parallel_numba(...):
 | Function | Optimization | Expected Speedup |
 |----------|--------------|------------------|
 | `sample_fission_spectrum()` | fastmath, nogil, boundscheck=False | 5-10% |
+| `sample_isotropic_direction()` | fastmath, nogil, boundscheck=False | 5-10% |
 | `track_particles_vectorized()` | fastmath, nogil, boundscheck=False | 10-30% |
 | `_update_scattering_source_parallel_numba()` | fastmath, nogil, boundscheck=False | 10-20% |
 
