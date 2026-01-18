@@ -20,6 +20,8 @@ This directory contains all SMRForge documentation organized by category.
 - Nuclear data backends
 - Logging usage
 - Architecture notes
+- Regulatory traceability and compliance
+- OpenMC comparison and improvements
 
 ### Development (`development/`)
 - Code style guide
