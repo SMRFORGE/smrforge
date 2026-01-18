@@ -1,0 +1,104 @@
+# Security audit workflow
+# Runs automated security scanning on a weekly schedule and on-demand
+
+name: Security Audit
+
+on:
+  schedule:
+    # Run weekly on Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual triggering
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'requirements*.txt'
+      - 'setup.py'
+      - 'pyproject.toml'
+      - 'smrforge/**'
+
+jobs:
+  security-audit:
+    name: Automated Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+      
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install pip-audit bandit[toml]
+      
+      - name: Install SMRForge dependencies
+        run: |
+          pip install -e ".[dev]"
+      
+      - name: Run pip-audit (dependency vulnerability scan)
+        id: pip_audit
+        run: |
+          python -m pip_audit --desc --format json --output pip_audit.json || echo "pip-audit failed"
+        continue-on-error: true
+      
+      - name: Run bandit (code security analysis)
+        id: bandit
+        run: |
+          python -m bandit -r smrforge/ -f json -o bandit.json -ll || echo "bandit failed"
+        continue-on-error: true
+      
+      - name: Run comprehensive security audit
+        run: |
+          python scripts/security_audit.py \
+            --format both \
+            --output-dir security_reports \
+            || echo "Security audit script completed with issues"
+        continue-on-error: true
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports-${{ github.run_number }}
+          path: |
+            security_reports/
+            pip_audit.json
+            bandit.json
+          retention-days: 90
+      
+      - name: Comment PR with security summary (if PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Try to read summary report
+            const summaryPath = path.join('security_reports', 'security_audit_*.txt');
+            let summary = 'Security audit completed. See artifacts for details.';
+            
+            try {
+              const summaryFiles = fs.readdirSync('security_reports')
+                .filter(f => f.startsWith('security_audit_') && f.endsWith('.txt'));
+              if (summaryFiles.length > 0) {
+                summary = fs.readFileSync(
+                  path.join('security_reports', summaryFiles[0]),
+                  'utf8'
+                );
+              }
+            } catch (e) {
+              // Continue with default message
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Security Audit Results\n\n\`\`\`\n${summary}\n\`\`\`\n\nSee workflow artifacts for full reports.`
+            });

@@ -13,6 +13,10 @@ flake8>=4.0
 mypy>=0.950
 pylint>=2.13
 
+# Security scanning
+pip-audit>=2.6.0
+bandit[toml]>=1.7.5
+
 # Documentation
 sphinx>=4.5
 sphinx-rtd-theme>=1.0
