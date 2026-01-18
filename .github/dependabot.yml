@@ -1,0 +1,62 @@
+# Dependabot configuration for automatic dependency updates and security scanning
+# Documentation: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "SMRForge Development Team"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Focus on security updates for production dependencies
+    ignore:
+      # Ignore patch updates (we'll handle manually or via security alerts)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+    # Allow updates to development dependencies
+    groups:
+      production-dependencies:
+        patterns:
+          - "numpy"
+          - "scipy"
+          - "numba"
+          - "pydantic"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "security"
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "black"
+          - "flake8"
+          - "mypy"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "security"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"

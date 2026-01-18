@@ -1,6 +1,6 @@
 # Release Process
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 18, 2026
 
 This document outlines the release process for SMRForge.
 

@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 18, 2026
 
 All notable changes to SMRForge will be documented in this file.
 
