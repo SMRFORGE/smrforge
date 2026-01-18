@@ -3,7 +3,7 @@
 **Date:** January 2026  
 **Status:** ✅ Phase 1 Complete - 🚧 Phase 2 In Progress  
 **Performance:** 90-95% of C++ Performance Achieved  
-**Phase 2:** Adaptive Sampling Foundation Implemented
+**Phase 2:** Adaptive Sampling + Hybrid Solver Foundations Complete
 
 ---
 
@@ -206,23 +206,65 @@ Successfully completed **Phase 1 optimizations** from OpenMC improvement recomme
 
 ---
 
-## 📋 Next Steps (Phase 2)
+## 🚧 Phase 2 Progress (Algorithmic Improvements)
 
-### Priority 1: Adaptive Sampling (2-3 weeks)
+### 1. Adaptive Sampling ✅ **FOUNDATION COMPLETE**
 
-**Goal:** Focus computation on important regions
+**Status:** 🚧 Foundation implemented, integration in progress
+
+**Completed:**
+- ✅ `ImportanceMap` class - Maps spatial regions to importance weights
+- ✅ `AdaptiveMonteCarloSolver` class - Main adaptive sampling solver
+- ✅ Exploration phase - Uniform sampling to identify important regions
+- ✅ Refinement phase - Importance-based sampling framework
+- ✅ Importance-based source resampling - Weighted selection from fission bank
+- ✅ Improved fission density estimation - Proper volume normalization
 
 **Expected Impact:** 2-5x faster convergence with same accuracy
 
-**Why First:** Foundation for other improvements, medium effort, high impact
+---
+
+### 2. Hybrid Solver ✅ **FOUNDATION COMPLETE**
+
+**Status:** 🚧 Foundation implemented, integration in progress
+
+**Completed:**
+- ✅ `RegionPartition` class - Partitions reactor into diffusion and MC regions
+- ✅ `HybridSolver` class - Main hybrid solver combining diffusion + MC
+- ✅ Complex region identification - Material boundaries, edges, corners
+- ✅ Flux gradient identification - Uses flux gradients from diffusion solution
+- ✅ Diffusion + MC coupling framework - Combines results from both methods
+
+**Expected Impact:** 10-100x faster than pure MC with same accuracy
 
 ---
 
-### Priority 2: Hybrid Methods (4-6 weeks)
+## 📋 Next Steps (Phase 2)
 
-**Goal:** Combine diffusion (fast) + MC (accurate)
+### Priority 1: Testing and Benchmarking
 
-**Expected Impact:** 10-100x faster than pure MC
+**Goal:** Validate Phase 2 performance improvements
+
+**Tasks:**
+- Create unit tests for adaptive sampling
+- Create unit tests for hybrid solver
+- Benchmark against standard MC (verify 2-5x improvement for adaptive, 10-100x for hybrid)
+- Compare convergence rates
+
+**Expected Impact:** Validation of performance gains
+
+---
+
+### Priority 2: Enhanced Boundary Coupling (Hybrid Solver)
+
+**Goal:** Proper coupling between diffusion and MC regions
+
+**Tasks:**
+- Implement proper boundary conditions between diffusion and MC regions
+- Use diffusion flux as source for MC regions
+- Iterate between diffusion and MC until convergence
+
+**Expected Impact:** More accurate coupling
 
 **Why Second:** Can make SMRForge **faster than OpenMC** for typical problems
 

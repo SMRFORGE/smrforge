@@ -228,24 +228,118 @@ class HybridSolver:
         
         return False
     
+    def _identify_complex_regions_from_flux(self, flux: np.ndarray) -> RegionPartition:
+        """
+        Identify complex regions using flux gradients from diffusion solution.
+        
+        Regions with high flux gradients are difficult for diffusion approximation
+        and require MC accuracy.
+        
+        Args:
+            flux: Flux distribution from diffusion solution [nz, nr, ng]
+        
+        Returns:
+            RegionPartition with identified regions
+        """
+        geometry = self.diffusion_solver.geometry
+        nz, nr = geometry.n_axial, geometry.n_radial
+        
+        # Start with material boundary identification (from geometry)
+        partition = self._identify_complex_regions()
+        
+        # Enhance with flux gradient analysis
+        # Compute flux gradient (spatial derivatives)
+        if flux.shape[2] > 0:  # Multi-group flux
+            # Use total flux (sum over groups)
+            flux_total = np.sum(flux, axis=2)
+        else:
+            flux_total = flux
+        
+        # Compute gradient magnitude
+        gradient_magnitude = self._compute_flux_gradient_magnitude(flux_total)
+        
+        # Threshold for high gradient (regions needing MC)
+        gradient_threshold = np.percentile(gradient_magnitude, 85)  # Top 15% highest gradients
+        
+        # Mark high-gradient regions as MC
+        high_gradient_mask = gradient_magnitude > gradient_threshold
+        partition.diffusion_mask[high_gradient_mask] = False
+        
+        # Update region IDs and counts
+        partition.region_ids = np.where(partition.diffusion_mask, 0, 1).astype(np.int32)
+        partition.n_diffusion_regions = np.sum(partition.diffusion_mask)
+        partition.n_mc_regions = np.sum(~partition.diffusion_mask)
+        
+        logger.info(
+            f"Flux-gradient identification: {partition.n_diffusion_regions} diffusion "
+            f"({100*partition.n_diffusion_regions/(nz*nr):.1f}%), "
+            f"{partition.n_mc_regions} MC ({100*partition.n_mc_regions/(nz*nr):.1f}%)"
+        )
+        
+        return partition
+    
+    def _compute_flux_gradient_magnitude(self, flux: np.ndarray) -> np.ndarray:
+        """
+        Compute flux gradient magnitude.
+        
+        Uses spatial derivatives to identify regions with high flux gradients.
+        
+        Args:
+            flux: Flux distribution [nz, nr]
+        
+        Returns:
+            Gradient magnitude [nz, nr]
+        """
+        nz, nr = flux.shape
+        
+        # Compute gradients using finite differences
+        # Axial gradient (z-direction)
+        grad_z = np.zeros_like(flux)
+        grad_z[1:-1, :] = (flux[2:, :] - flux[:-2, :]) / 2.0
+        grad_z[0, :] = flux[1, :] - flux[0, :]  # Forward difference at boundary
+        grad_z[-1, :] = flux[-1, :] - flux[-2, :]  # Backward difference at boundary
+        
+        # Radial gradient (r-direction)
+        grad_r = np.zeros_like(flux)
+        grad_r[:, 1:-1] = (flux[:, 2:] - flux[:, :-2]) / 2.0
+        grad_r[:, 0] = flux[:, 1] - flux[:, 0]  # Forward difference at boundary
+        grad_r[:, -1] = flux[:, -1] - flux[:, -2]  # Backward difference at boundary
+        
+        # Gradient magnitude
+        gradient_magnitude = np.sqrt(grad_z**2 + grad_r**2)
+        
+        # Normalize by local flux (relative gradient)
+        # Avoid division by zero
+        flux_normalized = np.abs(flux) + 1e-10
+        relative_gradient = gradient_magnitude / flux_normalized
+        
+        return relative_gradient
+    
     def solve_eigenvalue(self) -> Dict:
         """
         Solve k-eff using hybrid method.
         
         Algorithm:
-        1. Solve diffusion for full geometry (fast)
-        2. Identify complex regions (if adaptive)
-        3. Solve MC for complex regions (accurate)
-        4. Combine results with proper coupling
+        1. Solve diffusion for full geometry (fast) - preliminary solve
+        2. Identify complex regions using flux gradients (if adaptive)
+        3. Solve diffusion again with refined regions (if needed)
+        4. Solve MC for complex regions (accurate)
+        5. Combine results with proper coupling
         
         Returns:
             Dict with k_eff, k_std, and metadata
         """
         logger.info("Starting hybrid solver (diffusion + MC)")
         
-        # Step 1: Identify regions (if adaptive)
+        # Step 1: Preliminary diffusion solve (fast, for region identification)
+        logger.info("Step 1: Preliminary diffusion solve (for region identification)")
+        k_eff_prelim, flux_prelim = self.diffusion_solver.solve_steady_state()
+        self.flux_diffusion = flux_prelim
+        
+        # Step 2: Identify complex regions (if adaptive, uses flux gradients)
         if self.use_adaptive_partitioning:
-            self.partition = self._identify_complex_regions()
+            logger.info("Step 2: Identifying complex regions using flux gradients")
+            self.partition = self._identify_complex_regions_from_flux(flux_prelim)
         else:
             # Use full diffusion (no partition)
             geometry = self.diffusion_solver.geometry
@@ -257,15 +351,14 @@ class HybridSolver:
                 n_mc_regions=0,
             )
         
-        # Step 2: Solve with diffusion (fast, approximate)
-        logger.info("Step 1: Solving with diffusion (fast)")
-        k_eff_diff, flux_diff = self.diffusion_solver.solve_steady_state()
+        # Step 3: Final diffusion solve (if region partition changed)
+        # For now, reuse preliminary solution
+        k_eff_diff = k_eff_prelim
         self.k_eff_diffusion = k_eff_diff
-        self.flux_diffusion = flux_diff
         
         logger.info(f"Diffusion k-eff: {k_eff_diff:.6f}")
         
-        # Step 3: Solve MC for complex regions (if any)
+        # Step 4: Solve MC for complex regions (if any)
         if self.partition.n_mc_regions > 0:
             logger.info(
                 f"Step 2: Solving MC for {self.partition.n_mc_regions} complex regions"

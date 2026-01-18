@@ -67,9 +67,11 @@ class AdaptiveMonteCarlo:
 
 ---
 
-### 2. Hybrid Deterministic-Monte Carlo Methods (4-6 weeks) - Very High Impact
+### 2. Hybrid Deterministic-Monte Carlo Methods (4-6 weeks) - Very High Impact ✅ **FOUNDATION COMPLETE**
 
 **Goal:** Combine best of both worlds - speed of diffusion + accuracy of MC
+
+**Status:** 🚧 Foundation implemented, integration in progress
 
 **Implementation Strategy:**
 ```python
