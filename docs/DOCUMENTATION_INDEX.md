@@ -5,7 +5,7 @@
 
 This document provides a comprehensive index of all SMRForge documentation files.
 
-**Note:** Documentation has been reorganized into a structured directory layout. See [Documentation Reorganization Plan](DOCUMENTATION_REORGANIZATION_PLAN.md) for details.
+**Note:** Documentation has been consolidated and reorganized. Historical documents have been moved to `archive/`. See [Documentation Consolidation Plan](archive/DOCUMENTATION_CONSOLIDATION_PLAN_2026.md) for details.
 
 ---
 
