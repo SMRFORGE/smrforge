@@ -130,6 +130,52 @@ mat_map = np.where(r_grid < self.geometry.core_diameter / 2, 0, 1)
 
 ---
 
+### 6. Zero-Copy Operations Audit (Memory) ✅
+
+**Files Created:**
+- `docs/technical/zero-copy-audit.md` - Copy operations audit
+
+**Implementation:**
+- Audited all `.copy()` operations in codebase
+- Created `ensure_contiguous()`, `smart_array_copy()` utilities (already in optimization_utils)
+- Documented why copies are necessary (algorithm correctness)
+
+**Key Finding:**
+- Most `.copy()` operations are **necessary for correctness**
+- Red-black algorithm requires separate arrays
+- Arnoldi method requires state preservation for rollback
+
+**Impact:** Foundation for future optimizations (utilities ready for use)
+
+---
+
+### 7. Error Messages Integration (Ease of Use) ✅
+
+**Files Modified:**
+- `smrforge/validation/pydantic_layer.py` - Integrated error message utilities into validators
+
+**Implementation:**
+- Integrated `format_validation_error()` into temperature validation
+- Integrated `format_cross_section_error()` into cross-section validation
+- Optional imports with fallback to original error messages
+
+**Example:**
+```python
+# Temperature validation now provides suggestions
+if self.inlet_temperature >= self.outlet_temperature:
+    msg = format_validation_error(
+        field_name="inlet_temperature",
+        value=self.inlet_temperature,
+        error_type="temperature_order",
+        suggestions=["Inlet should be < outlet"]
+    )
+    raise ValueError(msg)
+```
+
+**Impact:** Better error messages with suggestions for faster debugging
+
+---
+
 ## 📊 Performance Improvements Summary
 
 | Optimization | Speedup | Impact Area |
@@ -186,10 +232,10 @@ Use the new utilities for:
 
 ## 📋 Next Steps (Priority Order)
 
-1. **Zero-Copy Operations** (1-2 weeks) - Audit and optimize copy() calls
+1. ✅ **Zero-Copy Operations** - Audit complete (most copies necessary)
 2. **Enhanced Type Hints** (3-4 weeks) - Comprehensive coverage
 3. **Preset Design Library** (2-3 weeks) - Expand collection (framework exists)
-4. **Error Messages Integration** (1 week) - Use new utilities in validation
+4. ✅ **Error Messages Integration** - Integrated utilities into Pydantic validators
 
 ---
 
