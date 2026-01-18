@@ -5,6 +5,11 @@
 # Run:   docker run -it smrforge:latest
 #
 # Last Updated: January 2026
+# Regulatory Traceability (Complete):
+# - Calculation audit trails - Complete input → output traceability for licensing applications
+# - Model assumption documentation - Explicit assumption tracking per calculation
+# - Safety margin reports - Automated safety margin calculations with text/JSON export
+# - BEPU methodology support - Best Estimate Plus Uncertainty workflow integration
 # Phase 3 Optimizations (Complete):
 # - Implicit Monte Carlo (IMC) for transients - 5-10x faster for time-dependent calculations
 # - Enhanced memory pooling - 5-10% speedup, reduced allocation overhead
