@@ -745,6 +745,179 @@ class TestInitImportErrors:
             assert hasattr(main_module, '__all__')
             # These should not be in __all__ if import failed
             assert 'ENDFPhotonParser' not in main_module.__all__
+    
+    def test_main_init_import_error_convenience_fallback(self):
+        """Test main __init__ handles convenience import fallback exception path (lines 113-127)."""
+        # Test the exception path when convenience import fails both from package and file
+        with patch.dict(sys.modules, {'smrforge.convenience': None}):
+            # Mock convenience.py file not existing
+            with patch('pathlib.Path.exists', return_value=False):
+                import importlib
+                if 'smrforge' in sys.modules:
+                    del sys.modules['smrforge']
+                import smrforge as main_module
+                importlib.reload(main_module)
+                
+                # Should handle error gracefully with warning
+                assert hasattr(main_module, '__all__')
+                assert '_CONVENIENCE_AVAILABLE' in dir(main_module)
+                assert main_module._CONVENIENCE_AVAILABLE == False
+    
+    def test_main_init_import_error_data_downloader(self):
+        """Test main __init__ handles data_downloader import error (lines 175-176)."""
+        with patch.dict(sys.modules, {'smrforge.data_downloader': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_DATA_DOWNLOADER_AVAILABLE' in dir(main_module)
+            assert main_module._DATA_DOWNLOADER_AVAILABLE == False
+    
+    def test_main_init_import_error_gui(self):
+        """Test main __init__ handles GUI import error (lines 289-290)."""
+        with patch.dict(sys.modules, {'smrforge.gui': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_GUI_AVAILABLE' in dir(main_module)
+            assert main_module._GUI_AVAILABLE == False
+    
+    def test_main_init_import_error_control(self):
+        """Test main __init__ handles control import error (lines 315-316)."""
+        with patch.dict(sys.modules, {'smrforge.control': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_CONTROL_AVAILABLE' in dir(main_module)
+            assert main_module._CONTROL_AVAILABLE == False
+    
+    def test_main_init_import_error_mechanics(self):
+        """Test main __init__ handles mechanics import error (lines 339-340)."""
+        with patch.dict(sys.modules, {'smrforge.mechanics': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_MECHANICS_AVAILABLE' in dir(main_module)
+            assert main_module._MECHANICS_AVAILABLE == False
+    
+    def test_main_init_import_error_economics(self):
+        """Test main __init__ handles economics import error (lines 361-362)."""
+        with patch.dict(sys.modules, {'smrforge.economics': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_ECONOMICS_AVAILABLE' in dir(main_module)
+            assert main_module._ECONOMICS_AVAILABLE == False
+    
+    def test_main_init_import_error_fuel_cycle(self):
+        """Test main __init__ handles fuel_cycle import error (lines 383-384)."""
+        with patch.dict(sys.modules, {'smrforge.fuel_cycle': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_FUEL_CYCLE_AVAILABLE' in dir(main_module)
+            assert main_module._FUEL_CYCLE_AVAILABLE == False
+    
+    def test_main_init_import_error_two_phase_advanced(self):
+        """Test main __init__ handles two_phase_advanced import error (lines 409-410)."""
+        with patch.dict(sys.modules, {'smrforge.thermal.two_phase_advanced': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_TWO_PHASE_ADVANCED_AVAILABLE' in dir(main_module)
+            assert main_module._TWO_PHASE_ADVANCED_AVAILABLE == False
+
+
+class TestBurnupInit:
+    """Test smrforge/burnup/__init__.py."""
+    
+    def test_import_burnup_solver(self):
+        """Test importing burnup solver from burnup."""
+        from smrforge.burnup import BurnupSolver, BurnupOptions, NuclideInventory
+        assert BurnupSolver is not None
+        assert BurnupOptions is not None
+        assert NuclideInventory is not None
+    
+    def test_burnup_init_all_attributes(self):
+        """Test that __all__ is properly populated."""
+        import smrforge.burnup as burnup_module
+        assert hasattr(burnup_module, '__all__')
+        assert 'BurnupSolver' in burnup_module.__all__
+    
+    def test_burnup_init_import_error_lwr_burnup(self):
+        """Test burnup __init__ handles lwr_burnup import error (lines 23-24)."""
+        with patch.dict(sys.modules, {'smrforge.burnup.lwr_burnup': None}):
+            import importlib
+            if 'smrforge.burnup' in sys.modules:
+                del sys.modules['smrforge.burnup']
+            import smrforge.burnup as burnup_module
+            importlib.reload(burnup_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(burnup_module, '__all__')
+            assert '_LWR_BURNUP_AVAILABLE' in dir(burnup_module)
+            assert burnup_module._LWR_BURNUP_AVAILABLE == False
+    
+    def test_burnup_init_import_error_fuel_management(self):
+        """Test burnup __init__ handles fuel_management_integration import error (lines 29-30)."""
+        with patch.dict(sys.modules, {'smrforge.burnup.fuel_management_integration': None}):
+            import importlib
+            if 'smrforge.burnup' in sys.modules:
+                del sys.modules['smrforge.burnup']
+            import smrforge.burnup as burnup_module
+            importlib.reload(burnup_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(burnup_module, '__all__')
+            assert '_FUEL_MANAGEMENT_INTEGRATION_AVAILABLE' in dir(burnup_module)
+            assert burnup_module._FUEL_MANAGEMENT_INTEGRATION_AVAILABLE == False
+
+
+class TestGuiInit:
+    """Test smrforge/gui/__init__.py."""
+    
+    def test_gui_init_all_attributes(self):
+        """Test that __all__ is properly populated."""
+        import smrforge.gui as gui_module
+        assert hasattr(gui_module, '__all__')
+        # GUI exports depend on availability
+        assert '_GUI_AVAILABLE' in dir(gui_module)
+    
+    def test_gui_init_import_error(self):
+        """Test gui __init__ handles web_app import error (lines 10-11)."""
+        with patch.dict(sys.modules, {'smrforge.gui.web_app': None}):
+            import importlib
+            if 'smrforge.gui' in sys.modules:
+                del sys.modules['smrforge.gui']
+            import smrforge.gui as gui_module
+            importlib.reload(gui_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(gui_module, '__all__')
+            assert '_GUI_AVAILABLE' in dir(gui_module)
+            assert gui_module._GUI_AVAILABLE == False
+            # create_app should not be in __all__ if import failed
+            assert 'create_app' not in gui_module.__all__
 
 
 class TestUtilsInit:
