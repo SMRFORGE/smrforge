@@ -222,7 +222,7 @@
 - ✅ Code style guide documented in `docs/development/code-style.md`
 - ✅ Code formatting tools configured: Black, isort, flake8, mypy
 
-**Status:** Tools configured and documented. Type hints improved significantly. Not strictly enforced yet. Suitable for development but not production-critical.
+**Status:** Tools configured and documented. Type hints improved significantly. Black formatting now enforced as blocker in CI. Suitable for development and approaching production-readiness.
 
 **Priority:** MEDIUM (Can be improved incrementally)
 
@@ -304,8 +304,17 @@
 **Current Status:**
 - ✅ **Strong foundation** - Testing, logging, documentation structure
 - ✅ **Suitable for research/development** - Yes
-- ⚠️ **Suitable for production** - Not yet
+- ⚠️ **Suitable for production** - Not yet (requires 80%+ test coverage, extended validation)
 - ⚠️ **Suitable for safety-critical** - Definitely not
+
+**Safety-Critical Requirements Not Met:**
+- ❌ Full verification & validation (V&V) against experimental benchmarks
+- ❌ Code certification and standards compliance (e.g., NQA-1, IEC 61508)
+- ❌ Formal software quality assurance (SQA) processes
+- ❌ Independent third-party verification
+- ❌ Comprehensive documentation for regulatory review
+- ❌ Proven reliability under all operational conditions
+- ⚠️ Test coverage needs to be 90%+ for safety-critical use (currently 79.2%)
 
 ### Minimum Requirements for Production:
 
@@ -328,7 +337,7 @@ Based on the assessment, minimum requirements are:
 
 1. ✅ **CHANGELOG.md** - Exists and updated
 2. ✅ **CONTRIBUTING.md** - Exists and comprehensive
-3. **Improve test coverage** (ongoing) - Current: 70-73%, Target: 80% (gap: ~1,346 statements)
+3. **Improve test coverage** (ongoing) - Current: 79.2%, Target: 80% (gap: ~83 statements - **Very close!**)
 4. **Generate API docs** (2-4 hours) - Run sphinx-apidoc
 
 ### Short Term (Next 2 Weeks):
