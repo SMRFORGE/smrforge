@@ -72,9 +72,47 @@ This directory contains all SMRForge documentation organized by category.
 
 ## 🔗 Quick Links
 
-- **[Documentation Index](../DOCUMENTATION_INDEX.md)** - Complete index of all documentation
+- **[Documentation Index](DOCUMENTATION_INDEX.md)** - Complete index of all documentation (see below)
 - **[Main README](../README.md)** - Project overview
 - **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute
+
+## 📚 Documentation Index
+
+**Core Documentation (Root):**
+- **[README.md](../README.md)** - Main project overview and quick start
+- **[CHANGELOG.md](../CHANGELOG.md)** - Version history and changes
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Guidelines for contributing
+- **[LICENSE](../LICENSE)** - License information
+
+**User Guides (`guides/`):**
+- **[Installation Guide](guides/installation.md)** - Installation instructions
+- **[Tutorial](guides/tutorial.md)** - Step-by-step tutorial for beginners
+- **[Usage Guide](guides/usage.md)** - Usage guide with examples
+- **[CLI Guide](guides/cli-guide.md)** - Command-line interface
+- **[Dashboard Guide](guides/dashboard-guide.md)** - Web dashboard usage
+- **[Docker Guide](guides/docker.md)** - Docker usage and troubleshooting
+
+**Technical Documentation (`technical/`):**
+- **[ENDF Documentation](technical/endf-documentation.md)** - Complete ENDF file usage guide
+- **[Performance Optimizations](technical/OPTIMIZATION-STATUS-REPORT.md)** - Performance improvements (Phase 1-3 complete)
+- **[Optimization Roadmap](technical/OPTIMIZATION-ROADMAP.md)** - Future optimization plans
+- **[Phase 2 Summary](technical/PHASE2-IMPLEMENTATION-SUMMARY.md)** - Algorithmic improvements summary
+
+**Status (`status/`):**
+- **[Feature Status](status/feature-status.md)** - Module status and capabilities
+- **[Production Readiness](status/production-readiness-status.md)** - Production readiness assessment
+- **[Test Coverage](status/test-coverage-summary.md)** - Test coverage details
+- **[Pain Points Assessment](status/pain-points-assessment.md)** - Gap analysis and pain points
+
+**Development (`development/`):**
+- **[Code Style Guide](development/code-style.md)** - Code style and formatting
+- **[Release Process](development/release-process.md)** - Release workflow
+- **[Testing Documentation](development/testing-and-coverage.md)** - Testing guidelines
+
+**Archive (`archive/`):**
+- Historical implementation summaries
+- Past phase reports
+- Archived redundant/outdated documents
 
 ---
 
