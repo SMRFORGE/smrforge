@@ -38,6 +38,16 @@ try:
 except ImportError:
     _INTEGRATION_AVAILABLE = False
 
+# Import regulatory traceability (always available)
+from smrforge.validation.regulatory_traceability import (
+    CalculationAuditTrail,
+    ModelAssumption,
+    SafetyMargin,
+    SafetyMarginReport,
+    create_audit_trail,
+    generate_safety_margins_from_reactor,
+)
+
 __all__ = [
     # Models
     "ReactorType",
@@ -57,6 +67,13 @@ __all__ = [
     "NeutronicsValidator",
     "ThermalValidator",
     "ConsistencyValidator",
+    # Regulatory Traceability
+    "CalculationAuditTrail",
+    "ModelAssumption",
+    "SafetyMargin",
+    "SafetyMarginReport",
+    "create_audit_trail",
+    "generate_safety_margins_from_reactor",
 ]
 
 if _INTEGRATION_AVAILABLE:
