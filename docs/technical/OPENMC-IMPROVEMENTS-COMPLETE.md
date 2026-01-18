@@ -325,19 +325,51 @@ result = smart_array_copy(source, target)  # Reuses target if compatible
 
 ### 2. Enhanced Type Hints
 
-**Status:** Partial (some type hints exist, need comprehensive coverage)
+**Status:** ✅ Enhanced (Protocol added, conventions documented)
 
-**Current State:**
-- ✅ Some type hints in newer code
-- ⚠️ Missing type hints in older code
+**Implementation:**
+- Added `ReactorLike` Protocol for duck typing in `batch_solve_keff()`
+- Enhanced type hints in `parallel_batch.py` and `optimization_utils.py`
+- Fixed incomplete type hints (`List` → `List[ReactorLike]`)
+- Created type hints conventions document
 
-**Next Steps:**
-- Add comprehensive type hints throughout codebase
-- Use `Protocol` for duck typing
-- Add `mypy` type checking
-- Document type conventions
+**Files Modified:**
+- `smrforge/utils/parallel_batch.py` - Added Protocol, fixed type hints
+- `smrforge/utils/optimization_utils.py` - Enhanced type hints with Literal
+- `docs/technical/type-hints-conventions.md` - Type hints guidelines
 
-**Effort:** 3-4 weeks  
+**Example:**
+```python
+from typing import Protocol, List
+
+class ReactorLike(Protocol):
+    """Protocol for reactor-like objects."""
+    def solve_keff(self) -> float:
+        """Solve for k-effective."""
+        ...
+
+def batch_solve_keff(
+    reactors: List[ReactorLike],  # Duck typing!
+    parallel: bool = True
+) -> List[float]:
+    """Batch solve k-eff for multiple reactors."""
+    return batch_process(reactors, lambda r: r.solve_keff(), parallel=parallel)
+```
+
+**Benefits:**
+- Better IDE autocomplete and error detection
+- Type-safe duck typing with Protocol
+- Self-documenting code
+- Foundation for comprehensive type coverage
+
+**Impact:** High (better developer experience)
+
+**Remaining Work:**
+- Gradually add type hints to older code
+- Run mypy regularly to catch type errors
+- Add Protocol definitions for other interfaces
+
+**Effort:** Ongoing (gradual adoption)  
 **Impact:** High (better developer experience)
 
 ---
