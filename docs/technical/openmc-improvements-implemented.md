@@ -216,20 +216,41 @@ mat_map = np.where(r_grid < self.geometry.core_diameter / 2, 0, 1)
 
 #### 7. Zero-Copy Operations (Memory - Priority: HIGH)
 
-**Status:** 📋 Planned
+**Status:** ✅ Audit Complete + Utilities Created
 
-**What Needs to Be Done:**
-- Audit codebase for unnecessary `.copy()` calls
-- Replace with views where possible
-- Use `np.ascontiguousarray()` only when needed
-- Add memory profiling
+**Files Created:**
+- `docs/technical/zero-copy-audit.md` - Copy operations audit
+- `smrforge/utils/optimization_utils.py` - Optimization utilities (already created)
 
-**Expected Benefit:**
-- 10-30% memory reduction
-- 5-10% speedup
-- Better cache performance
+**What Was Done:**
+- Audited all `.copy()` operations in codebase
+- Created `ensure_contiguous()` - Smart contiguity check (zero-copy if possible)
+- Created `smart_array_copy()` - Smart copy with memory reuse
+- Documented why copies are necessary (algorithm correctness)
 
-**Impact:** Medium (10-30% memory reduction)
+**Key Finding:**
+- Most `.copy()` operations are **necessary for correctness**
+- Red-black algorithm requires separate arrays
+- Arnoldi method requires state preservation for rollback
+- Codebase is already well-optimized
+
+**Example:**
+```python
+from smrforge.utils.optimization_utils import ensure_contiguous, smart_array_copy
+
+# Avoids copy if already contiguous
+arr_contig = ensure_contiguous(arr)  # Zero-copy if possible
+
+# Reuses target memory if compatible
+result = smart_array_copy(source, target)  # Reuses target if compatible
+```
+
+**Benefits:**
+- Utilities help avoid unnecessary copies in future code
+- Foundation for memory pooling optimizations
+- Better cache performance through smart reuse
+
+**Impact:** Low (most copies are necessary), but utilities provide foundation for future optimizations
 
 ---
 
