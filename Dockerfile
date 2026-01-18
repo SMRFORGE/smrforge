@@ -52,6 +52,9 @@
 # - Fixed dashboard State component initialization (all analysis options always in layout)
 # - Fixed LumpedThermalHydraulics parameter passing (adaptive/max_step moved to solve_transient)
 # - Improved validation warning messages (show actual validation details)
+# - Comprehensive CLI guide documentation (docs/guides/cli-guide.md)
+# - Updated tutorial with CLI usage and advanced features (docs/guides/tutorial.md)
+# - Help system integration (smr.help() function for interactive documentation)
 # - Complete dashboard workflow: reactor creation → analysis → results → export
 # - Real data capture: flux and power distributions from solver
 # - Enhanced visualizations: plots use actual solver data, not sample data
