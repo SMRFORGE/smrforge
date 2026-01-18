@@ -77,10 +77,11 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[Capability Gaps Analysis](docs/status/capability-gaps-analysis.md)** - **CURRENT** - Comprehensive capability gaps analysis (consolidates all gap analyses)
 
 ### Status Reports
-- **[Feature Status](docs/status/feature-status.md)** - Implementation status of all features
-- **[Production Readiness Status](docs/status/production-readiness-status.md)** - Production readiness assessment
-- **[SMRForge Fact Sheet](docs/status/smrforge-fact-sheet.md)** - Comprehensive feature overview
-- **[Codebase Consistency Report](docs/status/codebase-consistency-report.md)** - Codebase consistency analysis
+- **[Feature Status](status/feature-status.md)** - Implementation status of all features
+- **[Production Readiness Status](status/production-readiness-status.md)** - Production readiness assessment
+- **[SMRForge Fact Sheet](status/smrforge-fact-sheet.md)** - Comprehensive feature overview
+- **[Codebase Consistency Report](status/codebase-consistency-report.md)** - Codebase consistency analysis
+- **[Pain Points Assessment](status/pain-points-assessment.md)** - **NEW** - Gap analysis and pain points (moved from root)
 
 ### Detailed Analysis Documents
 - **[Data Import Comparison and Plan](docs/status/data-import-comparison-and-improvement-plan.md)** - Detailed OpenMC vs SMRForge comparison
@@ -160,8 +161,8 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 
 ## 📝 Documentation Management
 
-- **[Documentation Reorganization Plan](DOCUMENTATION_REORGANIZATION_PLAN.md)** - Reorganization plan and structure
-- **[Documentation README](docs/README.md)** - Documentation directory overview
+- **[Documentation Consolidation Plan](archive/DOCUMENTATION_CONSOLIDATION_PLAN_2026.md)** - Consolidation plan (January 2026)
+- **[Documentation README](README.md)** - Documentation directory overview
 
 ---
 
@@ -235,4 +236,4 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 - Documents are updated when features are implemented or information changes
 - Historical implementation summaries are kept in `docs/archive/` for reference
 - For the most current status, see [Feature Status](docs/status/feature-status.md) and [Development Roadmap](docs/roadmaps/development-roadmap.md)
-- Documentation structure follows the organization plan in [Documentation Reorganization Plan](DOCUMENTATION_REORGANIZATION_PLAN.md)
+- Documentation structure follows the consolidation plan in [Documentation Consolidation Plan](archive/DOCUMENTATION_CONSOLIDATION_PLAN_2026.md)
