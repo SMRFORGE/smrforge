@@ -4,7 +4,7 @@
 # Build: docker build -t smrforge:latest .
 # Run:   docker run -it smrforge:latest
 #
-# Last Updated: January 2026
+# Last Updated: January 18, 2026
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications
 # - Model assumption documentation - Explicit assumption tracking per calculation

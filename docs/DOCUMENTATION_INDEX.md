@@ -1,6 +1,6 @@
 # SMRForge Documentation Index
 
-**Last Updated:** January 1, 2026  
+**Last Updated:** January 18, 2026  
 **Status:** Consolidated and reorganized - Redundant documents archived
 
 This document provides a comprehensive index of all SMRForge documentation files.
@@ -232,7 +232,7 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 
 ## 📝 Notes
 
-- All dates in documentation use format: **Month Day, Year** (e.g., January 1, 2026)
+- All dates in documentation use format: **Month Day, Year** (e.g., January 18, 2026)
 - Documents are updated when features are implemented or information changes
 - Historical implementation summaries are kept in `docs/archive/` for reference
 - For the most current status, see [Feature Status](docs/status/feature-status.md) and [Development Roadmap](docs/roadmaps/development-roadmap.md)
