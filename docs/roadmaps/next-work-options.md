@@ -1,7 +1,7 @@
 # Next Work Options - ENDF-B-VIII.1 Analysis Review
 
-**Date:** January 1, 2026  
-**Last Updated:** January 1, 2026  
+**Date:** January 18, 2026  
+**Last Updated:** January 18, 2026  
 **Based on:** ENDF_FILE_TYPES_ANALYSIS.md review
 
 ---

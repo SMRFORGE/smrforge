@@ -1,6 +1,6 @@
 # SMR-Focused Advanced Capabilities Gaps Analysis
 
-**Date:** January 1, 2026  
+**Date:** January 18, 2026  
 **Last Updated:** January 2026  
 **Focus:** Missing advanced features in `reactor_core.py` and geometry modules for **SMR development and prototyping**  
 **Scope:** Small Modular Reactors (SMRs) - <300 MWe, modular construction, factory fabrication
