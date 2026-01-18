@@ -745,3 +745,78 @@ class TestInitImportErrors:
             assert hasattr(main_module, '__all__')
             # These should not be in __all__ if import failed
             assert 'ENDFPhotonParser' not in main_module.__all__
+
+
+class TestUtilsInit:
+    """Test smrforge/utils/__init__.py."""
+    
+    def test_import_utils_logging(self):
+        """Test importing logging utilities from utils."""
+        from smrforge.utils import get_logger, setup_logging
+        assert callable(get_logger)
+        assert callable(setup_logging)
+    
+    def test_import_utils_logo(self):
+        """Test importing logo utilities from utils."""
+        from smrforge.utils import get_logo_path, get_logo_data
+        assert callable(get_logo_path)
+        assert callable(get_logo_data)
+    
+    def test_utils_init_all_attributes(self):
+        """Test that __all__ is properly populated."""
+        import smrforge.utils as utils_module
+        assert hasattr(utils_module, '__all__')
+        assert 'get_logger' in utils_module.__all__
+        assert 'get_logo_path' in utils_module.__all__
+    
+    def test_utils_init_import_error_parallel_batch(self):
+        """Test utils __init__ handles parallel_batch import error (lines 33-37)."""
+        with patch.dict(sys.modules, {'smrforge.utils.parallel_batch': None}):
+            import importlib
+            if 'smrforge.utils' in sys.modules:
+                del sys.modules['smrforge.utils']
+            import smrforge.utils as utils_module
+            importlib.reload(utils_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(utils_module, '__all__')
+            # batch_process should not be in __all__ if import failed
+            assert 'batch_process' not in utils_module.__all__
+            # But core exports should still be there
+            assert 'get_logger' in utils_module.__all__
+    
+    def test_utils_init_import_error_optimization_utils(self):
+        """Test utils __init__ handles optimization_utils import error (lines 40-58)."""
+        with patch.dict(sys.modules, {'smrforge.utils.optimization_utils': None}):
+            import importlib
+            if 'smrforge.utils' in sys.modules:
+                del sys.modules['smrforge.utils']
+            import smrforge.utils as utils_module
+            importlib.reload(utils_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(utils_module, '__all__')
+            # Optimization functions should not be in __all__ if import failed
+            assert 'ensure_contiguous' not in utils_module.__all__
+            # But core exports should still be there
+            assert 'get_logger' in utils_module.__all__
+    
+    def test_utils_init_import_error_memory_utils(self):
+        """Test utils __init__ handles memory_mapped/memory_pool import error (lines 61-78)."""
+        with patch.dict(sys.modules, {
+            'smrforge.utils.memory_mapped': None,
+            'smrforge.utils.memory_pool': None
+        }):
+            import importlib
+            if 'smrforge.utils' in sys.modules:
+                del sys.modules['smrforge.utils']
+            import smrforge.utils as utils_module
+            importlib.reload(utils_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(utils_module, '__all__')
+            # Memory utilities should not be in __all__ if import failed
+            assert 'MemoryMappedArray' not in utils_module.__all__
+            assert 'ParticleMemoryPool' not in utils_module.__all__
+            # But core exports should still be there
+            assert 'get_logger' in utils_module.__all__
