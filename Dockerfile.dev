@@ -76,8 +76,8 @@
 # - Added system libraries for 3D visualization
 # - Optional: mesh conversion (meshio) and CAD import (trimesh) dependencies
 # - Updated to support latest features and test requirements
-# - Test coverage: 79.2% overall, 75-80%+ on priority modules
-# - Comprehensive test suite: 133+ test files including Phase 1/2 module tests
+# - Test coverage: 79.2% overall, 75-80%+ on priority modules (30+ new tests added for __init__.py coverage)
+# - Comprehensive test suite: 150+ test files including Phase 1/2 module tests and __init__.py import error path tests
 # - Advanced error handling and async edge case coverage
 # - New test files: test_parameter_sweep, test_templates, test_constraints, test_converters, test_burnup_checkpointing
 # - Advanced tests: test_reactor_core_advanced_error_handling, test_reactor_core_async_edge_cases
@@ -254,7 +254,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - Automated ENDF data downloader
 #   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
 #   - Enhanced mesh generation
-#   - Comprehensive test suite (133+ test files, 79.2% coverage)
+#   - Comprehensive test suite (150+ test files, 79.2% coverage)
 #     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
 #     * Advanced error handling tests: file operations, copy failures, validation errors
 #     * Async edge case tests: partial failures, exception propagation, timeouts, concurrent access
