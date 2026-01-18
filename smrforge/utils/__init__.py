@@ -56,3 +56,24 @@ try:
     ])
 except ImportError:
     pass
+
+# Memory management utilities (Phase 3 optimization)
+try:
+    from smrforge.utils.memory_mapped import (
+        MemoryMappedArray,
+        create_memory_mapped_cross_sections,
+        load_memory_mapped_cross_sections,
+    )
+    from smrforge.utils.memory_pool import (
+        ParticleMemoryPool,
+        MemoryPoolManager,
+    )
+    __all__.extend([
+        "MemoryMappedArray",
+        "create_memory_mapped_cross_sections",
+        "load_memory_mapped_cross_sections",
+        "ParticleMemoryPool",
+        "MemoryPoolManager",
+    ])
+except ImportError:
+    pass
