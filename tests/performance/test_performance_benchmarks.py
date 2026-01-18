@@ -10,7 +10,7 @@ from typing import Dict, List
 import pytest
 import numpy as np
 
-from smrforge.geometry.prismatic_core import PrismaticCore
+from smrforge.geometry.core_geometry import PrismaticCore
 from smrforge.neutronics.solver import MultiGroupDiffusion
 
 
