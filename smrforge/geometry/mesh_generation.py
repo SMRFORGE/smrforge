@@ -4,7 +4,7 @@ Advanced mesh generation with quality metrics and adaptive refinement.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from scipy.spatial import Delaunay
@@ -151,8 +151,8 @@ class AdvancedMeshGenerator:
         Returns:
             MeshQuality object
         """
-        angles = []
-        edge_lengths = []
+        angles: List[float] = []
+        edge_lengths: List[float] = []
 
         for triangle in triangles:
             # Get triangle vertices
@@ -255,7 +255,7 @@ class AdvancedMeshGenerator:
         new_triangles = []
 
         # Map to track midpoints we've already created (edge -> vertex_index)
-        edge_midpoint_map = {}
+        edge_midpoint_map: Dict[Tuple[int, int], int] = {}
 
         def get_or_create_midpoint(v1_idx: int, v2_idx: int) -> int:
             """Get or create midpoint vertex for an edge."""

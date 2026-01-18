@@ -442,8 +442,12 @@ def generate_safety_margins_from_reactor(
         >>> # Save report
         >>> report.save("safety_margins/report_001.json")
     """
+    # Ensure calculation_id is a string
+    calc_id = calculated_results.get("calculation_id", "unknown")
+    calc_id_str = str(calc_id) if calc_id is not None else "unknown"
+    
     report = SafetyMarginReport(
-        calculation_id=calculated_results.get("calculation_id", "unknown"),
+        calculation_id=calc_id_str,
         timestamp=datetime.now(),
     )
     

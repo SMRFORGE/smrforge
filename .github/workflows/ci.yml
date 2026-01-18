@@ -143,7 +143,6 @@ jobs:
       - name: Check code formatting with Black
         run: |
           black --check --diff smrforge/ tests/
-        continue-on-error: true
       
       - name: Check import sorting with isort
         run: |

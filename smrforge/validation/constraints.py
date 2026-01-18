@@ -180,9 +180,9 @@ class DesignValidator:
         Returns:
             ValidationResult with validation status and violations
         """
-        violations = []
-        warnings = []
-        metrics = {}
+        violations: List[ConstraintViolation] = []
+        warnings: List[str] = []
+        metrics: Dict[str, Any] = {}
         
         # Run analysis if not provided
         if analysis_results is None:
@@ -262,7 +262,7 @@ class DesignValidator:
             else:
                 continue
             
-            if violation:
+            if violation and severity is not None:
                 viol = ConstraintViolation(
                     constraint_name, value, limit, unit, severity,
                     f"{constraint_name}: {value:.3f} {unit} {'exceeds' if constraint_type == 'max' else 'below'} limit {limit:.3f} {unit}"

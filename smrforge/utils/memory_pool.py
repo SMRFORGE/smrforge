@@ -51,20 +51,20 @@ class ParticleMemoryPool:
             capacity: Maximum number of particles the pool can hold
             dtype: Data type for arrays
         """
-        self.capacity = capacity
-        self.dtype = dtype
+        self.capacity: int = capacity
+        self.dtype: type = dtype
         
         # Pre-allocate arrays (will be reused)
-        self.position = np.zeros((capacity, 3), dtype=dtype)
-        self.direction = np.zeros((capacity, 3), dtype=dtype)
-        self.energy = np.zeros(capacity, dtype=dtype)
-        self.weight = np.ones(capacity, dtype=dtype)
-        self.generation = np.zeros(capacity, dtype=np.int32)
-        self.alive = np.ones(capacity, dtype=bool)
-        self.material_id = np.zeros(capacity, dtype=np.int32)
+        self.position: np.ndarray = np.zeros((capacity, 3), dtype=dtype)
+        self.direction: np.ndarray = np.zeros((capacity, 3), dtype=dtype)
+        self.energy: np.ndarray = np.zeros(capacity, dtype=dtype)
+        self.weight: np.ndarray = np.ones(capacity, dtype=dtype)
+        self.generation: np.ndarray = np.zeros(capacity, dtype=np.int32)
+        self.alive: np.ndarray = np.ones(capacity, dtype=bool)
+        self.material_id: np.ndarray = np.zeros(capacity, dtype=np.int32)
         
         # Current active size (number of particles in use)
-        self.active_size = 0
+        self.active_size: int = 0
         
         logger.debug(f"ParticleMemoryPool initialized with capacity={capacity}")
     
