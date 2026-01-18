@@ -1,6 +1,6 @@
 # SMRForge Tutorial: Getting Started
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 2026
 
 This tutorial will teach you how to use SMRForge step-by-step, even if you're completely new to Python or nuclear reactor analysis.
 
@@ -8,11 +8,13 @@ This tutorial will teach you how to use SMRForge step-by-step, even if you're co
 
 1. [Installation](#installation)
 2. [Your First Calculation](#your-first-calculation)
-3. [Working with Preset Designs](#working-with-preset-designs)
-4. [Creating Custom Reactors](#creating-custom-reactors)
-5. [Understanding the Results](#understanding-the-results)
-6. [Visualizing Your Results](#visualizing-your-results)
-7. [Next Steps](#next-steps)
+3. [Using the Command-Line Interface (CLI)](#using-the-command-line-interface-cli)
+4. [Working with Preset Designs](#working-with-preset-designs)
+5. [Creating Custom Reactors](#creating-custom-reactors)
+6. [Understanding the Results](#understanding-the-results)
+7. [Visualizing Your Results](#visualizing-your-results)
+8. [Advanced Features Overview](#advanced-features-overview)
+9. [Next Steps](#next-steps)
 
 ---
 
@@ -38,6 +40,23 @@ pip install smrforge
 
 This will download and install SMRForge and all its dependencies. Wait for the installation to complete - it may take a minute or two.
 
+**Alternative Installation Options:**
+
+- **From source (development):**
+  ```bash
+  git clone https://github.com/cmwhalen/smrforge.git
+  cd smrforge
+  pip install -e .
+  ```
+
+- **Using Docker:**
+  ```bash
+  docker-compose up -d
+  # Or build and run manually
+  docker build -t smrforge:latest .
+  docker run -it smrforge:latest
+  ```
+
 ### Step 3: Verify Installation
 
 Let's make sure everything installed correctly. Create a new file called `test_install.py` with this content:
@@ -55,6 +74,11 @@ python test_install.py
 ```
 
 If you see the version number and "Installation successful!", you're ready to go!
+
+**Alternative verification using CLI:**
+```bash
+smrforge --version
+```
 
 ---
 
@@ -119,6 +143,61 @@ print(f"k-effective = {k_eff:.6f}")
 k_eff = smr.quick_keff(power_mw=10, enrichment=0.15)
 print(f"k-effective = {k_eff:.6f}")
 ```
+
+---
+
+## Using the Command-Line Interface (CLI)
+
+SMRForge includes a comprehensive command-line interface that lets you perform calculations without writing Python code!
+
+### Basic CLI Commands
+
+**Check version:**
+```bash
+smrforge --version
+```
+
+**Get help:**
+```bash
+smrforge --help
+smrforge reactor --help
+```
+
+### Quick Examples
+
+**Create a reactor from preset:**
+```bash
+smrforge reactor create --preset valar-10 --output reactor.json
+```
+
+**List available presets:**
+```bash
+smrforge reactor list
+```
+
+**Calculate k-eff from CLI:**
+```bash
+smrforge reactor analyze --reactor reactor.json --keff
+```
+
+**Launch the web dashboard:**
+```bash
+smrforge serve
+# Then open http://localhost:8050 in your browser
+```
+
+**Start an interactive Python shell with SMRForge pre-loaded:**
+```bash
+smrforge shell
+# Then use: reactor = smr.create_reactor("valar-10")
+```
+
+### CLI vs Python API
+
+- **CLI**: Great for quick calculations, automation, batch processing, and workflow scripts
+- **Python API**: Better for complex analysis, custom workflows, and programmatic control
+
+See the [CLI Guide](cli-guide.md) for comprehensive documentation of all CLI commands.
 
 ---
 
@@ -341,7 +420,98 @@ if power_dist is not None:
 
 ### Using SMRForge's Visualization Tools
 
-SMRForge also has built-in visualization functions. Check out the `examples/visualization_examples.py` file for more advanced plotting options!
+SMRForge also has built-in visualization functions:
+
+```python
+import smrforge as smr
+
+# Get results
+results = smr.analyze_preset("valar-10")
+
+# Use built-in visualization (if available)
+# smr.visualization.plot_flux(results['flux'])  # Check examples for exact API
+```
+
+Check out the `examples/visualization_examples.py` file for more advanced plotting options!
+
+### CLI Visualization
+
+You can also visualize from the command line:
+
+```bash
+# Visualize geometry
+smrforge visualize geometry --reactor reactor.json
+
+# Visualize flux distribution
+smrforge visualize flux --reactor reactor.json
+```
+
+---
+
+## Advanced Features Overview
+
+SMRForge includes many advanced features beyond basic neutronics. Here's a brief overview:
+
+### Transient Analysis
+
+Quick transient analysis for reactivity insertions and decay heat:
+
+```python
+import smrforge as smr
+
+# Quick reactivity insertion transient
+result = smr.quick_transient(
+    power=1e6,  # W
+    temperature=600.0,  # K
+    transient_type="reactivity_insertion",
+    reactivity=0.005,  # 5 mk
+    duration=100.0  # seconds
+)
+```
+
+Or from CLI:
+```bash
+smrforge transient run --power 1000000 --temperature 600 --type reactivity_insertion --reactivity 0.005 --duration 100
+```
+
+### Thermal Hydraulics
+
+Lumped-parameter thermal hydraulics for fast 0-D thermal circuit analysis:
+
+```python
+from smrforge.thermal.lumped import LumpedThermalHydraulics, ThermalLump, ThermalResistance
+
+# Create thermal lumps (e.g., fuel and moderator)
+fuel = ThermalLump(name="fuel", capacitance=1e8, temperature=1200.0)
+moderator = ThermalLump(name="moderator", capacitance=5e7, temperature=800.0)
+resistance = ThermalResistance(name="fuel_to_moderator", resistance=1e-3, 
+                               lump1_name="fuel", lump2_name="moderator")
+
+# Solve transient
+solver = LumpedThermalHydraulics(
+    lumps={"fuel": fuel, "moderator": moderator},
+    resistances=[resistance]
+)
+result = solver.solve_transient(t_span=(0.0, 3600.0))
+```
+
+Or from CLI:
+```bash
+smrforge thermal lumped --duration 3600 --plot
+```
+
+### Other Advanced Features
+
+SMRForge includes many other capabilities:
+
+- **Structural Mechanics**: Fuel rod mechanics, thermal expansion, stress/strain analysis
+- **Control Systems**: PID controllers, load-following algorithms
+- **Economics**: Cost modeling, LCOE calculations
+- **Fuel Cycle Optimization**: Refueling strategies, material aging
+- **Advanced Two-Phase Flow**: Drift-flux models, CHF predictions
+- **Parallelization**: Multi-core and MPI support for faster calculations
+
+See the [SMR Pain Points Assessment](../../SMR_PAIN_POINTS_ASSESSMENT.md) and [API documentation](https://smrforge.readthedocs.io) for details.
 
 ---
 
@@ -404,6 +574,21 @@ with open('results.json', 'w') as f:
 print("Results saved to results.json")
 ```
 
+### Task 4: Using CLI for Batch Operations
+
+The CLI makes it easy to run multiple analyses:
+
+```bash
+# Compare multiple designs
+smrforge reactor compare --presets valar-10 gt-mhr-350 htr-pm-200 --metrics k_eff
+
+# Run parameter sweep
+smrforge sweep --reactor reactor.json --params enrichment:0.15:0.25:0.02 --analysis keff
+
+# Batch process multiple reactor files
+smrforge reactor analyze --batch reactor1.json reactor2.json reactor3.json --keff
+```
+
 ---
 
 ## Troubleshooting
@@ -422,12 +607,27 @@ Try reinstalling:
 pip install --upgrade smrforge
 ```
 
+Or if installed from source:
+```bash
+pip install -e . --upgrade
+```
+
+### "Command not found: smrforge" (CLI not available)
+
+If the `smrforge` command isn't found:
+- Make sure SMRForge is installed: `pip show smrforge`
+- Check that the installation script path is in your PATH
+- Try using Python module syntax: `python -m smrforge.cli --help`
+- On Windows, make sure Python Scripts directory is in PATH
+
 ### Calculations Take Too Long
 
 The neutronics solver can take a few seconds to minutes depending on the problem size. For faster results:
 - Use simpler geometries (smaller core sizes)
 - Use fewer mesh points
 - Use the `quick_keff()` function for simple calculations
+- Enable parallelization (automatic on multi-core systems)
+- Use the optimized Monte Carlo solver for Monte Carlo calculations
 
 ### k-eff is Very Far from 1.0
 
@@ -435,6 +635,15 @@ This could mean:
 - The reactor design isn't physically realistic
 - The parameters you chose don't make sense for the reactor type
 - Try using preset designs first to see what reasonable values look like
+- Check that enrichment and geometry parameters are reasonable
+
+### Dashboard Not Opening
+
+If `smrforge serve` doesn't open in browser:
+- Check that port 8050 is available
+- Try `smrforge serve --host 0.0.0.0 --port 8050`
+- Manually open `http://localhost:8050` in your browser
+- Check firewall settings
 
 ---
 
@@ -449,19 +658,25 @@ Check out the `examples/` directory for more detailed examples:
 - `examples/preset_designs.py` - Working with preset designs
 - `examples/visualization_examples.py` - Advanced visualization
 - `examples/thermal_analysis.py` - Thermal-hydraulics analysis
+- `examples/convenience_methods_example.py` - Using convenience functions
+- `examples/complete_smr_workflow_example.py` - Complete workflow example
 
 ### 2. Read the Documentation
 
+- **CLI Guide**: Comprehensive guide to all CLI commands - see [CLI Guide](cli-guide.md)
 - **API Reference**: Full documentation of all functions at [smrforge.readthedocs.io](https://smrforge.readthedocs.io)
 - **Usage Guide**: See `docs/guides/usage.md` for more usage examples
+- **Docker Guide**: See `docs/guides/docker.md` for Docker usage
 - **Feature Status**: See `docs/status/feature-status.md` to see what features are available
 
 ### 3. Try Advanced Features
 
 Once you're comfortable with the basics, try:
+- **CLI Workflows**: Use `smrforge workflow run` for YAML-based automation
+- **Web Dashboard**: Launch `smrforge serve` for interactive analysis
+- **Transient Analysis**: Run safety transients and decay heat calculations
+- **Thermal Hydraulics**: Analyze coolant flow and heat transfer
 - **Geometry Creation**: Create custom reactor geometries
-- **Thermal-Hydraulics**: Analyze coolant flow and heat transfer
-- **Safety Analysis**: Run transient safety scenarios
 - **Uncertainty Quantification**: Understand how uncertainty affects results
 
 ### 4. Join the Community
@@ -473,6 +688,8 @@ Once you're comfortable with the basics, try:
 ---
 
 ## Quick Reference Card
+
+### Python API
 
 ```python
 # Import
@@ -498,6 +715,35 @@ results = reactor.solve()
 
 # Compare designs
 comparison = smr.compare_designs(["valar-10", "gt-mhr-350"])
+
+# Quick transient
+transient_result = smr.quick_transient(
+    power=1e6, temperature=600.0,
+    transient_type="reactivity_insertion",
+    reactivity=0.005, duration=100.0
+)
+```
+
+### CLI Commands
+
+```bash
+# Basic commands
+smrforge --version
+smrforge --help
+smrforge reactor list
+
+# Create and analyze
+smrforge reactor create --preset valar-10 --output reactor.json
+smrforge reactor analyze --reactor reactor.json --keff
+
+# Dashboard and shell
+smrforge serve
+smrforge shell
+
+# Advanced
+smrforge transient run --type reactivity_insertion --duration 100
+smrforge thermal lumped --duration 3600
+smrforge workflow run workflow.yaml
 ```
 
 ---
@@ -506,18 +752,23 @@ comparison = smr.compare_designs(["valar-10", "gt-mhr-350"])
 
 In this tutorial, you learned:
 
-1. ✅ How to install SMRForge
+1. ✅ How to install SMRForge (pip, source, or Docker)
 2. ✅ How to calculate k-effective with one line of code
-3. ✅ How to use preset reactor designs
-4. ✅ How to create custom reactors
-5. ✅ How to understand and visualize results
-6. ✅ Common tasks and troubleshooting tips
+3. ✅ How to use the command-line interface (CLI)
+4. ✅ How to use preset reactor designs
+5. ✅ How to create custom reactors
+6. ✅ How to understand and visualize results
+7. ✅ Overview of advanced features (transients, thermal hydraulics, etc.)
+8. ✅ Common tasks and troubleshooting tips
 
 You're now ready to start using SMRForge for your reactor analysis! Remember:
 - Start simple with `quick_keff()` and presets
+- Use the CLI for quick calculations: `smrforge reactor create --preset valar-10`
+- Use the web dashboard: `smrforge serve`
 - Experiment with different parameters
 - Check the examples directory for more ideas
-- Read the documentation for advanced features
+- Read the [CLI Guide](cli-guide.md) for comprehensive CLI documentation
+- Read the API documentation for advanced features
 
 Happy analyzing! 🚀
 
