@@ -99,3 +99,23 @@ except ImportError as e:
 
 if _HYBRID_AVAILABLE:
     __all__.extend(["HybridSolver", "RegionPartition", "create_hybrid_solver"])
+
+# Implicit Monte Carlo (Phase 3 optimization)
+try:
+    from smrforge.neutronics.implicit_mc import (
+        ImplicitMonteCarloSolver,
+        IMCTimeStep,
+        create_implicit_mc_solver,
+    )
+
+    _IMC_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(
+        f"Could not import implicit Monte Carlo: {e}", ImportWarning
+    )
+    _IMC_AVAILABLE = False
+
+if _IMC_AVAILABLE:
+    __all__.extend(["ImplicitMonteCarloSolver", "IMCTimeStep", "create_implicit_mc_solver"])
