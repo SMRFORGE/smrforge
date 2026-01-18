@@ -1095,7 +1095,14 @@ if __name__ == "__main__":
 
 
 # Numba-accelerated parallel functions
-@njit(parallel=True, cache=True)
+# Optimized with fastmath, nogil, and boundscheck=False for maximum performance
+@njit(
+    parallel=True,
+    cache=True,
+    fastmath=True,       # Faster math operations
+    boundscheck=False,  # Skip bounds checking (faster - arrays validated before call)
+    nogil=True          # Release GIL for true parallelism
+)
 def _update_scattering_source_parallel_numba(
     flux: np.ndarray,
     sigma_s: np.ndarray,

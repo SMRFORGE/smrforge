@@ -151,13 +151,18 @@ class ParticleBank:
         self.size = n_alive
 
 
-@njit(cache=True)
+@njit(cache=True, fastmath=True, boundscheck=False, nogil=True)
 def sample_isotropic_direction(rng_state: np.ndarray) -> Tuple[float, float, float]:
     """
     Sample isotropic direction using Numba-accelerated RNG.
     
+    Optimized with:
+    - fastmath=True: Faster math operations
+    - boundscheck=False: Skip bounds checking (faster)
+    - nogil=True: Release GIL for true parallelism
+    
     Args:
-        rng_state: NumPy RNG state array
+        rng_state: NumPy RNG state array (unused, kept for compatibility)
     
     Returns:
         (u, v, w) direction cosines
@@ -174,10 +179,15 @@ def sample_isotropic_direction(rng_state: np.ndarray) -> Tuple[float, float, flo
     return u, v, w
 
 
-@njit(cache=True)
+@njit(cache=True, fastmath=True, boundscheck=False, nogil=True)
 def sample_fission_spectrum() -> float:
     """
     Sample energy from fission spectrum (Watt spectrum approximation).
+    
+    Optimized with:
+    - fastmath=True: Faster math operations (slightly less accurate)
+    - boundscheck=False: Skip bounds checking (faster, but must ensure valid indices)
+    - nogil=True: Release GIL for true parallelism
     
     Returns:
         Energy in eV
@@ -187,7 +197,13 @@ def sample_fission_spectrum() -> float:
     return np.random.exponential(E_mean)
 
 
-@njit(cache=True, parallel=True)
+@njit(
+    cache=True,
+    parallel=True,
+    fastmath=True,       # Faster math (slightly less accurate - acceptable for MC)
+    boundscheck=False,  # Skip bounds checking (faster - arrays pre-allocated)
+    nogil=True          # Release GIL for true parallelism
+)
 def track_particles_vectorized(
     position: np.ndarray,
     direction: np.ndarray,
