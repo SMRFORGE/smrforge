@@ -21,14 +21,14 @@ Implemented foundation for **adaptive sampling** (Phase 2 optimization), which f
 - ✅ `AdaptiveMonteCarloSolver` class - Main adaptive sampling solver
 - ✅ Exploration phase - Uniform sampling to identify important regions
 - ✅ Refinement phase - Importance-based sampling framework
-- ✅ Fission density estimation - Tracks where fissions occur
+- ✅ Fission density estimation - Tracks where fissions occur with proper volume normalization
 - ✅ Integration with base MC solver
+- ✅ **Importance-based source resampling** - Weighted selection from fission bank
 
 **What's Next:**
-- Integrate with `_initialize_source()` for importance-based particle placement
-- Enhance fission density estimation with proper spatial binning
 - Test and verify 2-5x convergence improvement
 - Benchmark against standard MC
+- Create unit tests for adaptive sampling
 
 ---
 
@@ -156,33 +156,7 @@ class AdaptiveMonteCarloSolver:
 
 ## Next Steps
 
-### 1. Enhanced Integration
-
-**Status:** 📋 Pending
-
-**What Needs to Be Done:**
-- Modify `_initialize_source()` to use importance map for particle placement
-- Implement proper importance-weighted sampling
-- Test with actual reactor problems
-
-**Expected Impact:** Full adaptive sampling functionality
-
----
-
-### 2. Improved Fission Density Estimation
-
-**Status:** 📋 Pending
-
-**What Needs to Be Done:**
-- Implement proper spatial binning (accounting for cell volumes)
-- Use geometry mesh for accurate density calculation
-- Handle boundary conditions correctly
-
-**Expected Impact:** More accurate importance maps
-
----
-
-### 3. Testing and Benchmarking
+### 1. Testing and Benchmarking
 
 **Status:** 📋 Pending
 
@@ -192,6 +166,46 @@ class AdaptiveMonteCarloSolver:
 - Compare convergence rates
 
 **Expected Impact:** Validation of performance gains
+
+---
+
+### Implementation Highlights
+
+**Importance-Based Source Resampling:**
+
+The key innovation is `_resample_source_importance()`, which samples fission sites with probability proportional to their importance:
+
+```python
+def _resample_source_importance(self) -> None:
+    """Sample fission sites with importance weighting."""
+    # Calculate importance for each fission site
+    importances = np.array([
+        importance_map.get_sampling_probability(z, r)
+        for z, r in zip(z_positions, r_positions)
+    ])
+    
+    # Normalize to probabilities
+    probs = importances / np.sum(importances)
+    
+    # Sample with replacement using importance weights
+    indices = np.random.choice(
+        fission_bank.size,
+        size=n_particles,
+        replace=True,
+        p=probs,
+    )
+```
+
+**Improved Fission Density Estimation:**
+
+Fission density is now normalized by proper cylindrical cell volumes:
+
+```python
+# Cell volume = pi * (r_outer^2 - r_inner^2) * dz
+volume_radial = np.pi * (r_outer**2 - r_inner**2)
+cell_volumes[j, i] = volume_radial * volume_axial
+fission_density = fission_density / cell_volumes
+```
 
 ---
 

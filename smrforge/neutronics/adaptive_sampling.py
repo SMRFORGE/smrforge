@@ -160,18 +160,9 @@ class AdaptiveMonteCarloSolver:
         Adapt particle starting positions based on importance map.
         
         Redistributes particles to focus on high-importance regions.
+        Currently a placeholder - actual adaptation happens in _resample_source().
         """
-        # Get current source bank
-        source_bank = self.mc_solver.source_bank
-        
-        # Sample new positions based on importance
-        n_particles = source_bank.size
-        
-        # For now, simple approach: adjust starting positions
-        # More sophisticated: importance sampling in source initialization
-        # This would be implemented by modifying _initialize_source() in the base solver
-        
-        logger.debug(f"Adapting {n_particles} particles using importance map")
+        logger.debug(f"Importance map updated - will use for next source resampling")
     
     def solve_eigenvalue(self) -> Dict:
         """
@@ -235,8 +226,8 @@ class AdaptiveMonteCarloSolver:
             k_gen = n_fissions / max(n_source, 1)
             self.k_eff_history.append(k_gen)
             
-            # Resample source
-            self.mc_solver._resample_source()
+            # Resample source (use importance-based resampling if in refinement phase)
+            self._resample_source()
             
             # Update importance map periodically
             if gen > 0 and gen % self.importance_update_freq == 0:
@@ -273,16 +264,96 @@ class AdaptiveMonteCarloSolver:
             k_gen = n_fissions / max(n_source, 1)
             self.k_eff_history.append(k_gen)
             
-            # Resample source
-            self.mc_solver._resample_source()
+            # Resample source (use importance-based resampling if in refinement phase)
+            self._resample_source()
     
     def _resample_source(self) -> None:
         """
-        Resample source for next generation.
+        Resample source with importance-based weighting.
         
-        Delegates to base solver's resample method.
+        Uses importance map to weight fission site selection,
+        focusing particles in high-importance regions.
         """
-        self.mc_solver._resample_source()
+        if self.mc_solver.fission_bank.size == 0:
+            self.mc_solver._initialize_source()
+            return
+        
+        # If we don't have an importance map yet, use uniform sampling
+        if self.importance_map is None:
+            self.mc_solver._resample_source()
+            return
+        
+        # Importance-based resampling
+        self._resample_source_importance()
+    
+    def _resample_source_importance(self) -> None:
+        """
+        Resample source using importance-weighted selection.
+        
+        Samples fission sites with probability proportional to importance,
+        focusing particles in regions that contribute most to k-eff.
+        """
+        fission_bank = self.mc_solver.fission_bank
+        importance_map = self.importance_map
+        n_particles = self.mc_solver.n_particles
+        
+        # Get fission positions
+        positions = fission_bank.position[:fission_bank.size]
+        z_positions = positions[:, 2]
+        r_positions = np.sqrt(positions[:, 0]**2 + positions[:, 1]**2)
+        
+        # Calculate importance for each fission site
+        importances = np.zeros(fission_bank.size)
+        for i in range(fission_bank.size):
+            z = z_positions[i]
+            r = r_positions[i]
+            importances[i] = importance_map.get_sampling_probability(z, r)
+        
+        # Normalize to probabilities (with minimum to avoid zeros)
+        min_prob = 0.01  # Minimum probability (1% of max)
+        max_importance = np.max(importances)
+        if max_importance > 0:
+            # Scale so max importance gives probability 1.0, min gives min_prob
+            importances = importances / max_importance * (1.0 - min_prob) + min_prob
+        else:
+            # Uniform if all zeros
+            importances = np.ones(fission_bank.size) / fission_bank.size
+        
+        # Normalize to probabilities
+        probs = importances / np.sum(importances)
+        
+        # Sample with replacement using importance weights
+        self.mc_solver.source_bank.clear()
+        
+        # Use numpy's choice with probabilities
+        indices = np.random.choice(
+            fission_bank.size,
+            size=n_particles,
+            replace=True,
+            p=probs,
+        )
+        
+        # Import sample functions from base solver
+        from .monte_carlo_optimized import sample_isotropic_direction, sample_fission_spectrum
+        
+        for idx in indices:
+            pos = fission_bank.position[idx]
+            # Resample direction and energy (isotropic, fission spectrum)
+            u, v, w = sample_isotropic_direction(np.array([0]))
+            energy = sample_fission_spectrum()
+            
+            self.mc_solver.source_bank.add_particle(
+                position=pos,
+                direction=np.array([u, v, w]),
+                energy=energy,
+                weight=1.0,
+                generation=0,
+            )
+        
+        logger.debug(
+            f"Resampled {n_particles} particles using importance-weighted selection "
+            f"(max importance: {np.max(importances):.3f})"
+        )
     
     def _estimate_fission_density(self, fission_bank) -> np.ndarray:
         """
@@ -320,9 +391,20 @@ class AdaptiveMonteCarloSolver:
             if 0 <= z_idx < nz and 0 <= r_idx < nr:
                 fission_density[z_idx, r_idx] += 1
         
-        # Normalize by cell volume (simplified)
-        # Real implementation would account for proper cell volumes
-        cell_volumes = np.ones((nz, nr))  # Placeholder
+        # Normalize by cell volume (proper cylindrical geometry)
+        # Cell volume = pi * (r_bins[i+1]^2 - r_bins[i]^2) * (z_bins[j+1] - z_bins[j])
+        cell_volumes = np.zeros((nz, nr))
+        for i in range(nr):
+            r_inner = r_bins[i]
+            r_outer = r_bins[i + 1]
+            volume_radial = np.pi * (r_outer**2 - r_inner**2)
+            for j in range(nz):
+                z_inner = z_bins[j]
+                z_outer = z_bins[j + 1]
+                volume_axial = z_outer - z_inner
+                cell_volumes[j, i] = volume_radial * volume_axial
+        
+        # Normalize by cell volume to get density
         fission_density = fission_density / (cell_volumes + 1e-10)
         
         return fission_density
