@@ -952,6 +952,46 @@ class TestBurnupInit:
             assert burnup_module._FUEL_MANAGEMENT_INTEGRATION_AVAILABLE == False
 
 
+class TestFuelInit:
+    """Test smrforge/fuel/__init__.py."""
+    
+    def test_fuel_init_is_placeholder(self):
+        """Test that fuel __init__ is a placeholder module."""
+        import smrforge.fuel as fuel_module
+        assert hasattr(fuel_module, '__all__')
+        assert fuel_module.__all__ == []  # Empty __all__ for placeholder
+
+
+class TestIoInit:
+    """Test smrforge/io/__init__.py."""
+    
+    def test_io_init_is_placeholder(self):
+        """Test that io __init__ is a placeholder module."""
+        import smrforge.io as io_module
+        assert hasattr(io_module, '__all__')
+        assert io_module.__all__ == []  # Empty __all__ for placeholder
+
+
+class TestOptimizationInit:
+    """Test smrforge/optimization/__init__.py."""
+    
+    def test_optimization_init_is_placeholder(self):
+        """Test that optimization __init__ is a placeholder module."""
+        import smrforge.optimization as optimization_module
+        assert hasattr(optimization_module, '__all__')
+        assert optimization_module.__all__ == []  # Empty __all__ for placeholder
+
+
+class TestMaterialsInit:
+    """Test smrforge/materials/__init__.py."""
+    
+    def test_materials_init_has_all(self):
+        """Test that materials __init__ has __all__ defined."""
+        import smrforge.materials as materials_module
+        assert hasattr(materials_module, '__all__')
+        assert materials_module.__all__ == []  # Empty __all__ for placeholder
+
+
 class TestGuiInit:
     """Test smrforge/gui/__init__.py."""
     
