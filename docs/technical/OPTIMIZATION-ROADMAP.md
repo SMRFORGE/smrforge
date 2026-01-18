@@ -34,9 +34,11 @@ Phase 1 optimizations are **complete**, achieving **90-95% of C++ performance**.
 
 These improvements can make SMRForge **faster than OpenMC** for typical problems.
 
-### 1. Adaptive Sampling (2-3 weeks) - High Impact
+### 1. Adaptive Sampling (2-3 weeks) - High Impact ✅ **FOUNDATION COMPLETE**
 
 **Goal:** Focus computation on important regions
+
+**Status:** 🚧 Foundation implemented, integration in progress
 
 **Implementation Strategy:**
 ```python
