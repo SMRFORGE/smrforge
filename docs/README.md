@@ -1,6 +1,6 @@
 # SMRForge Documentation
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 2026
 
 This directory contains all SMRForge documentation organized by category.
 
@@ -97,6 +97,8 @@ This directory contains all SMRForge documentation organized by category.
 - **[Performance Optimizations](technical/OPTIMIZATION-STATUS-REPORT.md)** - Performance improvements (Phase 1-3 complete)
 - **[Optimization Roadmap](technical/OPTIMIZATION-ROADMAP.md)** - Future optimization plans
 - **[Phase 2 Summary](technical/PHASE2-IMPLEMENTATION-SUMMARY.md)** - Algorithmic improvements summary
+- **[Regulatory Traceability Guide](technical/regulatory-traceability-guide.md)** - Complete guide for licensing applications and regulatory compliance
+- **[OpenMC Regulatory Analysis](technical/openmc-regulatory-traceability-analysis.md)** - OpenMC comparison and SMRForge advantages
 
 **Status (`status/`):**
 - **[Feature Status](status/feature-status.md)** - Module status and capabilities
