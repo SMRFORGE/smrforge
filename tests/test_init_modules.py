@@ -278,6 +278,14 @@ class TestMainInit:
         assert __version_info__ is not None
         assert callable(get_version)
     
+    def test_get_version_returns_version_string(self):
+        """Test that get_version() returns the version string (covers __version__.py line 11)."""
+        from smrforge import get_version, __version__
+        version = get_version()
+        assert isinstance(version, str)
+        assert version == __version__
+        assert version == "0.1.0"
+    
     def test_main_init_neutronics_available_flag(self):
         """Test that _NEUTRONICS_AVAILABLE flag is set correctly (lines 35, 40)."""
         import smrforge as main_module
@@ -746,6 +754,18 @@ class TestInitImportErrors:
             # These should not be in __all__ if import failed
             assert 'ENDFPhotonParser' not in main_module.__all__
     
+    def test_main_init_import_error_transient_convenience(self):
+        """Test main __init__ handles transient convenience import error (lines 163-164)."""
+        with patch.dict(sys.modules, {'smrforge.convenience.transients': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_TRANSIENT_CONVENIENCE_AVAILABLE' in dir(main_module)
+            assert main_module._TRANSIENT_CONVENIENCE_AVAILABLE == False
+    
     def test_main_init_import_error_convenience_fallback(self):
         """Test main __init__ handles convenience import fallback exception path (lines 113-127)."""
         # Test the exception path when convenience import fails both from package and file
@@ -762,6 +782,18 @@ class TestInitImportErrors:
                 assert hasattr(main_module, '__all__')
                 assert '_CONVENIENCE_AVAILABLE' in dir(main_module)
                 assert main_module._CONVENIENCE_AVAILABLE == False
+    
+    def test_main_init_import_error_transient_convenience(self):
+        """Test main __init__ handles transient convenience import error (lines 163-164)."""
+        with patch.dict(sys.modules, {'smrforge.convenience.transients': None}):
+            import importlib
+            import smrforge as main_module
+            importlib.reload(main_module)
+            
+            # Should handle error gracefully (silent failure)
+            assert hasattr(main_module, '__all__')
+            assert '_TRANSIENT_CONVENIENCE_AVAILABLE' in dir(main_module)
+            assert main_module._TRANSIENT_CONVENIENCE_AVAILABLE == False
     
     def test_main_init_import_error_data_downloader(self):
         """Test main __init__ handles data_downloader import error (lines 175-176)."""
