@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Automated security audit script for SMRForge.
 
@@ -14,9 +15,15 @@ import subprocess
 import sys
 import argparse
 import json
+import io
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
+
+# Set UTF-8 encoding for Windows console
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
 
 def run_pip_audit(output_file: Optional[Path] = None) -> Tuple[int, str]:
@@ -81,13 +88,13 @@ def run_bandit(output_file: Optional[Path] = None) -> Tuple[int, str]:
             output += f"\n\nErrors/Warnings:\n{result.stderr}"
         
         if output_file:
-            with open(output_file, 'w') as f:
+            with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(output)
-            print(f"✅ bandit report saved to {output_file}")
+            print(f"[OK] bandit report saved to {output_file}")
         
         return result.returncode, output
     except FileNotFoundError:
-        print("⚠️  bandit not installed. Install with: pip install bandit[toml]")
+        print("WARNING: bandit not installed. Install with: pip install bandit[toml]")
         return 1, "bandit not available"
 
 
@@ -212,8 +219,10 @@ def generate_summary_report(
     report = "\n".join(lines)
     
     if output_file:
-        output_file.write_text(report)
-        print(f"✅ Summary report saved to {output_file}")
+        # Use UTF-8 encoding for Windows compatibility
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(report)
+        print(f"[OK] Summary report saved to {output_file}")
     
     return report
 
