@@ -28,3 +28,10 @@ __all__ = [
     "log_nuclear_data_fetch",
     "log_cache_operation",
 ]
+
+# Parallel batch processing (optional import)
+try:
+    from smrforge.utils.parallel_batch import batch_process, batch_solve_keff
+    __all__.extend(["batch_process", "batch_solve_keff"])
+except ImportError:
+    pass

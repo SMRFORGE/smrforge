@@ -29,6 +29,14 @@ except ImportError:
     _MPI_AVAILABLE = False
     MPI = None
 
+# Try to import Rich (optional, for progress bars)
+try:
+    from rich.progress import Progress, BarColumn, TextColumn, SpinnerColumn
+    _RICH_AVAILABLE = True
+except ImportError:
+    _RICH_AVAILABLE = False
+    Progress = None
+
 from ..utils.logging import get_logger
 
 # Import Pydantic models
@@ -348,6 +356,31 @@ class MultiGroupDiffusion:
             self.flux = np.ones_like(self.flux)
             logger.warning("Initial flux normalization failed, using uniform distribution")
 
+        # Use progress bar if Rich is available and verbose is enabled
+        use_progress = _RICH_AVAILABLE and self.options.verbose and self.options.max_iterations > 10
+        
+        if use_progress:
+            progress = Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                TextColumn("k_eff={task.fields[k_eff]:.6f}"),
+                console=None,  # Use default console
+            )
+            task = progress.add_task(
+                "Power iteration...",
+                total=self.options.max_iterations,
+                k_eff=self.k_eff
+            )
+            progress.start()
+        else:
+            progress = None
+            task = None
+
+        # Initialize error for failure case
+        error = float('inf')
+        
         for iteration in range(self.options.max_iterations):
             self._update_fission_source(k_old)
 
@@ -432,6 +465,10 @@ class MultiGroupDiffusion:
                     f"k_old={k_old:.6f}, k_new={k_new:.6f}"
                 )
 
+            # Update progress bar if available
+            if progress is not None and task is not None:
+                progress.update(task, advance=1, k_eff=k_new)
+
             # Log every 10 iterations or when converged
             if iteration % 10 == 0 or error < self.options.tolerance:
                 logger.debug(
@@ -440,6 +477,8 @@ class MultiGroupDiffusion:
                 )
 
             if error < self.options.tolerance:
+                if progress is not None:
+                    progress.stop()
                 logger.info(f"Converged in {iteration+1} iterations")
                 return k_new, self.flux
 
@@ -452,6 +491,10 @@ class MultiGroupDiffusion:
                 self.flux = np.ones_like(self.flux)
                 logger.warning(f"Flux too small at iteration {iteration}, reinitializing")
 
+        # Stop progress bar if it was started
+        if progress is not None:
+            progress.stop()
+        
         # Provide detailed diagnostics on failure
         logger.error(
             f"Failed to converge in {self.options.max_iterations} iterations. "
