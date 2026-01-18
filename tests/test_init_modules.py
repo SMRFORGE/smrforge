@@ -350,7 +350,16 @@ class TestMainInit:
         assert hasattr(main_module, '__all__')
         assert '__version__' in main_module.__all__
         assert '__version_info__' in main_module.__all__
+        assert 'get_version' in main_module.__all__
         assert 'constants' in main_module.__all__
+    
+    def test_main_init_transient_convenience_available_flag(self):
+        """Test that _TRANSIENT_CONVENIENCE_AVAILABLE flag is set correctly (lines 162-164)."""
+        import smrforge as main_module
+        # Transient convenience should be available if safety module is available
+        assert hasattr(main_module, '_TRANSIENT_CONVENIENCE_AVAILABLE')
+        # The flag should be True if transients imported successfully
+        assert isinstance(main_module._TRANSIENT_CONVENIENCE_AVAILABLE, bool)
 
 
 class TestInitImportErrors:
