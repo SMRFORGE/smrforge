@@ -6,7 +6,7 @@ reducing unnecessary memory copies, improving performance beyond OpenMC.
 """
 
 import numpy as np
-from typing import Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 
 from ..utils.logging import get_logger
 
@@ -112,8 +112,8 @@ def vectorized_normalize(
 
 
 def batch_vectorized_operations(
-    arrays: list[np.ndarray],
-    operation: str = "sum",
+    arrays: List[np.ndarray],
+    operation: Literal["sum", "mean", "max", "min"] = "sum",
 ) -> np.ndarray:
     """
     Perform vectorized operations on multiple arrays efficiently.

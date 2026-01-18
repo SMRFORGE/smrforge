@@ -7,7 +7,7 @@ improving efficiency for parameter sweeps and design studies.
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
-from typing import Callable, List, Optional, TypeVar, Union
+from typing import Callable, List, Optional, Protocol, TypeVar, Union
 
 from ..utils.logging import get_logger
 
@@ -15,6 +15,19 @@ logger = get_logger("smrforge.utils.parallel_batch")
 
 T = TypeVar("T")
 R = TypeVar("R")
+
+
+class ReactorLike(Protocol):
+    """
+    Protocol for reactor-like objects that have a solve_keff() method.
+    
+    Used for duck typing - any object with a solve_keff() method that returns
+    a float can be used with batch_solve_keff().
+    """
+    
+    def solve_keff(self) -> float:
+        """Solve for k-effective eigenvalue."""
+        ...
 
 
 def batch_process(
@@ -148,7 +161,7 @@ def batch_process(
 
 
 def batch_solve_keff(
-    reactors: List,
+    reactors: List[ReactorLike],
     parallel: bool = True,
     max_workers: Optional[int] = None,
     show_progress: bool = True,
