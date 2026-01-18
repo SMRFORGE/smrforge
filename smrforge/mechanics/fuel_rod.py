@@ -268,6 +268,9 @@ class StressStrain:
             
         Returns:
             Tuple of (hoop_strain, radial_strain, axial_strain)
+        
+        Raises:
+            ValueError: If Young's modulus <= 0 or Poisson's ratio is invalid.
         """
         hoop_strain = (
             hoop_stress - poisson * (radial_stress + axial_stress)

@@ -96,7 +96,16 @@ class MemoryMappedArray:
         return self.array[key]
     
     def __setitem__(self, key, value):
-        """Array assignment."""
+        """
+        Array assignment.
+        
+        Args:
+            key: Array index or slice
+            value: Value to assign
+        
+        Raises:
+            ValueError: If array is opened in read-only mode.
+        """
         if self.mode == 'r':
             raise ValueError("Cannot write to read-only memory-mapped array")
         self.array[key] = value

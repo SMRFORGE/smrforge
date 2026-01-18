@@ -56,6 +56,10 @@ def batch_process(
     Returns:
         List of results in same order as items
     
+    Raises:
+        RuntimeError: If parallel processing fails (errors are logged, not raised by default).
+        PicklingError: If func or items are not picklable when using ProcessPoolExecutor.
+    
     Examples:
         >>> from smrforge.utils.parallel_batch import batch_process
         >>> 
@@ -179,6 +183,10 @@ def batch_solve_keff(
     
     Returns:
         List of k-eff values in same order as reactors
+    
+    Raises:
+        AttributeError: If reactor objects don't have solve_keff() method.
+        RuntimeError: If parallel processing fails.
     
     Example:
         >>> from smrforge.utils.parallel_batch import batch_solve_keff

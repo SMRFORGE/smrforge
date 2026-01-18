@@ -328,6 +328,10 @@ def create_implicit_mc_solver(
     Returns:
         ImplicitMonteCarloSolver instance
     
+    Raises:
+        ValueError: If dt_base is invalid (<= 0).
+        AttributeError: If mc_solver doesn't have required methods.
+    
     Example:
         >>> from smrforge.neutronics.monte_carlo_optimized import OptimizedMonteCarloSolver
         >>> from smrforge.neutronics.implicit_mc import create_implicit_mc_solver

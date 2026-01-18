@@ -455,6 +455,10 @@ def create_adaptive_solver(
     Returns:
         AdaptiveMonteCarloSolver instance
     
+    Raises:
+        ValueError: If n_exploration or n_refinement are invalid (<= 0).
+        AttributeError: If mc_solver doesn't have required methods.
+    
     Example:
         >>> from smrforge.neutronics.monte_carlo_optimized import OptimizedMonteCarloSolver
         >>> from smrforge.neutronics.adaptive_sampling import create_adaptive_solver
