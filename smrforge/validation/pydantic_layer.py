@@ -200,17 +200,45 @@ class ReactorSpecification(BaseModel):
     @model_validator(mode="after")
     def validate_temperatures(self):
         """Cross-validate temperature relationships."""
+        # Try to import error message utilities (optional, fallback to simple message)
+        try:
+            from ..utils.error_messages import format_validation_error
+        except ImportError:
+            format_validation_error = None
+        
         if self.inlet_temperature >= self.outlet_temperature:
-            raise ValueError(
-                f"Inlet temperature ({self.inlet_temperature:.1f} K) must be "
-                f"less than outlet ({self.outlet_temperature:.1f} K)"
-            )
+            if format_validation_error:
+                msg = format_validation_error(
+                    field_name="inlet_temperature",
+                    value=self.inlet_temperature,
+                    error_type="temperature_order",
+                    suggestions=[
+                        f"Inlet ({self.inlet_temperature:.1f} K) should be < outlet ({self.outlet_temperature:.1f} K)"
+                    ]
+                )
+            else:
+                msg = (
+                    f"Inlet temperature ({self.inlet_temperature:.1f} K) must be "
+                    f"less than outlet ({self.outlet_temperature:.1f} K)"
+                )
+            raise ValueError(msg)
 
         if self.outlet_temperature > self.max_fuel_temperature:
-            raise ValueError(
-                f"Outlet temperature ({self.outlet_temperature:.1f} K) exceeds "
-                f"max fuel temperature ({self.max_fuel_temperature:.1f} K)"
-            )
+            if format_validation_error:
+                msg = format_validation_error(
+                    field_name="outlet_temperature",
+                    value=self.outlet_temperature,
+                    error_type="out_of_range",
+                    suggestions=[
+                        f"Outlet ({self.outlet_temperature:.1f} K) should be <= max fuel ({self.max_fuel_temperature:.1f} K)"
+                    ]
+                )
+            else:
+                msg = (
+                    f"Outlet temperature ({self.outlet_temperature:.1f} K) exceeds "
+                    f"max fuel temperature ({self.max_fuel_temperature:.1f} K)"
+                )
+            raise ValueError(msg)
 
         # Reasonable delta-T check
         delta_T = self.outlet_temperature - self.inlet_temperature
@@ -468,13 +496,51 @@ class CrossSectionData(BaseModel):
     @model_validator(mode="after")
     def validate_physical_relationships(self):
         """Validate physical constraints on cross sections."""
+        # Try to import error message utilities (optional, fallback to simple message)
+        try:
+            from ..utils.error_messages import format_cross_section_error
+        except ImportError:
+            format_cross_section_error = None
+        
         # Check sigma_a <= sigma_t
         if np.any(self.sigma_a > self.sigma_t):
-            raise ValueError("Absorption XS cannot exceed total XS (non-physical)")
+            bad_mask = self.sigma_a > self.sigma_t
+            bad_mat, bad_group = np.where(bad_mask)
+            if bad_mat.size > 0:
+                mat_id = bad_mat[0]
+                group_id = bad_group[0]
+                if format_cross_section_error:
+                    msg = format_cross_section_error(
+                        sigma_a=self.sigma_a[mat_id, group_id],
+                        sigma_t=self.sigma_t[mat_id, group_id],
+                        material_id=mat_id,
+                        group=group_id
+                    )
+                else:
+                    msg = "Absorption XS cannot exceed total XS (non-physical)"
+                raise ValueError(msg)
+            else:
+                raise ValueError("Absorption XS cannot exceed total XS (non-physical)")
 
         # Check sigma_f <= sigma_a
         if np.any(self.sigma_f > self.sigma_a):
-            raise ValueError("Fission XS cannot exceed absorption XS (non-physical)")
+            bad_mask = self.sigma_f > self.sigma_a
+            bad_mat, bad_group = np.where(bad_mask)
+            if bad_mat.size > 0:
+                mat_id = bad_mat[0]
+                group_id = bad_group[0]
+                if format_cross_section_error:
+                    msg = (
+                        f"Invalid cross sections for material {mat_id}, group {group_id}: "
+                        f"σ_f ({self.sigma_f[mat_id, group_id]:.6f}) > σ_a ({self.sigma_a[mat_id, group_id]:.6f}). "
+                        f"Fission cross section cannot exceed absorption cross section. "
+                        f"Check your cross-section data."
+                    )
+                else:
+                    msg = "Fission XS cannot exceed absorption XS (non-physical)"
+                raise ValueError(msg)
+            else:
+                raise ValueError("Fission XS cannot exceed absorption XS (non-physical)")
 
         # Check reasonable diffusion coefficient
         if np.any(self.D > 20):
