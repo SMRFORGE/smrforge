@@ -218,6 +218,13 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #     * Distributed memory support via mpi4py
 #     * Helper functions for MPI rank, size, root detection
 #     * Graceful fallback if MPI not available
+#   - Comprehensive CLI guide (docs/guides/cli-guide.md):
+#     * Complete documentation of all CLI commands and subcommands
+#     * Examples and usage patterns for all features
+#     * Troubleshooting guide and command quick reference
+#   - Robust CLI import handling:
+#     * Multiple import strategies for convenience functions
+#     * Handles module/package conflicts gracefully
 #   - Automated ENDF data downloader
 #   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
 #   - Enhanced mesh generation
