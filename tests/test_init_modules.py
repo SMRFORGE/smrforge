@@ -365,6 +365,24 @@ class TestMainInit:
 class TestInitImportErrors:
     """Test __init__.py files handle import errors gracefully."""
     
+    def test_main_init_import_error_neutronics(self):
+        """Test main __init__ handles neutronics import error with warning (lines 38-42)."""
+        with patch.dict(sys.modules, {'smrforge.neutronics': None}):
+            import importlib
+            import warnings
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                import smrforge as main_module
+                importlib.reload(main_module)
+                
+                # Should handle error gracefully with warning
+                assert hasattr(main_module, '__all__')
+                assert '_NEUTRONICS_AVAILABLE' in dir(main_module)
+                assert main_module._NEUTRONICS_AVAILABLE == False
+                # Should have issued an ImportWarning
+                assert len(w) > 0
+                assert any("neutronics" in str(warning.message).lower() for warning in w)
+    
     def test_core_init_import_error_reactor_core(self):
         """Test core __init__ handles reactor_core import error (lines 22-24)."""
         # Remove from sys.modules first to ensure clean reload
