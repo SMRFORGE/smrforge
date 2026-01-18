@@ -79,3 +79,23 @@ if _TRANSPORT_AVAILABLE:
     __all__.append("Transport")
 if _ADAPTIVE_AVAILABLE:
     __all__.extend(["AdaptiveMonteCarloSolver", "ImportanceMap", "create_adaptive_solver"])
+
+# Hybrid solver (Phase 2 optimization)
+try:
+    from smrforge.neutronics.hybrid_solver import (
+        HybridSolver,
+        RegionPartition,
+        create_hybrid_solver,
+    )
+
+    _HYBRID_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(
+        f"Could not import hybrid solver: {e}", ImportWarning
+    )
+    _HYBRID_AVAILABLE = False
+
+if _HYBRID_AVAILABLE:
+    __all__.extend(["HybridSolver", "RegionPartition", "create_hybrid_solver"])
