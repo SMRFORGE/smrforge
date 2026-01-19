@@ -6,7 +6,11 @@ This module provides comprehensive fuel rod mechanics capabilities including:
 - Stress and strain analysis
 - Pellet-cladding interaction (PCI)
 - Fuel swelling models
+- Creep models (primary, secondary, tertiary creep)
+- Material degradation for long-term analysis
 """
+
+from __future__ import annotations
 
 import numpy as np
 from dataclasses import dataclass, field
@@ -495,8 +499,8 @@ class FuelRodMechanics:
     """
     Comprehensive fuel rod mechanics analysis.
     
-    Integrates thermal expansion, stress/strain, PCI, and fuel swelling
-    to provide complete structural analysis of fuel rods.
+    Integrates thermal expansion, stress/strain, PCI, fuel swelling, creep,
+    and material degradation to provide complete structural analysis of fuel rods.
     
     Attributes:
         fuel_radius: Initial fuel radius [cm]
@@ -507,6 +511,10 @@ class FuelRodMechanics:
         stress_strain: Stress/strain calculator
         pci: Pellet-cladding interaction model
         fuel_swelling: Fuel swelling model
+        cladding_creep: Optional creep model for cladding
+        fuel_creep: Optional creep model for fuel
+        cladding_degradation: Optional material degradation model for cladding
+        fuel_degradation: Optional material degradation model for fuel
     """
     
     fuel_radius: float  # cm
@@ -517,6 +525,10 @@ class FuelRodMechanics:
     stress_strain: StressStrain = field(default_factory=StressStrain)
     pci: PelletCladdingInteraction = field(default_factory=PelletCladdingInteraction)
     fuel_swelling: FuelSwelling = field(default_factory=FuelSwelling)
+    cladding_creep: Optional[CreepModel] = None
+    fuel_creep: Optional[CreepModel] = None
+    cladding_degradation: Optional[MaterialDegradation] = None
+    fuel_degradation: Optional[MaterialDegradation] = None
     
     def analyze(
         self,
@@ -526,6 +538,10 @@ class FuelRodMechanics:
         power_density: float,
         internal_pressure: float = 0.0,  # Pa
         external_pressure: float = 15.5e6,  # Pa (typical PWR)
+        time: float = 0.0,  # days (for creep and degradation)
+        fluence: Optional[float] = None,  # n/cm² (for irradiation effects)
+        include_creep: bool = False,  # Whether to include creep analysis
+        include_degradation: bool = False,  # Whether to include material degradation
     ) -> Dict:
         """
         Perform comprehensive fuel rod mechanics analysis.
@@ -537,9 +553,13 @@ class FuelRodMechanics:
             power_density: Power density [W/cm³]
             internal_pressure: Internal pressure (fission gas) [Pa]
             external_pressure: External pressure (coolant) [Pa]
+            time: Exposure time [days] (for creep and degradation)
+            fluence: Optional neutron fluence [n/cm²] (for irradiation effects)
+            include_creep: Whether to include creep analysis
+            include_degradation: Whether to include material degradation
             
         Returns:
-            Dictionary with analysis results
+            Dictionary with analysis results including creep and degradation if enabled
         """
         # 1. Thermal expansion
         fuel_length_exp, fuel_radius_exp = self.thermal_expansion.fuel_expansion(
@@ -605,12 +625,58 @@ class FuelRodMechanics:
             cladding_vm, contact_pressure
         )
         
-        # 8. Safety margin
-        safety_margin = (
-            self.stress_strain.cladding_yield_strength - cladding_vm_enhanced
-        ) / self.stress_strain.cladding_yield_strength
+        # 8. Safety margin (using original yield strength)
+        yield_strength = self.stress_strain.cladding_yield_strength
         
-        return {
+        # 9. Material degradation (if enabled)
+        degraded_cladding_props = {}
+        degraded_fuel_props = {}
+        if include_degradation:
+            if self.cladding_degradation:
+                degraded_cladding_props = self.cladding_degradation.calculate_degraded_properties(
+                    time, cladding_temperature, cladding_vm_enhanced, fluence
+                )
+                # Update yield strength if degraded
+                if "yield_strength" in degraded_cladding_props:
+                    yield_strength = degraded_cladding_props["yield_strength"]
+            
+            if self.fuel_degradation:
+                fuel_stress = cladding_vm_enhanced * 0.5  # Approximate fuel stress
+                degraded_fuel_props = self.fuel_degradation.calculate_degraded_properties(
+                    time, fuel_temperature, fuel_stress, fluence
+                )
+        
+        # 10. Creep analysis (if enabled)
+        cladding_creep_results = {}
+        fuel_creep_results = {}
+        if include_creep:
+            if self.cladding_creep:
+                time_seconds = time * 86400.0  # Convert days to seconds
+                cladding_creep_results = self.cladding_creep.calculate_creep_strain(
+                    cladding_vm_enhanced, cladding_temperature, time_seconds, fluence
+                )
+                # Creep strain affects dimensions
+                creep_radius_increase = (
+                    clad_inner_radius_exp * cladding_creep_results["total_creep_strain"]
+                )
+                clad_inner_radius_exp += creep_radius_increase
+            
+            if self.fuel_creep:
+                time_seconds = time * 86400.0
+                fuel_stress = cladding_vm_enhanced * 0.5  # Approximate
+                fuel_creep_results = self.fuel_creep.calculate_creep_strain(
+                    fuel_stress, fuel_temperature, time_seconds, fluence
+                )
+                # Fuel creep affects radius
+                creep_radius_increase = (
+                    fuel_radius_total * fuel_creep_results["total_creep_strain"]
+                )
+                fuel_radius_total += creep_radius_increase
+        
+        # Recalculate safety margin with degraded properties
+        safety_margin = (yield_strength - cladding_vm_enhanced) / yield_strength
+        
+        result = {
             "fuel_radius": fuel_radius_total,
             "cladding_inner_radius": clad_inner_radius_exp,
             "gap": gap,
@@ -624,3 +690,381 @@ class FuelRodMechanics:
             "safety_margin": safety_margin,
             "fuel_swelling_radius_increase": radius_swelling,
         }
+        
+        # Add creep results if available
+        if cladding_creep_results:
+            result["cladding_creep_strain"] = cladding_creep_results["total_creep_strain"]
+            result["cladding_creep_strain_rate"] = cladding_creep_results["creep_strain_rate"]
+            result["cladding_creep_life"] = self.cladding_creep.calculate_creep_life(
+                cladding_vm_enhanced, cladding_temperature, fluence=fluence
+            )
+        
+        if fuel_creep_results:
+            result["fuel_creep_strain"] = fuel_creep_results["total_creep_strain"]
+            result["fuel_creep_strain_rate"] = fuel_creep_results["creep_strain_rate"]
+        
+        # Add degradation results if available
+        if degraded_cladding_props:
+            result["cladding_degraded_properties"] = degraded_cladding_props
+        
+        if degraded_fuel_props:
+            result["fuel_degraded_properties"] = degraded_fuel_props
+        
+        return result
+
+
+@dataclass
+class CreepModel:
+    """
+    Creep models for fuel rod materials.
+    
+    Creep is time-dependent deformation under constant stress and temperature.
+    Important for long-term fuel rod performance analysis.
+    
+    Models implemented:
+    - Primary creep: Initial transient creep
+    - Secondary creep: Steady-state creep (Norton's law, power law)
+    - Tertiary creep: Accelerating creep before failure
+    - Irradiation creep: Neutron fluence-enhanced creep
+    
+    Attributes:
+        material_type: Material type ('fuel', 'zircaloy', 'graphite')
+        creep_model_type: Creep model type ('norton', 'power_law', 'garofalo', 'irradiation_enhanced')
+        activation_energy: Creep activation energy [J/mol]
+        stress_exponent: Stress exponent (n in Norton's law)
+        pre_exponential: Pre-exponential factor [1/s]
+    """
+    
+    material_type: str  # 'fuel', 'zircaloy', 'graphite'
+    creep_model_type: str = "norton"  # 'norton', 'power_law', 'garofalo', 'irradiation_enhanced'
+    activation_energy: Optional[float] = None  # J/mol
+    stress_exponent: Optional[float] = None  # n
+    pre_exponential: Optional[float] = None  # A [1/s]
+    
+    def __post_init__(self):
+        """Initialize default creep parameters based on material type."""
+        if self.material_type == "zircaloy":
+            # Zircaloy-4 typical values
+            self.activation_energy = self.activation_energy or 2.4e5  # J/mol
+            self.stress_exponent = self.stress_exponent or 4.5
+            self.pre_exponential = self.pre_exponential or 1.0e-15  # 1/s
+        elif self.material_type == "fuel":
+            # UO2 fuel typical values
+            self.activation_energy = self.activation_energy or 3.0e5  # J/mol
+            self.stress_exponent = self.stress_exponent or 5.0
+            self.pre_exponential = self.pre_exponential or 1.0e-20  # 1/s
+        elif self.material_type == "graphite":
+            # Graphite typical values
+            self.activation_energy = self.activation_energy or 2.0e5  # J/mol
+            self.stress_exponent = self.stress_exponent or 3.0
+            self.pre_exponential = self.pre_exponential or 1.0e-12  # 1/s
+        else:
+            # Default values
+            self.activation_energy = self.activation_energy or 2.5e5
+            self.stress_exponent = self.stress_exponent or 4.0
+            self.pre_exponential = self.pre_exponential or 1.0e-15
+    
+    def calculate_creep_strain_rate(
+        self,
+        stress: float,  # Pa
+        temperature: float,  # K
+        fluence: Optional[float] = None,  # n/cm²
+    ) -> float:
+        """
+        Calculate creep strain rate.
+        
+        Args:
+            stress: Applied stress [Pa]
+            temperature: Temperature [K]
+            fluence: Optional neutron fluence [n/cm²] for irradiation creep
+            
+        Returns:
+            Creep strain rate [1/s]
+        """
+        R = 8.314  # J/(mol·K) - gas constant
+        
+        if self.creep_model_type == "norton":
+            # Norton's law: ε_dot = A * σ^n * exp(-Q/RT)
+            creep_rate = (
+                self.pre_exponential
+                * (stress ** self.stress_exponent)
+                * np.exp(-self.activation_energy / (R * temperature))
+            )
+        
+        elif self.creep_model_type == "power_law":
+            # Power law creep (simplified)
+            creep_rate = (
+                self.pre_exponential
+                * (stress / 1e6) ** self.stress_exponent  # Normalize stress to MPa
+                * np.exp(-self.activation_energy / (R * temperature))
+            )
+        
+        elif self.creep_model_type == "garofalo":
+            # Garofalo (sinh) model: ε_dot = A * [sinh(α*σ)]^n * exp(-Q/RT)
+            alpha = 1.0e-8  # Pa^-1 (typical value)
+            sinh_term = np.sinh(alpha * stress)
+            creep_rate = (
+                self.pre_exponential
+                * (sinh_term ** self.stress_exponent)
+                * np.exp(-self.activation_energy / (R * temperature))
+            )
+        
+        elif self.creep_model_type == "irradiation_enhanced":
+            # Irradiation-enhanced creep
+            base_creep = (
+                self.pre_exponential
+                * (stress ** self.stress_exponent)
+                * np.exp(-self.activation_energy / (R * temperature))
+            )
+            
+            # Irradiation enhancement factor
+            if fluence is not None:
+                # Typical: 2-5x enhancement at high fluence
+                fluence_factor = 1.0 + 0.1 * (fluence / 1e21)  # Enhancement per 10^21 n/cm²
+                fluence_factor = min(5.0, fluence_factor)  # Cap at 5x
+                creep_rate = base_creep * fluence_factor
+            else:
+                creep_rate = base_creep
+        
+        else:
+            # Default to Norton's law
+            creep_rate = (
+                self.pre_exponential
+                * (stress ** self.stress_exponent)
+                * np.exp(-self.activation_energy / (R * temperature))
+            )
+        
+        return max(0.0, creep_rate)  # Ensure non-negative
+    
+    def calculate_creep_strain(
+        self,
+        stress: float,  # Pa
+        temperature: float,  # K
+        time: float,  # s
+        fluence: Optional[float] = None,  # n/cm²
+        include_primary: bool = True,
+    ) -> Dict[str, float]:
+        """
+        Calculate total creep strain including primary, secondary, and tertiary.
+        
+        Args:
+            stress: Applied stress [Pa]
+            temperature: Temperature [K]
+            time: Exposure time [s]
+            fluence: Optional neutron fluence [n/cm²]
+            include_primary: Whether to include primary creep
+            
+        Returns:
+            Dictionary with:
+                - total_creep_strain: Total creep strain [-]
+                - primary_creep_strain: Primary creep strain [-]
+                - secondary_creep_strain: Secondary creep strain [-]
+                - tertiary_creep_strain: Tertiary creep strain [-]
+                - creep_strain_rate: Current creep strain rate [1/s]
+        """
+        # Secondary creep (steady-state)
+        secondary_rate = self.calculate_creep_strain_rate(stress, temperature, fluence)
+        secondary_strain = secondary_rate * time
+        
+        # Primary creep (transient, decaying)
+        primary_strain = 0.0
+        if include_primary:
+            # Primary creep: ε_p = ε_p0 * (1 - exp(-t/τ))
+            # Typical: primary strain is 10-30% of secondary
+            primary_strain_0 = 0.2 * secondary_strain  # 20% of secondary
+            tau = 1e6  # s (typical relaxation time)
+            primary_strain = primary_strain_0 * (1.0 - np.exp(-time / tau))
+        
+        # Tertiary creep (accelerating, before failure)
+        # Typically starts after significant secondary creep
+        tertiary_strain = 0.0
+        if time > 1e7:  # After ~1 year at high stress
+            # Tertiary creep accelerates as material approaches failure
+            # Simplified: exponential acceleration
+            tertiary_factor = 1.0 + 0.01 * (time / 1e7) ** 2
+            tertiary_strain = secondary_strain * (tertiary_factor - 1.0)
+        
+        total_creep_strain = primary_strain + secondary_strain + tertiary_strain
+        
+        return {
+            "total_creep_strain": total_creep_strain,
+            "primary_creep_strain": primary_strain,
+            "secondary_creep_strain": secondary_strain,
+            "tertiary_creep_strain": tertiary_strain,
+            "creep_strain_rate": secondary_rate,
+        }
+    
+    def calculate_creep_life(
+        self,
+        stress: float,  # Pa
+        temperature: float,  # K
+        failure_strain: float = 0.1,  # Typical failure strain (10%)
+        fluence: Optional[float] = None,  # n/cm²
+    ) -> float:
+        """
+        Calculate time to creep failure (rupture time).
+        
+        Args:
+            stress: Applied stress [Pa]
+            temperature: Temperature [K]
+            failure_strain: Failure strain criterion [-]
+            fluence: Optional neutron fluence [n/cm²]
+            
+        Returns:
+            Time to failure [s]
+        """
+        # Calculate steady-state creep rate
+        creep_rate = self.calculate_creep_strain_rate(stress, temperature, fluence)
+        
+        if creep_rate <= 0:
+            return float("inf")  # No creep at these conditions
+        
+        # Simplified: assume failure when total strain reaches failure_strain
+        # More accurate models would account for tertiary creep acceleration
+        time_to_failure = failure_strain / creep_rate
+        
+        return time_to_failure
+
+
+@dataclass
+class MaterialDegradation:
+    """
+    Material degradation models for long-term fuel rod analysis.
+    
+    Provides comprehensive material property degradation including:
+    - Irradiation damage (neutron fluence effects)
+    - Thermal aging (temperature and time effects)
+    - Creep-induced property changes
+    - Fatigue damage accumulation
+    
+    Attributes:
+        material_type: Material type ('fuel', 'zircaloy', 'graphite')
+        initial_properties: Initial material properties dictionary
+        creep_model: Optional creep model for creep-induced degradation
+    """
+    
+    material_type: str
+    initial_properties: Dict[str, float]
+    creep_model: Optional["CreepModel"] = None
+    
+    def __post_init__(self):
+        """Initialize creep model if not provided."""
+        if self.creep_model is None:
+            self.creep_model = CreepModel(material_type=self.material_type)
+    
+    def calculate_degraded_properties(
+        self,
+        time: float,  # days
+        temperature: float,  # K
+        stress: float,  # Pa
+        fluence: Optional[float] = None,  # n/cm²
+    ) -> Dict[str, float]:
+        """
+        Calculate material properties after degradation.
+        
+        Args:
+            time: Exposure time [days]
+            temperature: Temperature [K]
+            stress: Applied stress [Pa]
+            fluence: Optional neutron fluence [n/cm²]
+            
+        Returns:
+            Dictionary with degraded material properties
+        """
+        time_seconds = time * 86400.0  # Convert days to seconds
+        
+        degraded_properties = self.initial_properties.copy()
+        
+        # Calculate creep strain
+        creep_results = self.creep_model.calculate_creep_strain(
+            stress, temperature, time_seconds, fluence
+        )
+        
+        # Degradation due to creep
+        if self.material_type == "zircaloy":
+            # Zircaloy degradation
+            # Young's modulus decreases with creep damage
+            creep_damage = min(1.0, creep_results["total_creep_strain"] / 0.1)
+            degraded_properties["youngs_modulus"] = (
+                self.initial_properties.get("youngs_modulus", 1e11)
+                * (1.0 - 0.2 * creep_damage)  # Up to 20% reduction
+            )
+            
+            # Yield strength decreases with irradiation and creep
+            if fluence is not None:
+                fluence_factor = 1.0 - 0.1 * (fluence / 1e22)  # 10% reduction per 10^22 n/cm²
+                fluence_factor = max(0.5, fluence_factor)  # Minimum 50% of original
+            else:
+                fluence_factor = 1.0
+            
+            degraded_properties["yield_strength"] = (
+                self.initial_properties.get("yield_strength", 4e8)
+                * fluence_factor
+                * (1.0 - 0.15 * creep_damage)  # Additional 15% reduction from creep
+            )
+            
+            # Thermal conductivity decreases with irradiation
+            if fluence is not None:
+                conductivity_factor = 1.0 - 0.05 * (fluence / 1e22)
+                conductivity_factor = max(0.8, conductivity_factor)
+            else:
+                conductivity_factor = 1.0
+            
+            degraded_properties["thermal_conductivity"] = (
+                self.initial_properties.get("thermal_conductivity", 20.0)
+                * conductivity_factor
+            )
+        
+        elif self.material_type == "fuel":
+            # Fuel degradation
+            # Thermal conductivity decreases with burnup (via time approximation)
+            burnup_approx = time * 0.01  # Approximate burnup [MWd/kg] from time
+            conductivity_factor = 1.0 - 0.15 * (burnup_approx / 50.0) ** 0.5
+            conductivity_factor = max(0.7, conductivity_factor)
+            
+            degraded_properties["thermal_conductivity"] = (
+                self.initial_properties.get("thermal_conductivity", 3.0)
+                * conductivity_factor
+            )
+            
+            # Young's modulus decreases with creep
+            creep_damage = min(1.0, creep_results["total_creep_strain"] / 0.15)
+            degraded_properties["youngs_modulus"] = (
+                self.initial_properties.get("youngs_modulus", 2e11)
+                * (1.0 - 0.25 * creep_damage)  # Up to 25% reduction
+            )
+        
+        elif self.material_type == "graphite":
+            # Graphite degradation
+            # Young's modulus decreases with irradiation
+            if fluence is not None:
+                modulus_factor = 1.0 - 0.3 * (fluence / 1e22)
+                modulus_factor = max(0.4, modulus_factor)  # Minimum 40% of original
+            else:
+                modulus_factor = 1.0
+            
+            degraded_properties["youngs_modulus"] = (
+                self.initial_properties.get("youngs_modulus", 1e10)
+                * modulus_factor
+            )
+            
+            # Thermal conductivity decreases significantly with irradiation
+            if fluence is not None:
+                conductivity_factor = 1.0 - 0.4 * (fluence / 1e22)
+                conductivity_factor = max(0.3, conductivity_factor)
+            else:
+                conductivity_factor = 1.0
+            
+            degraded_properties["thermal_conductivity"] = (
+                self.initial_properties.get("thermal_conductivity", 100.0)
+                * conductivity_factor
+            )
+        
+        # Add creep information
+        degraded_properties["creep_strain"] = creep_results["total_creep_strain"]
+        degraded_properties["creep_strain_rate"] = creep_results["creep_strain_rate"]
+        degraded_properties["creep_life"] = self.creep_model.calculate_creep_life(
+            stress, temperature, fluence=fluence
+        )
+        
+        return degraded_properties

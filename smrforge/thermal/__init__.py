@@ -57,6 +57,7 @@ try:
     from smrforge.thermal.two_phase_advanced import (
         BoilingHeatTransfer,
         DriftFluxModel,
+        InterfacialTransferModels,
         TwoFluidModel,
         TwoPhaseThermalHydraulics,
     )
@@ -71,10 +72,32 @@ except ImportError:
 if _TWO_PHASE_ADVANCED_AVAILABLE:
     __all__.extend(
         [
-            "DriftFluxModel",
-            "TwoFluidModel",
             "BoilingHeatTransfer",
+            "DriftFluxModel",
+            "InterfacialTransferModels",
+            "TwoFluidModel",
             "TwoPhaseThermalHydraulics",
             "integrate_two_phase_with_thermal_hydraulics",
+        ]
+    )
+
+# Try to import multi-physics coupling (optional)
+try:
+    from smrforge.thermal.multiphysics_coupling import (
+        MultiPhysicsCoupling,
+        MultiPhysicsOptions,
+    )
+    from smrforge.thermal.hydraulics import ConjugateHeatTransfer
+
+    _MULTIPHYSICS_AVAILABLE = True
+except ImportError:
+    _MULTIPHYSICS_AVAILABLE = False
+
+if _MULTIPHYSICS_AVAILABLE:
+    __all__.extend(
+        [
+            "MultiPhysicsCoupling",
+            "MultiPhysicsOptions",
+            "ConjugateHeatTransfer",
         ]
     )

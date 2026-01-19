@@ -40,6 +40,16 @@ class TestUnitRegistry:
         pcm = ureg.pcm
         assert pcm is not None
 
+    def test_define_reactor_units(self):
+        """Test define_reactor_units function."""
+        from smrforge.utils.units import define_reactor_units
+        
+        ureg = define_reactor_units()
+        assert ureg is not None
+        # Verify reactor units are defined
+        assert hasattr(ureg, 'dollar')
+        assert hasattr(ureg, 'pcm')
+
 
 @pytest.mark.skipif(not _PINT_AVAILABLE, reason="Pint not installed")
 class TestUnitChecking:
@@ -74,6 +84,16 @@ class TestUnitChecking:
         with pytest.raises(DimensionalityError):
             check_units(power, "kelvin", "power")  # Wrong dimension
 
+    def test_check_units_with_quantity_expected_unit(self):
+        """Test check_units with Quantity as expected_unit."""
+        from smrforge.utils.units import check_units, get_ureg
+        
+        ureg = get_ureg()
+        
+        power = 10.0 * ureg.megawatt
+        checked = check_units(power, ureg.megawatt, "power")
+        assert checked.magnitude == 10.0
+
     def test_convert_units(self):
         """Test unit conversion."""
         from smrforge.utils.units import convert_units, get_ureg
@@ -105,6 +125,53 @@ class TestUnitChecking:
         
         reactivity_pcm = with_units(100.0, "pcm")
         assert reactivity_pcm.magnitude == 100.0
+
+    def test_convert_units_with_quantity_target_str(self):
+        """Test convert_units with Quantity and string target."""
+        from smrforge.utils.units import convert_units, get_ureg
+        
+        ureg = get_ureg()
+        
+        power_mw = 10.0 * ureg.megawatt
+        power_w = convert_units(power_mw, "watt")
+        assert abs(power_w - 10e6) < 1.0
+
+    def test_convert_units_with_quantity_target_quantity(self):
+        """Test convert_units with Quantity and Quantity target."""
+        from smrforge.utils.units import convert_units, get_ureg
+        
+        ureg = get_ureg()
+        
+        power_mw = 10.0 * ureg.megawatt
+        power_w = convert_units(power_mw, ureg.watt)
+        assert abs(power_w - 10e6) < 1.0
+
+    def test_convert_units_plain_number(self):
+        """Test convert_units with plain number."""
+        from smrforge.utils.units import convert_units
+        
+        result = convert_units(10.0, "watt")
+        assert result == 10.0
+
+    def test_with_units_string_unit(self):
+        """Test with_units with string unit."""
+        from smrforge.utils.units import with_units, get_ureg
+        
+        ureg = get_ureg()
+        
+        power = with_units(10.0, "megawatt")
+        assert power.magnitude == 10.0
+        assert power.units == ureg.megawatt
+
+    def test_with_units_quantity_unit(self):
+        """Test with_units with Quantity unit."""
+        from smrforge.utils.units import with_units, get_ureg
+        
+        ureg = get_ureg()
+        
+        power = with_units(10.0, ureg.megawatt)
+        assert power.magnitude == 10.0
+        assert power.units == ureg.megawatt
 
 
 @pytest.mark.skipif(_PINT_AVAILABLE, reason="Pint is installed - test backwards compatibility")
@@ -139,3 +206,13 @@ class TestBackwardsCompatibility:
             warnings.simplefilter("always")
             with_units_value = with_units(10.0, "megawatt")
             assert with_units_value == 10.0
+
+    def test_define_reactor_units(self):
+        """Test define_reactor_units function."""
+        from smrforge.utils.units import define_reactor_units
+        
+        ureg = define_reactor_units()
+        assert ureg is not None
+        # Verify reactor units are defined
+        assert hasattr(ureg, 'dollar')
+        assert hasattr(ureg, 'pcm')

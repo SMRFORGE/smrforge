@@ -192,9 +192,10 @@ class DesignOptimizer:
     ) -> np.ndarray:
         """Tournament selection."""
         selected = []
+        tournament_size = min(3, len(population))  # Adjust if population is small
         for _ in range(len(population)):
-            # Tournament of 3
-            idx = np.random.choice(len(population), size=3, replace=False)
+            # Tournament of 3 (or smaller if population is small)
+            idx = np.random.choice(len(population), size=tournament_size, replace=False)
             winner = idx[np.argmin(fitness[idx])]
             selected.append(population[winner])
         return np.array(selected)
