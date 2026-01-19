@@ -131,13 +131,15 @@ This document consolidates information about test coverage, external data depend
 - ✅ Basic initialization tests
 - ⚠️ Limited parsing tests (needs realistic mock files)
 
-**Uncovered Line Ranges:**
-- **38-49**: `ReactionData.interpolate` method (12 lines)
-- **85-87**: `ENDFEvaluation.__getitem__` KeyError path
-- **97-112**: `ENDFEvaluation.to_polars` method
-- **225-321**: `_parse_mf3_section` full implementation (97 lines - **LARGEST GAP!**)
-- **326-345**: `_mt_to_reaction_name` method (20 lines)
-- **374-392**: `ENDFCompatibility.__getitem__` ReactionWrapper creation
+**Coverage Status** (Updated January 18, 2026):
+- ✅ **`ReactionData.interpolate` method** (lines 38-49): ✅ **COMPLETE** - Comprehensive testing in `test_reaction_data_interpolate.py` (23 tests covering all edge cases including boundary conditions, interpolation accuracy, and various energy/XS arrays)
+- ✅ **`ENDFEvaluation.__getitem__` KeyError path** (lines 85-87): ✅ **COMPLETE** - Tested in `test_endf_parser_complete_coverage.py` and `test_endf_parser_remaining.py` (multiple tests covering KeyError scenarios)
+- ✅ **`ENDFEvaluation.to_polars` method** (lines 97-112): ✅ **COMPLETE** - Tested with/without Polars in `test_endf_parser_complete_coverage.py` and `test_endf_parser_polars_unavailable.py` (covers both available and unavailable Polars scenarios)
+- ✅ **`_parse_mf3_section` full implementation** (lines 225-321): ✅ **COMPLETE** - Comprehensive edge case testing in `test_endf_parser_edge_cases.py` and `test_endf_parser_complete_coverage.py` (covers start_idx >= len(lines), break conditions, next_mt=0, different MF, exception handling, value parsing, and all data extraction paths)
+- ✅ **`_mt_to_reaction_name` method** (lines 335-356): ✅ **COMPLETE** - Comprehensive testing in `test_endf_parser_remaining.py` (20+ tests covering all known MT number mappings, unknown MT numbers, edge cases)
+- ✅ **`ENDFCompatibility.__getitem__` ReactionWrapper creation** (lines 383-392): ✅ **COMPLETE** - Tested in `test_endf_compatibility_wrappers.py` (comprehensive tests covering ReactionWrapper creation, extended interface, energy/cross_section attributes, xs dictionary structure)
+
+**Note**: All functionality listed above is comprehensively tested. See `docs/development/coverage-inventory.md` for detailed coverage breakdown. Current `endf_parser.py` coverage: **97.3%** (exceeds 75-80% target).
 
 ---
 
