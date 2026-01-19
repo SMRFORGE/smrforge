@@ -8,6 +8,7 @@
 # Recent Additions (January 2026):
 # - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
 # - Material degradation models for long-term fuel rod analysis
+# - Model Predictive Control (MPC) for advanced reactor control algorithms
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications
 # - Model assumption documentation - Explicit assumption tracking per calculation
@@ -194,7 +195,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge sweep (parameter sweep and sensitivity analysis)
 #   All new modules available via Python imports:
 #     - smrforge.mechanics (FuelRodMechanics, ThermalExpansion, StressStrain, PCI, FuelSwelling)
-#     - smrforge.control (PIDController, ReactorController, LoadFollowingController)
+#     - smrforge.control (PIDController, ReactorController, LoadFollowingController, ModelPredictiveController)
 #     - smrforge.economics (CapitalCostEstimator, OperatingCostEstimator, LCOECalculator)
 #     - smrforge.fuel_cycle (FuelCycleOptimizer, RefuelingStrategyOptimizer, MaterialAging)
 #     - smrforge.thermal.two_phase_advanced (DriftFluxModel, TwoFluidModel, BoilingHeatTransfer)
@@ -223,7 +224,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #     * Parallel processing with Numba
 #     * Memory pooling (50-70% reduction)
 #   - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling, creep models, material degradation)
-#   - Advanced control systems (PID controllers, load-following, reactor control)
+#   - Advanced control systems (PID controllers, load-following, reactor control, Model Predictive Control)
 #   - Economics cost modeling (capital costs, operating costs, LCOE calculations with SMR-specific factors)
 #   - Regulatory traceability: Calculation audit trails, assumption documentation, safety margin reports, BEPU support
 #   - Advanced two-phase flow models:

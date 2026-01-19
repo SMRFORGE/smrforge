@@ -59,7 +59,7 @@
 #   * Pre-computed cross-section lookup tables
 #   * Batch tally processing
 # - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling, creep models, material degradation)
-# - Advanced control systems (PID controllers, load-following, reactor control)
+# - Advanced control systems (PID controllers, load-following, reactor control, Model Predictive Control)
 # - Economics cost modeling (capital costs, operating costs, LCOE calculations)
 # - Advanced two-phase flow models (drift-flux, two-fluid, enhanced boiling correlations, CHF)
 # - Advanced interfacial transfer models (mass, momentum, energy transfer) - Ishii-Hibiki, RELAP5, TRACE models
@@ -190,7 +190,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge validate run (validation framework - run validation tests)
 #   Optimized Monte Carlo: Use OptimizedMonteCarloSolver for 5-10x faster calculations
 #   Structural mechanics: Fuel rod analysis (thermal expansion, stress/strain, PCI, fuel swelling, creep models, material degradation)
-#   Control systems: PID controllers, load-following, reactor control (integrated with transients)
+#   Control systems: PID controllers, load-following, reactor control, Model Predictive Control (MPC) (integrated with transients)
 #   Economics: Capital cost estimation, operating costs, LCOE calculations
 #   Advanced two-phase flow: Drift-flux models, two-fluid models, enhanced boiling correlations, CHF predictions
 #   Fuel cycle optimization: Cycle length optimization, refueling strategy, material aging models
