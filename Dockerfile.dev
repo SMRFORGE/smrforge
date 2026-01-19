@@ -5,6 +5,9 @@
 # Or use: docker compose up smrforge-dev
 #
 # Last Updated: January 19, 2026
+# Recent Additions (January 2026):
+# - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
+# - Material degradation models for long-term fuel rod analysis
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications
 # - Model assumption documentation - Explicit assumption tracking per calculation
@@ -219,7 +222,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #     * Vectorized particle tracking
 #     * Parallel processing with Numba
 #     * Memory pooling (50-70% reduction)
-#   - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling)
+#   - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling, creep models, material degradation)
 #   - Advanced control systems (PID controllers, load-following, reactor control)
 #   - Economics cost modeling (capital costs, operating costs, LCOE calculations with SMR-specific factors)
 #   - Regulatory traceability: Calculation audit trails, assumption documentation, safety margin reports, BEPU support

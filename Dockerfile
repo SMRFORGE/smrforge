@@ -5,6 +5,9 @@
 # Run:   docker run -it smrforge:latest
 #
 # Last Updated: January 19, 2026
+# Recent Additions (January 2026):
+# - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
+# - Material degradation models for long-term fuel rod analysis
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications
 # - Model assumption documentation - Explicit assumption tracking per calculation
@@ -55,7 +58,7 @@
 #   * Parallel processing with Numba (scales with CPU cores)
 #   * Pre-computed cross-section lookup tables
 #   * Batch tally processing
-# - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling)
+# - Structural mechanics module (fuel rod mechanics, stress/strain, PCI, fuel swelling, creep models, material degradation)
 # - Advanced control systems (PID controllers, load-following, reactor control)
 # - Economics cost modeling (capital costs, operating costs, LCOE calculations)
 # - Advanced two-phase flow models (drift-flux, two-fluid, enhanced boiling correlations, CHF)
@@ -186,7 +189,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge thermal lumped (lumped-parameter thermal hydraulics)
 #   smrforge validate run (validation framework - run validation tests)
 #   Optimized Monte Carlo: Use OptimizedMonteCarloSolver for 5-10x faster calculations
-#   Structural mechanics: Fuel rod analysis (thermal expansion, stress/strain, PCI, fuel swelling)
+#   Structural mechanics: Fuel rod analysis (thermal expansion, stress/strain, PCI, fuel swelling, creep models, material degradation)
 #   Control systems: PID controllers, load-following, reactor control (integrated with transients)
 #   Economics: Capital cost estimation, operating costs, LCOE calculations
 #   Advanced two-phase flow: Drift-flux models, two-fluid models, enhanced boiling correlations, CHF predictions
