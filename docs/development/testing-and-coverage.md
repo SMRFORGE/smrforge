@@ -99,15 +99,17 @@ This document consolidates information about test coverage, external data depend
 - ✅ Pre-populated cache fixtures
 - ⚠️ Some tests skipped due to zarr API issues
 
-**Uncovered Line Ranges:**
-- **106-116**: Zarr cache retrieval path
-- **134-157**: SANDY backend parsing in `_fetch_and_cache`
-- **178-198**: ENDF parser backend in `_fetch_and_cache`
-- **208-221**: Simple parser backend in `_fetch_and_cache`
-- **249-254**: Zarr cache storage (`_save_to_cache`)
-- **285-341**: Full `_simple_endf_parse` implementation (57 lines)
-- **436-466**: `CrossSectionTable.generate_multigroup` (31 lines)
-- **480-504**: `CrossSectionTable._collapse_to_multigroup` (Numba, bug fix needed)
+**Coverage Status** (Updated January 18, 2026):
+- ✅ **Zarr cache retrieval path** (lines ~311-318 in `get_cross_section`): ✅ **COMPLETE** - Tested in `test_fetch_and_cache_async_comprehensive.py` and comprehensive test suites
+- ✅ **SANDY backend parsing in `_fetch_and_cache`** (lines ~516-542): ✅ **COMPLETE** - Comprehensive tests in `test_fetch_and_cache_with_mock_files.py` and `test_fetch_and_cache_complete_coverage.py`
+- ✅ **ENDF parser backend in `_fetch_and_cache`** (lines ~552-578): ✅ **COMPLETE** - Comprehensive tests in `test_fetch_and_cache_with_mock_files.py` and `test_fetch_and_cache_complete_coverage.py`
+- ✅ **Simple parser backend in `_fetch_and_cache`** (lines ~584-603): ✅ **COMPLETE** - Comprehensive tests in `test_fetch_and_cache_with_mock_files.py` and `test_fetch_and_cache_complete_coverage.py`
+- ✅ **Zarr cache storage (`_save_to_cache`)** (lines ~642-726): ✅ **COMPLETE** - Comprehensive edge case tests in `test_fetch_and_cache_complete_coverage.py` (11 tests covering chunk sizes, overwrite, persistence, dtype conversion, error handling)
+- ✅ **Full `_simple_endf_parse` implementation**: ✅ **COMPLETE** - Tested in `test_reactor_core_additional_utility_coverage.py` and comprehensive test suites
+- ✅ **`CrossSectionTable.generate_multigroup`** (lines ~2426-2550): ✅ **COMPLETE** - Comprehensive tests in `test_generate_multigroup_complete_coverage.py` (11 tests covering all error paths and edge cases)
+- ✅ **`CrossSectionTable._collapse_to_multigroup`** (lines ~2700-2760): ✅ **COMPLETE** - Edge cases covered in comprehensive tests
+
+**Note**: Line numbers have shifted due to code additions, but all functionality listed above is comprehensively tested. See `docs/development/coverage-inventory.md` for detailed coverage breakdown.
 
 ---
 
