@@ -9,6 +9,7 @@
 # - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
 # - Material degradation models for long-term fuel rod analysis
 # - Model Predictive Control (MPC) for advanced reactor control algorithms
+# - Model Predictive Control (MPC) for advanced reactor control algorithms
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications
 # - Model assumption documentation - Explicit assumption tracking per calculation
