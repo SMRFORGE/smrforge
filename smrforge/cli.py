@@ -61,6 +61,14 @@ def _print_info(message: str):
         print(f"ℹ {message}")
 
 
+def _print_warning(message: str):
+    """Print warning message with styling if rich is available."""
+    if _RICH_AVAILABLE:
+        console.print(f"[bold yellow]⚠[/bold yellow] {message}")
+    else:
+        print(f"⚠ {message}")
+
+
 def serve_dashboard(args):
     """
     Launch the SMRForge web dashboard.
