@@ -430,6 +430,15 @@ pytest --cov=smrforge.core.endf_parser --cov-report=term-missing
 - ✅ **Current: 79.2%** (improved from 64.4%, excellent progress!)
 - ✅ **Target: 80%** (very close - only 0.8% gap remaining)
 
+**Utility Modules** (January 18, 2026):
+- ✅ **error_messages.py: 100.0%** (20 tests)
+- ✅ **optimization_utils.py: 97.8%** (20 tests)
+- ✅ **memory_pool.py: 100.0%** (15 tests)
+- ✅ **material_mapping.py: 100.0%** (18 tests)
+- ✅ **memory_mapped.py: 67.8%** (7 tests - core functionality)
+- ✅ **validation/integration.py**: ValidationContext tested (3 tests)
+- ✅ **units.py**: Enhanced (6 additional tests)
+
 ---
 
 ## Key Dependencies Graph
