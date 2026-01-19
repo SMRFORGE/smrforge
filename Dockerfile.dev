@@ -8,7 +8,7 @@
 # Recent Additions (January 2026):
 # - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
 # - Material degradation models for long-term fuel rod analysis
-# - Model Predictive Control (MPC) for advanced reactor control algorithms
+# - Multi-physics coupling framework (unified coupling of all physics domains)
 # - Model Predictive Control (MPC) for advanced reactor control algorithms
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications

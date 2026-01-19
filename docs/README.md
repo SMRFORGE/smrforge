@@ -1,6 +1,6 @@
 # SMRForge Documentation
 
-**Last Updated:** January 2026
+**Last Updated:** January 19, 2026
 
 This directory contains all SMRForge documentation organized by category.
 
@@ -22,6 +22,8 @@ This directory contains all SMRForge documentation organized by category.
 - Architecture notes
 - Regulatory traceability and compliance
 - OpenMC comparison and improvements
+- Multi-physics coupling framework
+- Advanced control algorithms (MPC)
 
 ### Development (`development/`)
 - Code style guide
@@ -101,12 +103,14 @@ This directory contains all SMRForge documentation organized by category.
 - **[Phase 2 Summary](technical/PHASE2-IMPLEMENTATION-SUMMARY.md)** - Algorithmic improvements summary
 - **[Regulatory Traceability Guide](technical/regulatory-traceability-guide.md)** - Complete guide for licensing applications and regulatory compliance
 - **[OpenMC Regulatory Analysis](technical/openmc-regulatory-traceability-analysis.md)** - OpenMC comparison and SMRForge advantages
+- **Multi-Physics Coupling** - Comprehensive unified coupling framework integrating neutronics, thermal-hydraulics, structural mechanics, control systems, and burnup
+- **Advanced Control Systems** - Model Predictive Control (MPC) for predictive reactor control with constraint handling
 
 **Status (`status/`):**
 - **[Feature Status](status/feature-status.md)** - Module status and capabilities
 - **[Production Readiness](status/production-readiness-status.md)** - Production readiness assessment
 - **[Test Coverage](status/test-coverage-summary.md)** - Test coverage details
-- **[Pain Points Assessment](status/pain-points-assessment.md)** - Gap analysis and pain points
+- **[Pain Points Assessment](status/pain-points-assessment.md)** - Gap analysis and pain points (includes recent improvements: creep models, multi-physics coupling, MPC)
 
 **Development (`development/`):**
 - **[Code Style Guide](development/code-style.md)** - Code style and formatting
@@ -138,6 +142,12 @@ This directory contains all SMRForge documentation organized by category.
 - Check `status/feature-status.md` for current status
 
 ---
+
+## 🆕 Recent Features (January 2026)
+
+- **Creep Models & Material Degradation**: Comprehensive creep models (primary, secondary, tertiary, irradiation-enhanced) and material degradation for long-term fuel rod analysis
+- **Multi-Physics Coupling Framework**: Unified coupling framework (`MultiPhysicsCoupling`) integrating all physics domains with bidirectional feedback
+- **Model Predictive Control (MPC)**: Advanced predictive control algorithm with prediction horizon optimization and constraint handling
 
 ## 🔄 Documentation Updates
 
