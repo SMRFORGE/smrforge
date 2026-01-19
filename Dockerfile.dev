@@ -202,6 +202,9 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #     - smrforge.control (PIDController, ReactorController, LoadFollowingController, ModelPredictiveController)
 #     - smrforge.economics (CapitalCostEstimator, OperatingCostEstimator, LCOECalculator)
 #     - smrforge.fuel_cycle (FuelCycleOptimizer, RefuelingStrategyOptimizer, MaterialAging)
+#     - smrforge.fuel (FuelPerformance, FuelProperties, CladProperties)
+#     - smrforge.optimization (DesignOptimizer, LoadingPatternOptimizer, OptimizationResult)
+#     - smrforge.io (InputReader, OutputWriter, SerpentConverter, OpenMCConverter)
 #     - smrforge.thermal.two_phase_advanced (DriftFluxModel, TwoFluidModel, BoilingHeatTransfer)
 #
 # Development Features:
@@ -265,6 +268,9 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - Enhanced mesh generation
 #   - Geometry Designer GUI - Interactive visual core layout editor
 #   - Advanced optimization algorithms (GA, PSO) for fuel cycle optimization
+#   - Fuel Performance module (fuel temperature, swelling, fission gas release)
+#   - General Optimization module (reactor design optimization, loading pattern optimization)
+#   - General I/O Utilities (file readers/writers, format converters for Serpent/OpenMC)
 #   - Advanced interfacial transfer models for two-phase flow
 #   - Comprehensive test suite (150+ test files, 79.2% coverage)
 #     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
