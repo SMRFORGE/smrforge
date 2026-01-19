@@ -16,7 +16,7 @@
   - `utils/error_messages.py`: **100.0%** ✅ (20 tests added)
   - `utils/optimization_utils.py`: **97.8%** ✅ (20 tests added)
   - `utils/memory_pool.py`: **100.0%** ✅ (15 tests added)
-  - `utils/memory_mapped.py`: **67.8%** ✅ (7 tests added, core functionality covered)
+  - `utils/memory_mapped.py`: **100.0%** ✅ (16 tests added, comprehensive coverage including helper functions)
   - `core/material_mapping.py`: **100.0%** ✅ (18 tests added)
   - `validation/integration.py`: ValidationContext tested ✅ (3 tests added)
   - `utils/units.py`: Enhanced coverage ✅ (6 additional tests added)
