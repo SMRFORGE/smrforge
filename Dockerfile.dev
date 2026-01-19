@@ -4,7 +4,7 @@
 # Build: docker build -f Dockerfile.dev -t smrforge:dev .
 # Or use: docker compose up smrforge-dev
 #
-# Last Updated: January 19, 2026
+# Last Updated: January 18, 2026
 # Recent Additions (January 2026):
 # - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
 # - Material degradation models for long-term fuel rod analysis
@@ -85,10 +85,11 @@
 # - Added system libraries for 3D visualization
 # - Optional: mesh conversion (meshio) and CAD import (trimesh) dependencies
 # - Updated to support latest features and test requirements
-# - Test coverage: 79.2% overall, 75-80%+ on priority modules (30+ new tests added for __init__.py coverage)
-# - Comprehensive test suite: 150+ test files including Phase 1/2 module tests and __init__.py import error path tests
+# - Test coverage: 79.2% overall, 75-80%+ on priority modules (100+ new tests added for utility modules and coverage gaps)
+# - Comprehensive test suite: 150+ test files including Phase 1/2 module tests, __init__.py import error path tests, and utility module tests
+# - Utility module coverage: memory_mapped.py (100%), parallel_batch.py (67.2%), error_messages.py (100%), optimization_utils.py (97.8%), memory_pool.py (100%), material_mapping.py (100%)
 # - Advanced error handling and async edge case coverage
-# - New test files: test_parameter_sweep, test_templates, test_constraints, test_converters, test_burnup_checkpointing
+# - New test files: test_parameter_sweep, test_templates, test_constraints, test_converters, test_burnup_checkpointing, test_memory_mapped, test_parallel_batch, test_error_messages, test_optimization_utils, test_memory_pool, test_material_mapping
 # - Advanced tests: test_reactor_core_advanced_error_handling, test_reactor_core_async_edge_cases
 # - Manual testing framework: 13 test scripts (test_*.py) for feature validation (testing/ directory)
 #   Optional Jupyter notebooks available for interactive testing (01_CLI_Commands.ipynb)
@@ -274,6 +275,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - Advanced interfacial transfer models for two-phase flow
 #   - Comprehensive test suite (150+ test files, 79.2% coverage)
 #     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
+#     * Utility module tests: memory_mapped (100%), parallel_batch (67.2%), error_messages (100%), optimization_utils (97.8%), memory_pool (100%), material_mapping (100%)
 #     * Advanced error handling tests: file operations, copy failures, validation errors
 #     * Async edge case tests: partial failures, exception propagation, timeouts, concurrent access
 #   - Manual testing framework: 13 test scripts for feature validation
