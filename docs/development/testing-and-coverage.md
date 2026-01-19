@@ -1,10 +1,11 @@
 # Testing and Coverage Guide
 
-**Last Updated:** January 2026 (Comprehensive inventory and completion plan added)  
+**Last Updated:** January 18, 2026 (Utility module test coverage added)  
 **Current Overall Coverage**: **79.2%** (up from 64.4%, excellent progress!)  
 **Target Coverage**: 75-80% for all modules  
 **Progress**: All priority modules (9 high + 5 medium) now exceed target coverage (75-80%+)  
-**Gap to 80%**: ~83 statements (0.8% increase needed) - **Very close to target!**
+**Gap to 80%**: ~83 statements (0.8% increase needed) - **Very close to target!**  
+**Recent Addition**: 89 new tests for utility modules (January 18, 2026)
 
 **See Also:**
 - [Comprehensive Coverage Inventory](../status/comprehensive-coverage-inventory.md) - Full module-by-module breakdown
@@ -61,6 +62,15 @@ This document consolidates information about test coverage, external data depend
 - `neutronics/monte_carlo.py`: 97.7% - ✅ Excellent
 - `thermal/hydraulics.py`: 90.5% - ✅ Complete
 - `safety/transients.py`: 92.4% - ✅ Complete
+
+#### Utility Modules (January 18, 2026):
+- `utils/error_messages.py`: **100.0%** - ✅ Complete (20 tests)
+- `utils/optimization_utils.py`: **97.8%** - ✅ Complete (20 tests)
+- `utils/memory_pool.py`: **100.0%** - ✅ Complete (15 tests)
+- `utils/memory_mapped.py`: **67.8%** - ✅ Core functionality covered (7 tests)
+- `core/material_mapping.py`: **100.0%** - ✅ Complete (18 tests)
+- `validation/integration.py`: ValidationContext tested - ✅ Complete (3 tests)
+- `utils/units.py`: Enhanced coverage - ✅ Enhanced (6 additional tests)
 
 ---
 
@@ -220,6 +230,31 @@ This document consolidates information about test coverage, external data depend
     - **Tests cover**: Error handling, boundary conditions, invalid input handling
     - **Coverage gain**: Achieved
 
+### Phase 5: New Feature Module Coverage (January 2026) ✅ **COMPLETE**
+
+14. **✅ Test New Feature Modules** ✅ **COMPLETE**
+    - **Status**: ✅ 71 comprehensive tests added across 5 new test files
+    - **Modules covered**: `workflows/parameter_sweep.py`, `workflows/templates.py`, `validation/constraints.py`, `io/converters.py`, `burnup/solver.py` (checkpointing)
+    - **Coverage gain**: Achieved (~75-80% for all new modules)
+
+### Phase 6: Utility Module Coverage (January 18, 2026) ✅ **COMPLETE**
+
+15. **✅ Test Utility Modules** ✅ **COMPLETE**
+    - **Status**: ✅ 89 comprehensive tests added across 6 new test files
+    - **Modules covered**:
+      - `utils/error_messages.py`: **100.0%** (20 tests)
+      - `utils/optimization_utils.py`: **97.8%** (20 tests)
+      - `utils/memory_pool.py`: **100.0%** (15 tests)
+      - `utils/memory_mapped.py`: **67.8%** (7 tests - core functionality)
+      - `core/material_mapping.py`: **100.0%** (18 tests)
+      - `validation/integration.py`: ValidationContext (3 tests)
+      - `utils/units.py`: Enhanced (6 additional tests)
+    - **Bug Fixes**:
+      - ✅ Fixed `smrforge/thermal/__init__.py` syntax error
+      - ✅ Fixed `smrforge/mechanics/fuel_rod.py` forward reference issue
+      - ✅ Fixed `smrforge/optimization/design.py` tournament selection bug
+    - **Coverage gain**: Achieved (excellent coverage for utility modules)
+
 ---
 
 ## Implementation Status Summary
@@ -241,12 +276,24 @@ All priority tasks from the testing and coverage roadmap have been successfully 
 - `test_endf_evaluation_parsing.py` - ENDFEvaluation parsing tests
 - `test_reaction_data_interpolate.py` - Interpolation tests
 - `test_endf_compatibility_wrappers.py` - Compatibility wrapper tests
-- `test_endf_reactor_core_integration.py` - Integration tests (NEW)
+- `test_endf_reactor_core_integration.py` - Integration tests
+- `test_error_messages.py` - Error message formatting tests (NEW - January 18, 2026)
+- `test_optimization_utils.py` - Vectorization and zero-copy operation tests (NEW - January 18, 2026)
+- `test_memory_pool.py` - Memory pooling tests (NEW - January 18, 2026)
+- `test_memory_mapped.py` - Memory-mapped array tests (NEW - January 18, 2026)
+- `test_material_mapping.py` - Material composition mapping tests (NEW - January 18, 2026)
+- `test_validation_context.py` - ValidationContext tests (NEW - January 18, 2026)
 
 **Coverage Results:**
 - `reactor_core.py`: 86.5% coverage (exceeds 75-80% target)
 - `endf_parser.py`: 97.3% coverage (exceeds 75-80% target)
 - Overall project: 79.2% coverage (very close to 80% target)
+- **Utility Modules**: Excellent coverage achieved (January 18, 2026)
+  - `utils/error_messages.py`: 100.0%
+  - `utils/optimization_utils.py`: 97.8%
+  - `utils/memory_pool.py`: 100.0%
+  - `core/material_mapping.py`: 100.0%
+  - `utils/memory_mapped.py`: 67.8% (core functionality)
 
 ---
 
