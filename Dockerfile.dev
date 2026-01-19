@@ -4,7 +4,7 @@
 # Build: docker build -f Dockerfile.dev -t smrforge:dev .
 # Or use: docker compose up smrforge-dev
 #
-# Last Updated: January 18, 2026
+# Last Updated: January 19, 2026
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications
 # - Model assumption documentation - Explicit assumption tracking per calculation
@@ -40,6 +40,7 @@
 # - Added I/O Converters Framework - Serpent/OpenMC format support (framework ready)
 # - Added Dash web dashboard with dark/gray mode support
 # - Added CLI command (smrforge serve) for dashboard
+# - Added Geometry Designer GUI - Interactive visual core layout editor with material palette, 3D preview, export/import
 # - Added LWR SMR transient analysis (PWR/BWR/Integral SMR transients)
 # - Added LWR SMR burnup features (gadolinium depletion, assembly/rod-wise tracking)
 # - Added automated data downloader with parallel downloads (tqdm, pyyaml)
@@ -254,6 +255,9 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - Automated ENDF data downloader
 #   - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)
 #   - Enhanced mesh generation
+#   - Geometry Designer GUI - Interactive visual core layout editor
+#   - Advanced optimization algorithms (GA, PSO) for fuel cycle optimization
+#   - Advanced interfacial transfer models for two-phase flow
 #   - Comprehensive test suite (150+ test files, 79.2% coverage)
 #     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
 #     * Advanced error handling tests: file operations, copy failures, validation errors
