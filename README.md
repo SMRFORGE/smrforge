@@ -102,12 +102,20 @@ SMRForge includes **comprehensive performance optimizations**:
 
 **Performance Status:** SMRForge achieves **90-95% of C++ performance** with Numba and can be **faster than OpenMC** for typical problems through better algorithms.
 
-### ❌ Not Yet Implemented
-- **Fuel Performance**: Stub module (use external tools)
-- **Optimization**: Stub module (use scipy.optimize)
-- **General I/O Utilities**: Stub module (geometry I/O available via `geometry.importers`)
-- **Control Systems**: Stub module (control rod geometry available via `geometry.control_rods`)
-- **Economics**: Stub module
+### ✅ Recently Implemented (January 2026)
+- **Control Systems**: ✅ **IMPLEMENTED** - PID controllers, reactor control, load-following, Model Predictive Control (MPC)
+- **Economics**: ✅ **IMPLEMENTED** - Capital costs, operating costs, LCOE calculations with SMR-specific factors
+- **Structural Mechanics**: ✅ **IMPLEMENTED** - Fuel rod mechanics with creep models and material degradation
+- **Multi-Physics Coupling**: ✅ **IMPLEMENTED** - Unified coupling framework integrating all physics domains
+- **Fuel Performance**: ✅ **IMPLEMENTED** - Fuel temperature calculations, swelling models, fission gas release
+- **General Optimization**: ✅ **IMPLEMENTED** - Design optimization, loading pattern optimization with genetic algorithms
+- **General I/O Utilities**: ✅ **IMPLEMENTED** - File readers/writers (JSON, YAML, CSV), format converters (Serpent, OpenMC)
+
+### ✅ Recently Implemented (January 2026)
+- **Control Systems**: ✅ **IMPLEMENTED** - PID controllers, reactor control, load-following, Model Predictive Control (MPC)
+- **Economics**: ✅ **IMPLEMENTED** - Capital costs, operating costs, LCOE calculations with SMR-specific factors
+- **Structural Mechanics**: ✅ **IMPLEMENTED** - Fuel rod mechanics with creep models and material degradation
+- **Multi-Physics Coupling**: ✅ **IMPLEMENTED** - Unified coupling framework integrating all physics domains
 
 **See `docs/status/feature-status.md` for detailed status of all features.**
 

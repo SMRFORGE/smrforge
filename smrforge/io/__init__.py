@@ -1,22 +1,25 @@
 """
-Input/output utilities
+Input/output utilities.
 
-⚠️ EXPERIMENTAL / NOT IMPLEMENTED ⚠️
-
-This module is currently a placeholder with no implementation.
-For I/O needs, use:
-- Pydantic models' built-in serialization (model_dump_json, etc.)
-- JSON file I/O directly
-- SimpleReactor.save() and SimpleReactor.load() methods
-
-Planned features:
+This module provides I/O utilities for:
 - Import/export reactor designs
 - Results export formats
 - Data format converters
+- File format readers/writers
 
-See FEATURE_STATUS.md for current status.
+Classes:
+    InputReader: Input file readers (JSON, YAML, legacy formats)
+    OutputWriter: Output file writers (JSON, CSV, YAML)
+    SerpentConverter: Serpent format converter
+    OpenMCConverter: OpenMC format converter
 """
 
-__all__ = []
+from smrforge.io.converters import OpenMCConverter, SerpentConverter
+from smrforge.io.readers import InputReader, OutputWriter
 
-# TODO: Implement I/O utilities if needed
+__all__ = [
+    "InputReader",
+    "OutputWriter",
+    "SerpentConverter",
+    "OpenMCConverter",
+]

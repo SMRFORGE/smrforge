@@ -10,6 +10,9 @@
 # - Material degradation models for long-term fuel rod analysis
 # - Multi-physics coupling framework (unified coupling of all physics domains)
 # - Model Predictive Control (MPC) for advanced reactor control algorithms
+# - Fuel Performance module (temperature calculations, swelling, fission gas release)
+# - General Optimization module (design optimization, loading pattern optimization)
+# - General I/O Utilities module (JSON/YAML/CSV readers/writers, format converters)
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications
 # - Model assumption documentation - Explicit assumption tracking per calculation

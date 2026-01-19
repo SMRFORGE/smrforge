@@ -1,22 +1,26 @@
 """
-Fuel performance modeling
+Fuel performance modeling.
 
-⚠️ EXPERIMENTAL / NOT IMPLEMENTED ⚠️
-
-This module is currently a placeholder with no implementation.
-For production use, consider external fuel performance tools or
-implement specific models as needed.
-
-Planned features:
+This module provides fuel performance analysis including:
 - Fuel temperature calculations
 - Fuel swelling models
 - Fission gas release
 - Cladding performance
 
-See FEATURE_STATUS.md for current status.
+Classes:
+    FuelProperties: Fuel pellet properties
+    CladProperties: Cladding properties
+    FuelPerformance: Fuel performance analyzer
 """
 
-__all__ = []
+from smrforge.fuel.performance import (
+    CladProperties,
+    FuelPerformance,
+    FuelProperties,
+)
 
-# TODO: Implement fuel performance models
-# See additional_modules.py for starter implementations
+__all__ = [
+    "FuelProperties",
+    "CladProperties",
+    "FuelPerformance",
+]

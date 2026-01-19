@@ -10,6 +10,9 @@
 # - Material degradation models for long-term fuel rod analysis
 # - Multi-physics coupling framework (unified coupling of all physics domains)
 # - Model Predictive Control (MPC) for advanced reactor control algorithms
+# - Fuel Performance module (temperature calculations, swelling, fission gas release)
+# - General Optimization module (design optimization, loading pattern optimization)
+# - General I/O Utilities module (JSON/YAML/CSV readers/writers, format converters)
 # Regulatory Traceability (Complete):
 # - Calculation audit trails - Complete input → output traceability for licensing applications
 # - Model assumption documentation - Explicit assumption tracking per calculation
@@ -67,6 +70,9 @@
 # - Advanced interfacial transfer models (mass, momentum, energy transfer) - Ishii-Hibiki, RELAP5, TRACE models
 # - Fuel cycle optimization and long-term simulation (optimization algorithms, material aging)
 # - Advanced optimization algorithms (Genetic Algorithm, Particle Swarm Optimization) for fuel cycle optimization
+# - Fuel Performance module (fuel temperature, swelling, fission gas release)
+# - General Optimization module (reactor design optimization, loading pattern optimization)
+# - General I/O Utilities (file readers/writers, format converters for Serpent/OpenMC)
 # - Parallel multi-group diffusion solver (red-black group ordering, parallel spatial operations with Numba prange, 4-8x speedup)
 # - MPI support for distributed memory (optional, via mpi4py)
 # - Comprehensive CLI guide documentation (docs/guides/cli-guide.md)

@@ -1,21 +1,25 @@
 """
-Design optimization algorithms
+Design optimization algorithms.
 
-⚠️ EXPERIMENTAL / NOT IMPLEMENTED ⚠️
-
-This module is currently a placeholder with no implementation.
-For optimization needs, consider using:
-- scipy.optimize for general optimization
-- Custom optimization algorithms as needed
-
-Planned features:
+This module provides optimization algorithms for:
 - Reactor design optimization
 - Fuel loading pattern optimization
 - Core reload optimization
 
-See FEATURE_STATUS.md for current status.
+Classes:
+    OptimizationResult: Optimization result container
+    DesignOptimizer: Reactor design parameter optimization
+    LoadingPatternOptimizer: Fuel loading pattern optimization
 """
 
-__all__ = []
+from smrforge.optimization.design import (
+    DesignOptimizer,
+    LoadingPatternOptimizer,
+    OptimizationResult,
+)
 
-# TODO: Implement optimization algorithms
+__all__ = [
+    "OptimizationResult",
+    "DesignOptimizer",
+    "LoadingPatternOptimizer",
+]
