@@ -362,6 +362,70 @@ class EquivalenceTheory:
         )
         
         return equiv_xs
+    
+    def _calculate_dancoff_factor(
+        self,
+        fuel_radius: float,
+        pin_pitch: float,
+    ) -> float:
+        """
+        Calculate Dancoff factor for fuel pin array.
+        
+        Dancoff factor accounts for neutron interaction between fuel pins.
+        
+        Args:
+            fuel_radius: Fuel pin radius [cm]
+            pin_pitch: Pin pitch [cm]
+        
+        Returns:
+            Dancoff factor (0-1)
+        """
+        # Simplified model: Dancoff factor based on pitch-to-diameter ratio
+        pitch_to_diameter = pin_pitch / (2 * fuel_radius)
+        
+        # Typical values: 0.0 (isolated pins) to 0.3 (tight lattice)
+        # Simplified correlation
+        if pitch_to_diameter > 2.0:
+            dancoff = 0.0  # Isolated pins
+        elif pitch_to_diameter < 1.2:
+            dancoff = 0.3  # Very tight lattice
+        else:
+            # Linear interpolation
+            dancoff = 0.3 * (2.0 - pitch_to_diameter) / (2.0 - 1.2)
+        
+        return dancoff
+    
+    def _calculate_escape_probability(
+        self,
+        fuel_radius: float,
+        pin_pitch: float,
+        dancoff_factor: float,
+    ) -> float:
+        """
+        Calculate escape probability from fuel pin.
+        
+        Escape probability accounts for neutrons escaping the fuel pin
+        into the moderator.
+        
+        Args:
+            fuel_radius: Fuel pin radius [cm]
+            pin_pitch: Pin pitch [cm]
+            dancoff_factor: Dancoff factor
+        
+        Returns:
+            Escape probability (0-1)
+        """
+        # Simplified model: escape probability increases with pitch
+        # and decreases with Dancoff factor
+        pitch_to_diameter = pin_pitch / (2 * fuel_radius)
+        
+        # Base escape probability (increases with pitch)
+        base_escape = min(1.0, 0.5 + 0.3 * (pitch_to_diameter - 1.0))
+        
+        # Correct for Dancoff factor (higher Dancoff = lower escape)
+        escape_prob = base_escape * (1.0 - 0.5 * dancoff_factor)
+        
+        return np.clip(escape_prob, 0.0, 1.0)
 
 
 def collapse_cross_section_with_adjoint(
@@ -637,70 +701,6 @@ def collapse_with_adjoint_weighting(
                 coarse_xs[g_coarse] = numerator / coarse_flux[g_coarse]
     
     return coarse_xs
-    
-    def _calculate_dancoff_factor(
-        self,
-        fuel_radius: float,
-        pin_pitch: float,
-    ) -> float:
-        """
-        Calculate Dancoff factor for fuel pin array.
-        
-        Dancoff factor accounts for neutron interaction between fuel pins.
-        
-        Args:
-            fuel_radius: Fuel pin radius [cm]
-            pin_pitch: Pin pitch [cm]
-        
-        Returns:
-            Dancoff factor (0-1)
-        """
-        # Simplified model: Dancoff factor based on pitch-to-diameter ratio
-        pitch_to_diameter = pin_pitch / (2 * fuel_radius)
-        
-        # Typical values: 0.0 (isolated pins) to 0.3 (tight lattice)
-        # Simplified correlation
-        if pitch_to_diameter > 2.0:
-            dancoff = 0.0  # Isolated pins
-        elif pitch_to_diameter < 1.2:
-            dancoff = 0.3  # Very tight lattice
-        else:
-            # Linear interpolation
-            dancoff = 0.3 * (2.0 - pitch_to_diameter) / (2.0 - 1.2)
-        
-        return dancoff
-    
-    def _calculate_escape_probability(
-        self,
-        fuel_radius: float,
-        pin_pitch: float,
-        dancoff_factor: float,
-    ) -> float:
-        """
-        Calculate escape probability from fuel pin.
-        
-        Escape probability accounts for neutrons escaping the fuel pin
-        into the moderator.
-        
-        Args:
-            fuel_radius: Fuel pin radius [cm]
-            pin_pitch: Pin pitch [cm]
-            dancoff_factor: Dancoff factor
-        
-        Returns:
-            Escape probability (0-1)
-        """
-        # Simplified model: escape probability increases with pitch
-        # and decreases with Dancoff factor
-        pitch_to_diameter = pin_pitch / (2 * fuel_radius)
-        
-        # Base escape probability (increases with pitch)
-        base_escape = min(1.0, 0.5 + 0.3 * (pitch_to_diameter - 1.0))
-        
-        # Correct for Dancoff factor (higher Dancoff = lower escape)
-        escape_prob = base_escape * (1.0 - 0.5 * dancoff_factor)
-        
-        return np.clip(escape_prob, 0.0, 1.0)
 
 
 def apply_sph_to_multigroup_table(
