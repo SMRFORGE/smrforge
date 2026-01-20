@@ -514,6 +514,8 @@ def download_endf_data(
         "output_dir": str(output_dir),
     }
     
+    download_tasks: List[Tuple[Nuclide, Path, List[str]]] = []
+    
     for nuclide in nuclide_list:
         # Generate filename using the same method as NuclearDataCache
         z_str = f"{nuclide.Z:03d}"

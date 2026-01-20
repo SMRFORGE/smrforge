@@ -386,7 +386,7 @@ class HybridSolver:
             "k_eff_diffusion": k_eff_diff,
             "k_eff_mc_correction": self.k_eff_mc_correction,
             "partition": self.partition,
-            "flux": flux_diff,
+            "flux": self.flux_diffusion,
         }
     
     def _solve_mc_regions(self) -> Dict:

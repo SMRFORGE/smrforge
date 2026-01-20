@@ -86,8 +86,8 @@ class DecayChain:
             Final concentrations [n_nuclides]
         """
         A = self.build_decay_matrix()
-        final = expm_multiply(A, initial_concentrations, t=[0, time])
-        return final[-1]
+        result = expm_multiply(A, initial_concentrations, start=0, stop=time, num=2, endpoint=True)
+        return result[-1]  # Return final state
     
     def get_chain_depth(self, nuclide: Nuclide) -> int:
         """
@@ -187,7 +187,19 @@ def solve_bateman_equations(
         decay_matrix = decay_matrix.toarray()
     
     # Use matrix exponential
-    result = expm_multiply(decay_matrix, initial_concentrations, t=times)
+    if len(times) == 1:
+        # Single time point
+        result = expm_multiply(decay_matrix * times[0], initial_concentrations)
+    else:
+        # Multiple time points
+        result = expm_multiply(
+            decay_matrix, 
+            initial_concentrations, 
+            start=times[0], 
+            stop=times[-1], 
+            num=len(times), 
+            endpoint=True
+        )
     return result
 
 
