@@ -261,15 +261,32 @@ def get_cross_section_with_equivalence_theory(
         moderator_xs = np.ones_like(fuel_xs) * 0.66  # Water scattering ~0.66 barns
     
     # Use equivalence theory
-    equivalence = EquivalenceTheory()
+    # EquivalenceTheory in resonance_selfshield doesn't have calculate_equivalent_xs
+    # Use Bondarenko method with effective background cross-section
+    bondarenko = BondarenkoMethod()
+    nuclide_name = nuclide.name
     
-    # Calculate equivalent cross-section
-    equiv_xs = equivalence.calculate_equivalent_xs(
-        fuel_xs=fuel_xs,
-        moderator_xs=moderator_xs,
-        fuel_volume_fraction=fuel_volume_fraction,
-        fuel_pin_radius=fuel_pin_radius,
-        pin_pitch=pin_pitch,
+    # Calculate effective background cross-section using equivalence theory concepts
+    # Volume-weighted average with equivalence correction
+    moderator_volume_fraction = 1.0 - fuel_volume_fraction
+    
+    # Effective sigma_0 based on moderator and geometry
+    # Simplified: use average moderator XS weighted by volume fraction
+    sigma_0_eff = np.mean(moderator_xs) * moderator_volume_fraction / fuel_volume_fraction
+    
+    # Get f-factor for shielding
+    f_factor = bondarenko.get_f_factor(
+        nuclide=nuclide_name,
+        reaction=reaction,
+        sigma_0=sigma_0_eff,
+        T=temperature,
+    )
+    
+    # Apply shielding to fuel cross-sections
+    # Equivalent cross-section is volume-weighted average
+    equiv_xs = (
+        fuel_volume_fraction * fuel_xs * f_factor +
+        moderator_volume_fraction * moderator_xs
     )
     
     return energy, equiv_xs
