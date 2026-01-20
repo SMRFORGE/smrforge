@@ -237,3 +237,12 @@ class TestSmartArrayCopy:
         
         assert np.array_equal(result, source)
         assert result is not target  # Should create new array
+    
+    def test_smart_array_copy_non_contiguous_target(self):
+        """Test copying with non-contiguous target (should create new array)."""
+        source = np.array([1, 2, 3])
+        target = np.zeros(6, dtype=int)[::2]  # Non-contiguous (shape (3,))
+        result = smart_array_copy(source, target)
+        
+        assert np.array_equal(result, source)
+        assert result is not target  # Should create new array (target not C-contiguous)
