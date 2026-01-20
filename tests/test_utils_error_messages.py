@@ -66,6 +66,15 @@ class TestFormatValidationError:
         msg = format_validation_error("test_field", -10.0, "generic_error", suggestions)
         assert "Suggestions" in msg
         assert "Check units" in msg
+    
+    def test_format_validation_error_fallback(self):
+        """Test formatting error with fallback (no specific handling, no suggestions)."""
+        # Use an error type that doesn't match any specific cases and no suggestions
+        msg = format_validation_error("test_field", "invalid_value", "unknown_error_type")
+        assert "Invalid test_field" in msg
+        assert "invalid_value" in msg
+        # Should return base message without suggestions
+        assert "Suggestions" not in msg
 
 
 class TestSuggestCorrection:
