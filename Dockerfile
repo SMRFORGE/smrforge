@@ -4,7 +4,7 @@
 # Build: docker build -t smrforge:latest .
 # Run:   docker run -it smrforge:latest
 #
-# Last Updated: January 18, 2026
+# Last Updated: January 19, 2026
 # Recent Additions (January 2026):
 # - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
 # - Material degradation models for long-term fuel rod analysis
@@ -95,9 +95,15 @@
 # - Project save/open: full workflow persistence
 # - Enhanced error handling and user feedback throughout dashboard
 # - Includes support for advanced features (mesh conversion, CAD import - optional)
-# - Test coverage: 79.2% overall, 75-80%+ on priority modules (100+ new tests added for utility modules and coverage gaps)
+# - Test coverage: 79.2% overall, 75-80%+ on priority modules (239+ new tests added in latest session)
+# - Recent coverage improvements (January 19, 2026):
+#   * core/multigroup_advanced.py: 35.7% → 76.4% (+35 tests, bug fix)
+#   * validation/standards_parser.py: 44.0% → 93.5% (+32 tests)
+#   * validation/regulatory_traceability.py: 0% → 100% (+46 tests)
+#   * burnup/lwr_burnup.py: 47.2% → 100% (+33 tests)
+#   * economics/integration.py: 0% → 100% (+11 tests)
 # - CLI test coverage: 71.8% (130+ passing tests covering all major CLI commands and edge cases)
-# - Comprehensive test suite: 150+ test files including Phase 1/2 module tests, __init__.py import error path tests, utility module tests, and CLI tests
+# - Comprehensive test suite: 194+ test files including Phase 1/2 module tests, __init__.py import error path tests, utility module tests, and CLI tests
 # - Utility module coverage: memory_mapped.py (100%), parallel_batch.py (67.2%), error_messages.py (98.2%), optimization_utils.py (97.8%), memory_pool.py (100%), material_mapping.py (100%), units.py (improved), logo.py (improved), logging.py (improved)
 # - New test files: test_burnup_init, test_validation_init, test_convenience_init, test_presets_init, test_version, test_utils_units, test_utils_error_messages, test_utils_logo, test_utils_logging, test_help, test_data_downloader
 # - Advanced error handling and async edge case coverage
