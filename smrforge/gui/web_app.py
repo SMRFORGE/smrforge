@@ -68,6 +68,7 @@ def create_app() -> Optional["dash.Dash"]:
     from smrforge.gui.components import (
         create_sidebar,
         create_reactor_builder,
+        create_geometry_designer,
         create_analysis_panel,
         create_results_viewer,
         create_data_manager,
@@ -133,6 +134,7 @@ def _register_callbacks():
     from smrforge.gui.callbacks import (
         register_navigation_callbacks,
         register_reactor_builder_callbacks,
+        register_geometry_designer_callbacks,
         register_analysis_callbacks,
         register_results_callbacks,
         register_data_manager_callbacks,
@@ -142,6 +144,7 @@ def _register_callbacks():
     
     register_navigation_callbacks(app)
     register_reactor_builder_callbacks(app)
+    register_geometry_designer_callbacks(app)
     register_analysis_callbacks(app)
     register_results_callbacks(app)
     register_data_manager_callbacks(app)

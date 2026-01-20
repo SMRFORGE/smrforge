@@ -17,6 +17,7 @@ logger = get_logger(__name__)
 
 from smrforge.gui.components import (
     create_reactor_builder,
+    create_geometry_designer,
     create_analysis_panel,
     create_results_viewer,
     create_data_manager,
@@ -31,12 +32,13 @@ def register_navigation_callbacks(app):
     @app.callback(
         Output('main-content', 'children'),
         Input('nav-reactor-builder', 'n_clicks'),
+        Input('nav-geometry-designer', 'n_clicks'),
         Input('nav-analysis', 'n_clicks'),
         Input('nav-results', 'n_clicks'),
         Input('nav-data-manager', 'n_clicks'),
         prevent_initial_call=False
     )
-    def update_main_content(n1, n2, n3, n4):
+    def update_main_content(n1, n2, n3, n4, n5):
         """Update main content based on navigation clicks."""
         from dash import callback_context as ctx
         if not ctx.triggered:
@@ -48,6 +50,8 @@ def register_navigation_callbacks(app):
         
         if button_id == 'nav-reactor-builder':
             return create_reactor_builder()
+        elif button_id == 'nav-geometry-designer':
+            return create_geometry_designer()
         elif button_id == 'nav-analysis':
             return create_analysis_panel()
         elif button_id == 'nav-results':

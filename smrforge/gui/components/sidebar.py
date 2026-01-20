@@ -32,6 +32,14 @@ def create_sidebar():
         ]),
         dbc.NavItem([
             dbc.NavLink(
+                "Geometry Designer",
+                href="#",
+                id="nav-geometry-designer",
+                className="nav-link"
+            )
+        ]),
+        dbc.NavItem([
+            dbc.NavLink(
                 "Analysis",
                 href="#",
                 id="nav-analysis",

@@ -572,8 +572,8 @@ class MultiGroupDiffusion:
         if flux is None:
             flux = self.flux
         
-        # Use parallel version for large problems if enabled
-        if self.options.parallel_spatial and self.nz * self.nr > 1000:
+        # Use parallel version if enabled (Numba parallel is efficient even for smaller problems)
+        if self.options.parallel_spatial:
             _update_scattering_source_parallel_numba(
                 flux,
                 self.xs.sigma_s,
@@ -904,11 +904,15 @@ class MultiGroupDiffusion:
                     # Update fission source (uses self.flux)
                     self._update_fission_source(k_current)
 
-                    # Solve for each group
-                    flux_new = np.zeros_like(flux_old)
-                    for g in range(self.ng):
-                        self._update_scattering_source(g)  # Uses self.flux
-                        flux_new[:, :, g] = self._solve_group(g)
+                    # Solve for each group (use parallel if enabled)
+                    if self.options.parallel_group_solve and self.ng > 1:
+                        flux_new = self._solve_groups_parallel_red_black(flux_old)
+                    else:
+                        # Serial fallback
+                        flux_new = np.zeros_like(flux_old)
+                        for g in range(self.ng):
+                            self._update_scattering_source(g)  # Uses self.flux
+                            flux_new[:, :, g] = self._solve_group(g)
 
                     # Normalize flux
                     max_flux = np.max(flux_new)

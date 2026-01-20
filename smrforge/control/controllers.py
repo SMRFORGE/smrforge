@@ -1,17 +1,25 @@
 """
 Advanced control system controllers for reactor operation.
 
-This module implements PID controllers, reactor control systems, and
-load-following algorithms for operational transient analysis.
+This module implements PID controllers, reactor control systems,
+load-following algorithms, and Model Predictive Control (MPC) for
+operational transient analysis.
 """
 
 import numpy as np
 from dataclasses import dataclass, field
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from ..utils.logging import get_logger
 
 logger = get_logger("smrforge.control.controllers")
+
+try:
+    from scipy.optimize import minimize
+    _SCIPY_AVAILABLE = True
+except ImportError:
+    _SCIPY_AVAILABLE = False
+    logger.warning("scipy not available, MPC will use simplified optimization")
 
 
 @dataclass
@@ -379,6 +387,406 @@ class LoadFollowingController:
         )
         
         return control_action
+
+
+@dataclass
+class ModelPredictiveController:
+    """
+    Model Predictive Control (MPC) for advanced reactor control.
+    
+    MPC is an advanced control strategy that:
+    - Uses a model to predict future system behavior
+    - Optimizes control actions over a prediction horizon
+    - Handles constraints on inputs and states
+    - Applies only the first control action (receding horizon)
+    
+    Attributes:
+        prediction_horizon: Number of steps in prediction horizon
+        control_horizon: Number of control steps to optimize (≤ prediction_horizon)
+        dt: Time step [s]
+        power_setpoint: Target power level [W]
+        temperature_setpoint: Target temperature [K]
+        Q: State weighting matrix (for power and temperature)
+        R: Control weighting matrix (for rod position)
+        rod_worth: Control rod reactivity worth [dk/k per % insertion]
+        max_rod_position: Maximum rod position [%]
+        min_rod_position: Minimum rod position [%]
+        max_rod_rate: Maximum rod movement rate [%/s]
+        max_power: Maximum allowed power [W]
+        min_power: Minimum allowed power [W]
+        max_temperature: Maximum allowed temperature [K]
+        min_temperature: Minimum allowed temperature [K]
+        system_model: Optional custom system model function
+    """
+    
+    prediction_horizon: int = 10
+    control_horizon: int = 5
+    dt: float = 1.0  # s
+    power_setpoint: float = 1e8  # W
+    temperature_setpoint: float = 600.0  # K
+    Q: Optional[np.ndarray] = None  # State weights [power, temperature]
+    R: Optional[float] = None  # Control weight
+    rod_worth: float = -1e-3  # dk/k per % insertion
+    max_rod_position: float = 100.0  # %
+    min_rod_position: float = 0.0  # %
+    max_rod_rate: float = 1.0  # %/s
+    max_power: float = 1.2e8  # W (120% of nominal)
+    min_power: float = 0.0  # W
+    max_temperature: float = 1000.0  # K
+    min_temperature: float = 300.0  # K
+    system_model: Optional[Callable] = None
+    
+    def __post_init__(self):
+        """Initialize MPC parameters."""
+        if self.control_horizon > self.prediction_horizon:
+            self.control_horizon = self.prediction_horizon
+        
+        # Default state weighting: prioritize power tracking
+        if self.Q is None:
+            self.Q = np.array([1.0, 0.1])  # [power_weight, temperature_weight]
+        
+        # Default control weighting: penalize large control actions
+        if self.R is None:
+            self.R = 0.01
+        
+        # Initialize state history
+        self.state_history: List[Dict] = []
+        self.control_history: List[float] = []
+    
+    def _predict_system(
+        self,
+        initial_power: float,
+        initial_temperature: float,
+        initial_rod_position: float,
+        control_sequence: np.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Predict system behavior over prediction horizon.
+        
+        Uses a simplified reactor model:
+        - Power dynamics: dP/dt = (rho - beta)/Lambda * P
+        - Temperature dynamics: dT/dt = (P - Q_cool) / C
+        
+        Args:
+            initial_power: Initial power [W]
+            initial_temperature: Initial temperature [K]
+            initial_rod_position: Initial rod position [%]
+            control_sequence: Sequence of rod positions [%] (length = control_horizon)
+            
+        Returns:
+            Tuple of (power_prediction, temperature_prediction) arrays
+        """
+        if self.system_model is not None:
+            # Use custom system model
+            return self.system_model(
+                initial_power, initial_temperature, initial_rod_position, control_sequence
+            )
+        
+        # Simplified reactor model
+        power_pred = np.zeros(self.prediction_horizon + 1)
+        temp_pred = np.zeros(self.prediction_horizon + 1)
+        
+        power_pred[0] = initial_power
+        temp_pred[0] = initial_temperature
+        
+        # Reactor parameters (simplified)
+        Lambda = 1e-3  # s (neutron generation time)
+        beta = 0.007  # delayed neutron fraction
+        rho_0 = 0.0  # Initial reactivity (critical)
+        
+        # Thermal parameters
+        C = 1e8  # J/K (thermal capacitance)
+        Q_cool_base = initial_power * 0.9  # Cooling capacity
+        
+        rod_pos = initial_rod_position
+        
+        for k in range(self.prediction_horizon):
+            # Control action (hold last value if beyond control horizon)
+            if k < self.control_horizon:
+                rod_pos = control_sequence[k]
+            # Else: hold last control value
+            
+            # Reactivity from rod position
+            rho = rho_0 + self.rod_worth * rod_pos
+            
+            # Power dynamics: dP/dt = (rho - beta)/Lambda * P
+            # Simplified: P[k+1] = P[k] * (1 + (rho - beta) * dt / Lambda)
+            power_rate = (rho - beta) / Lambda
+            power_pred[k + 1] = power_pred[k] * (1.0 + power_rate * self.dt)
+            power_pred[k + 1] = max(0.0, power_pred[k + 1])  # Non-negative
+            
+            # Temperature dynamics: dT/dt = (P - Q_cool) / C
+            # Cooling increases with temperature
+            Q_cool = Q_cool_base * (1.0 + 0.001 * (temp_pred[k] - initial_temperature))
+            temp_rate = (power_pred[k] - Q_cool) / C
+            temp_pred[k + 1] = temp_pred[k] + temp_rate * self.dt
+            temp_pred[k + 1] = max(self.min_temperature, temp_pred[k + 1])
+        
+        return power_pred[1:], temp_pred[1:]  # Return predictions (exclude initial state)
+    
+    def _objective_function(
+        self,
+        control_sequence: np.ndarray,
+        current_power: float,
+        current_temperature: float,
+        current_rod_position: float,
+    ) -> float:
+        """
+        Objective function for MPC optimization.
+        
+        Minimizes:
+        - Tracking error (power and temperature)
+        - Control effort (rod movement)
+        - Constraint violations
+        
+        Args:
+            control_sequence: Control sequence to evaluate [%]
+            current_power: Current power [W]
+            current_temperature: Current temperature [K]
+            current_rod_position: Current rod position [%]
+            
+        Returns:
+            Objective function value (to minimize)
+        """
+        # Predict system behavior
+        power_pred, temp_pred = self._predict_system(
+            current_power, current_temperature, current_rod_position, control_sequence
+        )
+        
+        # Tracking error
+        power_error = power_pred - self.power_setpoint
+        temp_error = temp_pred - self.temperature_setpoint
+        
+        # Normalize errors
+        power_error_norm = power_error / self.power_setpoint if self.power_setpoint > 0 else power_error
+        temp_error_norm = temp_error / self.temperature_setpoint if self.temperature_setpoint > 0 else temp_error
+        
+        # Tracking cost
+        tracking_cost = (
+            self.Q[0] * np.sum(power_error_norm ** 2) +
+            self.Q[1] * np.sum(temp_error_norm ** 2)
+        )
+        
+        # Control effort cost
+        control_changes = np.diff(np.concatenate([[current_rod_position], control_sequence]))
+        control_cost = self.R * np.sum(control_changes ** 2)
+        
+        # Constraint violations (soft constraints)
+        penalty = 0.0
+        
+        # Power constraints
+        power_violations = np.maximum(0, power_pred - self.max_power) + np.maximum(0, self.min_power - power_pred)
+        penalty += 1000.0 * np.sum(power_violations ** 2)
+        
+        # Temperature constraints
+        temp_violations = np.maximum(0, temp_pred - self.max_temperature) + np.maximum(0, self.min_temperature - temp_pred)
+        penalty += 1000.0 * np.sum(temp_violations ** 2)
+        
+        # Rod position constraints
+        rod_violations = np.maximum(0, control_sequence - self.max_rod_position) + np.maximum(0, self.min_rod_position - control_sequence)
+        penalty += 1000.0 * np.sum(rod_violations ** 2)
+        
+        # Rod rate constraints
+        max_change = self.max_rod_rate * self.dt
+        rate_violations = np.maximum(0, np.abs(control_changes) - max_change)
+        penalty += 1000.0 * np.sum(rate_violations ** 2)
+        
+        return tracking_cost + control_cost + penalty
+    
+    def _optimize_control(
+        self,
+        current_power: float,
+        current_temperature: float,
+        current_rod_position: float,
+    ) -> np.ndarray:
+        """
+        Optimize control sequence.
+        
+        Args:
+            current_power: Current power [W]
+            current_temperature: Current temperature [K]
+            current_rod_position: Current rod position [%]
+            
+        Returns:
+            Optimal control sequence [%]
+        """
+        # Initial guess: current rod position
+        initial_guess = np.full(self.control_horizon, current_rod_position)
+        
+        # Bounds: rod position limits
+        bounds = [(self.min_rod_position, self.max_rod_position)] * self.control_horizon
+        
+        # Constraints: rod rate limits
+        constraints = []
+        for i in range(self.control_horizon):
+            max_change = self.max_rod_rate * self.dt
+            if i == 0:
+                # First step: limit change from current position
+                constraints.append({
+                    'type': 'ineq',
+                    'fun': lambda x, idx=i: max_change - abs(x[idx] - current_rod_position)
+                })
+            else:
+                # Subsequent steps: limit change from previous step
+                constraints.append({
+                    'type': 'ineq',
+                    'fun': lambda x, idx=i: max_change - abs(x[idx] - x[idx-1])
+                })
+        
+        if _SCIPY_AVAILABLE:
+            # Use scipy optimization
+            result = minimize(
+                self._objective_function,
+                initial_guess,
+                args=(current_power, current_temperature, current_rod_position),
+                method='SLSQP',
+                bounds=bounds,
+                constraints=constraints,
+                options={'maxiter': 100, 'ftol': 1e-6}
+            )
+            
+            if result.success:
+                return result.x
+            else:
+                logger.warning(f"MPC optimization did not converge: {result.message}")
+                # Fallback to initial guess
+                return initial_guess
+        else:
+            # Simplified optimization: gradient descent
+            return self._simple_optimize(
+                current_power, current_temperature, current_rod_position, initial_guess
+            )
+    
+    def _simple_optimize(
+        self,
+        current_power: float,
+        current_temperature: float,
+        current_rod_position: float,
+        initial_guess: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Simplified optimization when scipy is not available.
+        
+        Uses gradient-free search with multiple random restarts.
+        """
+        best_control = initial_guess.copy()
+        best_cost = self._objective_function(
+            best_control, current_power, current_temperature, current_rod_position
+        )
+        
+        # Random search with multiple restarts
+        n_restarts = 20
+        for _ in range(n_restarts):
+            # Random initial guess
+            candidate = np.random.uniform(
+                self.min_rod_position, self.max_rod_position, self.control_horizon
+            )
+            
+            # Local search: try small perturbations
+            for _ in range(10):
+                perturbation = np.random.normal(0, 1.0, self.control_horizon)
+                candidate_new = candidate + perturbation
+                candidate_new = np.clip(candidate_new, self.min_rod_position, self.max_rod_position)
+                
+                cost = self._objective_function(
+                    candidate_new, current_power, current_temperature, current_rod_position
+                )
+                
+                if cost < best_cost:
+                    best_cost = cost
+                    best_control = candidate_new.copy()
+                    candidate = candidate_new
+        
+        return best_control
+    
+    def control_step(
+        self,
+        power: float,
+        temperature: float,
+        rod_position: float,
+        time: Optional[float] = None,
+    ) -> Dict:
+        """
+        Execute MPC control step.
+        
+        Args:
+            power: Current reactor power [W]
+            temperature: Current average temperature [K]
+            rod_position: Current rod position [%]
+            time: Current time [s] (optional, for logging)
+            
+        Returns:
+            Dictionary with control action and MPC information:
+                - rod_position: Optimal rod position [%]
+                - rod_rate: Rod movement rate [%/s]
+                - predicted_power: Predicted power trajectory
+                - predicted_temperature: Predicted temperature trajectory
+                - control_sequence: Full optimized control sequence
+                - cost: Objective function value
+        """
+        # Optimize control sequence
+        control_sequence = self._optimize_control(power, temperature, rod_position)
+        
+        # Apply first control action (receding horizon)
+        optimal_rod_position = control_sequence[0]
+        
+        # Limit rod movement rate
+        max_change = self.max_rod_rate * self.dt
+        rod_change = optimal_rod_position - rod_position
+        if abs(rod_change) > max_change:
+            optimal_rod_position = rod_position + np.sign(rod_change) * max_change
+        
+        # Clip to bounds
+        optimal_rod_position = np.clip(
+            optimal_rod_position, self.min_rod_position, self.max_rod_position
+        )
+        
+        # Calculate rod rate
+        rod_rate = (optimal_rod_position - rod_position) / self.dt
+        
+        # Get predictions for visualization
+        power_pred, temp_pred = self._predict_system(
+            power, temperature, rod_position, control_sequence
+        )
+        
+        # Calculate cost
+        cost = self._objective_function(control_sequence, power, temperature, rod_position)
+        
+        # Store history
+        self.state_history.append({
+            "power": power,
+            "temperature": temperature,
+            "rod_position": rod_position,
+            "time": time,
+        })
+        self.control_history.append(optimal_rod_position)
+        
+        return {
+            "rod_position": optimal_rod_position,
+            "rod_rate": rod_rate,
+            "predicted_power": power_pred,
+            "predicted_temperature": temp_pred,
+            "control_sequence": control_sequence,
+            "cost": cost,
+            "setpoint_power": self.power_setpoint,
+            "setpoint_temperature": self.temperature_setpoint,
+        }
+    
+    def set_setpoints(
+        self,
+        power_setpoint: Optional[float] = None,
+        temperature_setpoint: Optional[float] = None,
+    ):
+        """Update setpoints."""
+        if power_setpoint is not None:
+            self.power_setpoint = power_setpoint
+        if temperature_setpoint is not None:
+            self.temperature_setpoint = temperature_setpoint
+    
+    def reset(self):
+        """Reset controller state."""
+        self.state_history = []
+        self.control_history = []
     
     def set_demand_profile(self, profile: Callable[[float], float]):
         """Set demand profile function."""

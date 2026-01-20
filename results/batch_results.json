@@ -1,0 +1,13 @@
+{
+  "processed": 1,
+  "failed": 1,
+  "results": {
+    "C:\\Users\\cmwha\\AppData\\Local\\Temp\\pytest-of-cmwha\\pytest-420\\test_reactor_analyze_batch_wit2\\reactor1.json": {
+      "reactor_file": "C:\\Users\\cmwha\\AppData\\Local\\Temp\\pytest-of-cmwha\\pytest-420\\test_reactor_analyze_batch_wit2\\reactor1.json",
+      "k_eff": 1.0
+    }
+  },
+  "errors": {
+    "C:\\Users\\cmwha\\AppData\\Local\\Temp\\pytest-of-cmwha\\pytest-420\\test_reactor_analyze_batch_wit2\\reactor2.json": "Test error"
+  }
+}

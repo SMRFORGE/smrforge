@@ -2,8 +2,9 @@
 Advanced two-phase flow models for BWR SMRs and LOCA analysis.
 
 This module provides:
-- Advanced drift-flux models (Zuber-Findlay, Chexal-Lellouche)
+- Advanced drift-flux models (Zuber-Findlay, Chexal-Lellouche, Ishii-Mishima)
 - Two-fluid models for detailed analysis
+- Advanced interfacial transfer models (mass, momentum, energy)
 - Enhanced boiling heat transfer correlations
 - Integration with thermal-hydraulics solver
 """
@@ -295,6 +296,30 @@ class TwoFluidModel:
         # Temperature (assumed saturated)
         T_sat = self._get_saturation_temperature(self.pressure)
         
+        # Calculate interfacial transfer using advanced models
+        interfacial = InterfacialTransferModels(
+            pressure=self.pressure,
+            temperature_liquid=T_sat,
+            temperature_vapor=T_sat,
+            void_fraction=void_fraction,
+            liquid_velocity=liquid_velocity,
+            vapor_velocity=vapor_velocity,
+            diameter=self.diameter,
+            model_type="ishii_hibiki",
+        )
+        
+        # Calculate interfacial transfer rates
+        mass_transfer = interfacial.calculate_mass_transfer_rate(
+            heat_flux_interface=heat_flux / 10.0,  # Assume 10% of wall heat flux at interface
+            superheat=0.0,  # Saturated conditions
+        )
+        
+        momentum_transfer = interfacial.calculate_momentum_transfer()
+        
+        energy_transfer = interfacial.calculate_energy_transfer(
+            heat_flux_interface=heat_flux / 10.0,
+        )
+        
         return {
             "void_fraction": void_fraction,
             "pressure_drop": pressure_drop,
@@ -302,6 +327,18 @@ class TwoFluidModel:
             "vapor_velocity": vapor_velocity,
             "temperature": T_sat,
             "outlet_quality": outlet_quality,
+            # Interfacial transfer results
+            "mass_transfer_rate": mass_transfer["mass_transfer_rate"],
+            "evaporation_rate": mass_transfer["evaporation_rate"],
+            "condensation_rate": mass_transfer["condensation_rate"],
+            "interfacial_area": mass_transfer["interfacial_area"],
+            "drag_force": momentum_transfer["drag_force"],
+            "drag_coefficient": momentum_transfer["drag_coefficient"],
+            "virtual_mass_force": momentum_transfer["virtual_mass_force"],
+            "turbulent_dispersion_force": momentum_transfer["turbulent_dispersion_force"],
+            "interfacial_heat_transfer_rate": energy_transfer["heat_transfer_rate"],
+            "interfacial_htc": energy_transfer["interfacial_htc"],
+            "latent_heat_transfer": energy_transfer["latent_heat_transfer"],
         }
     
     def _calculate_pressure_drop(
@@ -367,6 +404,340 @@ class TwoFluidModel:
     def _get_saturation_temperature(self, pressure: float) -> float:
         """Get saturation temperature at pressure."""
         # Simplified: T_sat ≈ 273.15 + 180 * (P/1e6)^0.25
+        T_sat = 273.15 + 180.0 * (pressure / 1e6) ** 0.25
+        return T_sat
+
+
+@dataclass
+class InterfacialTransferModels:
+    """
+    Advanced interfacial transfer models for two-fluid two-phase flow.
+    
+    Provides detailed models for:
+    - Mass transfer (evaporation/condensation at interface)
+    - Momentum transfer (interfacial drag forces)
+    - Energy transfer (interfacial heat transfer)
+    
+    These models are essential for accurate two-fluid modeling where separate
+    conservation equations are solved for liquid and vapor phases.
+    
+    Attributes:
+        pressure: Pressure [Pa]
+        temperature_liquid: Liquid temperature [K]
+        temperature_vapor: Vapor temperature [K]
+        void_fraction: Void fraction (0-1)
+        liquid_velocity: Liquid velocity [m/s]
+        vapor_velocity: Vapor velocity [m/s]
+        diameter: Channel diameter [m]
+        model_type: Interfacial transfer model type
+            - 'ishii_hibiki': Ishii-Hibiki (2006) comprehensive model
+            - 'relap5': RELAP5-style models
+            - 'trap': TRACE-style models
+    """
+    
+    pressure: float  # Pa
+    temperature_liquid: float  # K
+    temperature_vapor: float  # K
+    void_fraction: float  # 0-1
+    liquid_velocity: float  # m/s
+    vapor_velocity: float  # m/s
+    diameter: float  # m
+    model_type: str = "ishii_hibiki"  # 'ishii_hibiki', 'relap5', 'trap'
+    
+    def calculate_mass_transfer_rate(
+        self,
+        heat_flux_interface: Optional[float] = None,
+        superheat: Optional[float] = None,
+    ) -> Dict[str, float]:
+        """
+        Calculate interfacial mass transfer rate (evaporation/condensation).
+        
+        Mass transfer occurs due to:
+        - Wall heat flux (evaporation)
+        - Temperature difference between phases (condensation/evaporation)
+        - Pressure changes
+        
+        Args:
+            heat_flux_interface: Interfacial heat flux [W/m²] (if None, calculated)
+            superheat: Liquid superheat [K] (if None, calculated from temperatures)
+            
+        Returns:
+            Dictionary with:
+                - mass_transfer_rate: Mass transfer rate [kg/(m²·s)] (positive = evaporation)
+                - evaporation_rate: Evaporation rate [kg/(m²·s)]
+                - condensation_rate: Condensation rate [kg/(m²·s)]
+                - interfacial_area: Interfacial area per unit volume [m²/m³]
+        """
+        # Get saturation properties
+        rho_l, rho_v, h_fg = self._get_saturation_properties(self.pressure)
+        T_sat = self._get_saturation_temperature(self.pressure)
+        
+        # Calculate superheat if not provided
+        if superheat is None:
+            superheat = max(0.0, self.temperature_liquid - T_sat)
+        
+        # Calculate interfacial area density (area per unit volume)
+        # Simplified: a_i = 6 * void_fraction * (1 - void_fraction) / d_bubble
+        # For bubbly flow, use bubble diameter estimate
+        d_bubble = 0.001  # m (1 mm typical bubble size, simplified)
+        if self.void_fraction < 0.3:
+            # Bubbly flow
+            interfacial_area = 6.0 * self.void_fraction * (1.0 - self.void_fraction) / d_bubble
+        elif self.void_fraction < 0.7:
+            # Slug/churn flow
+            interfacial_area = 4.0 * self.void_fraction * (1.0 - self.void_fraction) / self.diameter
+        else:
+            # Annular flow
+            interfacial_area = 4.0 * (1.0 - self.void_fraction) / self.diameter
+        
+        # Mass transfer due to wall heat flux (if provided)
+        if heat_flux_interface is not None:
+            # Evaporation from wall: m_dot = q'' / h_fg
+            evaporation_from_wall = heat_flux_interface / h_fg  # kg/(m²·s)
+        else:
+            evaporation_from_wall = 0.0
+        
+        # Mass transfer due to temperature difference (interfacial)
+        # Ishii-Hibiki model: m_dot = h_i * (T_l - T_sat) / h_fg
+        # where h_i is interfacial heat transfer coefficient
+        h_i = self._calculate_interfacial_heat_transfer_coefficient()
+        
+        # Evaporation due to superheat
+        evaporation_from_superheat = h_i * superheat / h_fg  # kg/(m²·s)
+        
+        # Condensation (if vapor is subcooled)
+        subcool = max(0.0, T_sat - self.temperature_vapor)
+        condensation_rate = h_i * subcool / h_fg  # kg/(m²·s)
+        
+        # Net mass transfer rate (positive = evaporation)
+        total_evaporation = evaporation_from_wall + evaporation_from_superheat
+        net_mass_transfer = total_evaporation - condensation_rate
+        
+        return {
+            "mass_transfer_rate": net_mass_transfer,  # kg/(m²·s)
+            "evaporation_rate": total_evaporation,  # kg/(m²·s)
+            "condensation_rate": condensation_rate,  # kg/(m²·s)
+            "interfacial_area": interfacial_area,  # m²/m³
+        }
+    
+    def calculate_momentum_transfer(
+        self,
+        relative_velocity: Optional[float] = None,
+    ) -> Dict[str, float]:
+        """
+        Calculate interfacial momentum transfer (drag forces).
+        
+        Momentum transfer occurs due to:
+        - Interfacial drag (friction between phases)
+        - Virtual mass effects
+        - Turbulent dispersion
+        
+        Args:
+            relative_velocity: Relative velocity between phases [m/s] (if None, calculated)
+            
+        Returns:
+            Dictionary with:
+                - drag_force: Interfacial drag force per unit volume [N/m³]
+                - drag_coefficient: Interfacial drag coefficient
+                - virtual_mass_force: Virtual mass force per unit volume [N/m³]
+                - turbulent_dispersion_force: Turbulent dispersion force [N/m³]
+        """
+        # Calculate relative velocity if not provided
+        if relative_velocity is None:
+            relative_velocity = abs(self.vapor_velocity - self.liquid_velocity)
+        
+        # Get saturation properties
+        rho_l, rho_v, _ = self._get_saturation_properties(self.pressure)
+        
+        # Calculate interfacial drag coefficient based on flow regime
+        C_d = self._calculate_interfacial_drag_coefficient(relative_velocity)
+        
+        # Interfacial area density
+        interfacial_area = self._calculate_interfacial_area_density()
+        
+        # Interfacial drag force (per unit volume)
+        # F_drag = 0.5 * C_d * rho_mixture * |v_g - v_l|^2 * a_i
+        rho_mixture = self.void_fraction * rho_v + (1.0 - self.void_fraction) * rho_l
+        drag_force = 0.5 * C_d * rho_mixture * relative_velocity ** 2 * interfacial_area  # N/m³
+        
+        # Virtual mass force (acceleration effects)
+        # F_vm = C_vm * rho_l * alpha * (1 - alpha) * (dv_g/dt - dv_l/dt)
+        # Simplified: assume acceleration is proportional to velocity difference
+        C_vm = 0.5  # Virtual mass coefficient (typical value)
+        virtual_mass_force = C_vm * rho_l * self.void_fraction * (1.0 - self.void_fraction) * relative_velocity * 0.1  # N/m³ (simplified)
+        
+        # Turbulent dispersion force (mixing effects)
+        # F_td = C_td * rho_l * k * grad(alpha)
+        # Simplified: use velocity difference as proxy
+        C_td = 0.1  # Turbulent dispersion coefficient
+        turbulent_dispersion_force = C_td * rho_l * relative_velocity * 0.05  # N/m³ (simplified)
+        
+        return {
+            "drag_force": drag_force,  # N/m³
+            "drag_coefficient": C_d,
+            "virtual_mass_force": virtual_mass_force,  # N/m³
+            "turbulent_dispersion_force": turbulent_dispersion_force,  # N/m³
+        }
+    
+    def calculate_energy_transfer(
+        self,
+        heat_flux_interface: Optional[float] = None,
+    ) -> Dict[str, float]:
+        """
+        Calculate interfacial energy transfer (heat transfer at interface).
+        
+        Energy transfer occurs due to:
+        - Temperature difference between phases
+        - Latent heat of phase change
+        - Interfacial heat transfer coefficient
+        
+        Args:
+            heat_flux_interface: Interfacial heat flux [W/m²] (if None, calculated)
+            
+        Returns:
+            Dictionary with:
+                - heat_transfer_rate: Interfacial heat transfer rate per unit volume [W/m³]
+                - interfacial_htc: Interfacial heat transfer coefficient [W/(m²·K)]
+                - latent_heat_transfer: Latent heat transfer rate [W/m³]
+        """
+        # Get saturation properties
+        rho_l, rho_v, h_fg = self._get_saturation_properties(self.pressure)
+        T_sat = self._get_saturation_temperature(self.pressure)
+        
+        # Calculate interfacial heat transfer coefficient
+        h_i = self._calculate_interfacial_heat_transfer_coefficient()
+        
+        # Temperature difference
+        delta_T = self.temperature_liquid - self.temperature_vapor
+        
+        # Interfacial area density
+        interfacial_area = self._calculate_interfacial_area_density()
+        
+        # Sensible heat transfer (convection between phases)
+        sensible_heat_transfer = h_i * delta_T * interfacial_area  # W/m³
+        
+        # Latent heat transfer (from mass transfer)
+        mass_transfer = self.calculate_mass_transfer_rate()
+        latent_heat_transfer = mass_transfer["mass_transfer_rate"] * h_fg * interfacial_area  # W/m³
+        
+        # Total heat transfer
+        if heat_flux_interface is not None:
+            total_heat_transfer = heat_flux_interface * interfacial_area  # W/m³
+        else:
+            total_heat_transfer = sensible_heat_transfer + latent_heat_transfer
+        
+        return {
+            "heat_transfer_rate": total_heat_transfer,  # W/m³
+            "interfacial_htc": h_i,  # W/(m²·K)
+            "latent_heat_transfer": latent_heat_transfer,  # W/m³
+            "sensible_heat_transfer": sensible_heat_transfer,  # W/m³
+        }
+    
+    def _calculate_interfacial_drag_coefficient(
+        self,
+        relative_velocity: float,
+    ) -> float:
+        """
+        Calculate interfacial drag coefficient based on flow regime.
+        
+        Uses Ishii-Hibiki (2006) correlations for different flow regimes.
+        """
+        # Get saturation properties
+        rho_l, rho_v, _ = self._get_saturation_properties(self.pressure)
+        
+        # Reynolds number based on relative velocity
+        mu_l = 1e-4  # Pa·s (liquid viscosity, simplified)
+        Re = rho_l * relative_velocity * self.diameter / mu_l
+        
+        if self.model_type == "ishii_hibiki":
+            # Ishii-Hibiki model
+            if self.void_fraction < 0.3:
+                # Bubbly flow
+                C_d = 24.0 / Re * (1.0 + 0.1 * Re ** 0.75)  # Drag coefficient
+            elif self.void_fraction < 0.7:
+                # Slug/churn flow
+                C_d = 0.5  # Simplified
+            else:
+                # Annular flow
+                C_d = 0.01 * (1.0 - self.void_fraction) ** 2  # Wall friction dominated
+        elif self.model_type == "relap5":
+            # RELAP5-style model
+            C_d = 0.44 * (1.0 + 0.1 * self.void_fraction)  # Simplified
+        else:  # trap
+            # TRACE-style model
+            C_d = 0.3 * (1.0 - self.void_fraction) ** 0.5  # Simplified
+        
+        return max(0.01, min(1.0, C_d))  # Clamp to reasonable range
+    
+    def _calculate_interfacial_heat_transfer_coefficient(self) -> float:
+        """
+        Calculate interfacial heat transfer coefficient.
+        
+        Based on flow regime and phase properties.
+        """
+        # Get saturation properties
+        rho_l, rho_v, _ = self._get_saturation_properties(self.pressure)
+        
+        # Thermal conductivity (simplified)
+        k_l = 0.6  # W/(m·K) (liquid thermal conductivity)
+        k_v = 0.03  # W/(m·K) (vapor thermal conductivity)
+        
+        # Relative velocity
+        relative_velocity = abs(self.vapor_velocity - self.liquid_velocity)
+        
+        # Reynolds number
+        mu_l = 1e-4  # Pa·s
+        Re = rho_l * relative_velocity * self.diameter / mu_l
+        
+        # Prandtl number (simplified)
+        Pr_l = 1.0  # Liquid Prandtl number
+        
+        # Nusselt number (Dittus-Boelter type)
+        Nu = 0.023 * Re ** 0.8 * Pr_l ** 0.4
+        
+        # Heat transfer coefficient
+        h_i = Nu * k_l / self.diameter  # W/(m²·K)
+        
+        # Flow regime corrections
+        if self.void_fraction > 0.7:
+            # Annular flow: higher heat transfer
+            h_i *= 1.5
+        elif self.void_fraction < 0.3:
+            # Bubbly flow: lower heat transfer
+            h_i *= 0.8
+        
+        return max(100.0, min(100000.0, h_i))  # Clamp to reasonable range
+    
+    def _calculate_interfacial_area_density(self) -> float:
+        """Calculate interfacial area per unit volume [m²/m³]."""
+        d_bubble = 0.001  # m (typical bubble size)
+        
+        if self.void_fraction < 0.3:
+            # Bubbly flow
+            return 6.0 * self.void_fraction * (1.0 - self.void_fraction) / d_bubble
+        elif self.void_fraction < 0.7:
+            # Slug/churn flow
+            return 4.0 * self.void_fraction * (1.0 - self.void_fraction) / self.diameter
+        else:
+            # Annular flow
+            return 4.0 * (1.0 - self.void_fraction) / self.diameter
+    
+    def _get_saturation_properties(self, pressure: float) -> Tuple[float, float, float]:
+        """Get saturation properties (same as DriftFluxModel)."""
+        if abs(pressure - 7e6) < 1e5:
+            rho_l = 740.0
+            rho_v = 36.5
+            h_fg = 1.5e6
+        else:
+            p_ref = 7e6
+            rho_l = 740.0 * (pressure / p_ref) ** 0.1
+            rho_v = 36.5 * (pressure / p_ref) ** 0.5
+            h_fg = 1.5e6 * (p_ref / pressure) ** 0.2
+        
+        return rho_l, rho_v, h_fg
+    
+    def _get_saturation_temperature(self, pressure: float) -> float:
+        """Get saturation temperature at pressure."""
         T_sat = 273.15 + 180.0 * (pressure / 1e6) ** 0.25
         return T_sat
 

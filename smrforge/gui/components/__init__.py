@@ -6,6 +6,7 @@ Reusable UI components for the Dash application.
 
 from smrforge.gui.components.sidebar import create_sidebar
 from smrforge.gui.components.reactor_builder import create_reactor_builder
+from smrforge.gui.components.geometry_designer import create_geometry_designer
 from smrforge.gui.components.analysis_panel import (
     create_analysis_panel,
     create_neutronics_options,
@@ -20,6 +21,7 @@ from smrforge.gui.components.data_manager import create_data_manager
 __all__ = [
     "create_sidebar",
     "create_reactor_builder",
+    "create_geometry_designer",
     "create_analysis_panel",
     "create_neutronics_options",
     "create_burnup_options",

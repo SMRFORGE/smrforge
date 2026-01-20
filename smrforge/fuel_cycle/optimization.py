@@ -5,6 +5,7 @@ This module provides optimization algorithms for:
 - Fuel cycle length optimization
 - Refueling strategy optimization (batch sizes, enrichment, shuffling)
 - Multi-objective optimization (cost, cycle length, burnup)
+- Advanced optimization algorithms (Genetic Algorithm, Particle Swarm Optimization)
 """
 
 import numpy as np
@@ -12,6 +13,15 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
 from ..utils.logging import get_logger
+
+# Import advanced optimization algorithms
+try:
+    from .advanced_optimization import GeneticAlgorithm, ParticleSwarmOptimization
+    _ADVANCED_OPT_AVAILABLE = True
+except ImportError:
+    _ADVANCED_OPT_AVAILABLE = False
+    GeneticAlgorithm = None
+    ParticleSwarmOptimization = None
 
 logger = get_logger("smrforge.fuel_cycle.optimization")
 
@@ -162,6 +172,7 @@ class FuelCycleOptimizer:
         burnup_solver: Callable,
         cost_function: Optional[Callable] = None,
         weights: Dict[str, float] = None,
+        method: str = "grid_search",  # 'grid_search', 'genetic_algorithm', 'particle_swarm'
     ) -> Dict:
         """
         Multi-objective optimization of fuel cycle.
@@ -169,10 +180,16 @@ class FuelCycleOptimizer:
         Optimizes cycle length, enrichment, and batch configuration
         considering multiple objectives (cost, cycle length, burnup).
         
+        Supports multiple optimization methods:
+        - 'grid_search': Exhaustive grid search (default, simple but slow)
+        - 'genetic_algorithm': Genetic algorithm (good for complex landscapes)
+        - 'particle_swarm': Particle swarm optimization (fast convergence)
+        
         Args:
-            burnup_solver: Callable for burnup calculations
+            burnup_solver: Callable for burnup calculations (enrichment, cycle_length) -> (keff, burnup)
             cost_function: Optional cost function (enrichment, cycle_length) -> cost
             weights: Weights for objectives {'cost': 0.4, 'cycle_length': 0.3, 'burnup': 0.3}
+            method: Optimization method ('grid_search', 'genetic_algorithm', 'particle_swarm')
             
         Returns:
             Dictionary with optimization results
@@ -187,54 +204,178 @@ class FuelCycleOptimizer:
                 cycle_cost = 100.0 * cycle_length / 365.0  # USD per year
                 return enrichment_cost + cycle_cost
         
-        # Grid search over parameter space
-        enrichments = np.linspace(0.03, 0.20, 10)
-        cycle_lengths = np.linspace(
-            self.min_cycle_length, self.max_cycle_length, 10
-        )
-        
-        best_score = float("inf")
-        best_params = None
-        best_results = None
-        
-        for enrichment in enrichments:
-            for cycle_length in cycle_lengths:
+        # Define objective function for optimization
+        def objective(x):
+            """Objective function for optimization algorithms."""
+            enrichment, cycle_length = x[0], x[1]
+            
+            # Clip to bounds
+            enrichment = np.clip(enrichment, 0.03, 0.20)
+            cycle_length = np.clip(cycle_length, self.min_cycle_length, self.max_cycle_length)
+            
+            try:
                 keff, burnup = burnup_solver(enrichment, cycle_length)
-                
-                if abs(keff - self.target_keff) > 0.01:
-                    continue  # Skip non-critical configurations
-                
-                # Calculate multi-objective score
-                cost = cost_function(enrichment, cycle_length)
-                normalized_cost = cost / 10000.0  # Normalize
-                normalized_cycle = cycle_length / self.max_cycle_length
-                normalized_burnup = burnup / 100.0  # Normalize to 100 MWd/kg
-                
-                # Minimize cost, maximize cycle length and burnup
-                score = (
-                    weights["cost"] * normalized_cost
-                    - weights["cycle_length"] * normalized_cycle
-                    - weights["burnup"] * normalized_burnup
-                )
-                
-                if score < best_score:
-                    best_score = score
-                    best_params = {
-                        "enrichment": enrichment,
-                        "cycle_length": cycle_length,
-                    }
-                    best_results = {
-                        "k_eff": keff,
-                        "burnup": burnup,
-                        "cost": cost,
-                        "score": score,
-                    }
+            except Exception as e:
+                logger.warning(f"Burnup solver failed: {e}, using penalty")
+                return 1e10  # Large penalty for failed evaluations
+            
+            # Penalty for non-critical configurations
+            if abs(keff - self.target_keff) > 0.01:
+                return 1e10  # Large penalty
+            
+            # Calculate multi-objective score
+            cost = cost_function(enrichment, cycle_length)
+            normalized_cost = cost / 10000.0  # Normalize
+            normalized_cycle = cycle_length / self.max_cycle_length
+            normalized_burnup = burnup / 100.0  # Normalize to 100 MWd/kg
+            
+            # Minimize cost, maximize cycle length and burnup
+            score = (
+                weights["cost"] * normalized_cost
+                - weights["cycle_length"] * normalized_cycle
+                - weights["burnup"] * normalized_burnup
+            )
+            
+            return score
         
-        return {
-            "optimal_parameters": best_params,
-            "results": best_results,
-            "objective_weights": weights,
-        }
+        # Choose optimization method
+        if method == "genetic_algorithm" and _ADVANCED_OPT_AVAILABLE:
+            logger.info("Using Genetic Algorithm for multi-objective optimization")
+            
+            bounds = [
+                (0.03, 0.20),  # Enrichment bounds
+                (self.min_cycle_length, self.max_cycle_length),  # Cycle length bounds
+            ]
+            
+            ga = GeneticAlgorithm(
+                objective=objective,
+                bounds=bounds,
+                population_size=50,
+                generations=100,
+            )
+            
+            result = ga.optimize()
+            
+            # Extract results
+            optimal_enrichment, optimal_cycle_length = result.x_opt
+            keff, burnup = burnup_solver(optimal_enrichment, optimal_cycle_length)
+            cost = cost_function(optimal_enrichment, optimal_cycle_length)
+            
+            return {
+                "optimal_parameters": {
+                    "enrichment": optimal_enrichment,
+                    "cycle_length": optimal_cycle_length,
+                },
+                "results": {
+                    "k_eff": keff,
+                    "burnup": burnup,
+                    "cost": cost,
+                    "score": result.f_opt,
+                },
+                "objective_weights": weights,
+                "optimization_method": "genetic_algorithm",
+                "optimization_history": result.history,
+            }
+        
+        elif method == "particle_swarm" and _ADVANCED_OPT_AVAILABLE:
+            logger.info("Using Particle Swarm Optimization for multi-objective optimization")
+            
+            bounds = [
+                (0.03, 0.20),  # Enrichment bounds
+                (self.min_cycle_length, self.max_cycle_length),  # Cycle length bounds
+            ]
+            
+            pso = ParticleSwarmOptimization(
+                objective=objective,
+                bounds=bounds,
+                n_particles=30,
+                max_iterations=100,
+            )
+            
+            result = pso.optimize()
+            
+            # Extract results
+            optimal_enrichment, optimal_cycle_length = result.x_opt
+            keff, burnup = burnup_solver(optimal_enrichment, optimal_cycle_length)
+            cost = cost_function(optimal_enrichment, optimal_cycle_length)
+            
+            return {
+                "optimal_parameters": {
+                    "enrichment": optimal_enrichment,
+                    "cycle_length": optimal_cycle_length,
+                },
+                "results": {
+                    "k_eff": keff,
+                    "burnup": burnup,
+                    "cost": cost,
+                    "score": result.f_opt,
+                },
+                "objective_weights": weights,
+                "optimization_method": "particle_swarm",
+                "optimization_history": result.history,
+            }
+        
+        else:
+            # Fallback to grid search
+            if method != "grid_search":
+                logger.warning(
+                    f"Method '{method}' not available, falling back to grid_search"
+                )
+            
+            logger.info("Using grid search for multi-objective optimization")
+            
+            # Grid search over parameter space
+            enrichments = np.linspace(0.03, 0.20, 10)
+            cycle_lengths = np.linspace(
+                self.min_cycle_length, self.max_cycle_length, 10
+            )
+            
+            best_score = float("inf")
+            best_params = None
+            best_results = None
+            
+            for enrichment in enrichments:
+                for cycle_length in cycle_lengths:
+                    try:
+                        keff, burnup = burnup_solver(enrichment, cycle_length)
+                    except Exception:
+                        continue
+                    
+                    if abs(keff - self.target_keff) > 0.01:
+                        continue  # Skip non-critical configurations
+                    
+                    # Calculate multi-objective score
+                    cost = cost_function(enrichment, cycle_length)
+                    normalized_cost = cost / 10000.0  # Normalize
+                    normalized_cycle = cycle_length / self.max_cycle_length
+                    normalized_burnup = burnup / 100.0  # Normalize to 100 MWd/kg
+                    
+                    # Minimize cost, maximize cycle length and burnup
+                    score = (
+                        weights["cost"] * normalized_cost
+                        - weights["cycle_length"] * normalized_cycle
+                        - weights["burnup"] * normalized_burnup
+                    )
+                    
+                    if score < best_score:
+                        best_score = score
+                        best_params = {
+                            "enrichment": enrichment,
+                            "cycle_length": cycle_length,
+                        }
+                        best_results = {
+                            "k_eff": keff,
+                            "burnup": burnup,
+                            "cost": cost,
+                            "score": score,
+                        }
+            
+            return {
+                "optimal_parameters": best_params,
+                "results": best_results,
+                "objective_weights": weights,
+                "optimization_method": "grid_search",
+            }
 
 
 @dataclass

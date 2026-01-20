@@ -6,7 +6,8 @@ This module provides capabilities for:
 - Thermal expansion calculations
 - Pellet-cladding interaction (PCI)
 - Fuel swelling models
-- Material property degradation
+- Creep models (primary, secondary, tertiary, irradiation-enhanced)
+- Material property degradation for long-term analysis
 
 Classes:
     FuelRodMechanics: Main class for fuel rod structural analysis
@@ -14,6 +15,8 @@ Classes:
     StressStrain: Stress and strain analysis
     PelletCladdingInteraction: PCI modeling
     FuelSwelling: Fuel swelling models
+    CreepModel: Creep models for fuel rod materials
+    MaterialDegradation: Material degradation models for long-term analysis
 """
 
 from smrforge.mechanics.fuel_rod import (
@@ -22,6 +25,8 @@ from smrforge.mechanics.fuel_rod import (
     PelletCladdingInteraction,
     StressStrain,
     ThermalExpansion,
+    CreepModel,
+    MaterialDegradation,
 )
 
 __all__ = [
@@ -30,4 +35,6 @@ __all__ = [
     "StressStrain",
     "PelletCladdingInteraction",
     "FuelSwelling",
+    "CreepModel",
+    "MaterialDegradation",
 ]
