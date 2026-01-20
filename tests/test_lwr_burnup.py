@@ -11,6 +11,8 @@ from smrforge.burnup.lwr_burnup import (
     AssemblyBurnup,
     RodBurnup,
     GadoliniumDepletion,
+    AssemblyWiseBurnupTracker,
+    RodWiseBurnupTracker,
 )
 from smrforge.core.reactor_core import Nuclide, NuclearDataCache
 
@@ -224,3 +226,466 @@ class TestGadoliniumDepletion:
         )
         
         assert np.isclose(final_concentration, initial_concentration)
+    
+    def test_deplete_zero_flux(self):
+        """Test deplete with zero flux (should return initial concentration)."""
+        gd = GadoliniumDepletion()
+        
+        gd155 = Nuclide(Z=64, A=155)
+        initial_concentration = 1e20
+        
+        final_concentration = gd.deplete(
+            nuclide=gd155,
+            initial_concentration=initial_concentration,
+            flux=0.0,
+            time=365 * 24 * 3600,
+        )
+        
+        assert np.isclose(final_concentration, initial_concentration)
+    
+    def test_deplete_zero_initial_concentration(self):
+        """Test deplete with zero initial concentration."""
+        gd = GadoliniumDepletion()
+        
+        gd155 = Nuclide(Z=64, A=155)
+        
+        final_concentration = gd.deplete(
+            nuclide=gd155,
+            initial_concentration=0.0,
+            flux=1e14,
+            time=365 * 24 * 3600,
+        )
+        
+        assert final_concentration == 0.0
+    
+    def test_deplete_negative_initial_concentration(self):
+        """Test deplete with negative initial concentration."""
+        gd = GadoliniumDepletion()
+        
+        gd155 = Nuclide(Z=64, A=155)
+        
+        final_concentration = gd.deplete(
+            nuclide=gd155,
+            initial_concentration=-1e20,
+            flux=1e14,
+            time=365 * 24 * 3600,
+        )
+        
+        assert final_concentration == 0.0
+    
+    @patch('smrforge.burnup.lwr_burnup.NuclearDataCache')
+    def test_get_capture_cross_section_other_nuclide(self, mock_cache_class):
+        """Test get_capture_cross_section for other nuclide (fallback)."""
+        mock_cache = Mock()
+        mock_cache.get_cross_section.side_effect = Exception("Data not available")
+        gd = GadoliniumDepletion(cache=mock_cache)
+        
+        other_nuclide = Nuclide(Z=64, A=156)  # Not Gd-155 or Gd-157
+        xs = gd.get_capture_cross_section(other_nuclide)
+        
+        # Should use default fallback value
+        assert xs == 1000.0
+    
+    @patch('smrforge.burnup.lwr_burnup.NuclearDataCache')
+    def test_get_capture_cross_section_gd157_fallback(self, mock_cache_class):
+        """Test get_capture_cross_section for Gd-157 with exception (fallback)."""
+        mock_cache = Mock()
+        mock_cache.get_cross_section.side_effect = Exception("Data not available")
+        gd = GadoliniumDepletion(cache=mock_cache)
+        
+        gd157 = Nuclide(Z=64, A=157)
+        xs = gd.get_capture_cross_section(gd157)
+        
+        # Should use Gd-157 fallback value
+        assert xs == 254000.0
+    
+    def test_calculate_reactivity_worth(self):
+        """Test calculate_reactivity_worth method."""
+        gd = GadoliniumDepletion()
+        
+        gd155 = Nuclide(Z=64, A=155)
+        gd157 = Nuclide(Z=64, A=157)
+        
+        poison = GadoliniumPoison(
+            nuclides=[gd155, gd157],
+            initial_concentrations=np.array([1e20, 5e19]),
+        )
+        
+        flux = 1e14
+        time = 365 * 24 * 3600
+        
+        worth = gd.calculate_reactivity_worth(poison, flux, time)
+        
+        # Reactivity worth should be negative (negative reactivity)
+        assert worth < 0
+        assert isinstance(worth, (float, np.floating))
+    
+    def test_calculate_reactivity_worth_zero_initial(self):
+        """Test calculate_reactivity_worth with zero initial concentration."""
+        gd = GadoliniumDepletion()
+        
+        gd155 = Nuclide(Z=64, A=155)
+        
+        poison = GadoliniumPoison(
+            nuclides=[gd155],
+            initial_concentrations=np.array([0.0]),
+        )
+        
+        worth = gd.calculate_reactivity_worth(poison, 1e14, 365 * 24 * 3600)
+        
+        # Should handle zero concentration gracefully
+        assert isinstance(worth, (float, np.floating))
+
+
+class TestAssemblyWiseBurnupTracker:
+    """Tests for AssemblyWiseBurnupTracker class."""
+    
+    def test_init_with_n_assemblies(self):
+        """Test initialization with number of assemblies."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=37)
+        
+        assert tracker.n_assemblies == 37
+        assert tracker.lattice_size[0] * tracker.lattice_size[1] >= 37
+        assert len(tracker.assemblies) == 0
+    
+    def test_init_with_lattice_size(self):
+        """Test initialization with explicit lattice size."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=37, lattice_size=(7, 7))
+        
+        assert tracker.n_assemblies == 37
+        assert tracker.lattice_size == (7, 7)
+    
+    def test_get_assembly_position(self):
+        """Test get_assembly_position method."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=16, lattice_size=(4, 4))
+        
+        position = tracker.get_assembly_position(0)
+        assert position == (0, 0)
+        
+        position = tracker.get_assembly_position(5)
+        assert position == (1, 1)
+        
+        position = tracker.get_assembly_position(15)
+        assert position == (3, 3)
+    
+    def test_get_assembly_position_invalid_negative(self):
+        """Test get_assembly_position with negative ID."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=16)
+        
+        with pytest.raises(ValueError, match="assembly_id must be"):
+            tracker.get_assembly_position(-1)
+    
+    def test_get_assembly_position_invalid_too_large(self):
+        """Test get_assembly_position with ID too large."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=16)
+        
+        with pytest.raises(ValueError, match="assembly_id must be"):
+            tracker.get_assembly_position(16)
+    
+    def test_update_assembly(self):
+        """Test update_assembly method."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=16)
+        
+        inventory = Mock()
+        tracker.update_assembly(
+            assembly_id=0,
+            position=(0, 0),
+            burnup=10.5,
+            enrichment=0.195,
+            peak_power=150.0,
+            nuclide_inventory=inventory,
+        )
+        
+        assert 0 in tracker.assemblies
+        assert tracker.assemblies[0].assembly_id == "Assembly-0"
+        assert tracker.assemblies[0].burnup == 10.5
+        assert tracker.assemblies[0].nuclide_inventory == inventory
+    
+    def test_update_assembly_defaults(self):
+        """Test update_assembly with default parameters."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=16)
+        
+        tracker.update_assembly(
+            assembly_id=1,
+            position=(0, 1),
+            burnup=20.0,
+        )
+        
+        assert tracker.assemblies[1].average_enrichment == 0.045
+        assert tracker.assemblies[1].peak_power == 0.0
+        assert tracker.assemblies[1].nuclide_inventory is None
+    
+    def test_get_burnup_distribution(self):
+        """Test get_burnup_distribution method."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=9, lattice_size=(3, 3))
+        
+        # Update some assemblies
+        tracker.update_assembly(0, (0, 0), 10.0)
+        tracker.update_assembly(1, (0, 1), 20.0)
+        tracker.update_assembly(4, (1, 1), 30.0)
+        
+        distribution = tracker.get_burnup_distribution()
+        
+        assert distribution.shape == (3, 3)
+        assert distribution[0, 0] == 10.0
+        assert distribution[0, 1] == 20.0
+        assert distribution[1, 1] == 30.0
+        assert distribution[2, 2] == 0.0  # Not updated
+    
+    def test_get_burnup_distribution_out_of_bounds(self):
+        """Test get_burnup_distribution with out-of-bounds positions."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=9, lattice_size=(3, 3))
+        
+        # Create assembly with invalid position
+        assembly = AssemblyBurnup(
+            assembly_id="test",
+            position=(5, 5),  # Out of bounds
+            burnup=50.0,
+            average_enrichment=0.20,
+            peak_power=200.0,
+        )
+        tracker.assemblies[99] = assembly
+        
+        distribution = tracker.get_burnup_distribution()
+        
+        # Out-of-bounds position should not be included (distribution should be 3x3)
+        assert distribution.shape == (3, 3)
+        # All values should be 0.0 since position (5, 5) is out of bounds
+        assert np.all(distribution == 0.0)
+    
+    def test_get_average_burnup(self):
+        """Test get_average_burnup method."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=9)
+        
+        # Empty tracker
+        assert tracker.get_average_burnup() == 0.0
+        
+        # Add assemblies
+        tracker.update_assembly(0, (0, 0), 10.0)
+        tracker.update_assembly(1, (0, 1), 20.0)
+        tracker.update_assembly(2, (0, 2), 30.0)
+        
+        avg = tracker.get_average_burnup()
+        assert np.isclose(avg, 20.0)
+    
+    def test_get_peak_burnup(self):
+        """Test get_peak_burnup method."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=9)
+        
+        # Empty tracker
+        assert tracker.get_peak_burnup() == 0.0
+        
+        # Add assemblies
+        tracker.update_assembly(0, (0, 0), 10.0)
+        tracker.update_assembly(1, (0, 1), 50.0)
+        tracker.update_assembly(2, (0, 2), 30.0)
+        
+        peak = tracker.get_peak_burnup()
+        assert peak == 50.0
+
+
+class TestRodWiseBurnupTracker:
+    """Tests for RodWiseBurnupTracker class."""
+    
+    def test_init(self):
+        """Test RodWiseBurnupTracker initialization."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        assert tracker.assembly_size == (17, 17)
+        assert tracker.n_rods == 17 * 17
+        assert len(tracker.rods) == 0
+    
+    def test_get_rod_position(self):
+        """Test get_rod_position method."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        position = tracker.get_rod_position(0)
+        assert position == (0, 0)
+        
+        position = tracker.get_rod_position(18)
+        assert position == (1, 1)
+        
+        position = tracker.get_rod_position(288)  # 17*17 - 1
+        assert position == (16, 16)
+    
+    def test_get_rod_position_invalid_negative(self):
+        """Test get_rod_position with negative ID."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        with pytest.raises(ValueError, match="rod_id must be"):
+            tracker.get_rod_position(-1)
+    
+    def test_get_rod_position_invalid_too_large(self):
+        """Test get_rod_position with ID too large."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        with pytest.raises(ValueError, match="rod_id must be"):
+            tracker.get_rod_position(289)  # 17*17
+    
+    def test_calculate_shadowing_factor_no_control_rods(self):
+        """Test calculate_shadowing_factor with no control rods."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[],
+        )
+        
+        assert factor == 1.0  # No shadowing
+    
+    def test_calculate_shadowing_factor_single_control_rod(self):
+        """Test calculate_shadowing_factor with single control rod."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Rod at (8, 8), control rod at (8, 8) - same position
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 8)],
+            pitch=1.26,
+        )
+        
+        # Should have significant shadowing
+        assert 0.0 <= factor <= 1.0
+        assert factor < 1.0  # Some shadowing
+    
+    def test_calculate_shadowing_factor_distant_control_rod(self):
+        """Test calculate_shadowing_factor with distant control rod."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Rod at (0, 0), control rod at (16, 16) - far away
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(0, 0),
+            control_rod_positions=[(16, 16)],
+            pitch=1.26,
+        )
+        
+        # Should have minimal shadowing
+        assert 0.0 <= factor <= 1.0
+        assert factor > 0.5  # Less shadowing
+    
+    def test_calculate_shadowing_factor_multiple_control_rods(self):
+        """Test calculate_shadowing_factor with multiple control rods."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Rod at (8, 8), control rods at (8, 7) and (7, 8) - nearby
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 7), (7, 8)],
+            pitch=1.26,
+        )
+        
+        # Should use minimum distance
+        assert 0.0 <= factor <= 1.0
+    
+    def test_calculate_shadowing_factor_custom_pitch(self):
+        """Test calculate_shadowing_factor with custom pitch."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 9)],
+            pitch=2.0,  # Larger pitch
+        )
+        
+        assert 0.0 <= factor <= 1.0
+    
+    def test_update_rod(self):
+        """Test update_rod method."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        tracker.update_rod(
+            rod_id=0,
+            position=(0, 0),
+            burnup=15.5,
+            enrichment=0.19,
+            gadolinium_content=1e19,
+            control_rod_proximity=5.0,
+            shadowing_factor=0.8,
+        )
+        
+        assert 0 in tracker.rods
+        assert tracker.rods[0].rod_id == "Rod-0"
+        assert tracker.rods[0].burnup == 15.5
+        assert tracker.rods[0].shadowing_factor == 0.8
+    
+    def test_update_rod_defaults(self):
+        """Test update_rod with default parameters."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        tracker.update_rod(
+            rod_id=1,
+            position=(0, 1),
+            burnup=12.0,
+            enrichment=0.19,
+        )
+        
+        assert tracker.rods[1].gadolinium_content == 0.0
+        assert tracker.rods[1].control_rod_proximity == 0.0
+        assert tracker.rods[1].shadowing_factor == 1.0
+    
+    def test_get_burnup_distribution(self):
+        """Test get_burnup_distribution method."""
+        tracker = RodWiseBurnupTracker(assembly_size=(3, 3))
+        
+        # Update some rods
+        tracker.update_rod(0, (0, 0), 10.0, 0.19)
+        tracker.update_rod(1, (0, 1), 20.0, 0.19)
+        tracker.update_rod(4, (1, 1), 30.0, 0.19)
+        
+        distribution = tracker.get_burnup_distribution()
+        
+        assert distribution.shape == (3, 3)
+        assert distribution[0, 0] == 10.0
+        assert distribution[0, 1] == 20.0
+        assert distribution[1, 1] == 30.0
+        assert distribution[2, 2] == 0.0  # Not updated
+    
+    def test_get_burnup_distribution_out_of_bounds(self):
+        """Test get_burnup_distribution with out-of-bounds positions."""
+        tracker = RodWiseBurnupTracker(assembly_size=(3, 3))
+        
+        # Create rod with invalid position
+        rod = RodBurnup(
+            rod_id="test",
+            position=(5, 5),  # Out of bounds
+            burnup=50.0,
+            enrichment=0.20,
+        )
+        tracker.rods[99] = rod
+        
+        distribution = tracker.get_burnup_distribution()
+        
+        # Out-of-bounds position should not be included (distribution should be 3x3)
+        assert distribution.shape == (3, 3)
+        # All values should be 0.0 since position (5, 5) is out of bounds
+        assert np.all(distribution == 0.0)
+    
+    def test_get_average_burnup(self):
+        """Test get_average_burnup method."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Empty tracker
+        assert tracker.get_average_burnup() == 0.0
+        
+        # Add rods
+        tracker.update_rod(0, (0, 0), 10.0, 0.19)
+        tracker.update_rod(1, (0, 1), 20.0, 0.19)
+        tracker.update_rod(2, (0, 2), 30.0, 0.19)
+        
+        avg = tracker.get_average_burnup()
+        assert np.isclose(avg, 20.0)
+    
+    def test_get_peak_burnup(self):
+        """Test get_peak_burnup method."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Empty tracker
+        assert tracker.get_peak_burnup() == 0.0
+        
+        # Add rods
+        tracker.update_rod(0, (0, 0), 10.0, 0.19)
+        tracker.update_rod(1, (0, 1), 50.0, 0.19)
+        tracker.update_rod(2, (0, 2), 30.0, 0.19)
+        
+        peak = tracker.get_peak_burnup()
+        assert peak == 50.0
