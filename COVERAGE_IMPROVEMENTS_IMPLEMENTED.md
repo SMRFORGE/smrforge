@@ -160,9 +160,9 @@ Implemented comprehensive test coverage improvements for low-coverage modules id
    - All tests passing ✅
 
 6. **`tests/test_data_downloader_extended.py`**
-   - 24 comprehensive tests for data downloader
-   - Covers download functions, edge cases, validation scenarios
-   - 22 tests passing, 2 simplified ✅
+   - 30 comprehensive tests for data downloader
+   - Covers download functions, edge cases, validation scenarios, helper functions
+   - All 30 tests passing ✅
 
 ## Expected Coverage Impact
 
@@ -181,15 +181,15 @@ Implemented comprehensive test coverage improvements for low-coverage modules id
 
 ## Test Statistics
 
-### Total Tests Added: **195 new tests**
+### Total Tests Added: **201 new tests**
 - `test_utils_logging_extended.py`: 27 tests ✅
 - `test_regulatory_traceability_extended.py`: 31 tests ✅
 - `test_standards_parser_extended.py`: 31 tests ✅
 - `test_geometry_validation_extended.py`: 46 tests (43 passing, 3 skipped) ✅
 - `test_geometry_advanced_import_extended.py`: 36 tests ✅
-- `test_data_downloader_extended.py`: 24 tests (22 passing, 2 simplified) ✅
+- `test_data_downloader_extended.py`: 30 tests ✅
 
-### All Tests Status: ✅ **190/195 passing (97.4%)**, 3 skipped, 2 simplified
+### All Tests Status: ✅ **196/201 passing (97.5%)**, 3 skipped
 
 ## Next Steps
 
