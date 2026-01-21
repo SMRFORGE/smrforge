@@ -202,3 +202,141 @@ class TestUnitsExtended:
             assert "power" in str(exc_info.value).lower() or "name" in str(exc_info.value).lower()
         except ImportError:
             pytest.skip("Pint not available")
+    
+    def test_get_ureg_initializes_reactor_units(self):
+        """Test that get_ureg initializes reactor-specific units on first call."""
+        try:
+            # Reset the global registry to test initialization
+            import smrforge.utils.units
+            original_ureg = smrforge.utils.units._ureg
+            smrforge.utils.units._ureg = None  # Reset to trigger initialization
+            
+            from smrforge.utils.units import get_ureg
+            ureg = get_ureg()
+            
+            # Test that reactor units are defined (lines 52-53)
+            reactivity_dollar = 1 * ureg.dollar
+            assert reactivity_dollar.magnitude == 1.0
+            
+            reactivity_pcm = 100 * ureg.pcm
+            assert reactivity_pcm.magnitude == 100.0
+            
+            # Restore original
+            smrforge.utils.units._ureg = original_ureg
+        except ImportError:
+            pytest.skip("Pint not available")
+    
+    def test_units_with_mocked_pint(self):
+        """Test units module with mocked Pint to cover missing paths."""
+        import sys
+        from unittest.mock import MagicMock
+        
+        # Create mock Pint module
+        mock_pint = MagicMock()
+        mock_quantity = MagicMock()
+        mock_registry = MagicMock()
+        mock_registry_instance = MagicMock()
+        
+        # Setup mock registry
+        mock_registry.return_value = mock_registry_instance
+        mock_registry_instance.define = MagicMock()
+        mock_registry_instance.megawatt = MagicMock()
+        mock_registry_instance.kelvin = MagicMock()
+        mock_registry_instance.watt = MagicMock()
+        
+        # Setup mock Quantity
+        mock_quantity_instance = MagicMock()
+        mock_quantity_instance.magnitude = 10.0
+        mock_quantity_instance.units = MagicMock()
+        mock_quantity_instance.check.return_value = True
+        mock_quantity_instance.to.return_value = mock_quantity_instance
+        
+        mock_quantity.return_value = mock_quantity_instance
+        
+        # Setup mock DimensionalityError
+        mock_dimensionality_error = type('DimensionalityError', (Exception,), {})
+        
+        mock_pint.UnitRegistry = mock_registry
+        mock_pint.Quantity = mock_quantity
+        mock_pint.errors = MagicMock()
+        mock_pint.errors.DimensionalityError = mock_dimensionality_error
+        
+        # Save original
+        original_pint = sys.modules.get('pint')
+        original_pint_errors = sys.modules.get('pint.errors')
+        
+        # Mock pint module
+        sys.modules['pint'] = mock_pint
+        sys.modules['pint.errors'] = mock_pint.errors
+        
+        try:
+            # Reload module to pick up mocked Pint
+            import importlib
+            import smrforge.utils.units
+            importlib.reload(smrforge.utils.units)
+            
+            # Test get_ureg with mocked Pint
+            smrforge.utils.units._ureg = None  # Reset
+            ureg = smrforge.utils.units.get_ureg()
+            assert ureg is not None
+            # Verify reactor units were defined
+            assert mock_registry_instance.define.call_count >= 2
+            
+            # Test check_units with Quantity
+            mock_quantity_obj = MagicMock()
+            mock_quantity_obj.check.return_value = True
+            mock_quantity_obj.magnitude = 10.0
+            result = smrforge.utils.units.check_units(mock_quantity_obj, "megawatt", "power")
+            assert result is mock_quantity_obj
+            
+            # Test check_units with plain number and string unit
+            result = smrforge.utils.units.check_units(10.0, "megawatt", "power")
+            assert result is not None
+            
+            # Test check_units with plain number and Quantity unit
+            mock_unit_quantity = MagicMock()
+            result = smrforge.utils.units.check_units(10.0, mock_unit_quantity, "power")
+            assert result is not None
+            
+            # Test convert_units with Quantity and string target
+            mock_quantity_obj.to.return_value.magnitude = 10000000.0
+            result = smrforge.utils.units.convert_units(mock_quantity_obj, "watt")
+            assert result == 10000000.0
+            
+            # Test convert_units with Quantity and Quantity target
+            mock_target_quantity = MagicMock()
+            result = smrforge.utils.units.convert_units(mock_quantity_obj, mock_target_quantity)
+            assert result == 10000000.0
+            
+            # Test convert_units with plain number
+            result = smrforge.utils.units.convert_units(10.0, "watt")
+            assert result == 10.0
+            
+            # Test with_units with string unit
+            result = smrforge.utils.units.with_units(10.0, "megawatt")
+            assert result is not None
+            
+            # Test with_units with Quantity unit
+            result = smrforge.utils.units.with_units(10.0, mock_unit_quantity)
+            assert result is not None
+            
+            # Test define_reactor_units
+            result = smrforge.utils.units.define_reactor_units()
+            assert result is not None
+            
+        finally:
+            # Restore original modules
+            if original_pint is not None:
+                sys.modules['pint'] = original_pint
+            else:
+                sys.modules.pop('pint', None)
+            if original_pint_errors is not None:
+                sys.modules['pint.errors'] = original_pint_errors
+            else:
+                sys.modules.pop('pint.errors', None)
+            
+            # Reload module to restore original state
+            import importlib
+            import smrforge.utils.units
+            importlib.reload(smrforge.utils.units)
+    

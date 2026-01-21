@@ -689,3 +689,418 @@ class TestRodWiseBurnupTracker:
         
         peak = tracker.get_peak_burnup()
         assert peak == 50.0
+
+
+class TestLWRBurnupEdgeCases:
+    """Edge case tests for LWR burnup module to improve coverage."""
+    
+    def test_gadolinium_depletion_get_capture_cross_section_thermal_energy_not_exact(self):
+        """Test get_capture_cross_section when thermal energy (0.025 eV) is not exactly in array."""
+        from unittest.mock import patch
+        
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        
+        # Mock cache to return energy array without exactly 0.025 eV
+        mock_energy = np.array([0.01, 0.02, 0.03, 0.1])  # No 0.025 eV
+        mock_xs = np.array([50000, 60000, 55000, 50000])
+        
+        with patch.object(gd.cache, 'get_cross_section', return_value=(mock_energy, mock_xs)):
+            xs = gd.get_capture_cross_section(gd155, temperature=600.0)
+            
+            # Should use closest value (0.02 eV or 0.03 eV)
+            assert xs > 0
+            assert isinstance(xs, (float, np.floating, int, np.integer))
+    
+    def test_gadolinium_depletion_deplete_very_long_time(self):
+        """Test deplete with very long time (should deplete significantly)."""
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        
+        initial_concentration = 1e20
+        flux = 1e14
+        time = 10 * 365 * 24 * 3600  # 10 years
+        
+        final_concentration = gd.deplete(
+            nuclide=gd155,
+            initial_concentration=initial_concentration,
+            flux=flux,
+            time=time,
+        )
+        
+        # Should be significantly depleted
+        assert 0 <= final_concentration <= initial_concentration
+        assert final_concentration < initial_concentration
+    
+    def test_gadolinium_depletion_deplete_very_high_flux(self):
+        """Test deplete with very high flux."""
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        
+        initial_concentration = 1e20
+        flux = 1e16  # Very high flux
+        time = 365 * 24 * 3600  # 1 year
+        
+        final_concentration = gd.deplete(
+            nuclide=gd155,
+            initial_concentration=initial_concentration,
+            flux=flux,
+            time=time,
+        )
+        
+        # Should deplete very quickly with high flux
+        assert 0 <= final_concentration <= initial_concentration
+    
+    def test_gadolinium_depletion_calculate_reactivity_worth_empty_poison(self):
+        """Test calculate_reactivity_worth with empty poison (no nuclides)."""
+        gd = GadoliniumDepletion()
+        
+        poison = GadoliniumPoison(
+            nuclides=[],
+            initial_concentrations=np.array([]),
+        )
+        
+        worth = gd.calculate_reactivity_worth(poison, 1e14, 365 * 24 * 3600)
+        
+        # Should return 0.0 for empty poison
+        assert worth == 0.0
+    
+    def test_gadolinium_depletion_calculate_reactivity_worth_single_nuclide(self):
+        """Test calculate_reactivity_worth with single nuclide."""
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        
+        poison = GadoliniumPoison(
+            nuclides=[gd155],
+            initial_concentrations=np.array([1e20]),
+        )
+        
+        worth = gd.calculate_reactivity_worth(poison, 1e14, 365 * 24 * 3600)
+        
+        # Should be negative (negative reactivity)
+        assert worth < 0
+        assert isinstance(worth, (float, np.floating))
+    
+    def test_assembly_wise_burnup_tracker_lattice_size_calculation(self):
+        """Test that lattice_size is calculated correctly from n_assemblies."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=25)
+        
+        # Should calculate lattice size (e.g., 5x5 for 25 assemblies)
+        assert tracker.lattice_size[0] * tracker.lattice_size[1] >= 25
+        assert tracker.n_assemblies == 25
+    
+    def test_assembly_wise_burnup_tracker_get_assembly_position_edge_cases(self):
+        """Test get_assembly_position with edge case IDs."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=16, lattice_size=(4, 4))
+        
+        # First assembly
+        assert tracker.get_assembly_position(0) == (0, 0)
+        
+        # Last assembly
+        assert tracker.get_assembly_position(15) == (3, 3)
+        
+        # Middle assembly
+        position = tracker.get_assembly_position(8)
+        assert isinstance(position, tuple)
+        assert len(position) == 2
+    
+    def test_rod_wise_burnup_tracker_calculate_shadowing_factor_zero_distance(self):
+        """Test calculate_shadowing_factor when rod and control rod are at same position."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Rod and control rod at same position
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 8)],
+        )
+        
+        # Should have maximum shadowing (lowest factor)
+        assert 0.0 <= factor <= 1.0
+        assert factor < 1.0
+    
+    def test_rod_wise_burnup_tracker_calculate_shadowing_factor_very_close(self):
+        """Test calculate_shadowing_factor with very close control rod."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Rod at (8, 8), control rod at (8, 9) - adjacent
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 9)],
+            pitch=1.26,
+        )
+        
+        # Should have significant shadowing
+        assert 0.0 <= factor <= 1.0
+        assert factor < 1.0
+    
+    def test_rod_wise_burnup_tracker_get_rod_position_edge_cases(self):
+        """Test get_rod_position with edge case IDs."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # First rod
+        assert tracker.get_rod_position(0) == (0, 0)
+        
+        # Last rod
+        assert tracker.get_rod_position(288) == (16, 16)  # 17*17 - 1
+        
+        # Middle rod
+        position = tracker.get_rod_position(144)  # Middle
+        assert isinstance(position, tuple)
+        assert len(position) == 2
+    
+    def test_assembly_wise_burnup_tracker_get_burnup_distribution_empty(self):
+        """Test get_burnup_distribution with no assemblies updated."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=9, lattice_size=(3, 3))
+        
+        distribution = tracker.get_burnup_distribution()
+        
+        assert distribution.shape == (3, 3)
+        assert np.all(distribution == 0.0)
+    
+    def test_rod_wise_burnup_tracker_get_burnup_distribution_empty(self):
+        """Test get_burnup_distribution with no rods updated."""
+        tracker = RodWiseBurnupTracker(assembly_size=(3, 3))
+        
+        distribution = tracker.get_burnup_distribution()
+        
+        assert distribution.shape == (3, 3)
+        assert np.all(distribution == 0.0)
+    
+    def test_assembly_wise_burnup_tracker_get_average_burnup_single_assembly(self):
+        """Test get_average_burnup with single assembly."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=9)
+        
+        tracker.update_assembly(0, (0, 0), 25.0)
+        
+        avg = tracker.get_average_burnup()
+        assert avg == 25.0
+    
+    def test_rod_wise_burnup_tracker_get_average_burnup_single_rod(self):
+        """Test get_average_burnup with single rod."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        tracker.update_rod(0, (0, 0), 25.0, 0.19)
+        
+        avg = tracker.get_average_burnup()
+        assert avg == 25.0
+    
+    def test_assembly_wise_burnup_tracker_get_peak_burnup_single_assembly(self):
+        """Test get_peak_burnup with single assembly."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=9)
+        
+        tracker.update_assembly(0, (0, 0), 25.0)
+        
+        peak = tracker.get_peak_burnup()
+        assert peak == 25.0
+    
+    def test_rod_wise_burnup_tracker_get_peak_burnup_single_rod(self):
+        """Test get_peak_burnup with single rod."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        tracker.update_rod(0, (0, 0), 25.0, 0.19)
+        
+        peak = tracker.get_peak_burnup()
+        assert peak == 25.0
+    
+    def test_rod_wise_burnup_tracker_calculate_shadowing_factor_edge_distances(self):
+        """Test calculate_shadowing_factor with various distances."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Test with very close control rod (distance ~0)
+        factor_close = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 8)],  # Same position
+            pitch=1.26,
+        )
+        assert 0.0 <= factor_close <= 1.0
+        assert factor_close < 1.0  # Should have some shadowing
+        
+        # Test with very far control rod
+        factor_far = tracker.calculate_shadowing_factor(
+            rod_position=(0, 0),
+            control_rod_positions=[(16, 16)],  # Far away
+            pitch=1.26,
+        )
+        assert 0.0 <= factor_far <= 1.0
+        assert factor_far > factor_close  # Less shadowing when far
+        
+        # Test with multiple control rods at different distances
+        factor_multiple = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 7), (7, 8), (9, 9)],  # Multiple nearby
+            pitch=1.26,
+        )
+        assert 0.0 <= factor_multiple <= 1.0
+    
+    def test_rod_wise_burnup_tracker_calculate_shadowing_factor_clipping(self):
+        """Test calculate_shadowing_factor clipping to [0, 1]."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Test with extreme pitch values that might cause clipping
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 8)],
+            pitch=0.1,  # Very small pitch
+        )
+        assert 0.0 <= factor <= 1.0
+        
+        factor2 = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 8)],
+            pitch=10.0,  # Very large pitch
+        )
+        assert 0.0 <= factor2 <= 1.0
+    
+    def test_rod_wise_burnup_tracker_calculate_shadowing_factor_distance_calculation(self):
+        """Test calculate_shadowing_factor distance calculation with different positions."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Test diagonal distance
+        factor = tracker.calculate_shadowing_factor(
+            rod_position=(0, 0),
+            control_rod_positions=[(1, 1)],  # Diagonal, distance = sqrt(2)*pitch
+            pitch=1.26,
+        )
+        assert 0.0 <= factor <= 1.0
+        
+        # Test horizontal distance
+        factor2 = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(8, 9)],  # Horizontal, distance = 1*pitch
+            pitch=1.26,
+        )
+        assert 0.0 <= factor2 <= 1.0
+        
+        # Test vertical distance
+        factor3 = tracker.calculate_shadowing_factor(
+            rod_position=(8, 8),
+            control_rod_positions=[(9, 8)],  # Vertical, distance = 1*pitch
+            pitch=1.26,
+        )
+        assert 0.0 <= factor3 <= 1.0
+    
+    def test_gadolinium_depletion_calculate_reactivity_worth_multiple_nuclides(self):
+        """Test calculate_reactivity_worth with multiple nuclides."""
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        gd157 = Nuclide(Z=64, A=157)
+        
+        poison = GadoliniumPoison(
+            nuclides=[gd155, gd157],
+            initial_concentrations=np.array([1e20, 5e19]),
+        )
+        
+        worth = gd.calculate_reactivity_worth(poison, 1e14, 365 * 24 * 3600)
+        
+        # Should sum contributions from both nuclides
+        assert worth < 0  # Negative reactivity
+        assert isinstance(worth, (float, np.floating))
+    
+    def test_gadolinium_depletion_calculate_reactivity_worth_partial_depletion(self):
+        """Test calculate_reactivity_worth with partial depletion scenario."""
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        
+        poison = GadoliniumPoison(
+            nuclides=[gd155],
+            initial_concentrations=np.array([1e20]),
+        )
+        
+        # Short time (partial depletion)
+        worth_short = gd.calculate_reactivity_worth(poison, 1e14, 365 * 24 * 3600)  # 1 year
+        
+        # Long time (more depletion)
+        worth_long = gd.calculate_reactivity_worth(poison, 1e14, 10 * 365 * 24 * 3600)  # 10 years
+        
+        # Both should be negative
+        assert worth_short < 0
+        assert worth_long < 0
+        # Long time should have less negative worth (more depleted)
+        assert worth_long > worth_short
+    
+    def test_gadolinium_depletion_get_capture_cross_section_exception_handling(self):
+        """Test get_capture_cross_section exception handling paths."""
+        gd = GadoliniumDepletion()
+        
+        # Test with Gd-155 (should use fallback value)
+        gd155 = Nuclide(Z=64, A=155)
+        with patch.object(gd.cache, 'get_cross_section', side_effect=Exception("Data not available")):
+            xs = gd.get_capture_cross_section(gd155)
+            assert xs == 61000.0  # Fallback value
+        
+        # Test with Gd-157 (should use fallback value)
+        gd157 = Nuclide(Z=64, A=157)
+        with patch.object(gd.cache, 'get_cross_section', side_effect=Exception("Data not available")):
+            xs = gd.get_capture_cross_section(gd157)
+            assert xs == 254000.0  # Fallback value
+        
+        # Test with other nuclide (should use default fallback)
+        other_nuclide = Nuclide(Z=64, A=156)
+        with patch.object(gd.cache, 'get_cross_section', side_effect=Exception("Data not available")):
+            xs = gd.get_capture_cross_section(other_nuclide)
+            assert xs == 1000.0  # Default fallback
+    
+    def test_gadolinium_depletion_deplete_exponential_decay_edge_cases(self):
+        """Test deplete with edge cases in exponential decay."""
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        
+        # Test with very high cross-section (should deplete very quickly)
+        with patch.object(gd, 'get_capture_cross_section', return_value=1e6):  # Very high XS
+            final = gd.deplete(
+                nuclide=gd155,
+                initial_concentration=1e20,
+                flux=1e14,
+                time=1000.0,  # Short time
+            )
+            # Should deplete significantly even in short time
+            assert final < 1e20
+            assert final >= 0.0
+        
+        # Test with very low cross-section (should deplete slowly)
+        with patch.object(gd, 'get_capture_cross_section', return_value=1.0):  # Very low XS
+            final = gd.deplete(
+                nuclide=gd155,
+                initial_concentration=1e20,
+                flux=1e14,
+                time=365 * 24 * 3600,  # 1 year
+            )
+            # Should still have significant concentration
+            assert final > 1e19
+            assert final <= 1e20
+    
+    def test_assembly_wise_burnup_tracker_get_burnup_distribution_partial_fill(self):
+        """Test get_burnup_distribution when only some assemblies are updated."""
+        tracker = AssemblyWiseBurnupTracker(n_assemblies=16, lattice_size=(4, 4))
+        
+        # Update only a few assemblies
+        tracker.update_assembly(0, (0, 0), 10.0)
+        tracker.update_assembly(5, (1, 1), 20.0)
+        tracker.update_assembly(10, (2, 2), 30.0)
+        
+        distribution = tracker.get_burnup_distribution()
+        
+        assert distribution.shape == (4, 4)
+        assert distribution[0, 0] == 10.0
+        assert distribution[1, 1] == 20.0
+        assert distribution[2, 2] == 30.0
+        # Unupdated positions should be 0.0
+        assert distribution[3, 3] == 0.0
+    
+    def test_rod_wise_burnup_tracker_get_burnup_distribution_partial_fill(self):
+        """Test get_burnup_distribution when only some rods are updated."""
+        tracker = RodWiseBurnupTracker(assembly_size=(17, 17))
+        
+        # Update only a few rods
+        tracker.update_rod(0, (0, 0), 10.0, 0.19)
+        tracker.update_rod(144, (8, 8), 20.0, 0.19)  # Middle rod
+        tracker.update_rod(288, (16, 16), 30.0, 0.19)  # Last rod
+        
+        distribution = tracker.get_burnup_distribution()
+        
+        assert distribution.shape == (17, 17)
+        assert distribution[0, 0] == 10.0
+        assert distribution[8, 8] == 20.0
+        assert distribution[16, 16] == 30.0
+        # Unupdated positions should be 0.0
+        assert distribution[1, 1] == 0.0

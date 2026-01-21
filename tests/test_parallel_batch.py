@@ -244,3 +244,161 @@ class TestReactorLikeProtocol:
         reactors = [BadReactor()]
         with pytest.raises(AttributeError):
             batch_solve_keff(reactors, parallel=False)
+
+
+class TestParallelBatchEdgeCases:
+    """Edge case tests for parallel batch processing."""
+    
+    def test_batch_process_rich_unavailable(self):
+        """Test batch_process when Rich is not available."""
+        def double(x):
+            return x * 2
+        
+        # Mock Rich import to fail
+        with patch.dict(sys.modules, {'rich.progress': None}):
+            items = [1, 2, 3]
+            result = batch_process(
+                items,
+                double,
+                parallel=True,
+                use_threads=True,
+                show_progress=True,  # Request progress but Rich unavailable
+                max_workers=2
+            )
+            assert result == [2, 4, 6]
+    
+    def test_batch_process_progress_without_rich(self):
+        """Test batch_process with show_progress=True but Rich unavailable."""
+        def square(x):
+            return x ** 2
+        
+        # Simulate Rich not being available
+        original_import = __import__
+        def mock_import(name, *args, **kwargs):
+            if name == 'rich.progress':
+                raise ImportError("No module named 'rich'")
+            return original_import(name, *args, **kwargs)
+        
+        with patch('builtins.__import__', side_effect=mock_import):
+            items = [1, 2, 3, 4]
+            result = batch_process(
+                items,
+                square,
+                parallel=True,
+                use_threads=True,
+                show_progress=True,
+                max_workers=2
+            )
+            assert result == [1, 4, 9, 16]
+    
+    def test_batch_process_with_processes_error_handling(self):
+        """Test batch_process error handling with ProcessPoolExecutor."""
+        def failing_func(x):
+            if x == 2:
+                raise ValueError(f"Error for {x}")
+            return x * 2
+        
+        items = [1, 2, 3, 4]
+        # Use threads to avoid pickling issues, but test error handling
+        result = batch_process(
+            items,
+            failing_func,
+            parallel=True,
+            use_threads=True,  # Use threads to avoid Windows pickling issues
+            max_workers=2
+        )
+        
+        # Should handle errors gracefully
+        assert len(result) == 4
+        assert result[0] == 2
+        assert isinstance(result[1], ValueError)
+        assert result[2] == 6
+        assert result[3] == 8
+    
+    def test_batch_process_results_with_errors(self):
+        """Test that batch_process returns results even when some fail."""
+        def sometimes_fails(x):
+            if x % 2 == 0:
+                raise RuntimeError(f"Failed for {x}")
+            return x * 3
+        
+        items = [1, 2, 3, 4, 5]
+        result = batch_process(
+            items,
+            sometimes_fails,
+            parallel=True,
+            use_threads=True,
+            max_workers=3
+        )
+        
+        assert len(result) == 5
+        assert result[0] == 3  # 1 * 3
+        assert isinstance(result[1], RuntimeError)
+        assert result[2] == 9  # 3 * 3
+        assert isinstance(result[3], RuntimeError)
+        assert result[4] == 15  # 5 * 3
+    
+    def test_batch_process_max_workers_one(self):
+        """Test batch_process with max_workers=1."""
+        def double(x):
+            return x * 2
+        
+        items = [1, 2, 3, 4]
+        result = batch_process(
+            items,
+            double,
+            parallel=True,
+            use_threads=True,
+            max_workers=1
+        )
+        assert result == [2, 4, 6, 8]
+    
+    def test_batch_process_more_items_than_workers(self):
+        """Test batch_process with more items than workers."""
+        def square(x):
+            return x ** 2
+        
+        items = list(range(1, 21))  # 20 items
+        result = batch_process(
+            items,
+            square,
+            parallel=True,
+            use_threads=True,
+            max_workers=4  # Only 4 workers
+        )
+        
+        assert len(result) == 20
+        assert result[0] == 1
+        assert result[4] == 25
+        assert result[19] == 400
+    
+    def test_batch_solve_keff_empty_with_parallel(self):
+        """Test batch_solve_keff with empty list and parallel=True."""
+        result = batch_solve_keff([], parallel=True)
+        assert result == []
+    
+    def test_batch_solve_keff_single_with_progress(self):
+        """Test batch_solve_keff with single reactor and show_progress=True."""
+        reactor = MockReactor(1.05)
+        result = batch_solve_keff([reactor], parallel=False, show_progress=True)
+        assert result == [1.05]
+    
+    def test_batch_process_state_preservation(self):
+        """Test that batch_process preserves order of results."""
+        def add_index(x):
+            return (x[0], x[1])
+        
+        items = [(i, i*2) for i in range(10)]
+        result = batch_process(
+            items,
+            add_index,
+            parallel=True,
+            use_threads=True,
+            max_workers=3
+        )
+        
+        # Results should be in same order as input
+        assert len(result) == 10
+        for i, res in enumerate(result):
+            assert res[0] == i
+            assert res[1] == i * 2

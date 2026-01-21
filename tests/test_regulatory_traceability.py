@@ -840,3 +840,183 @@ class TestGenerateSafetyMarginsFromReactor:
         report = generate_safety_margins_from_reactor(mock_reactor, results)
         
         assert report.calculation_id == "unknown"
+
+
+class TestRegulatoryTraceabilityEdgeCases70Percent:
+    """Edge case tests to improve regulatory_traceability.py coverage from 40% to 70%+."""
+    
+    def test_serialize_dict_mixed_types(self):
+        """Test _serialize_dict with mixed data types."""
+        trail = CalculationAuditTrail(
+            calculation_id="test",
+            calculation_type="keff",
+            timestamp=datetime.now(),
+            inputs={},
+            outputs={},
+        )
+        
+        mixed_data = {
+            "array": np.array([1.0, 2.0]),
+            "pydantic": MagicMock(model_dump=lambda: {"field": "value"}),
+            "datetime": datetime(2024, 1, 1),
+            "dict": {"nested": "value"},
+            "list": [np.array([1.0]), np.array([2.0])],
+            "string": "value",
+            "number": 42,
+        }
+        
+        result = trail._serialize_dict(mixed_data)
+        
+        assert result["array"] == [1.0, 2.0]
+        assert result["pydantic"] == {"field": "value"}
+        assert result["datetime"] == datetime(2024, 1, 1).isoformat()
+        assert result["dict"]["nested"] == "value"
+        assert result["list"] == [[1.0], [2.0]]
+        assert result["string"] == "value"
+        assert result["number"] == 42
+    
+    def test_serialize_dict_nested_mixed(self):
+        """Test _serialize_dict with deeply nested mixed types."""
+        trail = CalculationAuditTrail(
+            calculation_id="test",
+            calculation_type="keff",
+            timestamp=datetime.now(),
+            inputs={},
+            outputs={},
+        )
+        
+        nested_data = {
+            "level1": {
+                "level2": {
+                    "array": np.array([1.0]),
+                    "datetime": datetime(2024, 1, 1),
+                }
+            }
+        }
+        
+        result = trail._serialize_dict(nested_data)
+        
+        assert result["level1"]["level2"]["array"] == [1.0]
+        assert result["level1"]["level2"]["datetime"] == datetime(2024, 1, 1).isoformat()
+    
+    def test_safety_margin_calculate_absolute_zero_calculated(self):
+        """Test calculate_absolute with zero calculated value."""
+        margin = SafetyMargin.calculate_absolute(
+            parameter="test",
+            calculated=0.0,
+            limit=100.0,
+            units="unit",
+        )
+        
+        # margin = limit - calculated = 100.0 - 0.0 = 100.0
+        assert margin.margin == 100.0
+        assert margin.margin_percent == 100.0  # (100.0 / 100.0) * 100 = 100%
+    
+    def test_safety_margin_calculate_absolute_exact_match(self):
+        """Test calculate_absolute when calculated equals limit."""
+        margin = SafetyMargin.calculate_absolute(
+            parameter="test",
+            calculated=100.0,
+            limit=100.0,
+            units="unit",
+        )
+        
+        assert margin.margin == 0.0
+        assert margin.margin_percent == 0.0
+    
+    def test_safety_margin_calculate_relative_exact_match(self):
+        """Test calculate_relative when calculated equals limit."""
+        margin = SafetyMargin.calculate_relative(
+            parameter="test",
+            calculated=1.0,
+            limit=1.0,
+            units="unit",
+        )
+        
+        assert abs(margin.margin_percent) < 1e-6
+    
+    def test_safety_margin_report_update_summary_all_passing(self):
+        """Test _update_summary when all margins are passing."""
+        report = SafetyMarginReport(
+            calculation_id="test",
+            timestamp=datetime.now(),
+        )
+        
+        margin1 = SafetyMargin.calculate_absolute(
+            parameter="param1",
+            calculated=100.0,
+            limit=200.0,
+            units="unit",
+        )
+        margin2 = SafetyMargin.calculate_absolute(
+            parameter="param2",
+            calculated=150.0,
+            limit=300.0,
+            units="unit",
+        )
+        
+        report.add_margin(margin1)
+        report.add_margin(margin2)
+        
+        assert report.summary["total_margins"] == 2
+        assert report.summary["passing"] == 2
+        assert report.summary["failing"] == 0
+    
+    def test_safety_margin_report_update_summary_min_margin(self):
+        """Test _update_summary calculates minimum margin correctly."""
+        report = SafetyMarginReport(
+            calculation_id="test",
+            timestamp=datetime.now(),
+        )
+        
+        margin1 = SafetyMargin.calculate_absolute(
+            parameter="param1",
+            calculated=100.0,
+            limit=200.0,
+            units="unit",
+        )  # 50% margin
+        margin2 = SafetyMargin.calculate_absolute(
+            parameter="param2",
+            calculated=50.0,
+            limit=200.0,
+            units="unit",
+        )  # 75% margin
+        
+        report.add_margin(margin1)
+        report.add_margin(margin2)
+        
+        assert report.summary["min_margin_percent"] == 50.0
+    
+    def test_safety_margin_report_to_text_empty(self):
+        """Test to_text with empty report."""
+        report = SafetyMarginReport(
+            calculation_id="test",
+            timestamp=datetime.now(),
+        )
+        
+        text = report.to_text()
+        
+        assert "SAFETY MARGIN REPORT" in text
+        assert "test" in text
+    
+    def test_create_audit_trail_all_parameters(self):
+        """Test create_audit_trail with all optional parameters."""
+        assumptions = [ModelAssumption(category="test", assumption="test")]
+        
+        trail = create_audit_trail(
+            calculation_type="keff",
+            inputs={"input": "value"},
+            outputs={"output": 1.0},
+            calculation_id="custom_id",
+            assumptions=assumptions,
+            user="test_user",
+            computer="test_computer",
+            solver_version="2.0.0",
+            solver_method="monte_carlo",
+        )
+        
+        assert trail.calculation_id == "custom_id"
+        assert len(trail.assumptions) == 1
+        assert trail.metadata["user"] == "test_user"
+        assert trail.solver_info["version"] == "2.0.0"
+        assert trail.solver_info["method"] == "monte_carlo"

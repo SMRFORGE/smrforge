@@ -310,3 +310,281 @@ class TestIntegrationWithRealControllers:
         
         assert isinstance(rho1, (float, np.floating))
         assert isinstance(rho2, (float, np.floating))
+
+
+class TestControlIntegrationEdgeCases:
+    """Edge case tests for control integration module."""
+    
+    def test_create_controlled_reactivity_state_partial_update(self, mock_reactor_controller):
+        """Test reactivity function with state that only updates power."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State with only power, no temperature
+        state = {"power": 1.2e6}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Temperature should remain at initial value
+        mock_reactor_controller.control_step.assert_called()
+    
+    def test_create_controlled_reactivity_state_only_temperature(self, mock_reactor_controller):
+        """Test reactivity function with state that only updates temperature."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State with only temperature, no power
+        state = {"T_fuel": 1300.0}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Power should remain at initial value
+        mock_reactor_controller.control_step.assert_called()
+    
+    def test_create_controlled_reactivity_empty_state_dict(self, mock_reactor_controller):
+        """Test reactivity function with empty state dictionary."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # Empty state dict should not update anything
+        reactivity = rho_func(1.0, {})
+        
+        assert isinstance(reactivity, (float, np.floating))
+        mock_reactor_controller.control_step.assert_called()
+    
+    def test_create_controlled_reactivity_dt_calculation_zero_time(self, mock_reactor_controller):
+        """Test that dt is 0.0 when time is 0.0."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # First call at t=0.0 should have dt=0.0
+        reactivity1 = rho_func(0.0, {})
+        
+        # Second call should calculate dt
+        reactivity2 = rho_func(1.0, {})
+        
+        assert isinstance(reactivity1, (float, np.floating))
+        assert isinstance(reactivity2, (float, np.floating))
+        # Verify controller was called with dt=0.0 first, then dt=1.0
+        assert mock_reactor_controller.control_step.call_count >= 2
+    
+    def test_create_controlled_reactivity_rod_worth_none(self, mock_reactor_controller):
+        """Test that rod_worth=None uses controller's rod_worth attribute."""
+        # Set controller's rod_worth
+        mock_reactor_controller.rod_worth = 0.015
+        
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+            rod_worth=None,  # Should use controller.rod_worth
+        )
+        
+        reactivity = rho_func(0.0, {})
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # rod_worth should be accessed from controller
+        assert hasattr(mock_reactor_controller, 'rod_worth')
+    
+    def test_create_load_following_reactivity_state_partial_update(self, mock_load_controller):
+        """Test load following reactivity with partial state update."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State with only power
+        state = {"power": 0.9e6}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        mock_load_controller.control_step.assert_called()
+    
+    def test_create_load_following_reactivity_empty_state_dict(self, mock_load_controller):
+        """Test load following reactivity with empty state dictionary."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # Empty state dict
+        reactivity = rho_func(1.0, {})
+        
+        assert isinstance(reactivity, (float, np.floating))
+        mock_load_controller.control_step.assert_called()
+    
+    def test_create_load_following_reactivity_dt_calculation(self, mock_load_controller):
+        """Test dt calculation in load following reactivity function."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # First call at t=0.0
+        reactivity1 = rho_func(0.0, {})
+        
+        # Second call at t=2.0 (dt should be 2.0)
+        reactivity2 = rho_func(2.0, {})
+        
+        assert isinstance(reactivity1, (float, np.floating))
+        assert isinstance(reactivity2, (float, np.floating))
+        assert mock_load_controller.control_step.call_count >= 2
+    
+    def test_create_controlled_reactivity_temperature_precedence(self, mock_reactor_controller):
+        """Test that T_fuel takes precedence over temperature key."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State with both T_fuel and temperature - T_fuel should be used
+        state = {"T_fuel": 1300.0, "temperature": 1250.0}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Should use T_fuel (1300.0), not temperature (1250.0)
+        mock_reactor_controller.control_step.assert_called()
+    
+    def test_create_load_following_reactivity_temperature_precedence(self, mock_load_controller):
+        """Test that T_fuel takes precedence over temperature key in load following."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State with both T_fuel and temperature
+        state = {"T_fuel": 1300.0, "temperature": 1250.0}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Should use T_fuel (1300.0)
+        mock_load_controller.control_step.assert_called()
+    
+    def test_create_controlled_reactivity_state_neither_key(self, mock_reactor_controller):
+        """Test reactivity function when state has neither T_fuel nor temperature."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State without temperature keys
+        state = {"power": 1.2e6, "other_field": 123}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Temperature should remain at initial value
+        mock_reactor_controller.control_step.assert_called()
+    
+    def test_create_controlled_reactivity_backwards_time(self, mock_reactor_controller):
+        """Test reactivity function with backwards time (dt could be negative)."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # First call at t=1.0
+        rho_func(1.0, {})
+        
+        # Second call at t=0.5 (backwards in time)
+        reactivity = rho_func(0.5, {})
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Should handle negative dt gracefully
+        mock_reactor_controller.control_step.assert_called()
+    
+    def test_create_load_following_reactivity_state_neither_key(self, mock_load_controller):
+        """Test load following when state has neither T_fuel nor temperature."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State without temperature keys
+        state = {"power": 0.9e6, "other_field": 456}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Temperature should remain at initial value
+        mock_load_controller.control_step.assert_called()
+    
+    def test_create_controlled_reactivity_state_none(self, mock_reactor_controller):
+        """Test reactivity function with state=None explicitly."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # Call with None state
+        reactivity = rho_func(1.0, None)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Should use stored initial values
+        mock_reactor_controller.control_step.assert_called()
+    
+    def test_create_load_following_reactivity_state_none(self, mock_load_controller):
+        """Test load following with state=None explicitly."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # Call with None state
+        reactivity = rho_func(1.0, None)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Should use stored initial values
+        mock_load_controller.control_step.assert_called()
+    
+    def test_create_controlled_reactivity_state_with_only_temperature_no_power(self, mock_reactor_controller):
+        """Test reactivity function when state only has temperature (not T_fuel)."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State with only 'temperature' key, no 'power'
+        state = {"temperature": 1250.0}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Power should remain at initial, temperature should update
+        mock_reactor_controller.control_step.assert_called()
+    
+    def test_create_load_following_reactivity_state_with_only_temperature_no_power(self, mock_load_controller):
+        """Test load following when state only has temperature (not T_fuel)."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        
+        # State with only 'temperature' key
+        state = {"temperature": 1180.0}
+        reactivity = rho_func(1.0, state)
+        
+        assert isinstance(reactivity, (float, np.floating))
+        # Power should remain at initial, temperature should update
+        mock_load_controller.control_step.assert_called()

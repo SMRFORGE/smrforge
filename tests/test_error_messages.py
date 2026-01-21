@@ -183,3 +183,79 @@ class TestFormatGeometryError:
         assert "material" in msg.lower()
         assert "Suggestions:" in msg
         assert "Check material_map is valid" in msg
+    
+    def test_format_validation_error_negative_power_thermal(self):
+        """Test formatting error for negative power_thermal."""
+        msg = format_validation_error("power_thermal", -10.0, "negative")
+        assert "Invalid power_thermal" in msg
+        assert "Power must be > 0" in msg
+    
+    def test_format_validation_error_negative_inlet_temperature(self):
+        """Test formatting error for negative inlet_temperature."""
+        msg = format_validation_error("inlet_temperature", -100.0, "negative")
+        assert "Invalid inlet_temperature" in msg
+        assert "Temperature must be positive" in msg
+    
+    def test_format_validation_error_negative_outlet_temperature(self):
+        """Test formatting error for negative outlet_temperature."""
+        msg = format_validation_error("outlet_temperature", -100.0, "negative")
+        assert "Invalid outlet_temperature" in msg
+        assert "Temperature must be positive" in msg
+    
+    def test_format_validation_error_non_numeric_value(self):
+        """Test formatting error with non-numeric value."""
+        msg = format_validation_error("test_field", "invalid", "negative")
+        # Should still format base message even if value is not numeric
+        assert "Invalid test_field" in msg
+    
+    def test_suggest_correction_enrichment_over_100(self):
+        """Test suggesting correction for enrichment > 100."""
+        suggestion = suggest_correction(150.0, "enrichment")
+        # Should return None for values > 100
+        assert suggestion is None
+    
+    def test_suggest_correction_power_mw_valid(self):
+        """Test that valid power_mw returns None."""
+        suggestion = suggest_correction(100.0, "power_mw")
+        assert suggestion is None
+    
+    def test_suggest_correction_temperature_valid(self):
+        """Test that valid temperature returns None."""
+        suggestion = suggest_correction(1200.0, "temperature")
+        assert suggestion is None
+    
+    def test_suggest_correction_temperature_too_high(self):
+        """Test that very high temperature returns None."""
+        suggestion = suggest_correction(2000.0, "temperature")
+        assert suggestion is None
+    
+    def test_suggest_correction_temperature_too_low(self):
+        """Test that very low temperature returns None."""
+        suggestion = suggest_correction(50.0, "temperature")
+        assert suggestion is None
+    
+    def test_format_solver_error_inf(self):
+        """Test solver error with Inf."""
+        msg = format_solver_error("Inf detected", "monte_carlo")
+        assert "inf" in msg.lower()
+        assert "Suggestions:" in msg
+    
+    def test_format_solver_error_converged(self):
+        """Test solver error with 'converged' keyword."""
+        msg = format_solver_error("not converged", "diffusion")
+        assert "converge" in msg.lower()
+        assert "Suggestions:" in msg
+    
+    def test_format_solver_error_no_suggestions(self):
+        """Test solver error without automatic suggestions."""
+        msg = format_solver_error("generic error", "diffusion")
+        assert "Diffusion solver error: generic error" in msg
+        # Should not have suggestions for generic errors
+        assert "Suggestions:" not in msg
+    
+    def test_format_geometry_error_no_keywords(self):
+        """Test geometry error without mesh or material keywords."""
+        msg = format_geometry_error("generic error", "prismatic")
+        assert "Prismatic geometry error: generic error" in msg
+        # Should not have suggestions for generic errors
+        assert "Suggestions:" not in msg

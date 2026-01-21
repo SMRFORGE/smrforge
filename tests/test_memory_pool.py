@@ -178,3 +178,107 @@ class TestParticleMemoryPool:
         repr_str = repr(manager)
         assert "MemoryPoolManager" in repr_str
         assert "source" in repr_str or "fission" in repr_str
+
+
+class TestMemoryPoolEdgeCases:
+    """Edge case tests for memory_pool.py to improve coverage to 60%+."""
+    
+    def test_pool_get_arrays_exact_capacity(self):
+        """Test getting arrays at exact capacity."""
+        pool = ParticleMemoryPool(capacity=100)
+        pos, dir, energy, weight, gen, alive, mat_id = pool.get_arrays(100)
+        
+        assert pool.active_size == 100
+        assert pos.shape == (100, 3)
+    
+    def test_pool_get_arrays_zero(self):
+        """Test getting arrays for zero particles."""
+        pool = ParticleMemoryPool(capacity=100)
+        pos, dir, energy, weight, gen, alive, mat_id = pool.get_arrays(0)
+        
+        assert pool.active_size == 0
+        assert pos.shape == (0, 3)
+    
+    def test_pool_grow_exact_current_capacity(self):
+        """Test growing pool to exact current capacity (no change)."""
+        pool = ParticleMemoryPool(capacity=100)
+        original_capacity = pool.capacity
+        
+        pool.grow(100)  # Same as current
+        
+        assert pool.capacity == original_capacity
+    
+    def test_pool_grow_larger_multiple(self):
+        """Test growing pool to much larger capacity."""
+        pool = ParticleMemoryPool(capacity=100)
+        pool.grow(1000)
+        
+        assert pool.capacity == 1000
+        assert pool.position.shape == (1000, 3)
+    
+    def test_pool_grow_preserves_data(self):
+        """Test that growing pool preserves existing data."""
+        pool = ParticleMemoryPool(capacity=100)
+        pos, _, _, _, _, _, _ = pool.get_arrays(50)
+        pos[0, 0] = 42.0
+        
+        pool.grow(200)
+        
+        assert pool.position[0, 0] == 42.0
+    
+    def test_pool_manager_get_pool_existing(self):
+        """Test getting existing pool returns same instance."""
+        from smrforge.utils.memory_pool import MemoryPoolManager
+        
+        manager = MemoryPoolManager()
+        pool1 = manager.get_pool("test_pool")
+        pool2 = manager.get_pool("test_pool")
+        
+        assert pool1 is pool2
+    
+    def test_pool_manager_get_pool_custom_capacity_then_default(self):
+        """Test getting pool with custom capacity then getting same pool again."""
+        from smrforge.utils.memory_pool import MemoryPoolManager
+        
+        manager = MemoryPoolManager(default_capacity=100)
+        pool1 = manager.get_pool("test", capacity=500)
+        # Getting same pool again should return same instance, not create new with default
+        pool2 = manager.get_pool("test")
+        
+        assert pool1 is pool2
+        assert pool1.capacity == 500  # Should keep original capacity
+    
+    def test_pool_manager_clear_all_empty(self):
+        """Test clearing all pools when manager is empty."""
+        from smrforge.utils.memory_pool import MemoryPoolManager
+        
+        manager = MemoryPoolManager()
+        manager.clear_all()  # Should not error
+    
+    def test_pool_manager_multiple_pools_different_capacities(self):
+        """Test manager with multiple pools having different capacities."""
+        from smrforge.utils.memory_pool import MemoryPoolManager
+        
+        manager = MemoryPoolManager(default_capacity=100)
+        pool1 = manager.get_pool("small", capacity=50)
+        pool2 = manager.get_pool("large", capacity=500)
+        
+        assert pool1.capacity == 50
+        assert pool2.capacity == 500
+    
+    def test_pool_repr_with_active_size(self):
+        """Test pool repr with active size."""
+        pool = ParticleMemoryPool(capacity=100)
+        pool.get_arrays(25)
+        
+        repr_str = repr(pool)
+        assert "active_size=25" in repr_str
+    
+    def test_pool_manager_repr_empty(self):
+        """Test manager repr when no pools exist."""
+        from smrforge.utils.memory_pool import MemoryPoolManager
+        
+        manager = MemoryPoolManager()
+        repr_str = repr(manager)
+        assert "MemoryPoolManager" in repr_str
+        assert "pools=[]" in repr_str or "pools=" in repr_str
