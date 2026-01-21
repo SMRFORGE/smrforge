@@ -205,11 +205,18 @@ Implemented comprehensive test coverage improvements for low-coverage modules id
    - ✅ Error path testing
    - ⚠️ Needs additional coverage to reach 75% target (complex module)
 
-2. 🔄 `geometry/advanced_import.py` - 33.65% → ~45-55% (Medium priority) ✅ **IN PROGRESS**
-   - ✅ Test advanced import functionality (28 edge case tests added)
+2. 🔄 `geometry/advanced_import.py` - 33.65% → ~50-60% (Medium priority) ✅ **IN PROGRESS**
+   - ✅ Test advanced import functionality (36 edge case tests added)
    - ✅ Test various file formats (OpenMC, Serpent, CAD) - covered in existing tests
    - ✅ Test error handling and edge cases (reconstruction, parsing edge cases)
    - ⚠️ Needs additional coverage to reach 75% target (complex module with many paths)
+
+3. 🔄 `data_downloader.py` - 13.08% → ~20-30% (Medium priority) ✅ **IN PROGRESS**
+   - ✅ Test download functions (30 comprehensive tests added)
+   - ✅ Test helper functions edge cases (parsing, URL generation, caching)
+   - ✅ Test error handling paths (HTTP errors, timeouts, network failures)
+   - ✅ Test resume functionality and progress bar behavior
+   - ⚠️ Still needs significant work to reach 75% target (large module, 206 missing lines)
 
 ## Running the New Tests
 
