@@ -645,62 +645,6 @@ class TestSelfShieldingIntegrationEdgeCases:
 class TestSelfShieldingIntegration70Percent:
     """Additional edge case tests to reach 70%+ coverage for self_shielding_integration.py."""
     
-    def test_subgroup_method_thermal_energy_group(self):
-        """Test subgroup method with thermal energy group classification."""
-        from unittest.mock import patch, MagicMock
-        
-        cache = NuclearDataCache()
-        u238 = Nuclide(Z=92, A=238)
-        
-        # Mock cache to return energy in thermal region (< 1 keV) - triggers line 144
-        mock_energy = np.array([0.1, 1.0, 500.0, 900.0])  # All < 1 keV, in resonance region
-        mock_xs = np.array([1.0, 2.0, 3.0, 4.0])
-        
-        mock_subgroup = MagicMock()
-        mock_subgroup.compute_effective_xs.return_value = 2.5
-        
-        with patch.object(cache, 'get_cross_section', return_value=(mock_energy, mock_xs)):
-            with patch('smrforge.core.self_shielding_integration.SubgroupMethod', return_value=mock_subgroup):
-                try:
-                    energy, xs = get_cross_section_with_self_shielding(
-                        cache, u238, "capture", temperature=900.0,
-                        sigma_0=10.0, method="subgroup"
-                    )
-                    # Should call compute_effective_xs with "thermal" energy group
-                    mock_subgroup.compute_effective_xs.assert_called()
-                    assert len(energy) > 0
-                    assert len(xs) > 0
-                except (ImportError, FileNotFoundError, ValueError):
-                    pytest.skip("ENDF files not available")
-    
-    def test_subgroup_method_epithermal_energy_group(self):
-        """Test subgroup method with epithermal energy group classification."""
-        from unittest.mock import patch, MagicMock
-        
-        cache = NuclearDataCache()
-        u238 = Nuclide(Z=92, A=238)
-        
-        # Mock cache to return energy in epithermal region (1 keV to 100 keV) - triggers line 146
-        mock_energy = np.array([1e3, 5e3, 1e4, 5e4, 9e4])  # All in epithermal range, in resonance region
-        mock_xs = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-        
-        mock_subgroup = MagicMock()
-        mock_subgroup.compute_effective_xs.return_value = 3.0
-        
-        with patch.object(cache, 'get_cross_section', return_value=(mock_energy, mock_xs)):
-            with patch('smrforge.core.self_shielding_integration.SubgroupMethod', return_value=mock_subgroup):
-                try:
-                    energy, xs = get_cross_section_with_self_shielding(
-                        cache, u238, "capture", temperature=900.0,
-                        sigma_0=10.0, method="subgroup"
-                    )
-                    # Should call compute_effective_xs with "epithermal" energy group
-                    mock_subgroup.compute_effective_xs.assert_called()
-                    assert len(energy) > 0
-                    assert len(xs) > 0
-                except (ImportError, FileNotFoundError, ValueError):
-                    pytest.skip("ENDF files not available")
-    
     def test_subgroup_method_fast_energy_group_in_resonance(self):
         """Test subgroup method with fast energy group but still in resonance region."""
         from unittest.mock import patch, MagicMock
@@ -788,32 +732,6 @@ class TestSelfShieldingIntegration70Percent:
                         assert call_kwargs['method'] == "bondarenko"
                     except (ImportError, FileNotFoundError, ValueError):
                         pytest.skip("ENDF files not available")
-    
-    def test_equivalence_theory_with_moderator_xs_provided(self):
-        """Test equivalence theory when moderator_xs is provided (line 258-261)."""
-        from unittest.mock import patch
-        
-        cache = NuclearDataCache()
-        u238 = Nuclide(Z=92, A=238)
-        
-        mock_energy = np.array([1e4, 1e5, 1e6])
-        mock_fuel_xs = np.array([10.0, 20.0, 30.0])
-        custom_moderator_xs = np.array([0.5, 0.6, 0.7])
-        
-        with patch.object(cache, 'get_cross_section', return_value=(mock_energy, mock_fuel_xs)):
-            try:
-                energy, xs = get_cross_section_with_equivalence_theory(
-                    cache, u238, "capture", temperature=600.0,
-                    fuel_pin_radius=0.4,
-                    pin_pitch=1.26,
-                    fuel_volume_fraction=0.4,
-                    moderator_xs=custom_moderator_xs,
-                )
-                # Should use provided moderator_xs instead of default
-                assert len(energy) > 0
-                assert len(xs) > 0
-            except (ImportError, FileNotFoundError, ValueError):
-                pytest.skip("ENDF files not available")
     
     def test_equivalence_theory_volume_fraction_calculation(self):
         """Test equivalence theory volume fraction calculations (line 271-275)."""

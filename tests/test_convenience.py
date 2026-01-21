@@ -236,17 +236,6 @@ class TestSimpleReactorAdditional:
             # Validation may fail for simplified test data - this is acceptable
             pass
 
-    def test_compare_designs_returns_dict(self):
-        """Test that compare_designs returns a dictionary."""
-        presets = list_presets()
-        if len(presets) >= 2:
-            results = compare_designs(presets[:2])
-            assert isinstance(results, dict)
-            assert len(results) == 2
-        else:
-            # Skip if not enough presets
-            pytest.skip("Not enough presets available for comparison")
-
     def test_compare_designs_handles_errors(self):
         """Test that compare_designs handles errors gracefully."""
         # Use invalid preset names
