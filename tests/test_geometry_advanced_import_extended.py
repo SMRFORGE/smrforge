@@ -557,3 +557,186 @@ class TestFromOpenMCXMLExtended:
                 # Should raise ValueError when universe text cannot be parsed as int
                 with pytest.raises(ValueError, match="Error parsing OpenMC CSG"):
                     AdvancedGeometryImporter._from_openmc_xml_csg(filepath)
+
+
+class TestGeometryConverterAdditional:
+    """Additional edge case tests for GeometryConverter."""
+    
+    def test_convert_format_json_input(self):
+        """Test convert_format with JSON input format."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        
+        # GeometryImporter is imported within convert_format, so patch it there
+        with patch('smrforge.geometry.importers.GeometryImporter') as mock_importer:
+            with patch('smrforge.geometry.core_geometry.GeometryExporter') as mock_exporter:
+                mock_core = MagicMock()
+                mock_importer.from_json.return_value = mock_core
+                
+                input_path = Path("input.json")
+                output_path = Path("output.json")
+                
+                with patch('pathlib.Path.exists', return_value=True):
+                    result = GeometryConverter.convert_format(
+                        input_path, output_path, "json", "json"
+                    )
+                    assert result is True
+                    mock_importer.from_json.assert_called_once()
+    
+    def test_convert_format_vtk_output(self):
+        """Test convert_format with VTK output format."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        
+        with patch('smrforge.geometry.advanced_import.AdvancedGeometryImporter.from_openmc_full') as mock_import:
+            try:
+                with patch('smrforge.geometry.mesh_extraction.extract_core_volume_mesh') as mock_extract:
+                    with patch('smrforge.visualization.mesh_3d.export_mesh_to_vtk') as mock_export:
+                        mock_core = MagicMock()
+                        mock_import.return_value = mock_core
+                        mock_mesh = MagicMock()
+                        mock_extract.return_value = mock_mesh
+                        
+                        input_path = Path("input.xml")
+                        output_path = Path("output.vtk")
+                        
+                        with patch('pathlib.Path.exists', return_value=True):
+                            result = GeometryConverter.convert_format(
+                                input_path, output_path, "openmc", "vtk"
+                            )
+                            assert result is True
+                            mock_import.assert_called_once()
+                            mock_extract.assert_called_once()
+                            mock_export.assert_called_once()
+            except ImportError:
+                # Some dependencies might not be available
+                pytest.skip("VTK export dependencies not available")
+    
+    def test_convert_format_unsupported_input_format(self):
+        """Test convert_format with unsupported input format."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        
+        input_path = Path("input.xyz")
+        output_path = Path("output.json")
+        
+        with pytest.raises(ValueError, match="Unsupported input format"):
+            GeometryConverter.convert_format(
+                input_path, output_path, "unknown", "json"
+            )
+    
+    def test_convert_format_unsupported_output_format(self):
+        """Test convert_format with unsupported output format."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        
+        with patch('smrforge.geometry.advanced_import.AdvancedGeometryImporter.from_openmc_full') as mock_import:
+            mock_core = MagicMock()
+            mock_import.return_value = mock_core
+            
+            input_path = Path("input.xml")
+            output_path = Path("output.xyz")
+            
+            with patch('pathlib.Path.exists', return_value=True):
+                with pytest.raises(ValueError, match="Unsupported output format"):
+                    GeometryConverter.convert_format(
+                        input_path, output_path, "openmc", "unknown"
+                    )
+
+
+class TestReconstructCoreFromCSGAdditional:
+    """Additional edge case tests for _reconstruct_core_from_csg."""
+    
+    def test_reconstruct_core_from_csg_no_core_cell(self):
+        """Test _reconstruct_core_from_csg when no core cell is found."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        
+        surfaces = {
+            1: CSGSurface(id=1, surface_type="z-cylinder", coeffs=[100.0]),
+        }
+        # Cells with no material (shouldn't be selected as core_cell)
+        cells = {
+            1: CSGCell(id=1, material=None),  # No material
+            2: CSGCell(id=2, material=None, fill="lattice"),  # Has fill
+        }
+        lattices = {}
+        
+        core = PrismaticCore(name="Test")
+        result = AdvancedGeometryImporter._reconstruct_core_from_csg(surfaces, cells, lattices, core)
+        
+        assert result is not None
+        assert isinstance(result, PrismaticCore)
+        # Should still extract dimensions from surfaces
+        assert result.core_diameter > 0
+    
+    def test_reconstruct_core_from_csg_no_dimensions(self):
+        """Test _reconstruct_core_from_csg with no dimension surfaces."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        
+        # Surfaces that don't provide dimensions
+        surfaces = {
+            1: CSGSurface(id=1, surface_type="sphere", coeffs=[100.0]),
+        }
+        cells = {
+            1: CSGCell(id=1, material=1),
+        }
+        lattices = {}
+        
+        core = PrismaticCore(name="Test")
+        result = AdvancedGeometryImporter._reconstruct_core_from_csg(surfaces, cells, lattices, core)
+        
+        assert result is not None
+        assert isinstance(result, PrismaticCore)
+        # Dimensions may remain 0 if not extracted
+
+
+class TestReconstructLatticeAdditional:
+    """Additional edge case tests for _reconstruct_lattice."""
+    
+    def test_reconstruct_lattice_no_pitch(self):
+        """Test _reconstruct_lattice with lattice having no pitch values."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        
+        lattices = {
+            1: Lattice(
+                id=1,
+                lattice_type="hexagonal",
+                dimension=(2, 0, 1),
+                lower_left=Point3D(0, 0, 0),
+                pitch=(),  # Empty pitch
+                universes=[[[1]]],
+            ),
+        }
+        
+        core = PrismaticCore(name="Test")
+        result = AdvancedGeometryImporter._reconstruct_lattice(lattices, core)
+        
+        assert result is not None
+        assert isinstance(result, PrismaticCore)
+        # Should handle empty pitch gracefully (may use defaults)
+    
+    def test_reconstruct_lattice_short_pitch(self):
+        """Test _reconstruct_lattice with lattice having short pitch tuple."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        
+        lattices = {
+            1: Lattice(
+                id=1,
+                lattice_type="hexagonal",
+                dimension=(2, 0, 1),
+                lower_left=Point3D(0, 0, 0),
+                pitch=(36.0,),  # Only one value
+                universes=[[[1]]],
+            ),
+        }
+        
+        core = PrismaticCore(name="Test")
+        result = AdvancedGeometryImporter._reconstruct_lattice(lattices, core)
+        
+        assert result is not None
+        assert isinstance(result, PrismaticCore)
+        # Should handle short pitch tuple
