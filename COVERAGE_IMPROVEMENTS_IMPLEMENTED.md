@@ -101,6 +101,23 @@ Implemented comprehensive test coverage improvements for low-coverage modules id
 
 **Status:** ✅ 33 tests passing, 3 skipped (require specific geometry setup)
 
+### 5. ✅ `geometry/advanced_import.py` - **33.65% → ~45-55%** (Target: 75%)
+
+**Tests Added:** `tests/test_geometry_advanced_import_extended.py` - **28 new tests**
+
+**Coverage Improvements:**
+- ✅ `_reconstruct_core_from_csg` edge cases (no surfaces/cells, empty coeffs, multiple z-planes, cell with fill)
+- ✅ `_reconstruct_lattice` edge cases (non-hexagonal lattices, empty dimension/pitch)
+- ✅ `_reconstruct_from_serpent` edge cases (no surfaces, multiple pz surfaces, insufficient params, non-hex lattice)
+- ✅ `_reconstruct_from_mcnp` edge cases (no surfaces, multiple PZ surfaces, no params)
+- ✅ `_create_hex_lattice` edge cases (zero diameter)
+- ✅ `_parse_mcnp_surfaces` edge cases (negative ID, PX/PY types, no params)
+- ✅ `_parse_mcnp_cells` edge cases (negative material, non-numeric material, minimal region)
+- ✅ `_is_numeric` edge cases (scientific notation, whitespace)
+- ✅ `_from_openmc_xml_csg` edge cases (empty file, missing attributes, invalid universe text)
+
+**Status:** ✅ All 28 tests passing
+
 ## Test Files Created
 
 1. **`tests/test_utils_logging_extended.py`**
@@ -123,6 +140,11 @@ Implemented comprehensive test coverage improvements for low-coverage modules id
    - Covers Gap dataclass, ValidationReport, all validation functions
    - 33 tests passing, 3 skipped (require specific geometry setup) ✅
 
+5. **`tests/test_geometry_advanced_import_extended.py`**
+   - 28 comprehensive tests for geometry advanced import
+   - Covers edge cases in reconstruction, parsing, and error handling
+   - All tests passing ✅
+
 ## Expected Coverage Impact
 
 ### Before Improvements:
@@ -135,16 +157,18 @@ Implemented comprehensive test coverage improvements for low-coverage modules id
 - `validation/regulatory_traceability.py`: **~75%+** ✅ (Target met)
 - `validation/standards_parser.py`: **~75%+** ✅ (Target met)
 - `geometry/validation.py`: **~60-70%** ⚠️ (Improved from 30.27%, approaching target)
+- `geometry/advanced_import.py`: **~45-55%** ⚠️ (Improved from 33.65%, needs more work)
 
 ## Test Statistics
 
-### Total Tests Added: **125 new tests**
+### Total Tests Added: **153 new tests**
 - `test_utils_logging_extended.py`: 27 tests ✅
 - `test_regulatory_traceability_extended.py`: 31 tests ✅
 - `test_standards_parser_extended.py`: 31 tests ✅
 - `test_geometry_validation_extended.py`: 36 tests (33 passing, 3 skipped) ✅
+- `test_geometry_advanced_import_extended.py`: 28 tests ✅
 
-### All Tests Status: ✅ **122/125 passing (97.6%)**, 3 skipped
+### All Tests Status: ✅ **150/153 passing (98.0%)**, 3 skipped
 
 ## Next Steps
 
@@ -160,10 +184,11 @@ Implemented comprehensive test coverage improvements for low-coverage modules id
    - ✅ Error path testing
    - ⚠️ Needs additional coverage to reach 75% target (complex module)
 
-2. 🔄 `geometry/advanced_import.py` - 33.65% (Medium priority)
-   - Test advanced import functionality
-   - Test various file formats (OpenMC, Serpent, CAD)
-   - Test error handling and edge cases
+2. 🔄 `geometry/advanced_import.py` - 33.65% → ~45-55% (Medium priority) ✅ **IN PROGRESS**
+   - ✅ Test advanced import functionality (28 edge case tests added)
+   - ✅ Test various file formats (OpenMC, Serpent, CAD) - covered in existing tests
+   - ✅ Test error handling and edge cases (reconstruction, parsing edge cases)
+   - ⚠️ Needs additional coverage to reach 75% target (complex module with many paths)
 
 ## Running the New Tests
 
