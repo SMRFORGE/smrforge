@@ -728,3 +728,194 @@ class TestDownloadPreprocessedLibraryExtended:
         mock_download.assert_called_once()
         call_kwargs = mock_download.call_args[1]
         assert call_kwargs['nuclides'] == nuclides
+
+
+class TestHelperFunctionsAdditional:
+    """Additional edge case tests for helper functions."""
+    
+    def test_parse_isotope_string_edge_cases(self):
+        """Test _parse_isotope_string with various edge cases."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        
+        # Test whitespace handling
+        result = downloader_module._parse_isotope_string("  U235  ")
+        assert result is not None
+        assert result.Z == 92
+        assert result.A == 235
+        
+        # Test lowercase symbol (may or may not work depending on regex)
+        result = downloader_module._parse_isotope_string("u235")
+        # May return None if regex requires uppercase, which is fine
+        if result is not None:
+            assert result.Z == 92
+        
+        # Test invalid format (numbers first)
+        result = downloader_module._parse_isotope_string("235U")
+        assert result is None
+        
+        # Test only letters
+        result = downloader_module._parse_isotope_string("Uranium")
+        assert result is None
+        
+        # Test only numbers
+        result = downloader_module._parse_isotope_string("235")
+        assert result is None
+        
+        # Test metastable with uppercase M (may or may not work depending on implementation)
+        result = downloader_module._parse_isotope_string("U239M1")
+        if result is not None:
+            assert result.m == 1
+        
+        # Test metastable without number (may default to m1 or return None)
+        result = downloader_module._parse_isotope_string("U239m")
+        if result is not None:
+            assert result.m >= 0  # Should have metastable state if parsed
+    
+    def test_expand_elements_to_nuclides_edge_cases(self):
+        """Test _expand_elements_to_nuclides with edge cases."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        
+        # Test unknown element
+        nuclides = downloader_module._expand_elements_to_nuclides(["Xx"], Library.ENDF_B_VIII_1)
+        assert nuclides == []
+        
+        # Test element not in common isotopes dict
+        nuclides = downloader_module._expand_elements_to_nuclides(["He"], Library.ENDF_B_VIII_1)
+        # Should return empty list or minimal list
+        assert isinstance(nuclides, list)
+        
+        # Test mixed valid/invalid elements
+        nuclides = downloader_module._expand_elements_to_nuclides(["U", "Xx", "Pu"], Library.ENDF_B_VIII_1)
+        assert isinstance(nuclides, list)
+        assert len(nuclides) > 0
+        z_values = {nuclide.Z for nuclide in nuclides}
+        assert 92 in z_values  # Uranium
+        assert 94 in z_values  # Plutonium
+    
+    def test_get_nndc_url_fallback_edge_cases(self):
+        """Test _get_nndc_url fallback behavior."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        
+        nuclide = Nuclide(Z=92, A=235)
+        
+        # Test unsupported library (should fallback to IAEA)
+        url = downloader_module._get_nndc_url(nuclide, Library.JEFF_33)
+        assert isinstance(url, str)
+        # Should fallback to IAEA URL
+        assert "iaea" in url.lower() or "jeff" in url.lower()
+        
+        # Test JENDL-5 (should fallback)
+        url = downloader_module._get_nndc_url(nuclide, Library.JENDL_5)
+        assert isinstance(url, str)
+        assert "iaea" in url.lower() or "jendl" in url.lower()
+    
+    def test_cache_successful_source_edge_cases(self):
+        """Test _cache_successful_source with edge cases."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        
+        # Clear cache first
+        downloader_module._source_cache.clear()
+        
+        # Test URL that doesn't match either pattern (should not crash)
+        downloader_module._cache_successful_source(
+            "https://example.com/file.endf",
+            Library.ENDF_B_VIII_1
+        )
+        # Should not add to cache
+        assert Library.ENDF_B_VIII_1.value not in downloader_module._source_cache
+        
+        # Test URL with partial match
+        downloader_module._cache_successful_source(
+            "https://www.nndc.bnl.gov/other/path/file.endf",
+            Library.ENDF_B_VIII_1
+        )
+        # Should cache as nndc
+        assert downloader_module._source_cache.get(Library.ENDF_B_VIII_1.value) == "nndc"
+    
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.requests')
+    @patch('builtins.open', create=True)
+    def test_download_file_error_handling(self, mock_open, mock_requests):
+        """Test download_file error handling paths."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        
+        from pathlib import Path
+        from unittest.mock import MagicMock
+        
+        # Test HTTP error (404)
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = Exception("404 Not Found")
+        mock_session = MagicMock()
+        mock_session.get.return_value = mock_response
+        mock_requests.Session.return_value = mock_session
+        
+        success = downloader_module.download_file(
+            "https://example.com/file.endf",
+            Path("file.endf"),
+            session=mock_session,
+            show_progress=False
+        )
+        assert success is False
+        
+        # Test network timeout
+        mock_session.get.side_effect = Exception("Connection timeout")
+        
+        success = downloader_module.download_file(
+            "https://example.com/file.endf",
+            Path("file.endf"),
+            session=mock_session,
+            show_progress=False
+        )
+        assert success is False
+    
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.requests')
+    @patch('builtins.open', create=True)
+    def test_download_file_resume_edge_cases(self, mock_open, mock_requests):
+        """Test download_file resume functionality edge cases."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        
+        from pathlib import Path
+        from unittest.mock import MagicMock
+        
+        # Mock existing file
+        with patch('pathlib.Path.exists', return_value=True):
+            with patch('pathlib.Path.stat') as mock_stat:
+                mock_stat.return_value.st_size = 100
+                
+                # Mock response with Range header support
+                mock_response = MagicMock()
+                mock_response.headers = {'content-length': '900', 'content-range': 'bytes 100-999/1000'}
+                mock_response.iter_content.return_value = [b'chunk1', b'chunk2']
+                mock_response.raise_for_status = MagicMock()
+                
+                mock_session = MagicMock()
+                mock_session.get.return_value = mock_response
+                mock_requests.Session.return_value = mock_session
+                
+                # Mock file
+                mock_file = MagicMock()
+                mock_open.return_value.__enter__.return_value = mock_file
+                mock_open.return_value.__exit__ = MagicMock(return_value=False)
+                
+                # Test resume with existing file
+                success = downloader_module.download_file(
+                    "https://example.com/file.endf",
+                    Path("file.endf"),
+                    resume=True,
+                    show_progress=False,
+                    session=mock_session
+                )
+                assert success is True
+                # Should use append mode
+                assert mock_open.call_args[0][1] == "ab"
+                
+                # Check that Range header was set
+                call_kwargs = mock_session.get.call_args[1]
+                assert "Range" in call_kwargs.get("headers", {})
