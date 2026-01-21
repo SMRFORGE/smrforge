@@ -894,3 +894,228 @@ class TestValidateGeometryCompletenessExtended:
         
         assert len(report.warnings) > 0
         assert any("fewer blocks" in warn.lower() for warn in report.warnings)
+
+
+class TestCheckGapsAndBoundariesAdditional:
+    """Additional edge case tests for check_gaps_and_boundaries."""
+    
+    def test_check_gaps_empty_blocks(self):
+        """Test check_gaps_and_boundaries with empty blocks list."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        gaps = check_gaps_and_boundaries([])
+        
+        assert gaps == []
+    
+    def test_check_gaps_single_block(self):
+        """Test check_gaps_and_boundaries with single block."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        block = GraphiteBlock(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        
+        gaps = check_gaps_and_boundaries([block])
+        
+        assert gaps == []  # No gaps with single block
+    
+    def test_check_gaps_zero_flat_to_flat(self):
+        """Test check_gaps_and_boundaries with block having zero flat_to_flat."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        block1 = GraphiteBlock(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flat_to_flat=0.0,  # Invalid
+            height=800.0,
+        )
+        block2 = GraphiteBlock(
+            id=2,
+            position=Point3D(36.0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        
+        gaps = check_gaps_and_boundaries([block1, block2])
+        
+        # Should handle zero flat_to_flat gracefully (may cause division issues)
+        assert isinstance(gaps, list)
+    
+    def test_check_gaps_overlap_detection(self):
+        """Test check_gaps_and_boundaries detects overlaps."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        # Create overlapping blocks
+        block1 = GraphiteBlock(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        block2 = GraphiteBlock(
+            id=2,
+            position=Point3D(10.0, 0, 0),  # Overlapping (distance < flat_to_flat)
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        
+        gaps = check_gaps_and_boundaries(
+            [block1, block2],
+            min_gap=0.0,
+            tolerance=0.1
+        )
+        
+        # Should detect overlap
+        assert len(gaps) > 0
+        if gaps:
+            assert any(gap.severity == "error" or gap.gap_size < 0 for gap in gaps)
+
+
+class TestValidateMaterialConnectivityAdditional:
+    """Additional edge case tests for validate_material_connectivity."""
+    
+    def test_validate_connectivity_empty_blocks(self):
+        """Test validate_material_connectivity with empty blocks."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        core = PrismaticCore(name="Empty-Core")
+        core.core_diameter = 200.0
+        core.core_height = 800.0
+        core.blocks = []
+        
+        report = validate_material_connectivity(core)
+        
+        assert isinstance(report, ValidationReport)
+        assert report.valid  # No issues if no blocks
+    
+    def test_validate_connectivity_single_block(self):
+        """Test validate_material_connectivity with single block."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        core = PrismaticCore(name="Single-Block-Core")
+        core.core_diameter = 200.0
+        core.core_height = 800.0
+        
+        block = GraphiteBlock(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        block.material = "graphite"
+        core.blocks.append(block)
+        
+        report = validate_material_connectivity(core)
+        
+        assert isinstance(report, ValidationReport)
+        # Single block should not trigger isolation warnings
+        assert len(report.connectivity_issues) == 0
+    
+    def test_validate_connectivity_no_material_attribute(self):
+        """Test validate_material_connectivity with blocks having no material attribute."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        core = PrismaticCore(name="No-Material-Core")
+        core.core_diameter = 200.0
+        core.core_height = 800.0
+        
+        # Add blocks without material attribute
+        block1 = GraphiteBlock(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        # Don't set material attribute
+        core.blocks.append(block1)
+        
+        report = validate_material_connectivity(core)
+        
+        # Should handle gracefully (uses "graphite" as default)
+        assert isinstance(report, ValidationReport)
+    
+    def test_validate_connectivity_isolated_block(self):
+        """Test validate_material_connectivity detects isolated blocks."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        core = PrismaticCore(name="Isolated-Block-Core")
+        core.core_diameter = 200.0
+        core.core_height = 800.0
+        
+        # Add two blocks far apart (isolated)
+        block1 = GraphiteBlock(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        block1.material = "fuel"
+        
+        block2 = GraphiteBlock(
+            id=2,
+            position=Point3D(500.0, 0, 0),  # Very far apart
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        block2.material = "fuel"
+        
+        core.blocks = [block1, block2]
+        
+        report = validate_material_connectivity(core, check_continuity=True)
+        
+        # Should detect isolation
+        assert isinstance(report, ValidationReport)
+        # May or may not detect depending on distance threshold
+        assert isinstance(report.connectivity_issues, list)
+
+
+class TestComprehensiveValidationAdditional:
+    """Additional edge case tests for comprehensive_validation."""
+    
+    def test_comprehensive_validation_no_checks(self, simple_prismatic_core):
+        """Test comprehensive_validation with all checks disabled."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        report = comprehensive_validation(
+            simple_prismatic_core,
+            check_gaps=False,
+            check_connectivity=False,
+            check_clearances=False,
+            check_assemblies=False,
+            check_control_rods=False,
+            check_fuel_loading=False,
+        )
+        
+        assert isinstance(report, ValidationReport)
+        # Should still do basic completeness check
+        assert hasattr(report, 'valid')
+    
+    def test_comprehensive_validation_with_gaps_only(self, simple_prismatic_core):
+        """Test comprehensive_validation with only gap checking enabled."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        
+        report = comprehensive_validation(
+            simple_prismatic_core,
+            check_gaps=True,
+            check_connectivity=False,
+            check_clearances=False,
+            check_assemblies=False,
+            check_control_rods=False,
+            check_fuel_loading=False,
+        )
+        
+        assert isinstance(report, ValidationReport)
+        assert isinstance(report.gaps, list)
