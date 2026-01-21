@@ -1,7 +1,10 @@
 # SMRForge Project Coverage Survey Report
 
+**⚠️ DEPRECATED: This file is for historical reference only.**  
+**📌 For current coverage information, see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md)** - This is the single source of truth for coverage tracking.
+
 **Date:** January 2026  
-**Coverage File Analyzed:** `coverage_final.json`
+**Coverage File Analyzed:** `coverage_final.json` (historical snapshot)
 
 ## Executive Summary
 

@@ -1,5 +1,8 @@
 # Coverage Completion Inventory: reactor_core.py, endf_parser.py, uncertainty/uq.py, and new feature modules
 
+**⚠️ NOTE: For current coverage status, see [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md)** - This document contains detailed implementation history and roadmap.  
+**📌 The consolidated tracking document is the single source of truth for current coverage status.**
+
 **Last Updated**: January 19, 2026 (After Phase 1, Phase 2, utility module, and __init__.py test coverage improvements)  
 **Target**: 75-80% coverage for priority modules  
 **Status**: 

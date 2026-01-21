@@ -467,6 +467,7 @@ pytest tests/test_neutronics.py
 - **Priority Modules**: 75-80%+ coverage achieved
 - **All Priority Modules**: Comprehensive test coverage completed
 - **Critical Modules**: All critical modules exceed target coverage (75-80%+)
+- **📌 Coverage Details**: See [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md) for comprehensive coverage status
 
 ### Manual Testing Framework
 
@@ -501,9 +502,10 @@ See testing documentation:
 - [`testing/README.md`](testing/README.md) - Manual testing guide
 - [`docs/testing/MANUAL_TESTING_CHECKLIST.md`](docs/testing/MANUAL_TESTING_CHECKLIST.md) - Complete testing checklist
 - [`testing/FINAL_TEST_RESULTS.md`](testing/FINAL_TEST_RESULTS.md) - Detailed test results
-- [`docs/status/test-coverage-summary.md`](docs/status/test-coverage-summary.md) - Detailed coverage metrics
-- [`docs/status/comprehensive-coverage-inventory.md`](docs/status/comprehensive-coverage-inventory.md) - Full module-by-module breakdown
-- [`docs/status/coverage-completion-plan.md`](docs/status/coverage-completion-plan.md) - Plan to reach 80% target
+- [`COVERAGE_TRACKING.md`](COVERAGE_TRACKING.md) - **Single source of truth for coverage tracking** ⭐
+- [`README_COVERAGE.md`](README_COVERAGE.md) - Quick reference for coverage documentation
+- [`docs/development/coverage-inventory.md`](docs/development/coverage-inventory.md) - Detailed implementation history and roadmap
+- [`docs/development/coverage-exclusions.md`](docs/development/coverage-exclusions.md) - Explanation of intentional exclusions
 
 ## Contributing
 
