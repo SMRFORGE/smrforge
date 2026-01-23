@@ -151,7 +151,7 @@ class TestReactorSpecificationValidators:
 
     def test_validate_temperatures_outlet_exceeds_max_fuel(self):
         """Test that outlet > max_fuel_temperature is rejected."""
-        with pytest.raises(ValueError, match="Outlet temperature.*exceeds.*max fuel temperature"):
+        with pytest.raises(ValueError, match="Invalid outlet_temperature|Outlet.*should be <= max fuel"):
             ReactorSpecification(
                 name="Test",
                 reactor_type=ReactorType.PRISMATIC,

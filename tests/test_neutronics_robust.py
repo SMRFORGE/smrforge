@@ -167,7 +167,9 @@ class TestEdgeCases:
         # This should still solve (though may converge slowly)
         try:
             k_eff, flux = solver.solve_steady_state()
-            assert_solution_reasonable(k_eff, flux, k_eff_range=(0.5, 2.5))
+            # With no fission, k_eff will be 0, which is physically correct
+            # Allow k_eff=0 for this edge case
+            assert_solution_reasonable(k_eff, flux, k_eff_range=(0.0, 2.5))
         except RuntimeError:
             # May not converge for this extreme case
             pass

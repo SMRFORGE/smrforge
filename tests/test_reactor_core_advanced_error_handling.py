@@ -276,16 +276,18 @@ class TestAsyncErrorHandling:
     @pytest.mark.asyncio
     async def test_async_file_not_found_handling(self, temp_cache_dir):
         """Test async handling when ENDF file not found."""
+        # Create cache with explicit None to avoid default directory detection
+        # and prevent hanging on large directory scans
         cache = NuclearDataCache(cache_dir=temp_cache_dir, local_endf_dir=None)
+        # Force local_endf_dir to None and pre-build empty index to prevent scanning
+        cache.local_endf_dir = None
+        cache._local_file_index = {}  # Pre-build empty index to avoid directory scan
         nuclide = Nuclide(Z=92, A=235)
         
-        # Should raise ImportError when file not found and no backends available
-        # This is handled by existing async tests, but we can add specific error path test
-        try:
+        # Should raise FileNotFoundError when file not found
+        # The async version calls the sync version which raises FileNotFoundError
+        with pytest.raises(FileNotFoundError):
             await cache._ensure_endf_file_async(nuclide, Library.ENDF_B_VIII_1)
-        except (ImportError, FileNotFoundError):
-            # Expected when no file and no download capability
-            pass
 
 
 class TestErrorMessages:

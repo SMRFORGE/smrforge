@@ -256,8 +256,15 @@ class TestUnitsExtended:
         # Setup mock DimensionalityError
         mock_dimensionality_error = type('DimensionalityError', (Exception,), {})
         
+        # Create a mock Quantity class (not just a function) so isinstance() works
+        mock_quantity_class = type('Quantity', (object,), {})
+        # Make it callable like the original
+        def quantity_constructor(*args, **kwargs):
+            return mock_quantity_instance
+        mock_quantity_class.__call__ = staticmethod(quantity_constructor)
+        
         mock_pint.UnitRegistry = mock_registry
-        mock_pint.Quantity = mock_quantity
+        mock_pint.Quantity = mock_quantity_class  # Use class, not MagicMock
         mock_pint.errors = MagicMock()
         mock_pint.errors.DimensionalityError = mock_dimensionality_error
         
@@ -283,10 +290,14 @@ class TestUnitsExtended:
             assert mock_registry_instance.define.call_count >= 2
             
             # Test check_units with Quantity
-            mock_quantity_obj = MagicMock()
-            mock_quantity_obj.check.return_value = True
+            # Create an instance that is actually an instance of the mocked Quantity class
+            mock_quantity_obj = mock_quantity_class()
+            mock_quantity_obj.check = MagicMock(return_value=True)
             mock_quantity_obj.magnitude = 10.0
+            mock_quantity_obj.units = MagicMock()
+            mock_quantity_obj.to = MagicMock()  # Add 'to' method for later test
             result = smrforge.utils.units.check_units(mock_quantity_obj, "megawatt", "power")
+            # Should return the same object when it's already a Quantity
             assert result is mock_quantity_obj
             
             # Test check_units with plain number and string unit
