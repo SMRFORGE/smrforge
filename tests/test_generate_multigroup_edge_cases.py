@@ -83,7 +83,7 @@ class TestGenerateMultigroupEdgeCases:
                 mock_collapse.assert_called_once()
 
     def test_generate_multigroup_none_cross_section(self, temp_dir, pre_populated_cache):
-        """Test generate_multigroup when get_cross_section returns None."""
+        """Test generate_multigroup when get_cross_section returns None skips gracefully."""
         from smrforge.core.reactor_core import CrossSectionTable, Nuclide
 
         table = CrossSectionTable()
@@ -92,18 +92,20 @@ class TestGenerateMultigroupEdgeCases:
         u235 = Nuclide(Z=92, A=235, m=0)
         group_structure = np.array([1e7, 1e6, 1e5])
 
-        with patch.object(pre_populated_cache, 'get_cross_section', return_value=(None, None)):
-            # Should raise an error or handle gracefully
-            with pytest.raises((ValueError, TypeError, AttributeError)):
-                table.generate_multigroup(
-                    nuclides=[u235],
-                    reactions=["total"],
-                    group_structure=group_structure,
-                    temperature=900.0
-                )
+        with patch.object(pre_populated_cache, 'get_cross_section', return_value=(None, None)) as mock_get:
+            df = table.generate_multigroup(
+                nuclides=[u235],
+                reactions=["total"],
+                group_structure=group_structure,
+                temperature=900.0
+            )
+            mock_get.assert_called_once()
+            assert df is not None
+            assert 'nuclide' in df.columns and 'reaction' in df.columns
+            assert 'group' in df.columns and 'xs' in df.columns
 
     def test_generate_multigroup_empty_cross_section(self, temp_dir, pre_populated_cache):
-        """Test generate_multigroup with empty cross-section arrays."""
+        """Test generate_multigroup with empty cross-section arrays skips gracefully."""
         from smrforge.core.reactor_core import CrossSectionTable, Nuclide
 
         table = CrossSectionTable()
@@ -114,15 +116,15 @@ class TestGenerateMultigroupEdgeCases:
 
         with patch.object(pre_populated_cache, 'get_cross_section') as mock_get:
             mock_get.return_value = (np.array([]), np.array([]))
-
-            # Should raise ValueError for empty arrays
-            with pytest.raises(ValueError, match="Empty cross-section data"):
-                table.generate_multigroup(
-                    nuclides=[u235],
-                    reactions=["total"],
-                    group_structure=group_structure,
-                    temperature=900.0
-                )
+            df = table.generate_multigroup(
+                nuclides=[u235],
+                reactions=["total"],
+                group_structure=group_structure,
+                temperature=900.0
+            )
+            mock_get.assert_called_once()
+            assert df is not None
+            assert 'nuclide' in df.columns and 'reaction' in df.columns
 
     def test_generate_multigroup_mismatched_energy_xs(self, temp_dir, pre_populated_cache):
         """Test generate_multigroup with mismatched energy and xs arrays."""

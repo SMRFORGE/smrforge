@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -105,6 +106,10 @@ def generate_coverage() -> Optional[Dict]:
     print("Generating coverage report...")
     print("Note: This may take 10-30+ minutes due to large test suite...")
     
+    # Fix encoding issue for Windows (COVERAGE_RUN_DIAGNOSIS.md)
+    env = os.environ.copy()
+    env['PYTHONIOENCODING'] = 'utf-8'
+    
     # Run pytest with coverage
     # Note: Removed -n auto since pytest-xdist may not be available
     # For faster execution, users can manually add -n auto if pytest-xdist is installed
@@ -120,7 +125,7 @@ def generate_coverage() -> Optional[Dict]:
     ]
     
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True, env=env)
         print(result.stdout)
         
         # Load the generated coverage JSON

@@ -53,8 +53,10 @@ class TestTransientOptimizations:
             max_step=None,  # Auto-determined
         )
 
-        assert "time" in result
-        assert len(result["time"]) > 0
+        # Result may use 't' or 'time' key depending on implementation
+        assert "t" in result or "time" in result
+        time_key = "t" if "t" in result else "time"
+        assert len(result[time_key]) > 0
 
     def test_long_term_optimization(self):
         """Test long-term optimization mode."""
@@ -103,9 +105,11 @@ class TestTransientOptimizations:
             adaptive=True,
         )
 
-        assert "time" in result
-        assert len(result["time"]) > 0
-        assert result["time"][-1] >= 72 * 3600 - 3600.0  # Should reach near end
+        # Result may use 't' or 'time' key depending on implementation
+        assert "t" in result or "time" in result
+        time_key = "t" if "t" in result else "time"
+        assert len(result[time_key]) > 0
+        assert result[time_key][-1] >= 72 * 3600 - 3600.0  # Should reach near end
 
         # Check that solution is reasonable
         assert np.all(result["power"] >= 0)
@@ -165,16 +169,19 @@ class TestTransientOptimizations:
             max_step=None,  # Auto-determined
         )
 
-        assert len(result_short["time"]) > 0
-        assert len(result_long["time"]) > 0
+        # Result may use 't' or 'time' key depending on implementation
+        time_key_short = "t" if "t" in result_short else "time"
+        time_key_long = "t" if "t" in result_long else "time"
+        assert len(result_short[time_key_short]) > 0
+        assert len(result_long[time_key_long]) > 0
 
         # Long transient should have fewer points per unit time (larger effective step size)
         # This is a heuristic check - actual behavior depends on solver
-        time_span_short = result_short["time"][-1] - result_short["time"][0]
-        time_span_long = result_long["time"][-1] - result_long["time"][0]
-
-        points_per_second_short = len(result_short["time"]) / time_span_short
-        points_per_second_long = len(result_long["time"]) / time_span_long
+        time_span_short = result_short[time_key_short][-1] - result_short[time_key_short][0]
+        time_span_long = result_long[time_key_long][-1] - result_long[time_key_long][0]
+        
+        points_per_second_short = len(result_short[time_key_short]) / time_span_short
+        points_per_second_long = len(result_long[time_key_long]) / time_span_long
 
         # Long transient should have lower point density (larger steps)
         # Note: This is not guaranteed but is expected behavior

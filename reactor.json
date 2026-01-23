@@ -1,2 +1,6 @@
 {
-  "name": 
+  "name": "valar-10",
+  "power_thermal": 100000000.0,
+  "enrichment": 0.05,
+  "reactor_type": "htgr"
+}

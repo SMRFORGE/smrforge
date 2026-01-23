@@ -674,6 +674,9 @@ class TestInitImportErrors:
         """Test geometry __init__ handles validation import error (lines 149-150)."""
         with patch.dict(sys.modules, {'smrforge.geometry.validation': None}):
             import importlib
+            # Clear module from cache to force reload
+            if 'smrforge.geometry' in sys.modules:
+                del sys.modules['smrforge.geometry']
             import smrforge.geometry as geometry_module
             importlib.reload(geometry_module)
             
@@ -686,6 +689,9 @@ class TestInitImportErrors:
         """Test neutronics __init__ handles MonteCarlo import error (lines 23-27)."""
         with patch.dict(sys.modules, {'smrforge.neutronics.monte_carlo': None}):
             import importlib
+            # Clear module from cache to force reload
+            if 'smrforge.neutronics' in sys.modules:
+                del sys.modules['smrforge.neutronics']
             import smrforge.neutronics as neutronics_module
             importlib.reload(neutronics_module)
             
@@ -698,6 +704,9 @@ class TestInitImportErrors:
         """Test neutronics __init__ handles Transport import error (lines 33-37)."""
         with patch.dict(sys.modules, {'smrforge.neutronics.transport': None}):
             import importlib
+            # Clear module from cache to force reload
+            if 'smrforge.neutronics' in sys.modules:
+                del sys.modules['smrforge.neutronics']
             import smrforge.neutronics as neutronics_module
             importlib.reload(neutronics_module)
             
@@ -720,15 +729,20 @@ class TestInitImportErrors:
 
     def test_main_init_import_error_convenience(self):
         """Test main __init__ handles convenience import error (lines 71-79)."""
+        # Need to prevent both package and file imports from working
         with patch.dict(sys.modules, {'smrforge.convenience': None}):
-            import importlib
-            import smrforge as main_module
-            importlib.reload(main_module)
-            
-            # Should handle error gracefully with warning
-            assert hasattr(main_module, '__all__')
-            assert '_CONVENIENCE_AVAILABLE' in dir(main_module)
-            assert main_module._CONVENIENCE_AVAILABLE == False
+            with patch('pathlib.Path.exists', return_value=False):
+                import importlib
+                # Remove smrforge from modules to force reload
+                if 'smrforge' in sys.modules:
+                    del sys.modules['smrforge']
+                import smrforge as main_module
+                importlib.reload(main_module)
+                
+                # Should handle error gracefully with warning
+                assert hasattr(main_module, '__all__')
+                assert '_CONVENIENCE_AVAILABLE' in dir(main_module)
+                assert main_module._CONVENIENCE_AVAILABLE == False
 
     def test_main_init_import_error_convenience_utils(self):
         """Test main __init__ handles convenience_utils import error (lines 102-103)."""
@@ -956,30 +970,40 @@ class TestFuelInit:
     """Test smrforge/fuel/__init__.py."""
     
     def test_fuel_init_is_placeholder(self):
-        """Test that fuel __init__ is a placeholder module."""
+        """Test that fuel __init__ has expected exports."""
         import smrforge.fuel as fuel_module
         assert hasattr(fuel_module, '__all__')
-        assert fuel_module.__all__ == []  # Empty __all__ for placeholder
+        # Fuel module now has implementations
+        assert 'FuelProperties' in fuel_module.__all__
+        assert 'CladProperties' in fuel_module.__all__
+        assert 'FuelPerformance' in fuel_module.__all__
 
 
 class TestIoInit:
     """Test smrforge/io/__init__.py."""
     
     def test_io_init_is_placeholder(self):
-        """Test that io __init__ is a placeholder module."""
+        """Test that io __init__ has expected exports."""
         import smrforge.io as io_module
         assert hasattr(io_module, '__all__')
-        assert io_module.__all__ == []  # Empty __all__ for placeholder
+        # IO module now has implementations
+        assert 'InputReader' in io_module.__all__
+        assert 'OutputWriter' in io_module.__all__
+        assert 'SerpentConverter' in io_module.__all__
+        assert 'OpenMCConverter' in io_module.__all__
 
 
 class TestOptimizationInit:
     """Test smrforge/optimization/__init__.py."""
     
     def test_optimization_init_is_placeholder(self):
-        """Test that optimization __init__ is a placeholder module."""
+        """Test that optimization __init__ has expected exports."""
         import smrforge.optimization as optimization_module
         assert hasattr(optimization_module, '__all__')
-        assert optimization_module.__all__ == []  # Empty __all__ for placeholder
+        # Optimization module now has implementations
+        assert 'OptimizationResult' in optimization_module.__all__
+        assert 'DesignOptimizer' in optimization_module.__all__
+        assert 'LoadingPatternOptimizer' in optimization_module.__all__
 
 
 class TestMaterialsInit:

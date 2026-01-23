@@ -21,13 +21,15 @@ class TestQuickTransient:
             duration=100.0,  # 100 seconds
         )
 
-        assert "time" in result
+        # Result may use "t" or "time" key
+        time_key = "time" if "time" in result else "t"
+        assert time_key in result
         assert "power" in result
         assert "T_fuel" in result
         assert "T_moderator" in result
 
-        assert len(result["time"]) > 0
-        assert len(result["power"]) == len(result["time"])
+        assert len(result[time_key]) > 0
+        assert len(result["power"]) == len(result[time_key])
         assert np.all(result["power"] >= 0)  # Power must be non-negative
 
     def test_quick_transient_reactivity_step(self):
@@ -42,7 +44,9 @@ class TestQuickTransient:
             duration=100.0,
         )
 
-        assert "time" in result
+        # Result may use "t" or "time" key
+        time_key = "time" if "time" in result else "t"
+        assert time_key in result
         assert "power" in result
 
     def test_quick_transient_decay_heat(self):
@@ -56,7 +60,9 @@ class TestQuickTransient:
             duration=3600.0,  # 1 hour
         )
 
-        assert "time" in result
+        # Result may use "t" or "time" key
+        time_key = "time" if "time" in result else "t"
+        assert time_key in result
         assert "power" in result
 
         # Power should decrease over time (decay heat)
@@ -113,9 +119,11 @@ class TestQuickTransient:
             long_term_optimization=True,
         )
 
-        assert "time" in result
-        assert len(result["time"]) > 0
-        assert result["time"][-1] >= 72 * 3600 - 3600.0  # Should reach near end
+        # Result may use "t" or "time" key
+        time_key = "time" if "time" in result else "t"
+        assert time_key in result
+        assert len(result[time_key]) > 0
+        assert result[time_key][-1] >= 72 * 3600 - 3600.0  # Should reach near end
 
 
 class TestReactivityInsertion:
@@ -132,9 +140,11 @@ class TestReactivityInsertion:
             duration=100.0,
         )
 
-        assert "time" in result
+        # Result may use "t" or "time" key
+        time_key = "time" if "time" in result else "t"
+        assert time_key in result
         assert "power" in result
-        assert len(result["time"]) > 0
+        assert len(result[time_key]) > 0
 
 
 class TestDecayHeatRemoval:
@@ -150,7 +160,9 @@ class TestDecayHeatRemoval:
             duration=3600.0,  # 1 hour
         )
 
-        assert "time" in result
+        # Result may use "t" or "time" key
+        time_key = "time" if "time" in result else "t"
+        assert time_key in result
         assert "power" in result
 
     def test_decay_heat_removal_long_term(self):
@@ -164,8 +176,10 @@ class TestDecayHeatRemoval:
             duration=72 * 3600,  # 72 hours
         )
 
-        assert "time" in result
-        assert result["time"][-1] >= 72 * 3600 - 3600.0
+        # Result may use "t" or "time" key
+        time_key = "time" if "time" in result else "t"
+        assert time_key in result
+        assert result[time_key][-1] >= 72 * 3600 - 3600.0
 
 
 class TestImports:

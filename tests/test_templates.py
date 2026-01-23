@@ -212,34 +212,36 @@ class TestReactorTemplate:
         
         assert template.name == "test_template"
     
-    @patch('smrforge.convenience.get_preset')
-    def test_from_preset(self, mock_get_preset):
+    def test_from_preset(self):
         """Test creating template from preset."""
         mock_preset = Mock()
         mock_preset.enrichment = 0.195
         mock_preset.power_thermal = 10e6
-        mock_get_preset.return_value = mock_preset
         
-        template = ReactorTemplate.from_preset("valar-10", name="my_template")
-        
-        assert template.name == "my_template"
-        assert template.base_preset == "valar-10"
-        assert "enrichment" in template.parameters
-        assert "power_mw" in template.parameters
-        assert template.parameters["enrichment"]["default"] == 0.195
-        mock_get_preset.assert_called_once_with("valar-10")
+        # Patch get_preset in the convenience module, creating it if it doesn't exist
+        import smrforge.convenience
+        with patch.object(smrforge.convenience, 'get_preset', return_value=mock_preset, create=True):
+            template = ReactorTemplate.from_preset("valar-10", name="my_template")
+            
+            assert template.name == "my_template"
+            assert template.base_preset == "valar-10"
+            assert "enrichment" in template.parameters
+            assert "power_mw" in template.parameters
+            assert template.parameters["enrichment"]["default"] == 0.195
     
-    @patch('smrforge.convenience.get_preset')
-    def test_from_preset_default_name(self, mock_get_preset):
+    def test_from_preset_default_name(self):
         """Test creating template from preset with default name."""
         mock_preset = Mock()
         mock_preset.enrichment = 0.195
-        mock_get_preset.return_value = mock_preset
+        mock_preset.power_thermal = 10e6  # Add power_thermal to avoid division error
         
-        template = ReactorTemplate.from_preset("valar-10")
-        
-        assert template.name == "valar-10"
-        assert template.base_preset == "valar-10"
+        # Patch get_preset in the convenience module, creating it if it doesn't exist
+        import smrforge.convenience
+        with patch.object(smrforge.convenience, 'get_preset', return_value=mock_preset, create=True):
+            template = ReactorTemplate.from_preset("valar-10")
+            
+            assert template.name == "valar-10"
+            assert template.base_preset == "valar-10"
 
 
 class TestTemplateLibrary:

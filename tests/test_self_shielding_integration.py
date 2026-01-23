@@ -728,8 +728,17 @@ class TestSelfShieldingIntegration70Percent:
                         # Should log warning and recursively call with "bondarenko"
                         mock_logger.warning.assert_called()
                         mock_recursive.assert_called_once()
-                        call_kwargs = mock_recursive.call_args[1]
-                        assert call_kwargs['method'] == "bondarenko"
+                        # Check that method="bondarenko" was passed (as positional or keyword)
+                        call_args = mock_recursive.call_args
+                        # Method is passed as 5th positional argument (0-indexed: cache, nuclide, reaction, temp, sigma_0, method)
+                        # or as keyword argument
+                        if len(call_args[0]) > 5:
+                            method_arg = call_args[0][5]  # 6th positional arg (method)
+                        elif 'method' in call_args[1]:
+                            method_arg = call_args[1]['method']
+                        else:
+                            method_arg = None
+                        assert method_arg == "bondarenko"
                     except (ImportError, FileNotFoundError, ValueError):
                         pytest.skip("ENDF files not available")
     

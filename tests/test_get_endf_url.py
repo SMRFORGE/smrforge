@@ -16,7 +16,7 @@ class TestGetEndfUrl:
         assert isinstance(url, str)
         assert "www-nds.iaea.org" in url
         assert "endfb8.0" in url
-        assert "U235" in url
+        assert "U_235" in url or "U235" in url  # URL uses U_235 format
         assert url.endswith(".endf")
 
     def test_get_endf_url_jeff_33(self):
@@ -27,7 +27,7 @@ class TestGetEndfUrl:
         assert isinstance(url, str)
         assert "www-nds.iaea.org" in url
         assert "jeff3.3" in url
-        assert "U238" in url
+        assert "U_238" in url or "U238" in url  # URL uses U_238 format
         assert url.endswith(".endf")
 
     def test_get_endf_url_jendl_5(self):
@@ -38,24 +38,24 @@ class TestGetEndfUrl:
         assert isinstance(url, str)
         assert "www-nds.iaea.org" in url
         assert "jendl5.0" in url
-        assert "Pu239" in url
+        assert "Pu_239" in url or "Pu239" in url  # URL uses Pu_239 format
         assert url.endswith(".endf")
 
     def test_get_endf_url_different_nuclides(self):
         """Test _get_endf_url with various nuclides."""
         test_cases = [
-            (Nuclide(Z=1, A=1, m=0), "H1"),
-            (Nuclide(Z=2, A=4, m=0), "He4"),
-            (Nuclide(Z=6, A=12, m=0), "C12"),
-            (Nuclide(Z=92, A=235, m=0), "U235"),
-            (Nuclide(Z=92, A=238, m=0), "U238"),
-            (Nuclide(Z=94, A=239, m=0), "Pu239"),
-            (Nuclide(Z=94, A=240, m=0), "Pu240"),
+            (Nuclide(Z=1, A=1, m=0), ["H_001", "H1"]),
+            (Nuclide(Z=2, A=4, m=0), ["He_004", "He4"]),
+            (Nuclide(Z=6, A=12, m=0), ["C_012", "C12"]),
+            (Nuclide(Z=92, A=235, m=0), ["U_235", "U235"]),
+            (Nuclide(Z=92, A=238, m=0), ["U_238", "U238"]),
+            (Nuclide(Z=94, A=239, m=0), ["Pu_239", "Pu239"]),
+            (Nuclide(Z=94, A=240, m=0), ["Pu_240", "Pu240"]),
         ]
         
-        for nuc, expected_name in test_cases:
+        for nuc, expected_names in test_cases:
             url = NuclearDataCache._get_endf_url(nuc, Library.ENDF_B_VIII)
-            assert expected_name in url
+            assert any(name in url for name in expected_names), f"None of {expected_names} found in {url}"
             assert url.endswith(".endf")
 
     def test_get_endf_url_metastable_nuclides(self):
@@ -65,7 +65,7 @@ class TestGetEndfUrl:
         url = NuclearDataCache._get_endf_url(nuc_meta, Library.ENDF_B_VIII)
         
         assert isinstance(url, str)
-        assert "U239m1" in url or "U239" in url  # Name might include or exclude metastable notation
+        assert "U_239m1" in url or "U239m1" in url or "U_239" in url or "U239" in url  # URL format uses underscores
         assert url.endswith(".endf")
 
     def test_get_endf_url_url_structure(self):
@@ -79,7 +79,7 @@ class TestGetEndfUrl:
         assert "https:" in parts[0]
         assert "www-nds.iaea.org" in url
         assert "endfb8.0" in parts
-        assert "U235.endf" in parts[-1]
+        assert "U_235.endf" in parts[-1] or "U235.endf" in parts[-1]  # URL format uses underscores
 
     def test_get_endf_url_all_libraries(self):
         """Test _get_endf_url with all supported libraries."""
@@ -91,7 +91,7 @@ class TestGetEndfUrl:
             url = NuclearDataCache._get_endf_url(nuc, library)
             assert isinstance(url, str)
             assert library.value in url
-            assert "U235" in url
+            assert "U_235" in url or "U235" in url  # URL format uses underscores
             assert url.endswith(".endf")
 
     def test_get_endf_url_large_atomic_number(self):
@@ -101,7 +101,7 @@ class TestGetEndfUrl:
         url = NuclearDataCache._get_endf_url(nuc, Library.ENDF_B_VIII)
         
         assert isinstance(url, str)
-        assert "Cf252" in url
+        assert "Cf_252" in url or "Cf252" in url  # URL format uses underscores
         assert url.endswith(".endf")
 
     def test_get_endf_url_large_mass_number(self):
@@ -110,7 +110,7 @@ class TestGetEndfUrl:
         url = NuclearDataCache._get_endf_url(nuc, Library.ENDF_B_VIII)
         
         assert isinstance(url, str)
-        assert "U236" in url
+        assert "U_236" in url or "U236" in url  # URL format uses underscores
         assert url.endswith(".endf")
 
     def test_get_endf_url_multiple_metastable_states(self):
@@ -140,8 +140,11 @@ class TestGetEndfUrl:
             url = NuclearDataCache._get_endf_url(nuc, Library.ENDF_B_VIII)
             assert isinstance(url, str)
             assert url.endswith(".endf")
-            # Verify nuclide name is in URL
-            assert nuc.name in url
+            # Verify nuclide name or URL format is in URL (URL uses underscores like H_001, He_003)
+            from smrforge.core.constants import ELEMENT_SYMBOLS
+            symbol = ELEMENT_SYMBOLS[nuc.Z]
+            url_format = f"{symbol}_{nuc.A:03d}"
+            assert nuc.name in url or url_format in url, f"Neither {nuc.name} nor {url_format} found in {url}"
 
     def test_get_endf_url_consistency(self):
         """Test that _get_endf_url produces consistent URLs for same inputs."""

@@ -97,10 +97,15 @@ def vectorized_normalize(
         >>> normalized = vectorized_normalize(flux, axis=None, norm_value=1.0)
         >>> print(normalized.sum())  # 1.0
     """
+    # Handle empty arrays
+    if arr.size == 0:
+        return arr.copy() if not inplace else arr
+    
     max_val = np.max(arr, axis=axis, keepdims=(axis is not None))
     
-    # Avoid division by zero
-    max_val = np.maximum(max_val, 1e-10)
+    # Avoid division by zero (use tiny so small positive values still normalize correctly)
+    tiny = np.finfo(np.float64).tiny
+    max_val = np.maximum(max_val, tiny)
     
     if inplace:
         arr /= max_val

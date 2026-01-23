@@ -53,27 +53,21 @@ class TestFetchAndCacheBackends:
         nuc = Nuclide(Z=92, A=235, m=0)
         key = f"{Library.ENDF_B_VIII.value}/{nuc.name}/total/293.6K"
         
-        # Mock endf-parserpy backend
+        # Mock endf-parserpy backend (use _get_parser so we bypass Cpp/factory)
         mock_energy = np.array([1.0e5, 1.0e6, 5.0e6])
         mock_xs = np.array([10.0, 12.0, 15.0])
-        
-        with patch('endf_parserpy.EndfParserFactory') as mock_factory:
-            # Mock the parser factory and parsefile
-            mock_parser = Mock()
-            mock_factory.create.return_value = mock_parser
-            
-            # Mock the parsed data structure
-            mock_endf_dict = {
-                3: {
-                    1: {  # MT=1 (total)
-                        'E': mock_energy,
-                        'XS': mock_xs,
-                    }
+        mock_endf_dict = {
+            3: {
+                1: {  # MT=1 (total)
+                    'E': mock_energy,
+                    'XS': mock_xs,
                 }
             }
-            mock_parser.parsefile.return_value = mock_endf_dict
-            
-            # Mock _ensure_endf_file to return our test file
+        }
+        mock_parser = Mock()
+        mock_parser.parsefile.return_value = mock_endf_dict
+        
+        with patch.object(cache, '_get_parser', return_value=mock_parser):
             with patch.object(cache, '_ensure_endf_file', return_value=realistic_endf_file_for_fetch):
                 energy, xs = cache._fetch_and_cache(nuc, "total", 293.6, Library.ENDF_B_VIII, key)
                 
@@ -225,41 +219,26 @@ class TestFetchAndCacheBackends:
         nuc = Nuclide(Z=92, A=235, m=0)
         key = f"{Library.ENDF_B_VIII.value}/{nuc.name}/total/600.0K"
         
-        # Mock endf-parserpy backend
         mock_energy = np.array([1.0e5, 1.0e6, 5.0e6])
         mock_xs = np.array([10.0, 12.0, 15.0])
+        mock_endf_dict = {3: {1: {'E': mock_energy, 'XS': mock_xs}}}
+        mock_parser = Mock()
+        mock_parser.parsefile.return_value = mock_endf_dict
         
-        with patch('endf_parserpy.EndfParserFactory') as mock_factory:
-            mock_parser = Mock()
-            mock_factory.create.return_value = mock_parser
-            mock_endf_dict = {
-                3: {
-                    1: {
-                        'E': mock_energy,
-                        'XS': mock_xs,
-                    }
-                }
-            }
-            mock_parser.parsefile.return_value = mock_endf_dict
-            
-            # Mock _ensure_endf_file
+        with patch.object(cache, '_get_parser', return_value=mock_parser):
             with patch.object(cache, '_ensure_endf_file', return_value=realistic_endf_file_for_fetch):
-                # Mock _doppler_broaden to verify it's called
                 with patch.object(cache, '_doppler_broaden') as mock_doppler:
                     mock_doppler.return_value = mock_xs * 1.5  # Simulate broadening
                     
                     energy, xs = cache._fetch_and_cache(nuc, "total", 600.0, Library.ENDF_B_VIII, key)
                     
-                    # Verify Doppler broadening was called (temperature difference > 1.0)
                     mock_doppler.assert_called_once()
                     call_args = mock_doppler.call_args
-                    assert np.allclose(call_args[0][0], mock_energy)  # energy
-                    assert np.allclose(call_args[0][1], mock_xs)  # xs
-                    assert call_args[0][2] == 293.6  # T_old
-                    assert call_args[0][3] == 600.0  # T_new
-                    assert call_args[0][4] == 235  # A
-                    
-                    # Verify results use broadened cross sections
+                    assert np.allclose(call_args[0][0], mock_energy)
+                    assert np.allclose(call_args[0][1], mock_xs)
+                    assert call_args[0][2] == 293.6
+                    assert call_args[0][3] == 600.0
+                    assert call_args[0][4] == 235
                     assert np.allclose(xs, mock_xs * 1.5)
 
     def test_fetch_and_cache_no_doppler_broadening_standard_temp(
@@ -272,33 +251,18 @@ class TestFetchAndCacheBackends:
         nuc = Nuclide(Z=92, A=235, m=0)
         key = f"{Library.ENDF_B_VIII.value}/{nuc.name}/total/293.6K"
         
-        # Mock endf-parserpy backend
         mock_energy = np.array([1.0e5, 1.0e6, 5.0e6])
         mock_xs = np.array([10.0, 12.0, 15.0])
+        mock_endf_dict = {3: {1: {'E': mock_energy, 'XS': mock_xs}}}
+        mock_parser = Mock()
+        mock_parser.parsefile.return_value = mock_endf_dict
         
-        with patch('endf_parserpy.EndfParserFactory') as mock_factory:
-            mock_parser = Mock()
-            mock_factory.create.return_value = mock_parser
-            mock_endf_dict = {
-                3: {
-                    1: {
-                        'E': mock_energy,
-                        'XS': mock_xs,
-                    }
-                }
-            }
-            mock_parser.parsefile.return_value = mock_endf_dict
-            
-            # Mock _ensure_endf_file
+        with patch.object(cache, '_get_parser', return_value=mock_parser):
             with patch.object(cache, '_ensure_endf_file', return_value=realistic_endf_file_for_fetch):
-                # Mock _doppler_broaden to verify it's NOT called
                 with patch.object(cache, '_doppler_broaden') as mock_doppler:
                     energy, xs = cache._fetch_and_cache(nuc, "total", 293.6, Library.ENDF_B_VIII, key)
                     
-                    # Verify Doppler broadening was NOT called (temperature difference <= 1.0)
                     mock_doppler.assert_not_called()
-                    
-                    # Verify results are unchanged
                     assert np.allclose(energy, mock_energy)
                     assert np.allclose(xs, mock_xs)
 
@@ -313,30 +277,17 @@ class TestFetchAndCacheBackends:
         nuc = Nuclide(Z=92, A=235, m=0)
         key = f"{Library.ENDF_B_VIII.value}/{nuc.name}/total/293.6K"
         
-        # Mock endf-parserpy backend
         mock_energy = np.array([1.0e5, 1.0e6, 5.0e6])
         mock_xs = np.array([10.0, 12.0, 15.0])
+        mock_endf_dict = {3: {1: {'E': mock_energy, 'XS': mock_xs}}}
+        mock_parser = Mock()
+        mock_parser.parsefile.return_value = mock_endf_dict
         
-        with patch('endf_parserpy.EndfParserFactory') as mock_factory:
-            mock_parser = Mock()
-            mock_factory.create.return_value = mock_parser
-            mock_endf_dict = {
-                3: {
-                    1: {
-                        'E': mock_energy,
-                        'XS': mock_xs,
-                    }
-                }
-            }
-            mock_parser.parsefile.return_value = mock_endf_dict
-            
-            # Mock _ensure_endf_file
+        with patch.object(cache, '_get_parser', return_value=mock_parser):
             with patch.object(cache, '_ensure_endf_file', return_value=realistic_endf_file_for_fetch):
-                # Mock _save_to_cache to verify it's called
                 with patch.object(cache, '_save_to_cache') as mock_save:
                     energy, xs = cache._fetch_and_cache(nuc, "total", 293.6, Library.ENDF_B_VIII, key)
                     
-                    # Verify _save_to_cache was called with correct arguments
                     mock_save.assert_called_once()
                     call_args = mock_save.call_args
                     assert call_args[0][0] == key

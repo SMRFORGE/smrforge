@@ -381,12 +381,13 @@ class TestEconomicsIntegrationEdgeCases:
     """Edge case tests for economics integration to improve coverage to 60%+."""
     
     def test_estimation_with_zero_electric_power(self):
-        """Test cost estimation when electric power is zero (edge case)."""
+        """Test cost estimation when electric power is near-zero (edge case).
+        ReactorSpecification requires power_electric > 0, so use minimal positive value."""
         reactor_spec = ReactorSpecification(
             name="Test Reactor",
             reactor_type=ReactorType.PRISMATIC,
             power_thermal=10e6,
-            power_electric=0.0,  # Zero electric power
+            power_electric=1e-6,  # Near-zero (model forbids exact 0)
             inlet_temperature=823.15,
             outlet_temperature=1023.15,
             max_fuel_temperature=1873.15,

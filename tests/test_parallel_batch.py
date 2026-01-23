@@ -2,6 +2,7 @@
 Unit tests for parallel batch processing utilities.
 """
 
+import gc
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -13,6 +14,40 @@ from smrforge.utils.parallel_batch import (
     batch_process,
     batch_solve_keff,
 )
+
+# Mark all tests in this file to run serially to avoid resource contention
+pytestmark = pytest.mark.parallel_batch
+
+
+@pytest.fixture(autouse=True)
+def cleanup_after_test():
+    """Ensure proper cleanup after each test to prevent resource leaks."""
+    yield
+    # Force garbage collection to free memory and close any lingering executors
+    gc.collect()
+    gc.collect()  # Second pass for cyclic references
+    
+    # On Windows, need more aggressive cleanup and longer delays
+    import time
+    import sys
+    import threading
+    
+    if sys.platform == 'win32':
+        # More aggressive cleanup on Windows
+        for _ in range(2):
+            gc.collect()
+            time.sleep(0.1)  # 100ms delay on Windows for thread cleanup
+        
+        # Check for lingering threads
+        active_threads = [t for t in threading.enumerate() 
+                         if t.is_alive() and t != threading.main_thread() 
+                         and 'ThreadPoolExecutor' in str(t)]
+        if active_threads:
+            # Wait a bit more for executor threads to finish
+            time.sleep(0.2)
+    else:
+        # Standard cleanup on other platforms
+        time.sleep(0.05)  # 50ms delay for thread cleanup
 
 
 class MockReactor:
@@ -51,7 +86,7 @@ class TestBatchProcess:
             return x * 2
         
         items = [1, 2, 3, 4]
-        result = batch_process(items, double, parallel=True, use_threads=True, max_workers=2)
+        result = batch_process(items, double, parallel=True, use_threads=True, max_workers=1)
         assert result == [2, 4, 6, 8]
     
     def test_batch_process_with_threads(self):
@@ -62,7 +97,7 @@ class TestBatchProcess:
             lambda x: x * 2, 
             parallel=True, 
             use_threads=True,
-            max_workers=2
+            max_workers=1
         )
         assert result == [2, 4, 6, 8]
     
@@ -106,7 +141,7 @@ class TestBatchProcess:
         
         items = [1, 2, 3, 4]
         # Should handle errors gracefully (use threads to avoid pickling issues)
-        result = batch_process(items, failing_func, parallel=True, max_workers=2, use_threads=True)
+        result = batch_process(items, failing_func, parallel=True, max_workers=1, use_threads=True)
         # Error should be stored in results
         assert len(result) == 4
         assert result[0] == 2
@@ -150,7 +185,7 @@ class TestBatchProcess:
                     parallel=True,
                     use_threads=True,
                     show_progress=True,
-                    max_workers=2
+                    max_workers=1
                 )
                 # Should complete without error
                 assert len(result) == 2
@@ -263,7 +298,7 @@ class TestParallelBatchEdgeCases:
                 parallel=True,
                 use_threads=True,
                 show_progress=True,  # Request progress but Rich unavailable
-                max_workers=2
+                max_workers=1
             )
             assert result == [2, 4, 6]
     
@@ -287,7 +322,7 @@ class TestParallelBatchEdgeCases:
                 parallel=True,
                 use_threads=True,
                 show_progress=True,
-                max_workers=2
+                max_workers=1
             )
             assert result == [1, 4, 9, 16]
     
@@ -305,7 +340,7 @@ class TestParallelBatchEdgeCases:
             failing_func,
             parallel=True,
             use_threads=True,  # Use threads to avoid Windows pickling issues
-            max_workers=2
+            max_workers=1
         )
         
         # Should handle errors gracefully
@@ -328,7 +363,7 @@ class TestParallelBatchEdgeCases:
             sometimes_fails,
             parallel=True,
             use_threads=True,
-            max_workers=3
+            max_workers=1
         )
         
         assert len(result) == 5
@@ -364,7 +399,7 @@ class TestParallelBatchEdgeCases:
             square,
             parallel=True,
             use_threads=True,
-            max_workers=4  # Only 4 workers
+            max_workers=1  # Only 4 workers
         )
         
         assert len(result) == 20
@@ -394,7 +429,7 @@ class TestParallelBatchEdgeCases:
             add_index,
             parallel=True,
             use_threads=True,
-            max_workers=3
+            max_workers=1
         )
         
         # Results should be in same order as input

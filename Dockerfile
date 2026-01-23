@@ -4,7 +4,7 @@
 # Build: docker build -t smrforge:latest .
 # Run:   docker run -it smrforge:latest
 #
-# Last Updated: January 21, 2026
+# Last Updated: January 22, 2026
 # Recent Additions (January 2026):
 # - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
 # - Material degradation models for long-term fuel rod analysis

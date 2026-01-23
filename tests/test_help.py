@@ -4,7 +4,8 @@ Tests for smrforge.help module.
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-import smrforge.help as help_module
+import importlib
+help_module = importlib.import_module('smrforge.help')
 
 
 class TestGetSmrModule:

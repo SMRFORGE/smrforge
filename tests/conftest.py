@@ -3,6 +3,7 @@ Pytest configuration and shared fixtures for SMRForge tests.
 """
 
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 
@@ -499,6 +500,37 @@ def pre_populated_cache(temp_dir):
     return cache
 
 
+# Session-scoped cleanup for parallel executors
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_parallel_executors():
+    """Ensure all parallel executors are cleaned up after test session."""
+    yield
+    # Force cleanup of any lingering executors
+    import gc
+    import time
+    import threading
+    
+    # Force garbage collection multiple times
+    for _ in range(5):  # More aggressive cleanup
+        gc.collect()
+        time.sleep(0.1)  # Longer delay between GC passes on Windows
+    
+    # Wait for all threads to finish (more time on Windows)
+    wait_time = 0.5 if sys.platform == 'win32' else 0.2
+    time.sleep(wait_time)
+    
+    # Check for active threads (debugging)
+    active_threads = [t for t in threading.enumerate() if t.is_alive() and t != threading.main_thread()]
+    if active_threads:
+        import warnings
+        warnings.warn(f"Found {len(active_threads)} active threads after test session: {[t.name for t in active_threads[:5]]}")
+    
+    # Final cleanup
+    for _ in range(2):
+        gc.collect()
+        time.sleep(0.05)
+
+
 # Markers for test organization
 def pytest_configure(config):
     """Configure custom markers."""
@@ -508,3 +540,21 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
     config.addinivalue_line("markers", "network: marks tests that require network access")
+    config.addinivalue_line("markers", "parallel_batch: marks tests that use parallel batch processing (run serially)")
+
+
+# Ensure parallel_batch tests run serially to avoid resource contention
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection to ensure parallel_batch tests run serially."""
+    # Add serial marker to parallel_batch tests if pytest-xdist is being used
+    try:
+        from xdist import is_xdist_worker
+        if is_xdist_worker(config):
+            # If using pytest-xdist, ensure parallel_batch tests don't run in parallel
+            for item in items:
+                if item.get_closest_marker("parallel_batch"):
+                    # Add a marker that prevents parallel execution
+                    item.add_marker(pytest.mark.serial)
+    except ImportError:
+        # pytest-xdist not available, skip
+        pass

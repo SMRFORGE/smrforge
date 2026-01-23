@@ -65,23 +65,29 @@ class TestKeffCalculationPerformance:
         geometry.generate_mesh(n_radial=5, n_axial=3)
         
         # Simple cross-section data (mock)
-        from smrforge.neutronics.solver import CrossSectionData
+        from smrforge.validation.models import CrossSectionData
+        # Note: sigma_a must be >= sigma_f for validation to pass
+        sigma_f = np.array([[0.0, 0.0, 0.1, 0.2], [0.0, 0.0, 0.0, 0.0]])
+        sigma_a = np.maximum(sigma_f, np.ones((2, 4)) * 0.3)  # Absorption >= fission
         xs_data = CrossSectionData(
             n_groups=4,
             n_materials=2,
             sigma_t=np.ones((2, 4)),
+            sigma_a=sigma_a,  # Absorption cross section (required, must be >= sigma_f)
             sigma_s=np.ones((2, 4, 4)) * 0.5,
-            sigma_f=np.array([[0.0, 0.0, 0.1, 0.2], [0.0, 0.0, 0.0, 0.0]]),
+            sigma_f=sigma_f,
             nu_sigma_f=np.array([[0.0, 0.0, 0.25, 0.4], [0.0, 0.0, 0.0, 0.0]]),
             chi=np.array([[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]),
             D=np.ones((2, 4)),
         )
         
-        solver = MultiGroupDiffusion(geometry, xs_data)
+        from smrforge.validation.models import SolverOptions
+        options = SolverOptions(max_iterations=50, tolerance=1e-5, skip_solution_validation=True)
+        solver = MultiGroupDiffusion(geometry, xs_data, options)
         
         # Measure performance (multiple runs for average)
         for _ in range(3):
-            _, elapsed = benchmark.measure(solver.solve_eigenvalue)
+            _, elapsed = benchmark.measure(solver.solve_steady_state)
         
         avg_time = benchmark.get_average()
         baseline = BASELINE_TIMINGS.get("keff_calculation_small", 1.0)
@@ -107,22 +113,27 @@ class TestKeffCalculationPerformance:
         geometry.core_diameter = 100.0
         geometry.generate_mesh(n_radial=10, n_axial=5)
         
-        from smrforge.neutronics.solver import CrossSectionData
+        from smrforge.validation.models import CrossSectionData, SolverOptions
+        # Note: sigma_a must be >= sigma_f for validation to pass
+        sigma_f = np.array([[0.0, 0.0, 0.1, 0.2], [0.0, 0.0, 0.0, 0.0]])
+        sigma_a = np.maximum(sigma_f, np.ones((2, 4)) * 0.3)  # Absorption >= fission
         xs_data = CrossSectionData(
             n_groups=4,
             n_materials=2,
             sigma_t=np.ones((2, 4)),
+            sigma_a=sigma_a,  # Absorption cross section (required, must be >= sigma_f)
             sigma_s=np.ones((2, 4, 4)) * 0.5,
-            sigma_f=np.array([[0.0, 0.0, 0.1, 0.2], [0.0, 0.0, 0.0, 0.0]]),
+            sigma_f=sigma_f,
             nu_sigma_f=np.array([[0.0, 0.0, 0.25, 0.4], [0.0, 0.0, 0.0, 0.0]]),
             chi=np.array([[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]),
             D=np.ones((2, 4)),
         )
         
-        solver = MultiGroupDiffusion(geometry, xs_data)
+        options = SolverOptions(max_iterations=50, tolerance=1e-5, skip_solution_validation=True)
+        solver = MultiGroupDiffusion(geometry, xs_data, options)
         
         # Measure performance (single run for medium-sized problem)
-        _, elapsed = benchmark.measure(solver.solve_eigenvalue)
+        _, elapsed = benchmark.measure(solver.solve_steady_state)
         
         baseline = BASELINE_TIMINGS.get("keff_calculation_medium", 2.0)
         threshold = baseline * benchmark.threshold_multiplier
