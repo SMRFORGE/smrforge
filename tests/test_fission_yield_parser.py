@@ -113,10 +113,10 @@ class TestENDFFissionYieldParser:
         assert nuclide.A == 235
 
     def test_parse_file_nonexistent(self):
-        """Test parsing non-existent file returns None."""
+        """Test parsing non-existent file raises FileNotFoundError."""
         parser = ENDFFissionYieldParser()
-        result = parser.parse_file(Path("nonexistent.endf"))
-        assert result is None
+        with pytest.raises(FileNotFoundError, match="Fission yield file not found"):
+            parser.parse_file(Path("nonexistent.endf"))
 
 
 class TestFissionYieldIntegration:

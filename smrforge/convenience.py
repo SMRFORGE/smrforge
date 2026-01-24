@@ -164,29 +164,36 @@ def create_reactor(
         ... )
         >>> results = reactor.solve()
     """
+    # If a name is provided, it *may* be a preset name OR a custom reactor name.
+    # Prefer presets when the name matches a known preset.
     if name:
-        # Use preset
-        preset_class = {
+        preset_map = {
             "valar-10": ValarAtomicsReactor,
             "gt-mhr-350": GTMHR350,
             "htr-pm-200": HTRPM200,
             "micro-htgr-1": MicroHTGR,
-        }.get(name)
+        }
+        preset_class = preset_map.get(name)
+        if preset_class is not None:
+            preset = preset_class()
+            return SimpleReactor.from_preset(preset)
 
-        if preset_class is None:
+        # Treat unknown "name" as a custom reactor name if any custom params are provided
+        if any(v is not None for v in [power_mw, core_height, core_diameter, enrichment]) or kwargs:
+            kwargs = dict(kwargs)
+            kwargs.setdefault("name", name)
+            name = None
+        else:
             raise ValueError(f"Unknown preset '{name}'. Available: {list_presets()}")
 
-        preset = preset_class()
-        return SimpleReactor.from_preset(preset)
-    else:
-        # Create custom reactor
-        return SimpleReactor(
-            power_mw=power_mw or 10.0,
-            core_height=core_height or 200.0,
-            core_diameter=core_diameter or 100.0,
-            enrichment=enrichment or 0.195,
-            **kwargs,
-        )
+    # Create custom reactor
+    return SimpleReactor(
+        power_mw=power_mw or 10.0,
+        core_height=core_height or 200.0,
+        core_diameter=core_diameter or 100.0,
+        enrichment=enrichment or 0.195,
+        **kwargs,
+    )
 
 
 def quick_keff(
@@ -370,22 +377,26 @@ class SimpleReactor:
             **{
                 k: v
                 for k, v in kwargs.items()
-                if k
-                not in [
-                    "name",
-                    "inlet_temperature",
-                    "outlet_temperature",
-                    "primary_pressure",
-                    "max_fuel_temperature",
-                    "reflector_thickness",
-                    "heavy_metal_loading",
-                    "coolant_flow_rate",
-                    "cycle_length",
-                    "capacity_factor",
-                    "target_burnup",
-                    "doppler_coefficient",
-                    "shutdown_margin",
-                ]
+                if (
+                    k
+                    not in [
+                        "name",
+                        "inlet_temperature",
+                        "outlet_temperature",
+                        "primary_pressure",
+                        "max_fuel_temperature",
+                        "reflector_thickness",
+                        "heavy_metal_loading",
+                        "coolant_flow_rate",
+                        "cycle_length",
+                        "capacity_factor",
+                        "target_burnup",
+                        "doppler_coefficient",
+                        "shutdown_margin",
+                    ]
+                    # Only forward kwargs that ReactorSpecification actually accepts
+                    and k in ReactorSpecification.model_fields
+                )
             },
         )
 
@@ -524,15 +535,28 @@ class SimpleReactor:
         except ValueError as e:
             # If validation fails but k_eff was computed, return it anyway
             # This allows convenience functions to work with approximate cross sections
-            if hasattr(solver, "k_eff") and solver.k_eff is not None:
+            # Only treat k_eff as "computed" if it was explicitly set on the solver instance.
+            # This avoids false-positives with mocks (e.g., MagicMock creates attributes on demand).
+            k_eff_val = None
+            solver_dict = getattr(solver, "__dict__", None)
+            if isinstance(solver_dict, dict) and "k_eff" in solver_dict:
+                k_eff_val = solver_dict.get("k_eff")
+
+            if k_eff_val is not None:
+                # Only accept a k_eff that can be treated as a real number
+                try:
+                    k_eff_val = float(k_eff_val)
+                except Exception:
+                    # No usable k_eff value; propagate the original validation error
+                    raise
                 import warnings
 
                 warnings.warn(
-                    f"Solution validation failed, but returning k_eff = {solver.k_eff:.6f}. "
+                    f"Solution validation failed, but returning k_eff = {k_eff_val:.6f}. "
                     f"Error: {e}",
                     UserWarning,
                 )
-                return solver.k_eff
+                return k_eff_val
             raise
 
     def solve(self) -> Dict:

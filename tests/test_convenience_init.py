@@ -31,6 +31,8 @@ class TestConvenienceInitImports:
         with patch('pathlib.Path.exists', return_value=False):
             import importlib
             import smrforge.convenience
+            # Ensure module is registered for reload even if other tests manipulated sys.modules
+            sys.modules[smrforge.convenience.__name__] = smrforge.convenience
             importlib.reload(smrforge.convenience)
             # Should handle gracefully
             assert hasattr(smrforge.convenience, '_CONVENIENCE_MAIN_AVAILABLE')

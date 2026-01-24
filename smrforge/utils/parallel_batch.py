@@ -7,9 +7,22 @@ improving efficiency for parameter sweeps and design studies.
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
+import sys
 from typing import Callable, List, Optional, Protocol, TypeVar, Union
 
 from ..utils.logging import get_logger
+
+# Try to import executor lock for test isolation (optional)
+try:
+    from tests.parallel_executor_lock import get_executor_lock
+    _EXECUTOR_LOCK_AVAILABLE = True
+except ImportError:
+    _EXECUTOR_LOCK_AVAILABLE = False
+    get_executor_lock = None
+
+# On Windows, prefer threads over processes to avoid pickling issues
+# and reduce resource contention
+_IS_WINDOWS = sys.platform == 'win32'
 
 logger = get_logger("smrforge.utils.parallel_batch")
 
@@ -88,13 +101,18 @@ def batch_process(
     if max_workers is None:
         max_workers = cpu_count()
     
-    # Limit workers to number of items
-    max_workers = min(max_workers, len(items))
+    # Limit workers to number of items and ensure at least 1
+    max_workers = max(1, min(max_workers, len(items)))
     
     logger.info(f"Processing {len(items)} items in parallel with {max_workers} workers")
     
     # Use threads or processes
-    executor_class = ThreadPoolExecutor if use_threads else ProcessPoolExecutor
+    # On Windows, default to threads to avoid pickling issues and reduce resource contention
+    if not use_threads and _IS_WINDOWS:
+        logger.debug("Windows detected: defaulting to ThreadPoolExecutor instead of ProcessPoolExecutor")
+        executor_class = ThreadPoolExecutor
+    else:
+        executor_class = ThreadPoolExecutor if use_threads else ProcessPoolExecutor
     
     # Try to import Rich for progress bars
     try:
@@ -105,54 +123,110 @@ def batch_process(
         _RICH_AVAILABLE = False
     
     # Execute in parallel
+    # Use lock if available (for test isolation)
+    executor_lock = get_executor_lock() if _EXECUTOR_LOCK_AVAILABLE else None
+    
     if _RICH_AVAILABLE and show_progress:
-        with executor_class(max_workers=max_workers) as executor:
-            # Submit all tasks
-            futures = {executor.submit(func, item): item for item in items}
-            
-            # Track progress
-            results = [None] * len(items)
-            item_to_index = {item: i for i, item in enumerate(items)}
-            
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            ) as progress:
-                task = progress.add_task("Processing...", total=len(items))
+        # Use lock if available to limit concurrent executors
+        lock_context = executor_lock if executor_lock else type('DummyContext', (), {'__enter__': lambda self: self, '__exit__': lambda *args: None})()
+        with lock_context:
+            with executor_class(max_workers=max_workers) as executor:
+                # Submit all tasks and track by index (handles unhashable items)
+                futures = {}
+                for i, item in enumerate(items):
+                    future = executor.submit(func, item)
+                    futures[future] = i  # Store index instead of item
                 
-                for future in as_completed(futures):
-                    item = futures[future]
-                    try:
-                        result = future.result()
-                        idx = item_to_index[item]
-                        results[idx] = result
-                        progress.update(task, advance=1)
-                    except Exception as e:
-                        logger.error(f"Error processing item {item}: {e}")
-                        idx = item_to_index[item]
-                        results[idx] = e  # Store error for now
+                # Track progress
+                results = [None] * len(items)
+                
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                ) as progress:
+                    task = progress.add_task("Processing...", total=len(items))
+                    
+                    # Process all futures - ensure we get all results before shutdown
+                    completed_count = 0
+                    import time
+                    start_time = time.time()
+                    timeout = 60.0  # 60 second timeout per batch
+                    
+                    for future in as_completed(futures, timeout=timeout):
+                        if time.time() - start_time > timeout:
+                            logger.warning("Timeout waiting for futures, cancelling remaining")
+                            break
+                        idx = futures[future]  # Get index directly
+                        item = items[idx]  # Get item for logging
+                        try:
+                            result = future.result(timeout=1.0)  # Quick timeout per future
+                            results[idx] = result
+                            progress.update(task, advance=1)
+                            completed_count += 1
+                        except Exception as e:
+                            logger.error(f"Error processing item {item}: {e}")
+                            results[idx] = e  # Store error for now
+                            completed_count += 1
+                    
+                    # Cancel any remaining futures
+                    for future in futures:
+                        if not future.done():
+                            future.cancel()
+                    
+                    # Verify all futures completed
+                    if completed_count < len(items):
+                        logger.warning(f"Only {completed_count}/{len(items)} futures completed")
+                # Context manager ensures executor.shutdown() is called automatically
     
     else:
-        with executor_class(max_workers=max_workers) as executor:
-            # Submit all tasks
-            futures = {executor.submit(func, item): item for item in items}
-            
-            # Collect results in order
-            results = [None] * len(items)
-            item_to_index = {item: i for i, item in enumerate(items)}
-            
-            for future in as_completed(futures):
-                item = futures[future]
+        # Use lock if available to limit concurrent executors
+        lock_context = executor_lock if executor_lock else type('DummyContext', (), {'__enter__': lambda self: self, '__exit__': lambda *args: None})()
+        with lock_context:
+            with executor_class(max_workers=max_workers) as executor:
+                # Submit all tasks and track by index (handles unhashable items)
+                futures = {}
+                for i, item in enumerate(items):
+                    future = executor.submit(func, item)
+                    futures[future] = i  # Store index instead of item
+                
+                # Collect results in order
+                results = [None] * len(items)
+                
+                # Process all futures - ensure we get all results before shutdown
+                completed_count = 0
+                import time
+                start_time = time.time()
+                timeout = 60.0  # 60 second timeout per batch
+                
                 try:
-                    result = future.result()
-                    idx = item_to_index[item]
-                    results[idx] = result
+                    for future in as_completed(futures, timeout=timeout):
+                        if time.time() - start_time > timeout:
+                            logger.warning("Timeout waiting for futures, cancelling remaining")
+                            break
+                        idx = futures[future]  # Get index directly
+                        item = items[idx]  # Get item for logging
+                        try:
+                            result = future.result(timeout=1.0)  # Quick timeout per future
+                            results[idx] = result
+                            completed_count += 1
+                        except Exception as e:
+                            logger.error(f"Error processing item {item}: {e}")
+                            results[idx] = e  # Store error for now
+                            completed_count += 1
                 except Exception as e:
-                    logger.error(f"Error processing item {item}: {e}")
-                    idx = item_to_index[item]
-                    results[idx] = e  # Store error for now
+                    logger.warning(f"Error in as_completed: {e}, cancelling remaining futures")
+                
+                # Cancel any remaining futures
+                for future in futures:
+                    if not future.done():
+                        future.cancel()
+                
+                # Verify all futures completed
+                if completed_count < len(items):
+                    logger.warning(f"Only {completed_count}/{len(items)} futures completed")
+                # Context manager ensures executor.shutdown() is called automatically
     
     # Check for errors
     errors = [r for r in results if isinstance(r, Exception)]

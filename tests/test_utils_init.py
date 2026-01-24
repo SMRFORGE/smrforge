@@ -4,6 +4,7 @@ Tests for smrforge.utils.__init__.py import error paths.
 
 import pytest
 from unittest.mock import patch, Mock
+import sys
 
 
 class TestUtilsInitImports:
@@ -21,6 +22,7 @@ class TestUtilsInitImports:
             # Should not raise, just skip the import
             import importlib
             import smrforge.utils
+            sys.modules[smrforge.utils.__name__] = smrforge.utils
             importlib.reload(smrforge.utils)
             # Should still have other imports
             assert hasattr(smrforge.utils, 'get_logo_path')
@@ -30,6 +32,7 @@ class TestUtilsInitImports:
         with patch('smrforge.utils.optimization_utils', side_effect=ImportError("Test")):
             import importlib
             import smrforge.utils
+            sys.modules[smrforge.utils.__name__] = smrforge.utils
             importlib.reload(smrforge.utils)
             # Should still have other imports
             assert hasattr(smrforge.utils, 'get_logo_path')
@@ -39,6 +42,7 @@ class TestUtilsInitImports:
         with patch('smrforge.utils.memory_mapped', side_effect=ImportError("Test")):
             import importlib
             import smrforge.utils
+            sys.modules[smrforge.utils.__name__] = smrforge.utils
             importlib.reload(smrforge.utils)
             # Should still have other imports
             assert hasattr(smrforge.utils, 'get_logo_path')
@@ -48,6 +52,7 @@ class TestUtilsInitImports:
         with patch('smrforge.utils.memory_pool', side_effect=ImportError("Test")):
             import importlib
             import smrforge.utils
+            sys.modules[smrforge.utils.__name__] = smrforge.utils
             importlib.reload(smrforge.utils)
             # Should still have other imports
             assert hasattr(smrforge.utils, 'get_logo_path')

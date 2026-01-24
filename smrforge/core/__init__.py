@@ -89,6 +89,7 @@ try:
         get_cross_section_with_equivalence_theory,
         get_cross_section_with_self_shielding,
     )
+    import smrforge.core.self_shielding_integration as self_shielding_integration
 
     _SELF_SHIELDING_INTEGRATION_AVAILABLE = True
 except ImportError:
@@ -223,6 +224,7 @@ if _SELF_SHIELDING_INTEGRATION_AVAILABLE:
         [
             "get_cross_section_with_self_shielding",
             "get_cross_section_with_equivalence_theory",
+            "self_shielding_integration",
         ]
     )
 

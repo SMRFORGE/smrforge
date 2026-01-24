@@ -12,6 +12,9 @@ from smrforge.utils.parallel_batch import (
     batch_solve_keff,
 )
 
+# Mark all tests in this file to run serially to avoid resource contention
+pytestmark = pytest.mark.parallel_batch
+
 
 class MockReactor:
     """Mock reactor for testing."""

@@ -156,10 +156,12 @@ class TestNuclearDataCacheComprehensive:
     
     def test_validate_endf_file(self, mock_endf_file, tmp_path):
         """Test ENDF file validation."""
-        # Create valid ENDF file for testing
+        # Create valid ENDF file for testing (needs to be >= 1000 bytes)
         valid_endf = tmp_path / "valid.endf"
-        endf_content = " " * 60 + "  -1" + "\n" * 20  # ENDF format marker + enough content
-        valid_endf.write_text(endf_content)
+        # Create file with enough content to pass size check (>= 1000 bytes)
+        # ENDF format marker must be at the start: "  -1"
+        endf_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF format marker + enough content
+        valid_endf.write_text(endf_content, encoding='utf-8')
         assert NuclearDataCache._validate_endf_file(valid_endf) is True
         
         # Invalid file (too small)
@@ -170,16 +172,16 @@ class TestNuclearDataCacheComprehensive:
         # Non-existent file
         assert NuclearDataCache._validate_endf_file(Path("nonexistent.endf")) is False
         
-        # File with "ENDF" in header
+        # File with "ENDF" in header (needs to be >= 1000 bytes)
         endf_file2 = tmp_path / "valid2.endf"
-        endf_content2 = "ENDF" + " " * 60 + "\n" * 20
-        endf_file2.write_text(endf_content2)
+        endf_content2 = "ENDF" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000
+        endf_file2.write_text(endf_content2, encoding='utf-8')
         assert NuclearDataCache._validate_endf_file(endf_file2) is True
         
-        # File with "ENDF/B" in header
+        # File with "ENDF/B" in header (needs to be >= 1000 bytes)
         endf_file3 = tmp_path / "valid3.endf"
-        endf_content3 = "ENDF/B-VIII.0" + " " * 50 + "\n" * 20
-        endf_file3.write_text(endf_content3)
+        endf_content3 = "ENDF/B-VIII.0" + " " * 50 + "\n" + (" " * 80 + "\n") * 1000
+        endf_file3.write_text(endf_content3, encoding='utf-8')
         assert NuclearDataCache._validate_endf_file(endf_file3) is True
     
     def test_add_file_to_index_with_duplicate(self, temp_cache_dir, mock_endf_file):
@@ -190,7 +192,9 @@ class TestNuclearDataCacheComprehensive:
         index = {}
         u235 = Nuclide(Z=92, A=235)
         test_file1 = mock_endf_file.parent / "n-092_U_235.endf"
-        test_file1.write_text(mock_endf_file.read_text())
+        # Ensure file is large enough and has valid ENDF marker
+        valid_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000
+        test_file1.write_text(valid_content, encoding='utf-8')
         
         nuclide1 = cache._add_file_to_index(test_file1, index, allow_alternative_names=False)
         assert nuclide1 is not None
@@ -198,7 +202,9 @@ class TestNuclearDataCacheComprehensive:
         
         # Try to add duplicate (same nuclide, different filename)
         test_file2 = mock_endf_file.parent / "U235.endf"
-        test_file2.write_text(mock_endf_file.read_text())
+        # Ensure file is large enough and has valid ENDF marker
+        valid_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000
+        test_file2.write_text(valid_content, encoding='utf-8')
         
         nuclide2 = cache._add_file_to_index(test_file2, index, allow_alternative_names=True)
         # Should return nuclide but not add duplicate
@@ -209,9 +215,9 @@ class TestNuclearDataCacheComprehensive:
         """Test adding file with filename mismatch."""
         cache = NuclearDataCache(cache_dir=temp_cache_dir, local_endf_dir=tmp_path)
         
-        # Create valid ENDF file with mismatched filename
+        # Create valid ENDF file with mismatched filename (needs to be >= 1000 bytes)
         valid_endf = tmp_path / "n-092_U_238.endf"  # File says U238
-        valid_endf.write_text(" " * 60 + "  -1" + "\n" * 20)
+        valid_endf.write_text("  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000, encoding='utf-8')
         
         index = {}
         nuclide = cache._add_file_to_index(valid_endf, index, allow_alternative_names=False)
@@ -334,9 +340,10 @@ class TestNuclearDataCacheComprehensive:
         decay_dir = local_dir / "decay-version.VIII.1"
         decay_dir.mkdir()
         
-        # Create decay file
+        # Create decay file (needs to be >= 1000 bytes for validation)
         decay_file = decay_dir / "dec-092_U_235.endf"
-        decay_file.write_text(" 1.001000+3 1.000000+0          0          0          0          0  8  451     \n")
+        decay_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        decay_file.write_text(decay_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         u235 = Nuclide(Z=92, A=235)
@@ -356,9 +363,10 @@ class TestNuclearDataCacheComprehensive:
         tsl_dir = local_dir / "tsl-version.VIII.1"
         tsl_dir.mkdir()
         
-        # Create TSL file
+        # Create TSL file (needs to be >= 1000 bytes for validation)
         tsl_file = tsl_dir / "tsl-H_in_H2O.endf"
-        tsl_file.write_text(" 1.001000+3 1.000000+0          0          0          0          0  7  1     \n" * 20)
+        tsl_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        tsl_file.write_text(tsl_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         
@@ -378,7 +386,8 @@ class TestNuclearDataCacheComprehensive:
         tsl_dir.mkdir()
         
         tsl_file = tsl_dir / "thermal-H_in_H2O.endf"
-        tsl_file.write_text(" " * 60 + "  -1" + "\n" * 20)
+        tsl_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        tsl_file.write_text(tsl_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         file_path = cache._find_local_tsl_file("H_in_H2O", Library.ENDF_B_VIII_1)
@@ -495,7 +504,8 @@ class TestNuclearDataCacheComprehensive:
         nfy_dir.mkdir()
         
         nfy_file = nfy_dir / "nfy-092_U_235.endf"
-        nfy_file.write_text(" " * 60 + "  -1" + "\n" * 20)
+        nfy_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        nfy_file.write_text(nfy_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         u235 = Nuclide(Z=92, A=235)
@@ -521,14 +531,16 @@ class TestNuclearDataCacheComprehensive:
         photoat_dir = local_dir / "photoat-version.VIII.1"
         photoat_dir.mkdir()
         
-        photon_file = photoat_dir / "p-001_H.endf"
-        photon_file.write_text(" " * 60 + "  -1" + "\n" * 20)
+        photon_file = photoat_dir / "p-001_H_001.endf"
+        photon_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        photon_file.write_text(photon_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         
         file_path = cache._find_local_photon_file("H", Library.ENDF_B_VIII_1)
-        # May be None if index not built or file not in index
-        assert file_path is None or isinstance(file_path, Path)
+        # Should find the file via index
+        assert file_path is not None
+        assert isinstance(file_path, Path)
     
     def test_build_photon_file_index(self, temp_cache_dir):
         """Test building photon file index."""
@@ -539,13 +551,15 @@ class TestNuclearDataCacheComprehensive:
         photoat_dir = local_dir / "photoat-version.VIII.1"
         photoat_dir.mkdir()
         
-        photon_file = photoat_dir / "p-001_H.endf"
-        photon_file.write_text(" " * 60 + "  -1" + "\n" * 20)
+        photon_file = photoat_dir / "p-001_H_001.endf"
+        photon_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        photon_file.write_text(photon_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         index = cache._build_photon_file_index()
         
         assert isinstance(index, dict)
+        assert len(index) > 0  # Should find the file
     
     def test_build_photon_file_index_no_dir(self, temp_cache_dir):
         """Test building photon index when no local_endf_dir."""
@@ -611,22 +625,6 @@ class TestNuclearDataCacheComprehensive:
         u235 = Nuclide(Z=92, A=235)
         file_path = cache._find_local_gamma_production_file(u235, Library.ENDF_B_VIII_1)
         assert file_path is None
-        cache = NuclearDataCache(cache_dir=temp_cache_dir)
-        
-        # Create TSL directory
-        local_dir = temp_cache_dir / "local_endf"
-        local_dir.mkdir()
-        tsl_dir = local_dir / "tsl-version.VIII.1"
-        tsl_dir.mkdir()
-        
-        tsl_file = tsl_dir / "tsl-H_in_H2O.endf"
-        tsl_file.write_text(" 1.001000+3 1.000000+0          0          0          0          0  7  1     \n")
-        
-        cache.local_endf_dir = local_dir
-        index = cache._build_tsl_file_index()
-        
-        assert len(index) > 0
-        assert "h_in_h2o" in index or "H_in_H2O" in index
     
     def test_build_photon_file_index(self, temp_cache_dir):
         """Test building photon file index."""
@@ -639,7 +637,8 @@ class TestNuclearDataCacheComprehensive:
         photon_dir.mkdir()
         
         photon_file = photon_dir / "p-001_H_001.endf"
-        photon_file.write_text(" 1.001000+3 1.000000+0          0          0          0          0 23  1     \n")
+        photon_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        photon_file.write_text(photon_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         index = cache._build_photon_file_index()
@@ -658,7 +657,8 @@ class TestNuclearDataCacheComprehensive:
         gammas_dir.mkdir()
         
         gamma_file = gammas_dir / "gammas-092_U_235.endf"
-        gamma_file.write_text(" 9.223500+4 2.345678+2          0          0          0          0 12 18     \n")
+        gamma_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        gamma_file.write_text(gamma_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         index = cache._build_gamma_production_file_index()
@@ -677,7 +677,8 @@ class TestNuclearDataCacheComprehensive:
         photon_dir.mkdir()
         
         photon_file = photon_dir / "p-001_H_001.endf"
-        photon_file.write_text(" 1.001000+3 1.000000+0          0          0          0          0 23  1     \n")
+        photon_content = "  -1" + " " * 60 + "\n" + (" " * 80 + "\n") * 1000  # ENDF marker + enough content
+        photon_file.write_text(photon_content, encoding='utf-8')
         
         cache.local_endf_dir = local_dir
         

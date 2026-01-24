@@ -287,6 +287,15 @@ class SafetyMarginReport:
         
         logger.info(f"Safety margin report saved: {filepath}")
     
+    def _format_margin(self, value: Any) -> str:
+        """Format margin value for display."""
+        if isinstance(value, str) or value is None:
+            return str(value) if value is not None else 'N/A'
+        try:
+            return f"{float(value):.2f}"
+        except (ValueError, TypeError):
+            return str(value)
+    
     def to_text(self) -> str:
         """
         Generate human-readable text report.
@@ -305,7 +314,7 @@ class SafetyMarginReport:
             f"  Total margins evaluated: {self.summary.get('total_margins', 0)}",
             f"  Passing: {self.summary.get('passing', 0)}",
             f"  Failing: {self.summary.get('failing', 0)}",
-            f"  Minimum margin: {self.summary.get('min_margin_percent', 'N/A'):.2f}%",
+            f"  Minimum margin: {self._format_margin(self.summary.get('min_margin_percent', 'N/A'))}%",
             "",
             "Detailed Margins:",
             "-" * 70,

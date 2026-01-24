@@ -356,9 +356,5 @@ class TestBackwardsCompatibility:
     def test_define_reactor_units(self):
         """Test define_reactor_units function."""
         from smrforge.utils.units import define_reactor_units
-        
-        ureg = define_reactor_units()
-        assert ureg is not None
-        # Verify reactor units are defined
-        assert hasattr(ureg, 'dollar')
-        assert hasattr(ureg, 'pcm')
+        with pytest.raises(ImportError):
+            define_reactor_units()

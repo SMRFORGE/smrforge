@@ -230,10 +230,13 @@ class TestAdvancedMeshGenerator3D:
             ]
             
             # Mock Parallel to avoid actual parallel execution in tests
-            with patch('smrforge.geometry.advanced_mesh.Parallel') as mock_parallel:
-                mock_parallel.return_value = [
+            with patch('smrforge.geometry.advanced_mesh.Parallel') as mock_parallel_class:
+                # Parallel(n_jobs) returns a callable instance
+                refinement_results = [
                     generator._generate_refinement_region(region) for region in refinement_regions
                 ]
+                mock_parallel_instance = MagicMock(return_value=refinement_results)
+                mock_parallel_class.return_value = mock_parallel_instance
                 
                 mesh = generator.generate_hybrid_3d(
                     core_region=core_region,
@@ -274,12 +277,14 @@ class TestAdvancedMeshGenerator3D:
             ]
             
             # Mock Parallel to avoid actual parallel execution
-            with patch('smrforge.geometry.advanced_mesh.Parallel') as mock_parallel:
-                mock_delayed = MagicMock()
-                mock_parallel.return_value = [
+            with patch('smrforge.geometry.advanced_mesh.Parallel') as mock_parallel_class:
+                # Parallel(n_jobs) returns a callable instance
+                parallel_results = [
                     generator.generate_structured_3d(region, resolution=10).to_mesh3d()
                     for region in regions
                 ]
+                mock_parallel_instance = MagicMock(return_value=parallel_results)
+                mock_parallel_class.return_value = mock_parallel_instance
                 
                 meshes = generator.generate_parallel(regions, resolution=10)
                 

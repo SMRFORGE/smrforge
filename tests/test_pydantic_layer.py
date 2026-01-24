@@ -151,7 +151,10 @@ class TestReactorSpecificationValidators:
 
     def test_validate_temperatures_outlet_exceeds_max_fuel(self):
         """Test that outlet > max_fuel_temperature is rejected."""
-        with pytest.raises(ValueError, match="Outlet temperature.*exceeds.*max fuel temperature"):
+        # Pydantic wraps validator ValueErrors into ValidationError
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match=r"Outlet .* should be <= max fuel"):
             ReactorSpecification(
                 name="Test",
                 reactor_type=ReactorType.PRISMATIC,

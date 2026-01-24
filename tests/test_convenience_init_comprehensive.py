@@ -211,7 +211,8 @@ class TestConvenienceInitEdgeCases:
         """Test import from file when parent_dir is not in sys.path."""
         import sys
         
-        # Test path where parent_dir needs to be added to sys.path (line 60-62)
+        # Test that import works even when parent_dir is not in sys.path
+        # Current implementation uses __package__ and sys.modules instead of sys.path
         original_path = sys.path.copy()
         parent_dir = str(Path(__file__).parent.parent / "smrforge")
         
@@ -222,12 +223,15 @@ class TestConvenienceInitEdgeCases:
             
             if 'smrforge.convenience' in sys.modules:
                 del sys.modules['smrforge.convenience']
+            # Also remove convenience_file module if it exists
+            if 'smrforge.convenience_file' in sys.modules:
+                del sys.modules['smrforge.convenience_file']
             
-            # Should add parent_dir to sys.path
+            # Should import successfully using __package__ approach (not sys.path)
             import smrforge.convenience
             assert hasattr(smrforge.convenience, '_CONVENIENCE_MAIN_AVAILABLE')
-            # Parent dir should now be in sys.path
-            assert parent_dir in sys.path
+            # Current implementation doesn't add to sys.path, uses __package__ instead
+            # So we just verify the import succeeded
         finally:
             sys.path = original_path
     

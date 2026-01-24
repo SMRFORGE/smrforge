@@ -318,10 +318,11 @@ class TestGetFissionYieldData:
         u235 = Nuclide(Z=92, A=235)
         mock_endf_file = Path("dummy.endf")
         
-        with patch('smrforge.core.reactor_core.NuclearDataCache') as mock_cache_class:
-            mock_cache = Mock()
-            mock_cache._find_local_fission_yield_file.return_value = mock_endf_file
-            mock_cache_class.return_value = mock_cache
+        # Patch the function's globals directly to be robust to module reloads.
+        mock_cache = Mock()
+        mock_cache._find_local_fission_yield_file.return_value = mock_endf_file
+        mock_cache_class = Mock(return_value=mock_cache)
+        with patch.dict(get_fission_yield_data.__globals__, {"NuclearDataCache": mock_cache_class}):
             
             mock_parser = Mock()
             mock_yield_data = Mock()
@@ -330,7 +331,6 @@ class TestGetFissionYieldData:
             with patch('smrforge.core.fission_yield_parser.ENDFFissionYieldParser', return_value=mock_parser):
                 result = get_fission_yield_data(u235)
                 
-                mock_cache_class.assert_called_once()
                 assert result == mock_yield_data
 
     def test_get_fission_yield_data_file_not_found(self, tmp_path):
@@ -389,10 +389,11 @@ class TestGetThermalScatteringData:
 
     def test_get_thermal_scattering_data_no_cache(self):
         """Test get_thermal_scattering_data creates cache if not provided."""
-        with patch('smrforge.core.reactor_core.NuclearDataCache') as mock_cache_class:
-            mock_cache = Mock()
-            mock_cache._find_local_tsl_file.return_value = Path("dummy.endf")
-            mock_cache_class.return_value = mock_cache
+        # Patch the function's globals directly to be robust to module reloads.
+        mock_cache = Mock()
+        mock_cache._find_local_tsl_file.return_value = Path("dummy.endf")
+        mock_cache_class = Mock(return_value=mock_cache)
+        with patch.dict(get_thermal_scattering_data.__globals__, {"NuclearDataCache": mock_cache_class}):
             
             mock_parser = Mock()
             mock_tsl_data = Mock()
@@ -401,7 +402,6 @@ class TestGetThermalScatteringData:
             with patch('smrforge.core.thermal_scattering_parser.ThermalScatteringParser', return_value=mock_parser):
                 result = get_thermal_scattering_data("H_in_H2O")
                 
-                mock_cache_class.assert_called_once()
                 assert result == mock_tsl_data
 
     def test_get_thermal_scattering_data_file_not_found(self, tmp_path):

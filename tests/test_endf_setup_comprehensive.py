@@ -270,7 +270,7 @@ class TestEndfSetupEdgeCases:
             endf_dir = tmp_path / "endf_source"
             endf_dir.mkdir()
             
-            with patch('builtins.input', side_effect=[str(endf_dir), "y"]):
+            with patch('builtins.input', side_effect=[str(endf_dir), "y", ""]):
                 with patch('builtins.print'):  # Suppress output
                     with patch('smrforge.core.endf_setup.scan_endf_directory') as mock_scan:
                         with patch('smrforge.core.endf_setup.organize_bulk_endf_downloads') as mock_org:

@@ -387,6 +387,14 @@ class LoadFollowingController:
         )
         
         return control_action
+    
+    def set_demand_profile(self, profile: Callable[[float], float]):
+        """Set demand profile function."""
+        self.demand_profile = profile
+    
+    def reset(self):
+        """Reset controller."""
+        self.controller.reset()
 
 
 @dataclass

@@ -398,7 +398,9 @@ class TestNuclearDataCacheAdditional:
 
         assert isinstance(url, str)
         assert "iaea.org" in url.lower() or "endf" in url.lower()
-        assert nuc.name in url
+        # URL filenames typically use an underscore separator (e.g. "U_235")
+        alt = nuc.name.replace(str(nuc.A), f"_{nuc.A}")
+        assert nuc.name in url or alt in url
 
     def test_reaction_to_mt_unknown_reaction(self):
         """Test _reaction_to_mt with unknown reaction defaults to MT=1."""

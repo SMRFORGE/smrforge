@@ -14,8 +14,19 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 try:
-    from smrforge.core.reactor_core import NuclearDataCache, Nuclide, CrossSectionTable
-    from smrforge.core.endf_parser import ENDFEvaluation, ENDFCompatibility
+    import polars as pl
+    _POLARS_AVAILABLE = True
+except ImportError:
+    _POLARS_AVAILABLE = False
+
+try:
+    from smrforge.core.reactor_core import (
+        CrossSectionTable,
+        Library,
+        NuclearDataCache,
+        Nuclide,
+    )
+    from smrforge.core.endf_parser import ENDFCompatibility, ENDFEvaluation
     _INTEGRATION_AVAILABLE = True
 except ImportError:
     _INTEGRATION_AVAILABLE = False
@@ -117,58 +128,58 @@ class TestEndfReactorCoreIntegration:
             except (FileNotFoundError, ImportError, ValueError):
                 pytest.skip("ENDF parser backend not available")
 
-    def test_cross_section_table_from_endf_evaluation(self, realistic_endf_file):
-        """Test creating CrossSectionTable from ENDFEvaluation data."""
-        # Parse ENDF file
-        eval_obj = ENDFEvaluation(realistic_endf_file)
-        
-        # Get reaction data
-        total_rxn = eval_obj[1]  # MT=1 (total)
-        
-        # Create CrossSectionTable
-        xs_table = CrossSectionTable(
-            energy=total_rxn.energy,
-            cross_section=total_rxn.cross_section,
-            reaction="total",
-            nuclide=Nuclide(Z=92, A=235),
-        )
-        
-        # Verify table structure
-        assert xs_table.reaction == "total"
-        assert xs_table.nuclide.Z == 92
-        assert xs_table.nuclide.A == 235
-        assert len(xs_table.energy) == len(total_rxn.energy)
-        assert len(xs_table.cross_section) == len(total_rxn.cross_section)
+    def test_cross_section_table_from_endf_evaluation(self, realistic_endf_file, temp_dir):
+        """Test CrossSectionTable with ENDF-derived data via generate_multigroup.
+        CrossSectionTable(cache) only; populate via generate_multigroup()."""
+        if not _POLARS_AVAILABLE:
+            pytest.skip("Polars not available")
+        # generate_multigroup uses library=ENDF_B_VIII (VIII.0) by default
+        neutrons_dir = temp_dir / "neutrons-version.VIII.0"
+        neutrons_dir.mkdir(parents=True, exist_ok=True)
+        endf_dest = neutrons_dir / "n-092_U_235.endf"
+        import shutil
+        shutil.copy(realistic_endf_file, endf_dest)
+        cache = NuclearDataCache(cache_dir=temp_dir / "xs_cache", local_endf_dir=temp_dir)
+        u235 = Nuclide(Z=92, A=235)
+        xs_table = CrossSectionTable(cache=cache)
+        group_structure = np.logspace(7, -5, 9)  # 8 groups
+        try:
+            df = xs_table.generate_multigroup(
+                nuclides=[u235],
+                reactions=["total"],
+                group_structure=group_structure,
+            )
+            assert df is not None
+            assert len(df) > 0
+            u235_total = df.filter(
+                (pl.col("nuclide") == "U235") & (pl.col("reaction") == "total")
+            )
+            assert len(u235_total) > 0
+        except (FileNotFoundError, ImportError, ValueError) as e:
+            pytest.skip(f"ENDF/cache setup not available: {e}")
 
     def test_multigroup_collapse_with_endf_data(self, realistic_endf_file, temp_dir):
         """Test multi-group collapse using data from ENDF parser."""
-        cache = NuclearDataCache(cache_dir=temp_dir / "multigroup_cache")
+        if not _POLARS_AVAILABLE:
+            pytest.skip("Polars not available")
+        # generate_multigroup uses library=ENDF_B_VIII (VIII.0) by default
+        neutrons_dir = temp_dir / "neutrons-version.VIII.0"
+        neutrons_dir.mkdir(parents=True, exist_ok=True)
+        endf_dest = neutrons_dir / "n-092_U_235.endf"
+        import shutil
+        shutil.copy(realistic_endf_file, endf_dest)
+        cache = NuclearDataCache(cache_dir=temp_dir / "multigroup_cache", local_endf_dir=temp_dir)
         u235 = Nuclide(Z=92, A=235)
-        
-        # Create group structure
-        group_boundaries = np.logspace(7, -5, 27)  # 26 groups
-        
+        group_structure = np.logspace(7, -5, 27)  # 26 groups
+        xs_table = CrossSectionTable(cache=cache)
         try:
-            # Get fine-group data
-            energy, xs = cache.get_cross_section(
-                u235, "total", library=Library.ENDF_B_VIII_1
+            df = xs_table.generate_multigroup(
+                nuclides=[u235],
+                reactions=["total"],
+                group_structure=group_structure,
             )
-            
-            # Create weighting flux (flat for simplicity)
-            weighting_flux = np.ones_like(energy)
-            
-            # Collapse to multi-group
-            xs_table = CrossSectionTable(
-                energy=energy,
-                cross_section=xs,
-                reaction="total",
-                nuclide=u235,
-            )
-            
-            # Test collapse (may require additional setup)
-            # This validates the integration structure even if collapse needs ENDF files
-            assert xs_table is not None
-            
+            assert df is not None
+            assert len(df) > 0
         except (FileNotFoundError, ImportError, ValueError):
             pytest.skip("ENDF files not available for multigroup collapse test")
 

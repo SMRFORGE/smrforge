@@ -167,7 +167,11 @@ class TestEdgeCases:
         # This should still solve (though may converge slowly)
         try:
             k_eff, flux = solver.solve_steady_state()
-            assert_solution_reasonable(k_eff, flux, k_eff_range=(0.5, 2.5))
+            # With zero fission XS, the system is non-multiplying; k_eff may be ~0.
+            assert np.isfinite(k_eff)
+            assert k_eff >= 0.0
+            assert np.all(np.isfinite(flux))
+            assert np.all(flux >= 0)
         except RuntimeError:
             # May not converge for this extreme case
             pass

@@ -1306,7 +1306,9 @@ class TestMultigroupAdvancedAdditionalEdgeCases:
             "fission": np.array([10.0, 20.0]),
         }
         
-        result = apply_sph_to_multigroup_table(table, factors)
+        # Wrap factors in dict as expected by function
+        sph_factors_dict = {"U238/capture": factors}
+        result = apply_sph_to_multigroup_table(table, sph_factors_dict)
         
         # Should return table unchanged if reaction not found
         assert "fission" in result

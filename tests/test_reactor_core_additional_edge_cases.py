@@ -36,7 +36,10 @@ class TestBuildLocalFileIndexEdgeCases:
     
     def test_build_index_no_local_dir(self, temp_cache_dir):
         """Test building index when no local_endf_dir."""
-        cache = NuclearDataCache(cache_dir=temp_cache_dir, local_endf_dir=None)
+        # Ensure auto-discovery (env/config) doesn't pick up a real ENDF directory
+        with patch("smrforge.core.reactor_core.os.getenv", return_value=None):
+            with patch.object(NuclearDataCache, "_load_config_dir", return_value=None):
+                cache = NuclearDataCache(cache_dir=temp_cache_dir, local_endf_dir=None)
         
         index = cache._build_local_file_index()
         assert isinstance(index, dict)

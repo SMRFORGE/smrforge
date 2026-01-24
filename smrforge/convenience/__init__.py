@@ -23,8 +23,13 @@ try:
             from pathlib import Path
             convenience_file = Path(__file__).parent.parent / "convenience.py"
             if convenience_file.exists():
-                spec = importlib.util.spec_from_file_location("_convenience_module", convenience_file)
+                # Load under a non-conflicting module name *within* the smrforge package
+                # so relative imports inside convenience.py (e.g. from .geometry...) work.
+                spec = importlib.util.spec_from_file_location(
+                    "smrforge._convenience_module", convenience_file
+                )
                 convenience_mod = importlib.util.module_from_spec(spec)
+                sys.modules[spec.name] = convenience_mod
                 spec.loader.exec_module(convenience_mod)
                 
                 list_presets = convenience_mod.list_presets
@@ -34,6 +39,9 @@ try:
                 compare_designs = convenience_mod.compare_designs
                 quick_keff = convenience_mod.quick_keff
                 SimpleReactor = convenience_mod.SimpleReactor
+                # Private helpers (used by some tests / advanced use)
+                _get_library = convenience_mod._get_library
+                _design_library = convenience_mod._design_library
                 _CONVENIENCE_MAIN_AVAILABLE = True
             else:
                 _CONVENIENCE_MAIN_AVAILABLE = False
@@ -46,6 +54,9 @@ try:
             compare_designs = parent_convenience.compare_designs
             quick_keff = parent_convenience.quick_keff
             SimpleReactor = parent_convenience.SimpleReactor
+            # Private helpers (used by some tests / advanced use)
+            _get_library = parent_convenience._get_library
+            _design_library = parent_convenience._design_library
             _CONVENIENCE_MAIN_AVAILABLE = True
     else:
         # Load from file directly
@@ -53,13 +64,18 @@ try:
         import importlib.util
         convenience_file = Path(__file__).parent.parent / "convenience.py"
         if convenience_file.exists():
-            spec = importlib.util.spec_from_file_location("_convenience_module", convenience_file)
+            # Load under a non-conflicting module name *within* the smrforge package
+            # so relative imports inside convenience.py (e.g. from .geometry...) work.
+            spec = importlib.util.spec_from_file_location(
+                "smrforge._convenience_module", convenience_file
+            )
             convenience_mod = importlib.util.module_from_spec(spec)
             # Add parent to path so relative imports work
             import sys
             parent_dir = str(convenience_file.parent)
             if parent_dir not in sys.path:
                 sys.path.insert(0, parent_dir)
+            sys.modules[spec.name] = convenience_mod
             spec.loader.exec_module(convenience_mod)
             
             list_presets = convenience_mod.list_presets
@@ -69,6 +85,9 @@ try:
             compare_designs = convenience_mod.compare_designs
             quick_keff = convenience_mod.quick_keff
             SimpleReactor = convenience_mod.SimpleReactor
+            # Private helpers (used by some tests / advanced use)
+            _get_library = convenience_mod._get_library
+            _design_library = convenience_mod._design_library
             _CONVENIENCE_MAIN_AVAILABLE = True
         else:
             _CONVENIENCE_MAIN_AVAILABLE = False

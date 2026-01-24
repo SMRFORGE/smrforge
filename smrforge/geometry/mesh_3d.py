@@ -442,6 +442,16 @@ def combine_meshes(meshes: List[Mesh3D]) -> Mesh3D:
     
     vertex_offset = 0
     
+    # Determine target cell shape (use largest if mixed)
+    max_cell_size = 0
+    for mesh in meshes:
+        if mesh.cells is not None and len(mesh.cells) > 0:
+            max_cell_size = max(max_cell_size, mesh.cells.shape[1])
+    
+    # If no cells found, max_cell_size stays 0
+    if max_cell_size == 0:
+        max_cell_size = 8  # Default to hexahedral
+    
     for mesh in meshes:
         # Add vertices
         all_vertices.append(mesh.vertices)
@@ -451,9 +461,15 @@ def combine_meshes(meshes: List[Mesh3D]) -> Mesh3D:
             offset_faces = mesh.faces + vertex_offset
             all_faces.append(offset_faces)
         
-        # Add cells with offset
+        # Add cells with offset, normalize to max_cell_size
         if mesh.cells is not None:
             offset_cells = mesh.cells + vertex_offset
+            # Pad tetrahedral (4) to hexahedral (8) if needed
+            if max_cell_size == 8 and offset_cells.shape[1] == 4:
+                # Pad by repeating last vertex 4 times
+                last_vertex = offset_cells[:, -1:]
+                padding = np.repeat(last_vertex, 4, axis=1)
+                offset_cells = np.hstack([offset_cells, padding])
             all_cells.append(offset_cells)
         
         # Add materials

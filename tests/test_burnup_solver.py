@@ -18,7 +18,7 @@ def simple_geometry():
     geometry = PrismaticCore(name="TestCore")
     geometry.core_height = 100.0  # cm
     geometry.core_diameter = 50.0  # cm
-    geometry.build_mesh(n_radial=5, n_axial=3)
+    geometry.generate_mesh(n_radial=5, n_axial=3)
     return geometry
 
 

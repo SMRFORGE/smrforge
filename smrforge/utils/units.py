@@ -94,8 +94,17 @@ def check_units(
 
     ureg = get_ureg()
 
-    # If value is already a Quantity, check units
-    if isinstance(value, Quantity):
+    # If value is already a Quantity, check units.
+    #
+    # Note: in some unit tests we mock Pint; `Quantity` may not be a real type.
+    # In that case, fall back to duck-typing (objects with `.check(...)`).
+    is_quantity = False
+    if isinstance(Quantity, type):
+        is_quantity = isinstance(value, Quantity)
+    else:
+        is_quantity = hasattr(value, "check")
+
+    if is_quantity:
         if isinstance(expected_unit, str):
             expected_quantity = ureg(expected_unit)
         else:
@@ -103,9 +112,8 @@ def check_units(
 
         # Check dimensional compatibility
         if not value.check(expected_quantity.dimensionality):
-            raise DimensionalityError(
-                value.units, expected_quantity.units, name=name
-            )
+            # Pint's DimensionalityError signature varies; don't pass extra kwargs.
+            raise DimensionalityError(value.units, expected_quantity.units)
         return value
 
     # If value is a plain number, convert to Quantity
@@ -143,7 +151,13 @@ def convert_units(value: Any, target_unit: Union[str, Any]) -> float:
 
     ureg = get_ureg()
 
-    if isinstance(value, Quantity):
+    is_quantity = False
+    if isinstance(Quantity, type):
+        is_quantity = isinstance(value, Quantity)
+    else:
+        is_quantity = hasattr(value, "to")
+
+    if is_quantity:
         if isinstance(target_unit, str):
             target_quantity = ureg(target_unit)
         else:
@@ -200,9 +214,9 @@ def define_reactor_units() -> Any:
         >>> reactivity = 0.001 * ureg.dollar  # 1 cent reactivity
         >>> reactivity_pcm = 100 * ureg.pcm  # 100 pcm
     """
-    ureg = get_ureg()
-    # Units are already defined in get_ureg(), but this can be extended
-    return ureg
+    # Units are defined in get_ureg(). If Pint is not installed, get_ureg() will
+    # raise ImportError, and callers/tests can skip accordingly.
+    return get_ureg()
 
 
 __all__ = [

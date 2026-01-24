@@ -250,7 +250,7 @@ class TestParameterSweep:
         
         assert template == {}
     
-    @patch('smrforge.convenience.create_reactor')
+    @patch('smrforge.convenience.create_reactor', create=True)
     def test_run_single_case_keff(self, mock_create_reactor):
         """Test running single case with k-eff analysis."""
         mock_reactor = Mock()
@@ -269,10 +269,10 @@ class TestParameterSweep:
         assert "parameters" in result
         assert result["parameters"]["enrichment"] == 0.15
         assert result["k_eff"] == 1.05
-        assert result["success"] is True
+        # Note: _run_single_case doesn't add 'success' key, it's added by the run() method
         mock_create_reactor.assert_called_once()
     
-    @patch('smrforge.convenience.create_reactor')
+    @patch('smrforge.convenience.create_reactor', create=True)
     def test_run_single_case_error(self, mock_create_reactor):
         """Test single case execution with error."""
         mock_create_reactor.side_effect = ValueError("Test error")
@@ -289,7 +289,7 @@ class TestParameterSweep:
         assert result["success"] is False
         assert "Test error" in result["error"]
     
-    @patch('smrforge.convenience.create_reactor')
+    @patch('smrforge.convenience.create_reactor', create=True)
     def test_run_single_case_neutronics(self, mock_create_reactor):
         """Test running single case with neutronics analysis."""
         mock_reactor = Mock()
@@ -309,7 +309,7 @@ class TestParameterSweep:
         assert result["k_eff"] == 1.05
         mock_reactor.solve.assert_called_once()
     
-    @patch('smrforge.convenience.create_reactor')
+    @patch('smrforge.convenience.create_reactor', create=True)
     def test_run_sequential(self, mock_create_reactor, tmp_path):
         """Test sequential sweep execution."""
         mock_reactor = Mock()
@@ -331,7 +331,7 @@ class TestParameterSweep:
         assert all("k_eff" in r for r in result.results)
         assert mock_create_reactor.call_count == 2
     
-    @patch('smrforge.convenience.create_reactor')
+    @patch('smrforge.convenience.create_reactor', create=True)
     def test_run_parallel(self, mock_create_reactor, tmp_path):
         """Test parallel sweep execution."""
         mock_reactor = Mock()
@@ -353,7 +353,7 @@ class TestParameterSweep:
         assert len(result.failed_cases) == 0
         assert mock_create_reactor.call_count == 3
     
-    @patch('smrforge.convenience.create_reactor')
+    @patch('smrforge.convenience.create_reactor', create=True)
     def test_run_with_failures(self, mock_create_reactor, tmp_path):
         """Test sweep execution with some failures."""
         mock_reactor = Mock()
@@ -421,7 +421,7 @@ class TestParameterSweep:
 class TestParameterSweepIntegration:
     """Integration tests for parameter sweep."""
     
-    @patch('smrforge.convenience.create_reactor')
+    @patch('smrforge.convenience.create_reactor', create=True)
     def test_full_sweep_workflow(self, mock_create_reactor, tmp_path):
         """Test complete parameter sweep workflow."""
         # Mock reactor that returns different k-eff based on enrichment
