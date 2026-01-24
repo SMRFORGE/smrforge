@@ -31,6 +31,7 @@ venv.bak/
 # IDEs
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
@@ -77,6 +78,31 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local coverage/test-run artifacts (generated, machine-specific)
+COVERAGE_ANALYSIS_IMPLEMENTATION.md
+COVERAGE_FILES_ANALYSIS.md
+COVERAGE_PROGRESS_BAR.md
+COVERAGE_RUN_*.md
+COVERAGE_STRATEGY.md
+EXCLUDED_FILES_*.md
+TEST_COORDINATION.md
+TEST_HANG_*.md
+WORK_SESSION_SUMMARY_*.md
+
+coverage_after_dedup.json
+coverage_run_*.txt
+coverage_run_*.txt.errors
+coverage_run_output*.txt
+coverage_run_output*.txt.errors
+coverage_run_output_new*.txt
+
+check_coverage_progress.ps1
+monitor_coverage.ps1
+scripts/check_old_processes.ps1
+scripts/monitor_coverage_run.ps1
+scripts/run_coverage_analysis.ps1
+scripts/show_coverage_progress.ps1
 
 # Docker (optional - comment out if you want to track)
 # Docker volumes and temporary files
