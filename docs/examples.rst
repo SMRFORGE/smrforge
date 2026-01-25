@@ -92,3 +92,10 @@ All examples can be run directly from the command line:
 
 Output files (plots, JSON exports, etc.) are saved to the ``output/`` directory.
 
+Interactive notebooks
+---------------------
+
+If you want an interactive, “try every feature” experience (instead of running scripts), see:
+
+* :doc:`guides/testing-notebooks` - Jupyter notebooks that run the manual feature test scripts.
+

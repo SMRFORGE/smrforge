@@ -59,6 +59,7 @@ setup(
             "sphinx>=4.5",
             "sphinx-rtd-theme>=1.0",
             "sphinx-autodoc-typehints>=1.18",
+            "myst-parser>=2.0.0",
         ],
         "viz": [
             # Visualization dependencies are now required (moved to install_requires)

@@ -52,7 +52,7 @@ python test_02_reactor_creation.py
 If you prefer interactive testing with notebooks:
 
 1. Start Jupyter: `jupyter notebook` or `jupyter lab`
-2. Open available notebook example: `01_CLI_Commands.ipynb` (optional template)
+2. Open the feature notebooks in `testing/notebooks/` (recommended)
 3. **Or create notebooks from Python scripts:**
    - Copy code from `test_*.py` scripts into notebook cells
    - Add markdown cells for documentation

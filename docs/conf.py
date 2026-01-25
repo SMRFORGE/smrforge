@@ -37,7 +37,14 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx_autodoc_typehints",  # Better type hint formatting
+    "myst_parser",  # Markdown support
 ]
+
+# Allow both reStructuredText and Markdown sources
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 
 # Templates
 templates_path = ["_templates"]
