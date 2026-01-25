@@ -10,6 +10,8 @@ services:
       - ./data:/app/data:rw
       # Mount output directory
       - ./output:/app/output:rw
+      # Persist example outputs/artifacts
+      - ./results:/app/results:rw
       # Mount examples (for development)
       - ./examples:/app/examples:ro
       # Optional: mount source code for development
@@ -39,6 +41,7 @@ services:
       - ./:/app:rw
       - ./data:/app/data:rw
       - ./output:/app/output:rw
+      - ./results:/app/results:rw
       - ./examples:/app/examples:ro
       # Mount tests directory for development
       - ./tests:/app/tests:ro
@@ -76,5 +79,6 @@ services:
     #   - API Consistency Report: docs/status/API_CONSISTENCY_REPORT.md (detailed API analysis)
     # Optional: Add mesh conversion and CAD import: pip install meshio trimesh
     # Optional: Add parquet support: pip install pyarrow or fastparquet
-    command: bash -c "pip install -e '.[dev]' && pip install pytest-asyncio ipython h5py && bash"
+    # Image already has dev deps installed; drop into an interactive shell.
+    command: ["/bin/bash"]
 

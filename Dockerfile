@@ -187,9 +187,9 @@ COPY examples/ /app/examples/
 COPY testing/ /app/testing/
 COPY docs/testing/ /app/docs/testing/
 
-# Create directories for data/output and ENDF storage
+# Create directories for data/output/results and ENDF storage
 # ENDF data can be mounted as volume or stored in container
-RUN mkdir -p /app/data /app/output /app/endf-data
+RUN mkdir -p /app/data /app/output /app/results /app/endf-data
 
 # Set environment variable for standard ENDF directory
 # Users can override this or mount their own ENDF directory
