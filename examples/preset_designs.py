@@ -7,8 +7,7 @@ Preset designs provide validated reference configurations that you can use
 directly or as starting points for your own designs.
 """
 
-from smrforge.presets.htgr import ValarAtomicsReactor, DesignLibrary
-from smrforge.validation.models import ReactorType
+from smrforge.presets.htgr import DesignLibrary
 
 
 def list_available_designs():
@@ -27,8 +26,7 @@ def list_available_designs():
     print()
     
     for design_name in designs:
-        reactor = library.get_design(design_name)
-        spec = reactor.spec
+        spec = library.get_design(design_name)
         
         print(f"Design: {spec.name}")
         print(f"  Type: {spec.reactor_type.value}")
@@ -57,8 +55,7 @@ def analyze_preset_design(design_name: str = "valar-10"):
     # Load preset design
     print("1. Loading preset design...")
     library = DesignLibrary()
-    reactor = library.get_design(design_name)
-    spec = reactor.spec
+    spec = library.get_design(design_name)
     
     print(f"   Name: {spec.name}")
     print(f"   Power: {spec.power_thermal / 1e6:.1f} MW thermal")
@@ -128,8 +125,7 @@ def compare_designs(design_names=None):
     print("-" * 70)
     
     for name in design_names:
-        reactor = library.get_design(name)
-        spec = reactor.spec
+        spec = library.get_design(name)
         print(f"{spec.name:<20} {spec.power_thermal/1e6:<12.1f} {spec.core_height:<12.1f} "
               f"{spec.core_diameter:<12.1f} {spec.enrichment*100:<12.1f}")
     

@@ -12,8 +12,41 @@ import numpy as np
 from smrforge.neutronics.solver import MultiGroupDiffusion
 from smrforge.validation.models import CrossSectionData, SolverOptions
 
-# Import test utilities for simple geometry
-from tests.test_utilities import SimpleGeometry
+class SimpleGeometry:
+    """
+    Minimal cylindrical geometry for examples.
+
+    This is intentionally self-contained (does not import from `tests/`) so the
+    example can run in a runtime Docker image that doesn't include test files.
+    """
+
+    def __init__(
+        self,
+        core_diameter: float = 200.0,
+        core_height: float = 400.0,
+        n_radial: int = 11,
+        n_axial: int = 21,
+    ):
+        self.core_diameter = core_diameter
+        self.core_height = core_height
+        self.radial_mesh = np.linspace(0, core_diameter / 2, n_radial)
+        self.axial_mesh = np.linspace(0, core_height, n_axial)
+
+    def get_material_map(self, fuel_radius: float | None = None) -> np.ndarray:
+        """
+        Material map (0=fuel, 1=reflector) for diffusion mesh.
+        """
+        if fuel_radius is None:
+            fuel_radius = 0.8 * self.core_diameter / 2
+
+        r_centers = (self.radial_mesh[:-1] + self.radial_mesh[1:]) / 2
+        z_centers = (self.axial_mesh[:-1] + self.axial_mesh[1:]) / 2
+
+        material_map = np.zeros((len(z_centers), len(r_centers)), dtype=int)
+        for i, r in enumerate(r_centers):
+            if r > fuel_radius:
+                material_map[:, i] = 1
+        return material_map
 
 
 def create_simple_cross_sections():

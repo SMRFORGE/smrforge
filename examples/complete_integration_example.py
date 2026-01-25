@@ -480,6 +480,16 @@ def convert_nuclide_to_material_xs(
         raise ValueError("Absorption exceeds total cross-section (non-physical)")
     if np.any(sigma_f > sigma_a + 1e-6):
         raise ValueError("Fission exceeds absorption cross-section (non-physical)")
+
+    # If no fission production exists, the eigenvalue solve is ill-posed.
+    # This most commonly indicates missing ENDF data for fissile nuclides in the
+    # local ENDF directory (or a mismatch in nuclide identifiers).
+    if np.max(nu_sigma_f[0, :]) <= 0:
+        raise ValueError(
+            "No fission production (nu_sigma_f is all zeros) after conversion. "
+            "Check that ENDF data for fissile nuclides is available and contains "
+            "fission reactions, or fall back to preset cross-sections."
+        )
     
     # Check chi normalization
     for m in range(n_materials):
@@ -742,8 +752,6 @@ class HTGRAnalysisPipeline:
             print(f"  Using energy-dependent nu and proper Watt spectrum for chi")
         except Exception as e:
             print(f"Warning: Conversion failed ({e}), falling back to preset cross-sections")
-            import traceback
-            traceback.print_exc()
             self.xs_data = self.reactor.get_cross_sections()
         
         # Store generated cross-sections for reference

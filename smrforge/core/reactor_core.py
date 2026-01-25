@@ -2714,12 +2714,33 @@ class CrossSectionTable:
             )
 
         # Create DataFrame from arrays (much faster than list of dicts)
-        self.data = pl.DataFrame({
-            "nuclide": nuclide_names,
-            "reaction": reaction_names,
-            "group": groups,
-            "xs": xs_values,
-        })
+        # IMPORTANT: We pre-allocate `n_total` rows, but may skip many
+        # nuclide/reaction combinations. Slice to the number of filled rows to
+        # avoid returning uninitialized garbage (np.empty()).
+        if idx <= 0:
+            self.data = pl.DataFrame(
+                {
+                    "nuclide": [],
+                    "reaction": [],
+                    "group": [],
+                    "xs": [],
+                },
+                schema={
+                    "nuclide": pl.Utf8,
+                    "reaction": pl.Utf8,
+                    "group": pl.Int32,
+                    "xs": pl.Float64,
+                },
+            )
+        else:
+            self.data = pl.DataFrame(
+                {
+                    "nuclide": nuclide_names[:idx],
+                    "reaction": reaction_names[:idx],
+                    "group": groups[:idx],
+                    "xs": xs_values[:idx],
+                }
+            )
         return self.data
 
     async def generate_multigroup_async(
@@ -3057,6 +3078,17 @@ class DecayData:
         """
         half_life = self._get_half_life(nuclide)  # seconds
         return np.log(2) / half_life if half_life > 0 else 0.0
+
+    @lru_cache(maxsize=512)
+    def get_half_life(self, nuclide: Nuclide) -> float:
+        """
+        Get half-life for a nuclide in seconds.
+
+        This is a thin, cached wrapper around ``_get_half_life`` and exists as a
+        public API for callers (e.g., decay heat calculations) that expect a
+        ``get_half_life`` method.
+        """
+        return self._get_half_life(nuclide)
 
     def build_decay_matrix(self, nuclides: List[Nuclide]) -> np.ndarray:
         """
