@@ -150,7 +150,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package metadata first (for better layer caching)
-COPY setup.py pyproject.toml README.md MANIFEST.in /app/
+COPY setup.py pyproject.toml README.md README_PYPI.md MANIFEST.in /app/
 COPY smrforge/ /app/smrforge/
 # Copy CLI scripts and utilities (validation scripts, completion scripts, etc.)
 COPY scripts/ /app/scripts/
@@ -185,6 +185,9 @@ RUN mkdir -p /app/data /app/output /app/endf-data
 # Users can override this or mount their own ENDF directory
 # Also supports configuration file: ~/.smrforge/config.yaml
 ENV SMRFORGE_ENDF_DIR=/app/endf-data
+
+# Dashboard port
+EXPOSE 8050
 
 # Default command (can be overridden)
 # Note: ENDF files can be downloaded automatically using the data downloader
@@ -221,6 +224,8 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   smrforge shell (interactive IPython/REPL)
 #   smrforge workflow run (YAML workflows)
 #   smrforge sweep (parameter sweep and sensitivity analysis)
-CMD ["python", "-c", "import smrforge as smr; print(f'SMRForge {smr.__version__} is ready!'); print(''); print('Features:'); print('  - Comprehensive CLI with nested subcommands'); print('  - Web Dashboard (smrforge serve) with dark/gray mode'); print('  - Interactive shell (smrforge shell)'); print('  - Workflow scripts (smrforge workflow run)'); print('  - Batch processing support'); print('  - Configuration management (smrforge config)'); print('  - Validation framework with benchmark comparison'); print('  - Parameter Sweep Workflow (smrforge sweep)'); print('  - Enhanced Design Comparison (smrforge reactor compare)'); print('  - Template Library System (smrforge reactor template)'); print('  - Simulation Checkpointing & Resume'); print('  - Design Constraints & Validation (smrforge validate design)'); print('  - I/O Converters Framework (Serpent/OpenMC)'); print('  - LWR SMR transient analysis (PWR/BWR/Integral SMR)'); print('  - LWR SMR burnup features (gadolinium depletion, assembly/rod tracking)'); print('  - Automated ENDF data downloader'); print('  - Advanced visualization, geometry import (OpenMC/Serpent/CAD/MCNP)'); print('  - Enhanced mesh generation'); print('  - Geometry Designer GUI - Interactive visual core layout editor'); print('  - Advanced optimization algorithms (GA, PSO) for fuel cycle optimization'); print('  - Advanced interfacial transfer models for two-phase flow'); print('  - Comprehensive test suite (150+ test files, 79.2% coverage)'); print('  - Manual testing scripts (testing/ directory) for feature validation'); print(''); print('ENDF Data Setup:'); print('  Option 1 (Recommended): Use CLI'); print('    smrforge data download --library ENDF-B-VIII.1 --output /app/endf-data'); print('  Option 2: Interactive setup'); print('    smrforge data setup'); print(''); print('Web Dashboard:'); print('  smrforge serve --host 0.0.0.0 --port 8050'); print('  Access at http://localhost:8050 (map port with -p 8050:8050)'); print(''); print('CLI Examples:'); print('  smrforge reactor list'); print('  smrforge reactor create --preset valar-10 --output reactor.json'); print('  smrforge reactor analyze --reactor reactor.json --keff'); print('  smrforge reactor compare --presets valar-10 htr-pm-200 --metrics k_eff'); print('  smrforge reactor template create --from-preset valar-10 --output template.json'); print('  smrforge sweep --reactor reactor.json --params enrichment:0.10:0.25:0.05 --analysis keff'); print('  smrforge burnup run --reactor reactor.json --checkpoint-interval 100 --checkpoint-dir checkpoints/'); print('  smrforge validate design --reactor reactor.json --output validation_report.json'); print('  smrforge validate run --endf-dir /app/endf-data'); print('  smrforge shell  # Interactive Python shell'); print(''); print('Testing:'); print('  pytest  # Run all automated tests'); print('  python testing/test_01_cli_commands.py  # Manual CLI testing'); print('  python testing/test_02_reactor_creation.py  # Manual reactor testing'); print('  python testing/test_03_burnup.py  # Manual burnup testing'); print('  # See testing/ directory for all 13 manual test scripts (test_*.py)
-  # Optional: Jupyter notebooks available for interactive testing (01_CLI_Commands.ipynb)'); print('  # See docs/testing/MANUAL_TESTING_CHECKLIST.md for testing guide'); print('  # See docs/validation/QUICK_START_VALIDATION.md for ENDF validation testing'); print(''); print('Test Coverage:'); print('  - Overall: 79.2% coverage'); print('  - CLI module: 71.8% coverage (130+ passing tests)'); print('  - Priority modules: 75-80%+ coverage'); print(''); print('Optional dependencies:'); print('  - Mesh conversion: pip install meshio'); print('  - CAD import: pip install trimesh'); print('Note: Visualization dependencies (plotly, pyvista, dash) are now required and included automatically')"]
+#
+# By default, start the web dashboard. Override `command:` in docker-compose.yml
+# or `docker run ... <cmd>` for CLI-only usage.
+CMD ["smrforge", "serve", "--host", "0.0.0.0", "--port", "8050"]
 

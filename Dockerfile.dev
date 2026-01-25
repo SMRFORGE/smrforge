@@ -142,7 +142,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package metadata first (for better layer caching)
-COPY setup.py pyproject.toml README.md MANIFEST.in /app/
+COPY setup.py pyproject.toml README.md README_PYPI.md MANIFEST.in /app/
 COPY smrforge/ /app/smrforge/
 # Copy CLI scripts and utilities (validation scripts, completion scripts, etc.)
 COPY scripts/ /app/scripts/
@@ -179,6 +179,11 @@ RUN mkdir -p /app/data /app/output /app/endf-data
 # Users can override this or mount their own ENDF directory
 # Also supports configuration file: ~/.smrforge/config.yaml
 ENV SMRFORGE_ENDF_DIR=/app/endf-data
+
+# Common ports:
+# - 8050: Dash dashboard (`smrforge serve`)
+# - 8888: Jupyter (optional)
+EXPOSE 8050 8888
 
 # Default to bash shell for interactive development
 # Note: ENDF files can be downloaded automatically using the data downloader

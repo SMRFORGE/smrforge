@@ -15,31 +15,19 @@ services:
       # Optional: mount source code for development
       # - ./smrforge:/app/smrforge:ro
       # Mount local ENDF data directory for bulk storage
-      # Uncomment and set path to your ENDF data directory:
-      # For Windows (adjust path as needed):
-      # - C:/Users/YourName/ENDF-Data:/app/endf-data:ro
-      - C:/Users/cmwha/Downloads/ENDF-B-VIII.1:/app/endf-data:ro
-      # For Linux/Mac:
-      # - ~/ENDF-Data:/app/endf-data:ro
-      # - /path/to/ENDF-B-VIII.1:/app/endf-data:ro
+      # Configure the host directory via environment variable:
+      #   SMRFORGE_ENDF_HOST_DIR=/path/to/ENDF-B-VIII.1
+      # If unset, defaults to ./data/endf-data (create/mount as needed).
+      - ${SMRFORGE_ENDF_HOST_DIR:-./data/endf-data}:/app/endf-data:ro
     working_dir: /app
     environment:
       - PYTHONUNBUFFERED=1
-      # Optional: set custom ENDF directory path
-      # - SMRFORGE_ENDF_DIR=/app/endf-data
+      - SMRFORGE_ENDF_DIR=/app/endf-data
       # Note: Also supports configuration file: ~/.smrforge/config.yaml
-      # Dashboard will be available at http://localhost:8050 when running
-    # Keep container running for exec commands
-    stdin_open: true
-    tty: true
-    # Expose dashboard port (8050)
+      # Dashboard available at http://localhost:8050
     ports:
       - "8050:8050"
-    command: tail -f /dev/null
-    # Or run a specific script
-    # command: python examples/complete_integration_example.py
-    # Or run the dashboard:
-    # command: smrforge serve --host 0.0.0.0 --port 8050
+    command: smrforge serve --host 0.0.0.0 --port 8050
 
   smrforge-dev:
     build:
@@ -55,18 +43,11 @@ services:
       # Mount tests directory for development
       - ./tests:/app/tests:ro
       # Mount local ENDF data directory for bulk storage
-      # Uncomment and set path to your ENDF data directory:
-      # For Windows (adjust path as needed):
-      # - C:/Users/YourName/ENDF-Data:/app/endf-data:ro
-      - C:/Users/cmwha/Downloads/ENDF-B-VIII.1:/app/endf-data:ro
-      # For Linux/Mac:
-      # - ~/ENDF-Data:/app/endf-data:ro
-      # - /path/to/ENDF-B-VIII.1:/app/endf-data:ro
+      - ${SMRFORGE_ENDF_HOST_DIR:-./data/endf-data}:/app/endf-data:ro
     working_dir: /app
     environment:
       - PYTHONUNBUFFERED=1
-      # Optional: set custom ENDF directory path
-      # - SMRFORGE_ENDF_DIR=/app/endf-data
+      - SMRFORGE_ENDF_DIR=/app/endf-data
       # Note: Also supports configuration file: ~/.smrforge/config.yaml
       # Dashboard will be available at http://localhost:8050 when running
     stdin_open: true
