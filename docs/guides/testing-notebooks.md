@@ -1,5 +1,7 @@
 # Interactive Feature Notebooks
 
+**Last Updated:** January 25, 2026
+
 SMRForge includes a **notebook-based feature testing set** intended for users to quickly try out each major feature area (CLI, reactor creation, burnup, sweeps, visualization, etc.) in an interactive environment.
 
 ## Where they live

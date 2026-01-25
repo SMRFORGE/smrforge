@@ -1,8 +1,10 @@
 # SMRForge Feature Status
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 25, 2026
 
 This document describes the implementation status and stability of SMRForge modules.
+
+**Roadmap:** See `docs/roadmaps/next-steps.md` for the consolidated “what to do next”.
 
 ---
 
@@ -125,6 +127,19 @@ These modules are fully implemented, tested, and ready for production use:
   - Logo access functions
   - Structured logging throughout package
 
+### Documentation & Feature Testing
+- ✅ **Sphinx Documentation** (`docs/`)
+  - Built with Sphinx + RTD theme
+  - Supports both reStructuredText and Markdown guides
+  - See: `docs/guides/testing-notebooks.md`
+- ✅ **Manual Feature Tests (Scripts)** (`testing/test_*.py`)
+  - One script per feature area (CLI, reactor creation, burnup, sweeps, visualization, etc.)
+  - Test data lives under `testing/test_data/`
+  - Outputs written under `testing/results/` (gitignored)
+- ✅ **Manual Feature Tests (Notebooks)** (`testing/notebooks/*.ipynb`)
+  - One notebook per feature script (thin wrappers that run the scripts and show output inline)
+  - Intended for users to try features interactively without copy/paste
+
 ### ENDF Data Support
 - ✅ **Thermal Scattering Laws** (`smrforge.core.thermal_scattering_parser`)
   - Full ENDF MF=7 parser (MT=2 and MT=4)
@@ -235,45 +250,11 @@ These modules are **functionally complete and well-tested**, but their APIs may 
 
 ---
 
-## 🔴 Not Implemented (Stubs)
+## 🔴 Not Implemented / Placeholders
 
-These modules are placeholders with no implementation:
+Most modules listed above are implemented and covered by automated tests.
 
-### Fuel Performance
-- ❌ **Fuel Module** (`smrforge.fuel`) - Empty stub
-  - **Status**: Not implemented
-  - **Use Case**: Fuel temperature, swelling, fission gas release
-  - **Recommendation**: Use external tools or implement as needed
-
-### Optimization
-- ❌ **Optimization Module** (`smrforge.optimization`) - Empty stub
-  - **Status**: Not implemented
-  - **Use Case**: Design optimization, loading pattern optimization
-  - **Recommendation**: Use scipy.optimize or implement as needed
-
-### I/O Utilities
-- ✅ **Geometry Import** (`smrforge.geometry.importers`) - Implemented
-  - JSON import/export for geometry
-  - Geometry validation
-  - See Geometry section above
-- ❌ **General I/O Module** (`smrforge.io`) - Empty stub
-  - **Status**: Not implemented (geometry I/O available via importers)
-  - **Use Case**: General reactor design import/export
-  - **Recommendation**: Use JSON/Pydantic serialization (already available via models)
-
-
-### Control Systems
-- ❌ **Control Module** (`smrforge.control`) - Empty stub
-  - **Status**: Not implemented
-  - **Note**: Control rod geometry is available via `smrforge.geometry.control_rods` (see Geometry section)
-  - **Use Case**: Reactor control systems, protection systems, control logic
-  - **Recommendation**: Implement as needed for specific use cases
-
-### Economics
-- ❌ **Economics Module** (`smrforge.economics`) - Empty stub
-  - **Status**: Not implemented
-  - **Use Case**: Cost analysis, LCOE calculations
-  - **Recommendation**: Implement as needed for specific use cases
+If you find a feature exposed in docs but missing in code, treat it as a placeholder and open an issue (or update this status page).
 
 
 ---
@@ -339,5 +320,4 @@ If you're using features that are marked as experimental or not implemented:
 
 ---
 
-*Last Updated: 2025*
-
+*Last Updated: January 25, 2026*
