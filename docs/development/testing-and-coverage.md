@@ -420,6 +420,22 @@ pytest --cov=smrforge.core.reactor_core --cov-report=term-missing
 pytest --cov=smrforge.core.endf_parser --cov-report=term-missing
 ```
 
+### Windows / OneDrive file-lock workaround
+
+On Windows—especially when working inside a OneDrive-synced folder—`pytest-cov` may fail with
+`PermissionError: [WinError 5]` while trying to erase/merge `.coverage.*` files.
+
+Workaround: run coverage directly and write the data file to a non-dot filename (or outside OneDrive):
+
+```bash
+python -m coverage run --rcfile=.coveragerc --data-file=coverage_data_full -m pytest -q -p no:cov
+python -m coverage report --rcfile=.coveragerc --data-file=coverage_data_full -m
+python -m coverage html --rcfile=.coveragerc --data-file=coverage_data_full
+start htmlcov/index.html
+```
+
+If you still hit file locking, set `--data-file` to a path in `%TEMP%` or another non-synced directory.
+
 ### Actual Coverage After Completion ✅
 
 **reactor_core.py**:
