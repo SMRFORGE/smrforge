@@ -4,10 +4,14 @@ Reference reactor designs and presets
 
 try:
     from smrforge.presets.htgr import (
+        BWRX300,
+        CAREM32MWe,
         GTMHR350,
         HTRPM200,
         DesignLibrary,
         MicroHTGR,
+        NuScalePWR77MWe,
+        SMART100MWe,
         ValarAtomicsReactor,
     )
 
@@ -27,5 +31,9 @@ if _PRESETS_AVAILABLE:
             "HTRPM200",
             "MicroHTGR",
             "DesignLibrary",
+            "NuScalePWR77MWe",
+            "SMART100MWe",
+            "CAREM32MWe",
+            "BWRX300",
         ]
     )

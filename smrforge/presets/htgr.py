@@ -24,6 +24,15 @@ from ..validation.models import (
     ReactorType,
 )
 
+try:
+    # LWR SMR presets live in a separate module, but are registered here so the
+    # existing preset discovery API continues to work.
+    from .smr_lwr import BWRX300, CAREM32MWe, NuScalePWR77MWe, SMART100MWe
+
+    _LWR_PRESETS_AVAILABLE = True
+except Exception:
+    _LWR_PRESETS_AVAILABLE = False
+
 
 class ValarAtomicsReactor:
     """
@@ -365,6 +374,17 @@ class DesignLibrary:
         self.designs["htr-pm-200"] = htrpm.spec
         self.designs["micro-htgr-1"] = micro.spec
 
+        if _LWR_PRESETS_AVAILABLE:
+            nuscale = NuScalePWR77MWe()
+            smart = SMART100MWe()
+            carem = CAREM32MWe()
+            bwrx = BWRX300()
+
+            self.designs["nuscale-77mwe"] = nuscale.spec
+            self.designs["smart-100mwe"] = smart.spec
+            self.designs["carem-32mwe"] = carem.spec
+            self.designs["bwrx-300"] = bwrx.spec
+
     def get_design(self, name: str) -> ReactorSpecification:
         """Retrieve a validated design by name."""
         if name not in self.designs:
@@ -383,7 +403,7 @@ class DesignLibrary:
         from rich.table import Table
 
         console = Console()
-        table = Table(title="HTGR Design Comparison")
+        table = Table(title="Reactor Design Comparison")
 
         table.add_column("Parameter", style="cyan")
         for name in design_names:

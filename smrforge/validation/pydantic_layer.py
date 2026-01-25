@@ -74,6 +74,9 @@ class ReactorType(str, Enum):
     PEBBLE_BED = "pebble_bed"
     ANNULAR = "annular"
     HYBRID = "hybrid"
+    # LWR SMR core types (aligned with `smrforge.geometry.core_geometry.CoreType`)
+    PWR_SMR = "pwr_smr"
+    BWR_SMR = "bwr_smr"
 
 
 class FuelType(str, Enum):

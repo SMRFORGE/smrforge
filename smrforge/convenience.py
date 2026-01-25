@@ -24,10 +24,14 @@ from .validation.models import (
 # Import presets (handle case where they might not be available)
 try:
     from .presets.htgr import (
+        BWRX300,
+        CAREM32MWe,
         GTMHR350,
         HTRPM200,
         DesignLibrary,
         MicroHTGR,
+        NuScalePWR77MWe,
+        SMART100MWe,
         ValarAtomicsReactor,
     )
 
@@ -171,6 +175,10 @@ def create_reactor(
             "gt-mhr-350": GTMHR350,
             "htr-pm-200": HTRPM200,
             "micro-htgr-1": MicroHTGR,
+            "nuscale-77mwe": NuScalePWR77MWe,
+            "smart-100mwe": SMART100MWe,
+            "carem-32mwe": CAREM32MWe,
+            "bwrx-300": BWRX300,
         }.get(name)
 
         if preset_class is None:
