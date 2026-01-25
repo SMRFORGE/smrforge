@@ -6,6 +6,7 @@ This page provides detailed API documentation for SMRForge.
 .. toctree::
    :maxdepth: 2
 
+   api/howto
    api/modules
 
 Main Modules

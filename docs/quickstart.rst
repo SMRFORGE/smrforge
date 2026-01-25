@@ -49,24 +49,16 @@ Run Neutronics Analysis
 
 .. code-block:: python
 
-   from smrforge.neutronics.solver import MultiGroupDiffusion
-   from smrforge.validation.models import CrossSectionData, SolverOptions
-   from tests.test_utilities import SimpleGeometry
-   
-   # Create geometry
-   geometry = SimpleGeometry()
-   
-   # Create cross-section data
-   xs_data = CrossSectionData(...)  # See examples for details
-   
-   # Create solver options
-   options = SolverOptions(max_iterations=100, tolerance=1e-5)
-   
-   # Create and run solver
-   solver = MultiGroupDiffusion(geometry, xs_data, options)
-   k_eff, flux = solver.solve_steady_state()
-   
+   import smrforge as smr
+
+   # Recommended: use the high-level convenience API
+   reactor = smr.create_reactor("valar-10")
+   k_eff = reactor.solve_keff()
    print(f"k-effective: {k_eff:.6f}")
+
+   # Advanced: the low-level neutronics solver (`MultiGroupDiffusion`) requires
+   # a geometry implementation and cross-section data. See `examples/` and the
+   # API reference pages for details.
 
 Compute Power Distribution
 ---------------------------

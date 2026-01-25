@@ -1,7 +1,9 @@
-geometry
-========
+API Modules
+===========
+
+This section is auto-generated API reference stubs.
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
-   geometry
+   smrforge
