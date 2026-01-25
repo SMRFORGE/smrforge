@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: smrforge:latest
-    container_name: smrforge
+    # Avoid pinning container_name to prevent name collisions across projects.
     volumes:
       # Mount your data directory
       - ./data:/app/data:rw
@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     image: smrforge:dev
-    container_name: smrforge-dev
+    # Avoid pinning container_name to prevent name collisions across projects.
     volumes:
       - ./:/app:rw
       - ./data:/app/data:rw

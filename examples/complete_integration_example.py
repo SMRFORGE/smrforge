@@ -94,6 +94,37 @@ def convert_nuclide_to_material_xs(
     if cache is None:
         # Create a temporary cache if not provided
         cache = NuclearDataCache()
+
+    # Normalize the nuclide column to string names.
+    # CrossSectionTable.generate_multigroup() may store Nuclide objects, which makes
+    # equality filtering against string names (e.g., "U235") return zero rows and
+    # can silently produce nu_sigma_f == 0 (ill-posed eigenvalue problem).
+    def _nuclide_to_name(v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v
+        # smrforge.core.reactor_core.Nuclide has a `.name` property.
+        name = getattr(v, "name", None)
+        if isinstance(name, str):
+            return name
+        return str(v)
+
+    try:
+        xs_df = xs_df.with_columns(
+            pl.col("nuclide")
+            .map_elements(_nuclide_to_name, return_dtype=pl.Utf8)
+            .alias("nuclide")
+        ).with_columns(
+            [
+                pl.col("reaction").cast(pl.Utf8),
+                pl.col("group").cast(pl.Int64),
+            ]
+        )
+    except Exception:
+        # If normalization fails for any reason, continue with original DataFrame.
+        # Downstream code will warn on missing cross-section data per nuclide.
+        pass
     
     # Normalize composition to get fractions
     total_density = sum(composition.values())
