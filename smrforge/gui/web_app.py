@@ -139,6 +139,7 @@ def _register_callbacks():
         register_results_callbacks,
         register_data_manager_callbacks,
         register_project_callbacks,
+        register_feature_lab_callbacks,
     )
     from smrforge.gui.callbacks.theme import register_theme_callbacks
     
@@ -149,6 +150,7 @@ def _register_callbacks():
     register_results_callbacks(app)
     register_data_manager_callbacks(app)
     register_project_callbacks(app)
+    register_feature_lab_callbacks(app)
     register_theme_callbacks(app)
 
 

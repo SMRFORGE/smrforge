@@ -21,6 +21,7 @@ from smrforge.gui.components import (
     create_analysis_panel,
     create_results_viewer,
     create_data_manager,
+    create_feature_lab,
 )
 
 
@@ -36,9 +37,10 @@ def register_navigation_callbacks(app):
         Input('nav-analysis', 'n_clicks'),
         Input('nav-results', 'n_clicks'),
         Input('nav-data-manager', 'n_clicks'),
+        Input('nav-feature-lab', 'n_clicks'),
         prevent_initial_call=False
     )
-    def update_main_content(n1, n2, n3, n4, n5):
+    def update_main_content(n1, n2, n3, n4, n5, n6):
         """Update main content based on navigation clicks."""
         from dash import callback_context as ctx
         if not ctx.triggered:
@@ -58,5 +60,7 @@ def register_navigation_callbacks(app):
             return create_results_viewer()
         elif button_id == 'nav-data-manager':
             return create_data_manager()
+        elif button_id == 'nav-feature-lab':
+            return create_feature_lab()
         
         return create_reactor_builder()

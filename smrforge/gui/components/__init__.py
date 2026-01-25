@@ -17,6 +17,7 @@ from smrforge.gui.components.analysis_panel import (
 )
 from smrforge.gui.components.results_viewer import create_results_viewer
 from smrforge.gui.components.data_manager import create_data_manager
+from smrforge.gui.components.feature_lab import create_feature_lab
 
 __all__ = [
     "create_sidebar",
@@ -30,4 +31,5 @@ __all__ = [
     "create_lumped_thermal_options",
     "create_results_viewer",
     "create_data_manager",
+    "create_feature_lab",
 ]

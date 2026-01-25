@@ -276,12 +276,65 @@ def register_analysis_callbacks(app):
                         }
             
             if analysis_type in ['burnup', 'complete']:
-                # Run burnup (simplified)
                 logger.info("Running burnup analysis")
-                results['burnup'] = {
-                    'status': 'success',
-                    'message': 'Burnup analysis completed'
-                }
+                # Best-effort: attempt full burnup solver; fall back to a lightweight model.
+                try:
+                    from smrforge.burnup.solver import BurnupOptions, BurnupSolver
+
+                    # Parse time steps (days)
+                    steps = []
+                    if time_steps:
+                        for part in str(time_steps).split(","):
+                            part = part.strip()
+                            if part:
+                                steps.append(float(part))
+                    if not steps:
+                        steps = [0.0, 365.0, 730.0]
+
+                    opts = BurnupOptions(
+                        time_steps=steps,
+                        power_density=float(power_density) if power_density else 1e6,
+                        initial_enrichment=float(spec.enrichment),
+                    )
+                    burn = BurnupSolver(reactor._get_solver(), opts)
+                    inv = burn.solve()
+
+                    results["burnup"] = {
+                        "status": "success",
+                        "time_days": [float(x) for x in steps],
+                        "burnup_mwd_per_kg": [float(x) for x in inv.burnup.tolist()],
+                        "message": "Burnup solver completed",
+                    }
+                except Exception as e:
+                    logger.warning(f"Full burnup solver unavailable, using simplified model: {e}")
+                    # Simplified burnup: compute MWd/kgU from power and heavy metal loading
+                    # and apply an exponential depletion of effective enrichment.
+                    steps = []
+                    if time_steps:
+                        for part in str(time_steps).split(","):
+                            part = part.strip()
+                            if part:
+                                steps.append(float(part))
+                    if not steps:
+                        steps = [0.0, 365.0, 730.0]
+
+                    power_mw = float(spec.power_thermal) / 1e6
+                    hm_kg = float(getattr(spec, "heavy_metal_loading", 150.0) or 150.0)
+                    burnup = []
+                    eff_enr = []
+                    for d in steps:
+                        b = power_mw * d / hm_kg  # MWd/kg (capacity factor omitted for simplicity)
+                        burnup.append(float(b))
+                        eff_enr.append(float(spec.enrichment) * float(np.exp(-b / 50.0)))
+
+                    results["burnup"] = {
+                        "status": "success",
+                        "time_days": [float(x) for x in steps],
+                        "burnup_mwd_per_kg": burnup,
+                        "effective_enrichment": eff_enr,
+                        "message": "Simplified burnup completed (configure ENDF for full depletion physics)",
+                        "warning": str(e),
+                    }
             
             if analysis_type in ['quick_transient']:
                 # Run quick transient analysis
@@ -389,12 +442,77 @@ def register_analysis_callbacks(app):
                     }
             
             if analysis_type in ['safety', 'complete']:
-                # Run safety transient (simplified)
-                logger.info("Running safety analysis")
-                results['safety'] = {
-                    'status': 'success',
-                    'message': 'Safety analysis completed'
-                }
+                logger.info("Running safety analysis (point kinetics)")
+                try:
+                    from smrforge.safety.transients import PointKineticsParameters, PointKineticsSolver
+                    import numpy as _np
+
+                    # Typical 6-group delayed neutron parameters (representative)
+                    beta = _np.array([0.00021, 0.00141, 0.00127, 0.00255, 0.00074, 0.00027])
+                    lambda_d = _np.array([0.0127, 0.0317, 0.115, 0.311, 1.40, 3.87])
+
+                    params = PointKineticsParameters(
+                        beta=beta,
+                        lambda_d=lambda_d,
+                        alpha_fuel=-5e-5,
+                        alpha_moderator=-2e-5,
+                        Lambda=1e-4,
+                        fuel_heat_capacity=1e6,
+                        moderator_heat_capacity=5e6,
+                    )
+                    solver = PointKineticsSolver(params)
+
+                    t_end = float(transient_time) if transient_time else 3600.0
+
+                    # Map UI transient type into a simple reactivity/power-removal scenario
+                    scram_time = 5.0
+                    scram_rho = -0.05
+                    if transient_type == "slb":
+                        # mild positive insertion then scram
+                        def rho_ext(t: float) -> float:
+                            return 0.001 if t < scram_time else scram_rho
+
+                        def q_removal(t: float, T_fuel: float, T_mod: float) -> float:
+                            return float(spec.power_thermal) * (0.95 if t < scram_time else 0.10)
+                    elif transient_type == "lofc":
+                        def rho_ext(t: float) -> float:
+                            return 0.0 if t < scram_time else scram_rho
+
+                        def q_removal(t: float, T_fuel: float, T_mod: float) -> float:
+                            return float(spec.power_thermal) * (0.50 if t < scram_time else 0.08)
+                    else:
+                        def rho_ext(t: float) -> float:
+                            return 0.0 if t < scram_time else scram_rho
+
+                        def q_removal(t: float, T_fuel: float, T_mod: float) -> float:
+                            return float(spec.power_thermal) * (0.80 if t < scram_time else 0.10)
+
+                    initial = {
+                        "power": float(spec.power_thermal),
+                        "T_fuel": float(getattr(spec, "max_fuel_temperature", spec.outlet_temperature)),
+                        "T_mod": float(spec.outlet_temperature),
+                    }
+                    pk = solver.solve_transient(
+                        rho_external=rho_ext,
+                        power_removal=q_removal,
+                        initial_state=initial,
+                        t_span=(0.0, t_end),
+                        adaptive=True,
+                        long_term_optimization=(t_end > 86400),
+                    )
+
+                    results["safety"] = {
+                        "status": "success",
+                        "message": "Safety transient completed (point kinetics)",
+                        "time": pk.get("time", []),
+                        "power": pk.get("power", []),
+                        "T_fuel": pk.get("T_fuel", []),
+                        "T_moderator": pk.get("T_mod", pk.get("T_moderator", [])),
+                        "reactivity": pk.get("reactivity", []),
+                    }
+                except Exception as e:
+                    logger.error(f"Safety analysis failed: {e}", exc_info=True)
+                    results["safety"] = {"status": "error", "error": str(e)}
             
             # Check if any analysis failed
             has_errors = any(r.get('status') == 'error' for r in results.values())

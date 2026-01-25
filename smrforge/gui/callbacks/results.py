@@ -208,19 +208,43 @@ def register_results_callbacks(app):
     @app.callback(
         Output('3d-plot-container', 'children'),
         Input('analysis-results-store', 'data'),
+        Input('reactor-spec-store', 'data'),
         prevent_initial_call=True
     )
-    def update_3d_plot(results):
+    def update_3d_plot(results, reactor_spec):
         """Update 3D geometry plot."""
-        if not results:
-            return dbc.Alert("No 3D geometry data available.", color="info")
-        
-        # Placeholder for 3D visualization
-        return dbc.Alert(
-            "3D geometry visualization coming soon. Use CLI for 3D visualization: "
-            "from smrforge.visualization import plot_3d_geometry",
-            color="info"
-        )
+        if not reactor_spec:
+            return dbc.Alert("No reactor specification available. Create a reactor first.", color="info")
+
+        try:
+            import smrforge as smr
+            from smrforge.validation.models import ReactorSpecification
+            from smrforge.visualization.advanced import plot_ray_traced_geometry
+
+            spec = ReactorSpecification(**reactor_spec)
+            reactor = smr.create_reactor(
+                name=spec.name,
+                power_mw=spec.power_thermal / 1e6,
+                core_height=spec.core_height,
+                core_diameter=spec.core_diameter,
+                enrichment=spec.enrichment,
+                reactor_type=spec.reactor_type,
+                fuel_type=spec.fuel_type,
+                inlet_temperature=spec.inlet_temperature,
+                outlet_temperature=spec.outlet_temperature,
+            )
+            core = reactor._get_core()
+            fig = plot_ray_traced_geometry(
+                core,
+                origin=(0.0, 0.0, float(spec.core_height) / 2.0),
+                width=(float(spec.core_diameter) * 1.2, float(spec.core_diameter) * 1.2, float(spec.core_height) * 1.2),
+                basis="xy",
+                backend="plotly",
+            )
+            return dcc.Graph(figure=fig)
+        except Exception as e:
+            logger.error(f"3D plot failed: {e}", exc_info=True)
+            return dbc.Alert(f"3D plot failed: {e}", color="warning")
     
     @app.callback(
         Output('transient-plot-container', 'children'),
@@ -229,15 +253,49 @@ def register_results_callbacks(app):
     )
     def update_transient_plot(results):
         """Update transient results plot."""
-        if not results or 'safety' not in results:
-            return dbc.Alert("No transient data available. Run a safety analysis first.", color="info")
-        
-        # Placeholder for transient visualization
-        return dbc.Alert(
-            "Transient visualization coming soon. Use CLI for transient analysis: "
-            "from smrforge.safety import run_transient",
-            color="info"
+        if not results:
+            return dbc.Alert("No transient data available. Run an analysis first.", color="info")
+
+        # Prefer safety, then quick transient, then lumped thermal
+        series = None
+        title = None
+        if isinstance(results, dict) and "safety" in results and results["safety"].get("status") == "success":
+            series = results["safety"]
+            title = "Safety transient (point kinetics)"
+        elif isinstance(results, dict) and "quick_transient" in results and results["quick_transient"].get("status") == "success":
+            series = results["quick_transient"]
+            title = "Quick transient"
+        elif isinstance(results, dict) and "lumped_thermal" in results and results["lumped_thermal"].get("status") == "success":
+            series = results["lumped_thermal"].get("result", {})
+            title = "Lumped thermal"
+
+        if not series:
+            return dbc.Alert("No transient series found. Run a safety / quick transient / lumped thermal analysis.", color="info")
+
+        t = series.get("time", [])
+        fig = go.Figure()
+
+        if t and series.get("power"):
+            fig.add_trace(go.Scatter(x=t, y=series.get("power", []), mode="lines", name="Power (W)"))
+
+        # Temperature traces (varies by source)
+        if t and series.get("T_fuel"):
+            fig.add_trace(go.Scatter(x=t, y=series.get("T_fuel", []), mode="lines", name="T_fuel (K)", yaxis="y2"))
+        if t and (series.get("T_moderator") or series.get("T_mod")):
+            fig.add_trace(go.Scatter(x=t, y=series.get("T_moderator", series.get("T_mod", [])), mode="lines", name="T_moderator (K)", yaxis="y2"))
+
+        if t and series.get("reactivity"):
+            fig.add_trace(go.Scatter(x=t, y=series.get("reactivity", []), mode="lines", name="Reactivity (dk/k)", yaxis="y3"))
+
+        fig.update_layout(
+            title=title,
+            xaxis_title="Time (s)",
+            yaxis=dict(title="Power (W)"),
+            yaxis2=dict(title="Temperature (K)", overlaying="y", side="right"),
+            yaxis3=dict(title="Reactivity (dk/k)", anchor="free", overlaying="y", side="right", position=1.0),
+            legend=dict(orientation="h"),
         )
+        return dcc.Graph(figure=fig)
     
     @app.callback(
         Output('export-feedback', 'children'),

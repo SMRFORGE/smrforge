@@ -62,6 +62,14 @@ def create_sidebar():
                 className="nav-link"
             )
         ]),
+        dbc.NavItem([
+            dbc.NavLink(
+                "Feature Lab",
+                href="#",
+                id="nav-feature-lab",
+                className="nav-link"
+            )
+        ]),
         html.Hr(),
         dbc.NavItem([
             dbc.Button(
