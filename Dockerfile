@@ -124,10 +124,15 @@ LABEL maintainer="SMRForge Development Team" \
 WORKDIR /app
 
 # Set environment variables
+# Headless-friendly defaults for containers:
+# - MPLBACKEND=Agg avoids GUI backends in headless environments
+# - PYVISTA_OFF_SCREEN=true helps avoid display requirements
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    MPLBACKEND=Agg \
+    PYVISTA_OFF_SCREEN=true
 
 # Install system dependencies
 # Scientific Python packages require various system libraries
@@ -147,7 +152,11 @@ RUN apt-get update && \
     libglib2.0-0 \
     libxrender1 \
     libfontconfig1 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency manifest first (better layer caching)
+COPY requirements.txt /app/requirements.txt
 
 # Copy package metadata first (for better layer caching)
 COPY setup.py pyproject.toml README.md README_PYPI.md MANIFEST.in /app/
@@ -157,11 +166,12 @@ COPY scripts/ /app/scripts/
 
 # Install Python dependencies
 # Upgrade pip and install wheel first (helps with some packages)
-RUN pip install --upgrade pip wheel setuptools
+RUN pip install --upgrade pip wheel setuptools && \
+    pip install --no-cache-dir -r /app/requirements.txt
 
 # Install SMRForge with all dependencies from setup.py
 # This includes visualization dependencies (plotly, pyvista, dash) which are now required
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir .
 
 # Optional: Install additional mesh conversion and CAD import dependencies
 # Uncomment the next lines to include mesh conversion and CAD import support:

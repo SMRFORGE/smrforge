@@ -114,9 +114,14 @@ LABEL maintainer="SMRForge Development Team" \
 
 WORKDIR /app
 
+# Headless-friendly defaults for containers:
+# - MPLBACKEND=Agg avoids GUI backends in headless environments
+# - PYVISTA_OFF_SCREEN=true helps avoid display requirements
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    MPLBACKEND=Agg \
+    PYVISTA_OFF_SCREEN=true
 
 # Install system dependencies including development tools
 # Added libgl1 and libglib2.0-0 for pyvista visualization support
@@ -136,10 +141,14 @@ RUN apt-get update && \
     libglib2.0-0 \
     libxrender1 \
     libfontconfig1 \
+    libgomp1 \
     git \
     vim \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency manifests first (better layer caching)
+COPY requirements.txt requirements-dev.txt /app/
 
 # Copy package metadata first (for better layer caching)
 COPY setup.py pyproject.toml README.md README_PYPI.md MANIFEST.in /app/
@@ -154,12 +163,11 @@ COPY docs/testing/ /app/docs/testing/
 # Install Python dependencies
 RUN pip install --upgrade pip wheel setuptools
 
-# Install SMRForge with dev dependencies from setup.py
-# Note: This will be overridden by volume mount in docker compose, but ensures
-# the image has all dependencies available even without volume mounts
-# Includes pytest, pytest-cov, black, flake8, mypy
-# Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
-RUN pip install --no-cache-dir -e ".[dev]"
+# Install dev dependencies (includes core deps via -r requirements.txt)
+RUN pip install --no-cache-dir -r /app/requirements-dev.txt
+
+# Install SMRForge (editable for development workflows)
+RUN pip install --no-cache-dir -e .
 
 # Optional: Install additional mesh conversion and CAD import dependencies
 # Uncomment the next lines to include mesh conversion and CAD import support:
@@ -167,9 +175,6 @@ RUN pip install --no-cache-dir -e ".[dev]"
 #     meshio>=5.0.0 \
 #     trimesh>=3.0.0
 # Note: joblib is already included as a dependency of scikit-learn
-
-# Install pytest-asyncio for async test support (required for async edge case tests)
-RUN pip install --no-cache-dir pytest-asyncio
 
 # Create directories for data/output and ENDF storage
 # ENDF data can be mounted as volume or stored in container
