@@ -10,12 +10,16 @@ TEST_PATH="${1:-tests}"
 echo "Running quick coverage check on: $TEST_PATH"
 echo "Using parallel execution for speed..."
 
+# Keep generated artifacts out of repo root
+COVERAGE_OUT_DIR="coverage/generated"
+mkdir -p "$COVERAGE_OUT_DIR"
+
 # Run tests with parallel execution and minimal coverage reporting
 pytest "$TEST_PATH" \
     -n auto \
     --cov=smrforge \
     --cov-report=term \
-    --cov-report=json:coverage_quick.json \
+    --cov-report=json:"$COVERAGE_OUT_DIR/coverage_quick.json" \
     -q \
     --tb=short
 

@@ -48,7 +48,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 - **Validation**: Pydantic-based input validation with physics checks
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
-- **Quality Assurance**: 79.2% test coverage overall, 75-80%+ on priority modules, comprehensive manual testing framework
+- **Quality Assurance**: 76.7% test coverage overall (latest verified run), 75-80%+ on priority modules, comprehensive manual testing framework
 - **NEW: Web Dashboard** (January 2026):
   - Interactive web-based interface
   - Reactor builder with preset support
@@ -444,7 +444,7 @@ All examples are runnable and include comments explaining each step.
 
 ## Testing
 
-SMRForge has comprehensive test coverage with 79.2% overall coverage and 75-80%+ on priority modules. All critical modules are well-tested with extensive edge case coverage.
+SMRForge has comprehensive test coverage with 76.7% overall coverage (latest verified run) and 75-80%+ on priority modules. All critical modules are well-tested with extensive edge case coverage.
 
 ### Automated Testing
 
@@ -463,7 +463,7 @@ pytest tests/test_neutronics.py
 ```
 
 **Test Coverage Status:**
-- **Overall Coverage**: 79.2% (up from 35-40%, excellent progress!)
+- **Overall Coverage**: 76.7% (up from 35-40%, excellent progress!)
 - **Priority Modules**: 75-80%+ coverage achieved
 - **All Priority Modules**: Comprehensive test coverage completed
 - **Critical Modules**: All critical modules exceed target coverage (75-80%+)
@@ -493,10 +493,12 @@ python testing/test_10_visualization.py     # Visualization
 
 **Test Data Generator:**
 The `testing/generate_test_data.py` script creates mock test data files needed for visualization and parameter sweep tests:
-- `burnup_results.json` - Mock burnup results with k-eff history
-- `flux_results.json` - Mock flux distribution data
-- `sweep_results.json` - Mock parameter sweep results
-- `checkpoints/checkpoint_5.0.h5` - Mock checkpoint file for burnup resume testing
+- `testing/test_data/burnup_results.json` - Mock burnup results with k-eff history
+- `testing/test_data/flux_results.json` - Mock flux distribution data
+- `testing/test_data/sweep_results.json` - Mock parameter sweep results
+- `testing/test_data/checkpoints/checkpoint_5.0.h5` - Mock checkpoint file for burnup resume testing
+
+Generated plots/HTML visualizations are written to `testing/results/` to keep the repo root clean.
 
 See testing documentation:
 - [`testing/README.md`](testing/README.md) - Manual testing guide

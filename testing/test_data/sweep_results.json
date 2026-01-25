@@ -1,0 +1,59 @@
+{
+  "config": {
+    "parameters": {
+      "enrichment": [
+        0.1,
+        0.15,
+        0.2,
+        0.25
+      ],
+      "power_mw": [
+        50,
+        75,
+        100
+      ]
+    },
+    "analysis_types": [
+      "keff"
+    ],
+    "reactor_template": {
+      "name": "valar-10"
+    },
+    "output_dir": "testing/results/sweep_results",
+    "parallel": false
+  },
+  "results": [
+    {
+      "case_id": 1,
+      "enrichment": 0.1,
+      "power_mw": 50,
+      "k_eff": 0.92,
+      "success": true
+    },
+    {
+      "case_id": 2,
+      "enrichment": 0.15,
+      "power_mw": 75,
+      "k_eff": 1.01,
+      "success": true
+    },
+    {
+      "case_id": 3,
+      "enrichment": 0.2,
+      "power_mw": 100,
+      "k_eff": 1.08,
+      "success": true
+    }
+  ],
+  "failed_cases": [],
+  "summary_stats": {
+    "total_cases": 3,
+    "successful_cases": 3,
+    "failed_cases": 0,
+    "k_eff": {
+      "mean": 1.0033333333333334,
+      "min": 0.92,
+      "max": 1.08
+    }
+  }
+}

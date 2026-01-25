@@ -1,7 +1,7 @@
 # Testing and Coverage Guide
 
 **Last Updated:** January 18, 2026 (Utility module test coverage added)  
-**Current Overall Coverage**: **79.2%** (up from 64.4%, excellent progress!)  
+**Current Overall Coverage**: **76.7%** (up from 64.4%, excellent progress!)  
 **Target Coverage**: 75-80% for all modules  
 **Progress**: All priority modules (9 high + 5 medium) now exceed target coverage (75-80%+)  
 **Gap to 80%**: ~83 statements (0.8% increase needed) - **Very close to target!**  
@@ -291,7 +291,7 @@ All priority tasks from the testing and coverage roadmap have been successfully 
 **Coverage Results:**
 - `reactor_core.py`: 86.5% coverage (exceeds 75-80% target)
 - `endf_parser.py`: 97.3% coverage (exceeds 75-80% target)
-- Overall project: 79.2% coverage (very close to 80% target)
+- Overall project: 76.7% coverage (very close to 80% target)
 - **Utility Modules**: Excellent coverage achieved (January 18, 2026)
   - `utils/error_messages.py`: 100.0%
   - `utils/optimization_utils.py`: 97.8%
@@ -447,7 +447,7 @@ If you still hit file locking, set `--data-file` to a path in `%TEMP%` or anothe
 - ✅ **Target achieved: 75-80%** (exceeds target)
 
 **Overall**:
-- ✅ **Current: 79.2%** (improved from 64.4%, excellent progress!)
+- ✅ **Current: 76.7%** (improved from 64.4%, excellent progress!)
 - ✅ **Target: 80%** (very close - only 0.8% gap remaining)
 
 **Utility Modules** (January 18, 2026):

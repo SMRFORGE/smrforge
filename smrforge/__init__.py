@@ -276,7 +276,7 @@ except ImportError:
 # Some tests delete/reload `smrforge` and/or `smrforge.utils` directly, which can
 # leave a stale `smrforge.utils` attribute pointing at a module object that is
 # no longer the canonical `sys.modules["smrforge.utils"]`.
-import sys as _sys  # noqa: E402
+from ._import_compat import canonical_import, delete_global  # noqa: E402
 
 
 def __getattr__(name: str):
@@ -289,21 +289,12 @@ def __getattr__(name: str):
     to stale attributes and `importlib.reload(package.submodule)` failures.
     """
     if name == "utils":
-        import importlib
-
-        mod = _sys.modules.get("smrforge.utils")
-        if mod is None:
-            mod = importlib.import_module("smrforge.utils")
-        return mod
+        return canonical_import("smrforge.utils")
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 # Ensure we don't keep a stale cached `utils` attribute.
-if "utils" in globals():
-    try:
-        del globals()["utils"]
-    except Exception:
-        pass
+delete_global(globals(), "utils")
 
 # Help system (always available)
 try:

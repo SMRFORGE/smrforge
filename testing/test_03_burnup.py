@@ -19,6 +19,11 @@ except ImportError:
     print("ERROR: SMRForge not installed. Run: pip install -e .")
     sys.exit(1)
 
+TESTING_DIR = Path(__file__).resolve().parent
+TEST_DATA_DIR = TESTING_DIR / "test_data"
+RESULTS_DIR = TESTING_DIR / "results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def test_create_reactor():
     """Create reactor for burnup testing."""
@@ -74,8 +79,8 @@ def test_burnup_with_checkpointing(reactor):
         return False
     
     try:
-        checkpoint_dir = Path('./checkpoints')
-        checkpoint_dir.mkdir(exist_ok=True)
+        checkpoint_dir = TEST_DATA_DIR / "checkpoints"
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
         
         # BurnupOptions: time_steps is a list, no time_units parameter
         options = BurnupOptions(
@@ -109,7 +114,7 @@ def test_resume_from_checkpoint(reactor):
         print("⏭️  Skipped (no reactor)")
         return False
     
-    checkpoint_dir = Path('./checkpoints')
+    checkpoint_dir = TEST_DATA_DIR / "checkpoints"
     if not checkpoint_dir.exists():
         print("⏭️  Skipped (no checkpoint directory)")
         print("   Run burnup with checkpointing first to create checkpoints")
@@ -150,7 +155,7 @@ def test_burnup_visualization():
     """Test burnup visualization."""
     print("\n5. Testing burnup visualization...")
     
-    results_file = Path('burnup_results.json')
+    results_file = TEST_DATA_DIR / "burnup_results.json"
     if not results_file.exists():
         print("⏭️  Skipped (no results file)")
         return False
@@ -178,10 +183,11 @@ def test_burnup_visualization():
                 plt.title('k-eff Evolution During Burnup')
                 plt.grid(True)
                 plt.legend()
-                plt.savefig('burnup_keff_plot.png')
+                output_file = RESULTS_DIR / "burnup_keff_plot.png"
+                plt.savefig(output_file)
                 plt.close()
                 
-                print(f"✅ Created visualization: burnup_keff_plot.png")
+                print(f"✅ Created visualization: {output_file}")
                 return True
             except ImportError:
                 print("⏭️  Skipped (matplotlib not available)")

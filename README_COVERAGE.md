@@ -8,23 +8,20 @@
 
 The following documents contain historical information and detailed implementation notes:
 
-- **`COVERAGE_SURVEY_REPORT.md`** - Historical survey report (deprecated, see COVERAGE_TRACKING.md)
+- **`coverage/archive/docs/`** - Archived historical coverage notes (kept for context)
+- **`coverage/archive/docs/COVERAGE_SURVEY_REPORT.md`** - Historical survey report (deprecated, see COVERAGE_TRACKING.md)
 - **`docs/development/coverage-inventory.md`** - Detailed implementation history and roadmap
 - **`docs/development/coverage-exclusions.md`** - Explanation of intentional exclusions
 - **`docs/archive/coverage-improvements-2026-01.md`** - Historical improvements log
 
 ## Coverage Files
 
-**Historical Coverage JSON Files:**
-The repository contains multiple historical coverage JSON files:
-- `coverage.json`, `coverage_final.json`, `coverage_current.json`
-- `coverage_reactor.json`, `coverage_reactor_full.json`, `coverage_reactor_final.json`
-- `coverage_uq.json`, `coverage_uq_full.json`
-- `coverage_after_dedup.json`, `coverage_check.json`, `coverage_new_modules.json`
+**Historical Coverage JSON Files (archived):**
+The repository keeps older coverage snapshots under `coverage/archive/json/` (useful for forensic comparisons, but often stale).
 
-**⚠️ Important:** These are historical snapshots. To get current coverage:
+**⚠️ Important:** Generate fresh coverage for the current state. Recommended output location:
 ```bash
-pytest tests/ --cov=smrforge --cov-report=json:coverage.json
+pytest tests/ --cov=smrforge --cov-report=json:coverage/generated/coverage.json
 ```
 
 ## Quick Start
@@ -36,13 +33,14 @@ pytest tests/ --cov=smrforge --cov-report=json:coverage.json
 
 2. **Generate Detailed Report:**
    ```bash
-   pytest tests/ --cov=smrforge --cov-report=html
-   open htmlcov/index.html
+    pytest tests/ --cov=smrforge --cov-report=html:coverage/generated/htmlcov
+    open coverage/generated/htmlcov/index.html
    ```
 
 3. **View Coverage Status:**
    - See `COVERAGE_TRACKING.md` for current status
    - See `docs/development/coverage-inventory.md` for detailed history
+   - On Windows/OneDrive, see `docs/development/testing-and-coverage.md` for a coverage workaround that avoids `pytest-cov` file-lock issues.
 
 ## Coverage Targets
 

@@ -42,8 +42,8 @@
 **Passed:**
 - ✅ Basic burnup options (**FIXED!** - `time_steps` as list, no `time_units`)
 - ✅ Burnup with checkpointing (**FIXED!** - correct parameters)
-- ✅ **Burnup visualization** (**FIXED!** - test data generated in `burnup_results.json`)
-- ✅ **Resume from checkpoint** (**FIXED!** - test data generated in `checkpoints/checkpoint_5.0.h5`)
+- ✅ **Burnup visualization** (**FIXED!** - test data in `testing/test_data/burnup_results.json`)
+- ✅ **Resume from checkpoint** (**FIXED!** - test data in `testing/test_data/checkpoints/checkpoint_5.0.h5`)
 
 **Notes:**
 - BurnupOptions API now correctly uses `time_steps` as list (in days)
@@ -61,7 +61,7 @@
 - ✅ Multi-parameter sweep (**FIXED!** - multiple parameters in dict)
 - ✅ Range-based sweep (**FIXED!** - tuple format `(start, end, step)`)
 - ✅ Parallel sweep (**FIXED!** - parallel options correctly set)
-- ✅ **Save results** (**FIXED!** - test data generated in `sweep_results.json`)
+- ✅ **Save results** (**FIXED!** - test data in `testing/test_data/sweep_results.json`)
 
 **Notes:**
 - SweepConfig API now correctly uses `parameters` dictionary
@@ -124,7 +124,7 @@
 
 **Notes:**
 - ValidationBenchmarker is in `tests/validation_benchmarks.py` and requires full test suite setup
-- Benchmark data file created (`test_benchmark_data.json`) for future use
+- Benchmark data file created (`testing/test_data/test_benchmark_data.json`) for future use
 - Validation framework is ready; benchmarking requires integration with tests module
 - Both skipped tests are expected for manual testing without full test suite
 
@@ -138,8 +138,8 @@
 **Passed:**
 - ✅ 2D geometry visualization (**FIXED!** - uses voxel plot, handles data requirements)
 - ✅ 3D geometry visualization (**FIXED!** - numpy array bug fixed in `voxel_plots.py`)
-- ✅ **Burnup visualization** (**FIXED!** - test data generated in `burnup_results.json`)
-- ✅ **Flux visualization** (**FIXED!** - test data generated in `flux_results.json`)
+- ✅ **Burnup visualization** (**FIXED!** - test data in `testing/test_data/burnup_results.json`)
+- ✅ **Flux visualization** (**FIXED!** - test data in `testing/test_data/flux_results.json`)
 
 **Notes:**
 - Visualization bug fixed in `voxel_plots.py` (numpy array hashing issue)
@@ -207,14 +207,14 @@
 2. **Test 2: Quick k-eff** - Fixed to use parameters instead of reactor object ✅
 3. **Test 2: Analyze/Compare** - Fixed API signatures, handle solver validation gracefully ✅
 4. **Test 3: Burnup API** - Fixed `time_steps` list, removed `time_units` ✅
-   - **Test 3: Burnup Visualization** - Created test data (`burnup_results.json`) ✅
-   - **Test 3: Checkpoint Resume** - Created checkpoint file (`checkpoints/checkpoint_5.0.h5`) ✅
-5. **Test 4: Parameter Sweep Save Results** - Created test data (`sweep_results.json`) ✅
+   - **Test 3: Burnup Visualization** - Created test data (`testing/test_data/burnup_results.json`) ✅
+   - **Test 3: Checkpoint Resume** - Created checkpoint file (`testing/test_data/checkpoints/checkpoint_5.0.h5`) ✅
+5. **Test 4: Parameter Sweep Save Results** - Created test data (`testing/test_data/sweep_results.json`) ✅
 5. **Test 4: Parameter Sweep API** - Fixed `SweepConfig` to use `parameters` dict ✅
 6. **Test 7: I/O Converters** - Fixed imports and API usage ✅
 7. **Test 10: Visualization** - Fixed numpy array hashing bug in `voxel_plots.py` ✅
-   - **Test 10: Burnup Visualization** - Created test data (`burnup_results.json`) ✅
-   - **Test 10: Flux Visualization** - Created test data (`flux_results.json`) ✅
+   - **Test 10: Burnup Visualization** - Created test data (`testing/test_data/burnup_results.json`) ✅
+   - **Test 10: Flux Visualization** - Created test data (`testing/test_data/flux_results.json`) ✅
 
 ### ✅ All Issues Fixed!
 All remaining issues are either expected (not yet implemented features) or expected skips (require data files).

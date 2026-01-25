@@ -22,9 +22,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 # Coverage data storage location
-COVERAGE_DATA_DIR = Path("coverage_data")
-COVERAGE_DATA_FILE = COVERAGE_DATA_DIR / "coverage_history.json"
-COVERAGE_TRENDS_FILE = COVERAGE_DATA_DIR / "coverage_trends.json"
+# Keep generated artifacts out of the repo root.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+COVERAGE_BASE_DIR = REPO_ROOT / "coverage"
+COVERAGE_GENERATED_DIR = COVERAGE_BASE_DIR / "generated"
+COVERAGE_TRACKING_DIR = COVERAGE_BASE_DIR / "tracking"
+COVERAGE_DATA_FILE = COVERAGE_TRACKING_DIR / "coverage_history.json"
+COVERAGE_TRENDS_FILE = COVERAGE_TRACKING_DIR / "coverage_trends.json"
 
 
 def load_coverage_json(json_file: Path) -> Optional[Dict]:
@@ -90,7 +94,7 @@ def load_history() -> List[Dict]:
 
 def save_history(history: List[Dict]):
     """Save historical coverage data."""
-    COVERAGE_DATA_DIR.mkdir(exist_ok=True)
+    COVERAGE_TRACKING_DIR.mkdir(parents=True, exist_ok=True)
     
     data = {
         'last_updated': datetime.now().isoformat(),
@@ -113,11 +117,14 @@ def generate_coverage() -> Optional[Dict]:
     # Run pytest with coverage
     # Note: Removed -n auto since pytest-xdist may not be available
     # For faster execution, users can manually add -n auto if pytest-xdist is installed
+    COVERAGE_GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+    coverage_json_path = COVERAGE_GENERATED_DIR / "coverage_current.json"
+
     cmd = [
         sys.executable, '-m', 'pytest',
         'tests/',
         '--cov=smrforge',
-        '--cov-report=json:coverage_current.json',
+        f'--cov-report=json:{coverage_json_path.as_posix()}',
         '--cov-report=term',
         '-q',
         '--ignore=tests/performance/test_performance_benchmarks.py',  # Exclude slow/failing tests
@@ -125,12 +132,11 @@ def generate_coverage() -> Optional[Dict]:
     ]
     
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True, env=env)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True, env=env, cwd=REPO_ROOT)
         print(result.stdout)
         
         # Load the generated coverage JSON
-        coverage_file = Path("coverage_current.json")
-        coverage_data = load_coverage_json(coverage_file)
+        coverage_data = load_coverage_json(coverage_json_path)
         
         if coverage_data:
             metrics = extract_coverage_metrics(coverage_data)
@@ -357,7 +363,7 @@ Examples:
     
     if args.summary:
         # Try to load current coverage if available
-        current_file = Path("coverage_current.json")
+        current_file = COVERAGE_GENERATED_DIR / "coverage_current.json"
         if current_file.exists():
             coverage_data = load_coverage_json(current_file)
             if coverage_data:
@@ -377,7 +383,7 @@ Examples:
     
     if args.compare:
         # Generate current if not available
-        current_file = Path("coverage_current.json")
+        current_file = COVERAGE_GENERATED_DIR / "coverage_current.json"
         if not current_file.exists():
             print("No current coverage data. Generating...")
             metrics = generate_coverage()

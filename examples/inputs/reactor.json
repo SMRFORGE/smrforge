@@ -1,0 +1,6 @@
+{
+  "name": "example-reactor",
+  "reactor_type": "htgr",
+  "power_mw": 100,
+  "enrichment": 0.195
+}

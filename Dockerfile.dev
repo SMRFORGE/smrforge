@@ -280,7 +280,7 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   - General Optimization module (reactor design optimization, loading pattern optimization)
 #   - General I/O Utilities (file readers/writers, format converters for Serpent/OpenMC)
 #   - Advanced interfacial transfer models for two-phase flow
-#   - Comprehensive test suite (194+ test files, 79.2% coverage)
+#   - Comprehensive test suite (194+ test files, 76.7% coverage)
 #     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
 #     * Utility module tests: memory_mapped (100%), parallel_batch (67.2%), error_messages (98.2%), optimization_utils (97.8%), memory_pool (100%), material_mapping (100%), units (improved), logo (improved), logging (improved)
 #     * __init__.py import error path tests: burnup, validation, convenience, presets
@@ -297,23 +297,28 @@ ENV SMRFORGE_ENDF_DIR=/app/endf-data
 #   pytest tests/test_burnup_checkpointing.py -v  # Test checkpointing
 #   pytest tests/test_reactor_core_advanced_error_handling.py -v  # Test error handling
 #   pytest tests/test_reactor_core_async_edge_cases.py -v  # Test async operations
-#   pytest --cov=smrforge --cov-report=html  # Coverage report
+#   pytest --cov=smrforge --cov-report=html:coverage/generated/htmlcov  # Coverage report
 #
 # Running Manual Tests:
 #   # First, generate test data files (required for some tests):
 #   python testing/generate_test_data.py  # Generate burnup, flux, sweep, and checkpoint data
-#   # This creates: burnup_results.json, flux_results.json, sweep_results.json, checkpoints/checkpoint_5.0.h5
+#   # This creates:
+#   #   - testing/test_data/burnup_results.json
+#   #   - testing/test_data/flux_results.json
+#   #   - testing/test_data/sweep_results.json
+#   #   - testing/test_data/checkpoints/checkpoint_5.0.h5  (if h5py is available)
+#   #   - (plots/HTML outputs go under testing/results/)
 #   
 #   python testing/test_01_cli_commands.py  # Test CLI commands
 #   python testing/test_02_reactor_creation.py  # Test reactor creation/analysis
-#   python testing/test_03_burnup.py  # Test burnup calculations (uses generated burnup_results.json)
-#   python testing/test_04_parameter_sweep.py  # Test parameter sweep (uses generated sweep_results.json)
+#   python testing/test_03_burnup.py  # Test burnup calculations (uses testing/test_data/burnup_results.json)
+#   python testing/test_04_parameter_sweep.py  # Test parameter sweep (uses testing/test_data/sweep_results.json)
 #   python testing/test_05_templates.py  # Test template library
 #   python testing/test_06_constraints.py  # Test design constraints
 #   python testing/test_07_io_converters.py  # Test I/O converters
 #   python testing/test_08_data_management.py  # Test data management
 #   python testing/test_09_validation.py  # Test validation framework
-#   python testing/test_10_visualization.py  # Test visualization (uses generated burnup_results.json and flux_results.json)
+#   python testing/test_10_visualization.py  # Test visualization (uses testing/test_data/burnup_results.json and flux_results.json)
 #   python testing/test_11_workflows.py  # Test workflow scripts
 #   python testing/test_12_config.py  # Test configuration
 #   python testing/test_13_advanced.py  # Test advanced features

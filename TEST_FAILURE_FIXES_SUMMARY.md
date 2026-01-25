@@ -41,7 +41,7 @@
 
 Add to coverage run command:
 ```bash
-pytest tests/ --cov=smrforge --cov-report=json:coverage.json \
+pytest tests/ --cov=smrforge --cov-report=json:coverage/generated/coverage.json \
     --ignore=tests/test_backend_fallback_chain.py \
     --ignore=tests/test_burnup_checkpointing.py \
     --ignore=tests/test_adjoint_weighting.py \

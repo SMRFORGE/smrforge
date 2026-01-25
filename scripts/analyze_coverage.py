@@ -120,6 +120,6 @@ if __name__ == '__main__':
         coverage_file = sys.argv[1]
     else:
         # Default to most recent coverage file
-        coverage_file = 'coverage.json'
+        coverage_file = 'coverage/generated/coverage.json'
     
     analyze_coverage_file(coverage_file)

@@ -8,12 +8,16 @@ param(
 Write-Host "Running quick coverage check on: $TestPath" -ForegroundColor Cyan
 Write-Host "Using parallel execution for speed..." -ForegroundColor Yellow
 
+# Keep generated artifacts out of repo root
+$CoverageOutDir = "coverage/generated"
+New-Item -ItemType Directory -Force $CoverageOutDir | Out-Null
+
 # Run tests with parallel execution and minimal coverage reporting
 pytest $TestPath `
     -n auto `
     --cov=smrforge `
     --cov-report=term `
-    --cov-report=json:coverage_quick.json `
+    --cov-report=json:$CoverageOutDir/coverage_quick.json `
     -q `
     --tb=short
 

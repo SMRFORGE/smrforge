@@ -20,6 +20,11 @@ except ImportError:
     print("ERROR: SMRForge not installed. Run: pip install -e .")
     sys.exit(1)
 
+TESTING_DIR = Path(__file__).resolve().parent
+TEST_DATA_DIR = TESTING_DIR / "test_data"
+TEST_RESULTS_DIR = TESTING_DIR / "results"
+TEST_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def generate_burnup_results():
     """Generate mock burnup results file for visualization testing."""
@@ -71,8 +76,9 @@ def generate_burnup_results():
     }
     
     # Save to file
-    output_file = Path('burnup_results.json')
-    with open(output_file, 'w') as f:
+    TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    output_file = TEST_DATA_DIR / "burnup_results.json"
+    with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(burnup_results, f, indent=2, default=str)
     
     print(f"✅ Generated burnup results file: {output_file}")
@@ -125,8 +131,9 @@ def generate_flux_data():
                 flux_results['power_sample'] = power_array.flatten()[:1000].tolist()
                 flux_results['power_shape'] = list(power_array.shape)
             
-            output_file = Path('flux_results.json')
-            with open(output_file, 'w') as f:
+            TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
+            output_file = TEST_DATA_DIR / "flux_results.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(flux_results, f, indent=2, default=str)
             
             print(f"✅ Generated flux results file: {output_file}")
@@ -164,8 +171,9 @@ def generate_flux_data():
                 }
             }
             
-            output_file = Path('flux_results.json')
-            with open(output_file, 'w') as f:
+            TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
+            output_file = TEST_DATA_DIR / "flux_results.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(flux_results, f, indent=2)
             
             print(f"✅ Generated mock flux results file: {output_file}")
@@ -187,8 +195,8 @@ def create_checkpoint_file():
     try:
         import h5py
         
-        checkpoint_dir = Path('./checkpoints')
-        checkpoint_dir.mkdir(exist_ok=True)
+        checkpoint_dir = TEST_DATA_DIR / "checkpoints"
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
         
         checkpoint_file = checkpoint_dir / 'checkpoint_5.0.h5'
         
@@ -245,8 +253,9 @@ def setup_validation_benchmark_data():
     }
     
     # Save benchmark data file
-    benchmark_file = Path('test_benchmark_data.json')
-    with open(benchmark_file, 'w') as f:
+    TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    benchmark_file = TEST_DATA_DIR / "test_benchmark_data.json"
+    with open(benchmark_file, 'w', encoding='utf-8') as f:
         json.dump(benchmark_data, f, indent=2)
     
     print(f"✅ Created benchmark data file: {benchmark_file}")
@@ -271,7 +280,7 @@ def generate_parameter_sweep_results():
             },
             analysis_types=['keff'],
             reactor_template={'name': 'valar-10'},
-            output_dir=Path('sweep_results'),
+            output_dir=TEST_RESULTS_DIR / "sweep_results",
             parallel=False,
             save_intermediate=True
         )
@@ -330,7 +339,8 @@ def generate_parameter_sweep_results():
         )
         
         # Save to JSON file
-        output_file = Path('sweep_results.json')
+        TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        output_file = TEST_DATA_DIR / "sweep_results.json"
         sweep_result.save(output_file)
         
         print(f"✅ Generated parameter sweep results: {output_file}")

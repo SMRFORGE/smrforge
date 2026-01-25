@@ -39,10 +39,13 @@ venv.bak/
 # Testing
 .pytest_cache/
 .coverage
+.coverage*
+coverage_data*
 htmlcov/
 .tox/
 .mypy_cache/
 .pytype/
+pytest-cache-files-*/
 
 # Documentation
 # Only ignore build output, not source files
@@ -62,6 +65,20 @@ data/*
 !data/.gitkeep
 output/*
 !output/.gitkeep
+results/*
+!results/.gitkeep
+
+# Manual testing outputs / generated artifacts
+testing/results/
+burnup_keff_plot.png
+flux_distribution_plot.png
+geometry_2d.html
+geometry_2d.png
+geometry_3d.html
+
+# Coverage generated artifacts (historical snapshots live in coverage/archive/)
+coverage/generated/
+coverage/tracking/
 
 # Backup
 backup_*/

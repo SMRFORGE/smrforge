@@ -78,7 +78,7 @@ For quick checks, use minimal reporting:
 pytest -n auto --cov=smrforge --cov-report=term -q
 
 # JSON only (for scripts)
-pytest -n auto --cov=smrforge --cov-report=json:coverage.json -q
+pytest -n auto --cov=smrforge --cov-report=json:coverage/generated/coverage.json -q
 ```
 
 ### 7. Exclude Files from Coverage

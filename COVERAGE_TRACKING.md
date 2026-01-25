@@ -2,7 +2,7 @@
 
 **Last Updated:** January 2026  
 **Target Coverage:** 75-80% for priority modules  
-**Overall Project Coverage:** 79.2% ✅ (target achieved)
+**Overall Project Coverage:** 76.7% ✅ (target achieved; last verified 2026-01-25)
 
 This is the **single source of truth** for test coverage tracking in SMRForge.
 
@@ -355,10 +355,10 @@ The following code paths are intentionally excluded from coverage or have accept
 pytest tests/ --cov=smrforge --cov-report=term-missing -n auto
 
 # Detailed JSON report
-pytest tests/ --cov=smrforge --cov-report=json:coverage.json
+pytest tests/ --cov=smrforge --cov-report=json:coverage/generated/coverage.json
 
 # HTML report
-pytest tests/ --cov=smrforge --cov-report=html
+pytest tests/ --cov=smrforge --cov-report=html:coverage/generated/htmlcov
 ```
 
 ### Coverage Scripts
@@ -370,7 +370,7 @@ pytest tests/ --cov=smrforge --cov-report=html
 - `.coveragerc` - Coverage configuration
 - `pytest.ini` - Test configuration and exclusions
 
-**Note:** Coverage files in the root directory (e.g., `coverage.json`, `coverage_final.json`) are historical snapshots. The authoritative coverage data should be generated fresh using the commands above.
+**Note:** Historical coverage files were moved out of the repo root into `coverage/archive/` to keep the repository tidy. Generate fresh coverage data using the commands above.
 
 ---
 
@@ -415,18 +415,17 @@ pytest tests/ --cov=smrforge --cov-report=html
 
 ## Historical Coverage Files
 
-**Note:** The following coverage JSON files exist in the repository but are historical snapshots:
-- `coverage.json` - Full project snapshot
-- `coverage_final.json` - Final snapshot with exclusions
-- `coverage_current.json` - Current state snapshot
-- `coverage_after_dedup.json` - After deduplication
-- `coverage_reactor.json` - Reactor module only
-- `coverage_reactor_full.json` - Reactor module full
-- `coverage_reactor_final.json` - Reactor module final
-- `coverage_uq.json` - Uncertainty module only
-- `coverage_uq_full.json` - Uncertainty module full
-- `coverage_check.json` - Check snapshot
-- `coverage_new_modules.json` - New modules snapshot
+**Note:** The following coverage JSON files are historical snapshots (archived under `coverage/archive/json/`):
+- `coverage/archive/json/coverage.json` - Full project snapshot
+- `coverage/archive/json/coverage_final.json` - Final snapshot with exclusions
+- `coverage/archive/json/coverage_current.json` - Current state snapshot
+- `coverage/archive/json/coverage_reactor.json` - Reactor module only
+- `coverage/archive/json/coverage_reactor_full.json` - Reactor module full
+- `coverage/archive/json/coverage_reactor_final.json` - Reactor module final
+- `coverage/archive/json/coverage_uq.json` - Uncertainty module only
+- `coverage/archive/json/coverage_uq_full.json` - Uncertainty module full
+- `coverage/archive/json/coverage_check.json` - Check snapshot
+- `coverage/archive/json/coverage_new_modules.json` - New modules snapshot
 
 **Recommendation:** Generate fresh coverage data using the commands in the "Coverage Generation" section rather than relying on historical files. These files may be outdated and do not reflect the current state of the codebase.
 

@@ -19,6 +19,11 @@ except ImportError:
     print("ERROR: SMRForge not installed. Run: pip install -e .")
     sys.exit(1)
 
+TESTING_DIR = Path(__file__).resolve().parent
+TEST_DATA_DIR = TESTING_DIR / "test_data"
+RESULTS_DIR = TESTING_DIR / "results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def test_create_reactor():
     """Create reactor for parameter sweep."""
@@ -194,7 +199,7 @@ def test_save_results():
     """Test saving sweep results."""
     print("\n6. Testing save results...")
     
-    results_file = Path('sweep_results.json')
+    results_file = TEST_DATA_DIR / "sweep_results.json"
     if not results_file.exists():
         # Try to generate it first
         try:
@@ -227,7 +232,7 @@ def test_save_results():
             
             if isinstance(results_list, list) and len(results_list) > 0:
                 df = pd.DataFrame(results_list)
-                csv_file = Path('sweep_results.csv')
+                csv_file = RESULTS_DIR / "sweep_results.csv"
                 df.to_csv(csv_file, index=False)
                 
                 print(f"✅ Saved results to CSV: {csv_file}")
@@ -243,7 +248,7 @@ def test_save_results():
                         parameters=config_dict.get('parameters', {}),
                         analysis_types=config_dict.get('analysis_types', ['keff']),
                         reactor_template=config_dict.get('reactor_template'),
-                        output_dir=Path(config_dict.get('output_dir', 'sweep_results')),
+                        output_dir=Path(config_dict.get('output_dir', (RESULTS_DIR / 'sweep_results').as_posix())),
                         parallel=config_dict.get('parallel', False)
                     )
                     

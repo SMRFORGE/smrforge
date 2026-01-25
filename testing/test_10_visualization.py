@@ -18,6 +18,11 @@ except ImportError:
     print("ERROR: SMRForge not installed. Run: pip install -e .")
     sys.exit(1)
 
+TESTING_DIR = Path(__file__).resolve().parent
+TEST_DATA_DIR = TESTING_DIR / "test_data"
+RESULTS_DIR = TESTING_DIR / "results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def test_create_reactor():
     """Create reactor for visualization testing."""
@@ -65,12 +70,12 @@ def test_geometry_visualization_2d(reactor):
             basis='xyz',  # 3D can be viewed as 2D slice
             color_by='material',
             backend='plotly',
-            output_file='geometry_2d.html'
+            output_file=(RESULTS_DIR / "geometry_2d.html").as_posix()
         )
         
         fig = plot.plot(core)
         print(f"✅ Created 2D/3D geometry visualization")
-        print(f"   Output: geometry_2d.html")
+        print(f"   Output: {RESULTS_DIR / 'geometry_2d.html'}")
         print(f"   Note: 2D slice plot requires flux/power data")
         
         return True
@@ -113,12 +118,12 @@ def test_geometry_visualization_3d(reactor):
             basis='xyz',  # 3D view
             color_by='material',
             backend='plotly',
-            output_file='geometry_3d.html'
+            output_file=(RESULTS_DIR / "geometry_3d.html").as_posix()
         )
         
         fig = plot.plot(core)
         print(f"✅ Created 3D geometry visualization")
-        print(f"   Output: geometry_3d.html")
+        print(f"   Output: {RESULTS_DIR / 'geometry_3d.html'}")
         
         return True
     except ImportError:
@@ -136,10 +141,10 @@ def test_burnup_visualization():
     print("\n4. Testing burnup visualization...")
     
     # Check if we have burnup results
-    burnup_file = Path('burnup_results.json')
+    burnup_file = TEST_DATA_DIR / "burnup_results.json"
     if not burnup_file.exists():
         print("⏭️  Skipped (no burnup results file)")
-        print("   Run test_03_burnup.py first to generate results")
+        print("   Run testing/generate_test_data.py first to generate results")
         return False
     
     try:
@@ -166,7 +171,7 @@ def test_burnup_visualization():
             plt.grid(True)
             plt.legend()
             
-            output_file = Path('burnup_keff_plot.png')
+            output_file = RESULTS_DIR / "burnup_keff_plot.png"
             plt.savefig(output_file)
             plt.close()
             
@@ -191,7 +196,7 @@ def test_flux_visualization():
     print("\n5. Testing flux visualization...")
     
     # Check if we have flux results file (from generate_test_data.py)
-    flux_file = Path('flux_results.json')
+    flux_file = TEST_DATA_DIR / "flux_results.json"
     if not flux_file.exists():
         # Try to generate it first
         try:
@@ -247,10 +252,11 @@ def test_flux_visualization():
             max_flux = flux_stats.get('max', np.max(flux_values))
             plt.axhline(y=max_flux, color='r', linestyle='--', alpha=0.5, label=f'Max: {max_flux:.2e}')
         
-        plt.savefig('flux_distribution_plot.png', dpi=150, bbox_inches='tight')
+        output_file = RESULTS_DIR / "flux_distribution_plot.png"
+        plt.savefig(output_file, dpi=150, bbox_inches='tight')
         plt.close()
         
-        print(f"✅ Created flux visualization: flux_distribution_plot.png")
+        print(f"✅ Created flux visualization: {output_file}")
         if flux_stats:
             print(f"   Flux max: {flux_stats.get('max', 0):.2e} n/cm²/s")
             print(f"   Flux mean: {flux_stats.get('mean', 0):.2e} n/cm²/s")
@@ -295,9 +301,14 @@ def main():
     print(f"\nTotal: {passed}/{total} tests passed")
     
     # Cleanup
-    for f in ['geometry_2d.png', 'geometry_3d.html', 'burnup_keff_plot.png']:
-        if Path(f).exists():
-            Path(f).unlink()
+    for f in [
+        RESULTS_DIR / "geometry_2d.html",
+        RESULTS_DIR / "geometry_3d.html",
+        RESULTS_DIR / "burnup_keff_plot.png",
+        RESULTS_DIR / "flux_distribution_plot.png",
+    ]:
+        if f.exists():
+            f.unlink()
     
     return 0 if passed == total else 1
 
