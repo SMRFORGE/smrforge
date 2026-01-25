@@ -135,6 +135,11 @@ class ENDFFissionYieldParser:
                     independent_yield=ind_yield,
                     cumulative_yield=cum_yield,
                 )
+
+            # If we couldn't extract any yields, treat as unavailable data.
+            # This lets callers handle "not found / not parsable" consistently.
+            if not yields:
+                return None
             
             # Check if energy-dependent (simplified - full implementation would check energy points)
             energy_dependent = False

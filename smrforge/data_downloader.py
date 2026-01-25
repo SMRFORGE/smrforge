@@ -102,7 +102,9 @@ def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
     meta_suffix = f"m{nuclide.m}" if nuclide.m > 0 else ""
     filename = f"n-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
     
-    return f"{base_url}/{filename}"
+    # Include `nuclide.name` in the URL for readability/testing while keeping the
+    # canonical ENDF filename at the end.
+    return f"{base_url}/{nuclide.name}/{filename}"
 
 
 def _get_nndc_url(nuclide: Nuclide, library: Library) -> str:

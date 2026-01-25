@@ -185,6 +185,24 @@ if _ENDF_EXTRACTORS_AVAILABLE:
         ]
     )
 
+
+def __getattr__(name: str):
+    """
+    Lazy-access submodules that tests patch via `smrforge.core.<module>`.
+
+    Some test suites reload `smrforge.core` under mocked ImportError conditions,
+    which can leave submodule attributes unattached even when the submodule can
+    later be imported. Provide a small lazy-loader for commonly patched modules.
+    """
+    if name == "self_shielding_integration":
+        import importlib
+        import sys
+
+        mod = importlib.import_module(".self_shielding_integration", __name__)
+        setattr(sys.modules[__name__], name, mod)
+        return mod
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
 if _CONTROL_ROD_WORTH_AVAILABLE:
     __all__.extend(
         [

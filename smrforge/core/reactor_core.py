@@ -28,6 +28,26 @@ from ..utils.logging import get_logger, log_cache_operation, log_nuclear_data_fe
 # Get logger for this module
 logger = get_logger("smrforge.core")
 
+# Some tests patch `smrforge.core.reactor_core.logger` and expect calls to go
+# through that patched object. A few test modules also reload/import pieces in
+# ways that can leave multiple copies of this module's globals in memory.
+# Resolve the logger via `sys.modules` to ensure patches are respected.
+import sys as _sys  # noqa: E402
+
+
+def _get_active_logger():
+    mod = _sys.modules.get("smrforge.core.reactor_core")
+    if mod is not None and hasattr(mod, "logger"):
+        return getattr(mod, "logger")
+    return logger
+
+
+def _get_active_cache_class():
+    mod = _sys.modules.get("smrforge.core.reactor_core")
+    if mod is not None and hasattr(mod, "NuclearDataCache"):
+        return getattr(mod, "NuclearDataCache")
+    return NuclearDataCache
+
 
 class Library(Enum):
     """
@@ -116,6 +136,9 @@ class Nuclide:
         return hash(self.zam)
 
 
+_AUTO_LOCAL_ENDF_DIR = object()
+
+
 class NuclearDataCache:
     """
     High-performance nuclear data cache using Zarr for storage.
@@ -146,7 +169,11 @@ class NuclearDataCache:
         root: Zarr root group for persistent storage.
     """
 
-    def __init__(self, cache_dir: Optional[Path] = None, local_endf_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        cache_dir: Optional[Path] = None,
+        local_endf_dir: Optional[Path] | object = _AUTO_LOCAL_ENDF_DIR,
+    ):
         """
         Initialize nuclear data cache.
         
@@ -186,17 +213,21 @@ class NuclearDataCache:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
         # Local ENDF directory (e.g., ENDF-B-VIII.1)
-        # Check environment variable if local_endf_dir not provided
-        if local_endf_dir is None:
+        # - If caller does not provide `local_endf_dir`, attempt auto-detection via
+        #   environment/config (backwards compatible behavior).
+        # - If caller explicitly passes `local_endf_dir=None`, disable auto-detection.
+        auto_detect = local_endf_dir is _AUTO_LOCAL_ENDF_DIR
+        if auto_detect:
+            local_endf_dir = None
             env_dir = os.getenv("SMRFORGE_ENDF_DIR")
             if env_dir:
                 local_endf_dir = Path(env_dir).expanduser().resolve()
-        
-        # Try to load from config file if still None
-        if local_endf_dir is None:
-            config_dir = self._load_config_dir()
-            if config_dir:
-                local_endf_dir = config_dir
+            
+            # Try to load from config file if still None (auto mode only)
+            if local_endf_dir is None:
+                config_dir = self._load_config_dir()
+                if config_dir:
+                    local_endf_dir = config_dir
         
         self.local_endf_dir = Path(local_endf_dir) if local_endf_dir else None
         self._local_file_index: Optional[Dict[str, Path]] = None  # Lazy-loaded index
@@ -336,6 +367,7 @@ class NuclearDataCache:
             Parser instances are thread-safe and can be reused across multiple file parses.
             This provides 10-30% performance improvement by eliminating parser initialization overhead.
         """
+        log = _get_active_logger()
         if self._parser is None:
             try:
                 from endf_parserpy import EndfParserFactory
@@ -345,7 +377,7 @@ class NuclearDataCache:
                     from endf_parserpy import EndfParserCpp
                     self._parser = EndfParserCpp()
                     self._parser_type = "C++"
-                    logger.info(
+                    log.info(
                         "Using endf-parserpy C++ parser (fast) - "
                         "2-5x faster than Python parser"
                     )
@@ -357,9 +389,9 @@ class NuclearDataCache:
                     
                     # Check if it's actually the C++ parser
                     if "Cpp" in parser_type_name or "cpp" in parser_type_name.lower():
-                        logger.info(f"Using endf-parserpy C++ parser: {parser_type_name}")
+                        log.info(f"Using endf-parserpy C++ parser: {parser_type_name}")
                     else:
-                        logger.info(
+                        log.info(
                             f"Using endf-parserpy Python parser: {parser_type_name}. "
                             "For better performance, install C++ parser: "
                             "pip install --upgrade endf-parserpy"
@@ -1864,7 +1896,9 @@ class NuclearDataCache:
         
         return file_path
     
-    def _find_local_decay_file(self, nuclide: Nuclide, library: Library) -> Optional[Path]:
+    def _find_local_decay_file(
+        self, nuclide: Nuclide, library: Library = Library.ENDF_B_VIII_1
+    ) -> Optional[Path]:
         """
         Find decay data file in local directory.
         
@@ -2515,7 +2549,7 @@ class NuclearDataCache:
             meta_suffix = f"m{nuclide.m}" if nuclide.m > 0 else ""
             filename = f"n-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
             
-            return f"{base_url}/{filename}"
+            return f"{base_url}/{nuclide.name}/{filename}"
 
 
 class CrossSectionTable:
@@ -3238,15 +3272,16 @@ def get_fission_yield_data(
         >>> # Cache methods provide direct access when you have a cache instance
     """
     if cache is None:
-        cache = NuclearDataCache()
+        cache = _get_active_cache_class()()
     
     try:
         from .fission_yield_parser import ENDFFissionYieldParser, FissionYieldData
+        log = _get_active_logger()
         
         # Find fission yield file
         nfy_file = cache._find_local_fission_yield_file(nuclide, library)
         if nfy_file is None:
-            logger.debug(f"Fission yield file not found for {nuclide.name}")
+            log.debug(f"Fission yield file not found for {nuclide.name}")
             return None
         
         # Parse yield data
@@ -3255,7 +3290,7 @@ def get_fission_yield_data(
         
         return yield_data
     except (ImportError, Exception) as e:
-        logger.warning(f"Could not load fission yield data for {nuclide.name}: {e}")
+        _get_active_logger().warning(f"Could not load fission yield data for {nuclide.name}: {e}")
         return None
 
 
@@ -3546,15 +3581,16 @@ def get_thermal_scattering_data(
         >>> tsl_data = get_thermal_scattering_data(tsl_name, cache=cache)
     """
     if cache is None:
-        cache = NuclearDataCache()
+        cache = _get_active_cache_class()()
     
     try:
         from .thermal_scattering_parser import ThermalScatteringParser
+        log = _get_active_logger()
         
         # Find TSL file
         tsl_file = cache._find_local_tsl_file(material_name, library)
         if tsl_file is None:
-            logger.debug(f"TSL file not found for {material_name}")
+            log.debug(f"TSL file not found for {material_name}")
             return None
         
         # Parse TSL data
@@ -3563,7 +3599,7 @@ def get_thermal_scattering_data(
         
         return tsl_data
     except (ImportError, Exception) as e:
-        logger.debug(f"Could not load TSL data for {material_name}: {e}")
+        _get_active_logger().debug(f"Could not load TSL data for {material_name}: {e}")
         return None
 
 
@@ -3692,8 +3728,10 @@ def organize_bulk_endf_downloads(
     
     index: Dict[str, Path] = {}
     
+    log = _get_active_logger()
+
     # Scan source directory recursively for all .endf files
-    logger.info(f"Scanning {source_dir} for ENDF files...")
+    log.info(f"Scanning {source_dir} for ENDF files...")
     for endf_file in source_dir.rglob("*.endf"):
         stats["files_found"] += 1
         
@@ -3705,19 +3743,19 @@ def organize_bulk_endf_downloads(
             nuclide = NuclearDataCache._parse_alternative_endf_filename(endf_file.name)
         
         if nuclide is None:
-            logger.debug(f"Skipping unparseable filename: {endf_file.name}")
+            log.debug(f"Skipping unparseable filename: {endf_file.name}")
             stats["files_skipped"] += 1
             continue
         
         # Validate file
         if not NuclearDataCache._validate_endf_file(endf_file):
-            logger.warning(f"Skipping invalid ENDF file: {endf_file.name}")
+            log.warning(f"Skipping invalid ENDF file: {endf_file.name}")
             stats["files_skipped"] += 1
             continue
         
         # Check for duplicates
         if nuclide.name in index:
-            logger.debug(f"Duplicate {nuclide.name}: {endf_file.name} (keeping {index[nuclide.name].name})")
+            log.debug(f"Duplicate {nuclide.name}: {endf_file.name} (keeping {index[nuclide.name].name})")
             stats["files_skipped"] += 1
             continue
         
@@ -3731,11 +3769,11 @@ def organize_bulk_endf_downloads(
             try:
                 import shutil
                 shutil.copy2(endf_file, target_file)
-                logger.debug(f"Organized {nuclide.name}: {endf_file.name} -> {target_file.name}")
+                log.debug(f"Organized {nuclide.name}: {endf_file.name} -> {target_file.name}")
                 index[nuclide.name] = target_file
                 stats["files_organized"] += 1
             except (IOError, OSError) as e:
-                logger.error(f"Failed to copy {endf_file.name}: {e}")
+                log.error(f"Failed to copy {endf_file.name}: {e}")
                 stats["files_skipped"] += 1
                 continue
         else:
@@ -3746,13 +3784,13 @@ def organize_bulk_endf_downloads(
     stats["nuclides_indexed"] = len(index)
     
     if create_structure:
-        logger.info(
+        log.info(
             f"Organized {stats['files_organized']} ENDF files into {neutrons_dir}\n"
             f"  Found: {stats['files_found']}, Skipped: {stats['files_skipped']}, "
             f"Unique nuclides: {stats['nuclides_indexed']}"
         )
     else:
-        logger.info(
+        log.info(
             f"Would organize {stats['files_organized']} ENDF files\n"
             f"  Found: {stats['files_found']}, Would skip: {stats['files_skipped']}, "
             f"Unique nuclides: {stats['nuclides_indexed']}"

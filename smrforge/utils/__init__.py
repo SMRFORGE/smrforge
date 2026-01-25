@@ -36,6 +36,30 @@ try:
 except ImportError:
     pass
 
+
+# Keep `smrforge.utils` on the parent package consistent with `sys.modules`.
+# Some test suites delete/reload modules and then call `importlib.reload(smrforge.utils)`,
+# which requires that `smrforge.utils` refers to the exact module object stored in
+# `sys.modules["smrforge.utils"]`.
+import sys as _sys  # noqa: E402
+
+_parent_pkg = _sys.modules.get("smrforge")
+
+# Also ensure our own entry is present and canonical. Some test suites delete
+# `sys.modules["smrforge.utils"]` without clearing the attribute on `smrforge`,
+# which can cause `importlib.reload(smrforge.utils)` to fail if it holds a stale
+# module object.
+_sys.modules["smrforge.utils"] = _sys.modules[__name__]
+
+# Avoid leaving a potentially stale cached attribute on the parent package.
+# Access should go through `smrforge.__getattr__("utils")`, which always returns
+# the canonical module from `sys.modules`.
+if _parent_pkg is not None:
+    try:
+        delattr(_parent_pkg, "utils")
+    except Exception:
+        pass
+
 # Optimization utilities (optional import)
 try:
     from smrforge.utils.optimization_utils import (

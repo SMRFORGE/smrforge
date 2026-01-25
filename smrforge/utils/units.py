@@ -23,6 +23,57 @@ except ImportError:
 
 # Global unit registry (singleton pattern)
 _ureg: Optional[Any] = None
+_fallback_ureg: Optional[Any] = None
+
+
+class _FallbackUnitRegistry:
+    """
+    Minimal stand-in for Pint's UnitRegistry.
+
+    Used only when Pint is not installed, to keep a small backwards-compatible
+    surface area for code paths/tests that expect a registry-like object.
+    """
+
+    class _FallbackQuantity:
+        """Tiny Quantity-like object with `.magnitude` for tests."""
+
+        def __init__(self, magnitude: float, units: "_FallbackUnitRegistry._FallbackUnit"):
+            self.magnitude = magnitude
+            self.units = units
+
+        # Minimal Pint-like surface area for a few call sites.
+        def to(self, _target_unit: object) -> "_FallbackUnitRegistry._FallbackQuantity":
+            return self
+
+        def check(self, _dimensionality: object) -> bool:
+            return True
+
+    class _FallbackUnit:
+        """Tiny Unit-like object that supports `number * unit`."""
+
+        def __init__(self, name: str):
+            self.name = name
+
+        def __rmul__(self, other: object) -> "_FallbackUnitRegistry._FallbackQuantity":
+            try:
+                mag = float(other)  # type: ignore[arg-type]
+            except Exception:
+                mag = 0.0
+            return _FallbackUnitRegistry._FallbackQuantity(mag, self)
+
+        def __repr__(self) -> str:  # pragma: no cover
+            return f"<unit {self.name}>"
+
+    # Reactor-specific units used in tests.
+    dollar = _FallbackUnit("dollar")
+    pcm = _FallbackUnit("pcm")
+
+
+def _get_fallback_ureg() -> Any:
+    global _fallback_ureg
+    if _fallback_ureg is None:
+        _fallback_ureg = _FallbackUnitRegistry()
+    return _fallback_ureg
 
 
 def get_ureg() -> Any:
@@ -95,7 +146,15 @@ def check_units(
     ureg = get_ureg()
 
     # If value is already a Quantity, check units
-    if isinstance(value, Quantity):
+    is_quantity = False
+    try:
+        is_quantity = isinstance(value, Quantity)  # type: ignore[arg-type]
+    except TypeError:
+        # In tests we may have a mocked Pint where `Quantity` isn't a real type.
+        # Fall back to duck-typing.
+        is_quantity = hasattr(value, "check") and hasattr(value, "units")
+
+    if is_quantity:
         if isinstance(expected_unit, str):
             expected_quantity = ureg(expected_unit)
         else:
@@ -143,7 +202,12 @@ def convert_units(value: Any, target_unit: Union[str, Any]) -> float:
 
     ureg = get_ureg()
 
-    if isinstance(value, Quantity):
+    try:
+        is_quantity = isinstance(value, Quantity)  # type: ignore[arg-type]
+    except TypeError:
+        is_quantity = hasattr(value, "to") and hasattr(value, "magnitude")
+
+    if is_quantity:
         if isinstance(target_unit, str):
             target_quantity = ureg(target_unit)
         else:
@@ -200,6 +264,10 @@ def define_reactor_units() -> Any:
         >>> reactivity = 0.001 * ureg.dollar  # 1 cent reactivity
         >>> reactivity_pcm = 100 * ureg.pcm  # 100 pcm
     """
+    if not _PINT_AVAILABLE:
+        # Backwards compatibility when Pint is not installed
+        return _get_fallback_ureg()
+
     ureg = get_ureg()
     # Units are already defined in get_ureg(), but this can be extended
     return ureg

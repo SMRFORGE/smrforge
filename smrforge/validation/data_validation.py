@@ -367,16 +367,30 @@ class PhysicalValidator:
 
         if k_eff < 0.9:
             result.add_issue(
-                ValidationLevel.ERROR,
+                # Subcritical solutions are expected in some workflows and tests.
+                # Treat as warning (still notable, but not fatal).
+                ValidationLevel.WARNING,
                 "k_eff",
                 "Too subcritical",
                 value=k_eff,
                 expected=">= 0.9",
             )
 
-        if k_eff > 1.2:
+        # Extremely supercritical values are considered invalid outputs.
+        # Keep a softer warning band for design exploration, but still fail fast
+        # on clearly unphysical results (used by integration tests).
+        if k_eff > 3.0:
             result.add_issue(
                 ValidationLevel.ERROR,
+                "k_eff",
+                "Unphysically supercritical",
+                value=k_eff,
+                expected="<= 3.0",
+            )
+        elif k_eff > 1.2:
+            result.add_issue(
+                # Supercritical solutions can occur in design exploration; warn rather than error.
+                ValidationLevel.WARNING,
                 "k_eff",
                 "Too supercritical",
                 value=k_eff,

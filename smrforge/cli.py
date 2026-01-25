@@ -338,16 +338,19 @@ def reactor_analyze(args):
             _print_info("For batch processing, use the Python API or process files individually")
             _print_info("Example: for f in *.json; do smrforge reactor analyze --reactor $f; done")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         # Single file mode
         if not args.reactor:
             _print_error("Must specify --reactor FILE or --batch PATTERN")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         # Load reactor
         if not args.reactor.exists():
             _print_error(f"Reactor file not found: {args.reactor}")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         with open(args.reactor) as f:
             reactor_data = json.load(f)
@@ -408,12 +411,14 @@ def reactor_analyze(args):
     except ImportError as e:
         _print_error(f"Failed to import SMRForge modules: {e}")
         sys.exit(1)
+        return
     except Exception as e:
         _print_error(f"Failed to analyze reactor: {e}")
         if args.verbose if hasattr(args, 'verbose') else False:
             import traceback
             traceback.print_exc()
         sys.exit(1)
+        return
 
 
 def _reactor_analyze_batch(args):
@@ -439,6 +444,7 @@ def _reactor_analyze_batch(args):
         if not reactor_files:
             _print_error("No valid reactor files found")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         _print_info(f"Found {len(reactor_files)} reactor files to process")
         
@@ -1044,6 +1050,7 @@ def burnup_run(args):
             if not args.reactor.exists():
                 _print_error(f"Reactor file not found: {args.reactor}")
                 sys.exit(1)
+                return  # ensure we don't fall through when exit is mocked
             
             with open(args.reactor) as f:
                 reactor_data = json.load(f)
@@ -1052,6 +1059,7 @@ def burnup_run(args):
         else:
             _print_error("Must specify --reactor FILE")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         # Parse time steps
         if args.time_steps:
@@ -1104,12 +1112,14 @@ def burnup_run(args):
     except ImportError as e:
         _print_error(f"Failed to import burnup modules: {e}")
         sys.exit(1)
+        return
     except Exception as e:
         _print_error(f"Failed to run burnup calculation: {e}")
         if args.verbose if hasattr(args, 'verbose') else False:
             import traceback
             traceback.print_exc()
         sys.exit(1)
+        return
 
 
 def validate_run(args):
@@ -1274,6 +1284,7 @@ def visualize_geometry(args):
         if not args.reactor.exists():
             _print_error(f"Reactor file not found: {args.reactor}")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         with open(args.reactor) as f:
             reactor_data = json.load(f)
@@ -1312,12 +1323,14 @@ def visualize_geometry(args):
     except ImportError as e:
         _print_error(f"Failed to import visualization modules: {e}")
         sys.exit(1)
+        return
     except Exception as e:
         _print_error(f"Failed to visualize geometry: {e}")
         if args.verbose if hasattr(args, 'verbose') else False:
             import traceback
             traceback.print_exc()
         sys.exit(1)
+        return
 
 
 def visualize_flux(args):
@@ -1606,6 +1619,7 @@ def config_set(args):
         if not _YAML_AVAILABLE:
             _print_error("PyYAML not available. Install PyYAML: pip install pyyaml")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         config_dir = Path.home() / ".smrforge"
         config_file = config_dir / "config.yaml"
@@ -1664,6 +1678,7 @@ def config_set(args):
             import traceback
             traceback.print_exc()
         sys.exit(1)
+        return
 
 
 def config_init(args):
@@ -1672,6 +1687,7 @@ def config_init(args):
         if not _YAML_AVAILABLE:
             _print_error("PyYAML not available. Install PyYAML: pip install pyyaml")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         config_dir = Path.home() / ".smrforge"
         config_file = config_dir / "config.yaml"
@@ -1680,6 +1696,7 @@ def config_init(args):
             _print_error(f"Configuration file already exists: {config_file}")
             _print_info("Use --force to overwrite existing configuration")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         # Create default config
         default_config = {
@@ -1746,6 +1763,7 @@ def config_init(args):
             import traceback
             traceback.print_exc()
         sys.exit(1)
+        return
 
 
 def shell_interactive(args):
@@ -2434,6 +2452,7 @@ def validate_design(args):
         else:
             _print_error("Must specify --reactor or --preset")
             sys.exit(1)
+            return  # ensure we don't fall through when exit is mocked
         
         # Load constraint set
         if args.constraints:
@@ -2483,6 +2502,7 @@ def validate_design(args):
             import traceback
             traceback.print_exc()
         sys.exit(1)
+        return
 
 
 def main():

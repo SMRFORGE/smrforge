@@ -382,14 +382,16 @@ class MultiGroupDiffusion:
         for iteration in range(self.options.max_iterations):
             self._update_fission_source(k_old)
 
-            # Use parallel group solve if enabled
-            if self.options.parallel_group_solve and self.ng > 1:
+            # Always use the same red-black energy-group sweep for ng>1 so that
+            # serial and parallel paths converge to comparable solutions. The
+            # `parallel_group_solve` option controls whether the sweep uses a
+            # thread pool, not whether the red-black ordering is used.
+            if self.ng > 1:
                 self.flux = self._solve_groups_parallel_red_black(self.flux)
             else:
-                # Serial fallback
-                for g in range(self.ng):
-                    self._update_scattering_source(g)
-                    self.flux[:, :, g] = self._solve_group(g)
+                # Single-group solve
+                self._update_scattering_source(0)
+                self.flux[:, :, 0] = self._solve_group(0)
             
             # Check if flux became zero (shouldn't happen, but handle gracefully)
             max_flux = np.max(self.flux)
@@ -624,7 +626,13 @@ class MultiGroupDiffusion:
         Returns:
             Solved flux for group g [nz, nr]
         """
-        self._update_scattering_source(g, flux)
+        # When solving groups concurrently, avoid nested parallelism / shared-state
+        # hazards in the Numba-parallel scattering update. A pure NumPy update is
+        # deterministic and thread-safe here because each thread writes only to
+        # `self.source[:, :, g]`.
+        sigma_s_mat = self.xs.sigma_s[self.material_map, :, g]  # [nz, nr, ng]
+        scatter_in = np.sum(sigma_s_mat * flux, axis=2)  # [nz, nr]
+        self.source[:, :, g] += scatter_in
         return self._solve_group(g)
 
     def _solve_groups_parallel_red_black(self, flux_old: np.ndarray) -> np.ndarray:
@@ -656,10 +664,13 @@ class MultiGroupDiffusion:
             num_threads = cpu_count()
         
         # Pass 1: Solve even groups in parallel
-        if len(even_groups) > 1 and self.options.parallel:
+        if len(even_groups) > 1 and self.options.parallel and self.options.parallel_group_solve:
+            # Snapshot flux so each task sees a consistent iterate (avoids races
+            # from other groups updating `flux_new` mid-computation).
+            flux_snapshot = np.copy(flux_new)
             with ThreadPoolExecutor(max_workers=min(len(even_groups), num_threads)) as executor:
                 futures = {
-                    executor.submit(self._solve_group_with_source, g, flux_new): g
+                    executor.submit(self._solve_group_with_source, g, flux_snapshot): g
                     for g in even_groups
                 }
                 for future in as_completed(futures):
@@ -673,10 +684,11 @@ class MultiGroupDiffusion:
                 flux_new[:, :, g] = self._solve_group(g)
         
         # Pass 2: Solve odd groups in parallel (can use updated even group fluxes)
-        if len(odd_groups) > 1 and self.options.parallel:
+        if len(odd_groups) > 1 and self.options.parallel and self.options.parallel_group_solve:
+            flux_snapshot = np.copy(flux_new)
             with ThreadPoolExecutor(max_workers=min(len(odd_groups), num_threads)) as executor:
                 futures = {
-                    executor.submit(self._solve_group_with_source, g, flux_new): g
+                    executor.submit(self._solve_group_with_source, g, flux_snapshot): g
                     for g in odd_groups
                 }
                 for future in as_completed(futures):
@@ -807,6 +819,20 @@ class MultiGroupDiffusion:
         """Compute k_eff from flux solution."""
         fission_rate = np.sum(self.nu_sigma_f_map * self.flux)
         absorption_rate = np.sum(self.sigma_a_map * self.flux)
+
+        # If there is no fission production, this is not a meaningful eigenvalue
+        # problem (k_eff is undefined). Raise so callers/tests can handle it.
+        if fission_rate <= 0:
+            max_nu_sigma_f = float(np.max(self.nu_sigma_f_map))
+            error_msg = (
+                "Zero fission production rate - eigenvalue problem is ill-posed.\n"
+                f"  fission_rate={float(fission_rate):.3e}\n"
+                f"  max(nu_sigma_f)={max_nu_sigma_f:.3e}\n"
+                "  Possible causes:\n"
+                "  1. nu_sigma_f is all zeros (no fission)\n"
+                "  2. Flux collapsed to zero in fissionable regions\n"
+            )
+            raise RuntimeError(error_msg)
 
         if absorption_rate == 0:
             # Provide detailed diagnostics

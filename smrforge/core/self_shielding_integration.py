@@ -290,3 +290,13 @@ def get_cross_section_with_equivalence_theory(
     )
     
     return energy, equiv_xs
+
+
+# Ensure the parent package (`smrforge.core`) keeps a reference to this submodule.
+# Some test environments manipulate imports/reloads and then patch via
+# `smrforge.core.self_shielding_integration`.
+import sys as _sys  # noqa: E402
+
+_parent_pkg = _sys.modules.get(__name__.rsplit(".", 1)[0])
+if _parent_pkg is not None:
+    setattr(_parent_pkg, "self_shielding_integration", _sys.modules[__name__])

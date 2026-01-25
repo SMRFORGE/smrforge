@@ -18,6 +18,30 @@ import numpy as np
 from .reactor_core import Nuclide
 
 
+def _parse_endf_float(field: str) -> float:
+    """
+    Parse an ENDF-6 style floating field.
+
+    ENDF commonly encodes floats like ` 1.234567+5` (meaning 1.234567E+5) or
+    `-3.210000-3` (meaning -3.21E-3) without an explicit 'E'.
+    """
+    s = (field or "").strip()
+    if not s:
+        return 0.0
+
+    s = s.replace(" ", "")
+    if "e" in s.lower():
+        return float(s)
+
+    pos_plus = s.rfind("+", 1)
+    pos_minus = s.rfind("-", 1)
+    pos = max(pos_plus, pos_minus)
+    if pos > 0:
+        s = s[:pos] + "E" + s[pos:]
+
+    return float(s)
+
+
 @dataclass
 class DecayMode:
     """Information about a single decay mode."""
@@ -157,8 +181,9 @@ class ENDFDecayParser:
             # Parse beta spectrum (MF=8, MT=455)
             beta_spectrum = self._parse_beta_spectrum(lines)
             
-            # Determine if stable (very long half-life or no decay modes)
-            is_stable = half_life > 1e20 or len(decay_modes) == 0
+            # Determine if stable (very long half-life). Do not rely on `decay_modes`
+            # here because `_parse_decay_modes` may be a stub in lightweight builds.
+            is_stable = half_life >= 1e20
             
             return DecayData(
                 nuclide=nuclide,
@@ -219,31 +244,38 @@ class ENDFDecayParser:
         Returns:
             Half-life in seconds, or 1e20 (effectively stable) if not found.
         """
-        # Look for MF=8, MT=457 section
-        for i, line in enumerate(lines):
+        # Look for MF=8, MT=457 section.
+        #
+        # In ENDF decay files produced from ENSDF, the MT=457 section commonly
+        # contains:
+        # - A first numeric record with ZA/AWR (not the half-life)
+        # - A second numeric record whose first field is the half-life [s]
+        #
+        # We therefore take the *second* numeric line in the MT=457 section.
+        data_line_count = 0
+        for line in lines:
             if len(line) < 75:
                 continue
-            
+
             mf = line[70:72].strip()
             mt = line[72:75].strip()
-            
-            if mf == "8" and mt == "457":
-                # Half-life is typically in the first data line after header
-                # Format: T_1/2 is in the first data value
-                if i + 1 < len(lines):
-                    data_line = lines[i + 1]
-                    try:
-                        # ENDF format: first 11 characters are first value
-                        half_life_str = data_line[0:11].strip()
-                        if half_life_str:
-                            half_life = float(half_life_str)
-                            # ENDF stores half-life in seconds, but sometimes uses
-                            # special notation (e.g., 0.0 for stable)
-                            if half_life <= 0:
-                                return 1e20  # Effectively stable
-                            return half_life
-                    except (ValueError, IndexError):
-                        pass
+            if mf != "8" or mt != "457":
+                continue
+
+            # Skip purely blank "control" records that have no numeric fields.
+            if not line[0:11].strip():
+                continue
+
+            data_line_count += 1
+            if data_line_count == 2:
+                try:
+                    half_life = _parse_endf_float(line[0:11])
+                except (ValueError, IndexError):
+                    half_life = 0.0
+
+                if half_life <= 0:
+                    return 1e20
+                return half_life
         
         # Default: assume stable
         return 1e20

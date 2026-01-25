@@ -230,7 +230,10 @@ class ReactorSpecification(BaseModel):
                     value=self.outlet_temperature,
                     error_type="out_of_range",
                     suggestions=[
-                        f"Outlet ({self.outlet_temperature:.1f} K) should be <= max fuel ({self.max_fuel_temperature:.1f} K)"
+                        (
+                            f"Outlet temperature ({self.outlet_temperature:.1f} K) exceeds "
+                            f"max fuel temperature ({self.max_fuel_temperature:.1f} K)"
+                        )
                     ]
                 )
             else:
@@ -567,7 +570,7 @@ class SolverOptions(BaseModel):
     """Solver configuration with validation."""
 
     max_iterations: int = Field(
-        default=1000, ge=10, le=10000, description="Maximum iterations"
+        default=1000, ge=1, le=10000, description="Maximum iterations"
     )
     tolerance: float = Field(
         default=1e-6, gt=0, le=1e-2, description="Convergence tolerance"
