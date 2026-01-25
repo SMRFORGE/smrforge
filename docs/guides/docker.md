@@ -22,17 +22,21 @@ This guide explains how to use SMRForge with Docker Desktop, including setup, us
    docker compose up -d smrforge
    ```
 
-2. **Run commands interactively:**
+2. **Open the dashboard (default):**
+   - The `smrforge` service starts the Dash dashboard by default.
+   - Visit `http://localhost:8050`
+
+3. **Run commands interactively:**
    ```bash
    docker compose exec smrforge python -c "import smrforge as smr; print(smr.__version__)"
    ```
 
-3. **Run an example:**
+4. **Run an example:**
    ```bash
    docker compose exec smrforge python examples/complete_integration_example.py
    ```
 
-4. **Access interactive Python shell:**
+5. **Access interactive Python shell:**
    ```bash
    docker compose exec smrforge python
    ```
@@ -44,7 +48,16 @@ This guide explains how to use SMRForge with Docker Desktop, including setup, us
    docker build -t smrforge:latest .
    ```
 
-2. **Run a container:**
+2. **Run the dashboard (default):**
+   ```bash
+   docker run --rm \
+     -p 8050:8050 \
+     -v $(pwd)/data:/app/data \
+     -v $(pwd)/output:/app/output \
+     smrforge:latest
+   ```
+
+3. **Run a container for CLI / Python:**
    ```bash
    docker run -it --rm \
      -v $(pwd)/data:/app/data \
@@ -72,48 +85,45 @@ docker compose exec smrforge-dev bash
 
 ## Installing Optional Dependencies
 
-SMRForge supports optional dependencies via pip extras. The `[viz]` extra is not a Docker Compose service name - it's a pip package extra that must be installed inside the container.
+The Docker images already include **core + dashboard/visualization** dependencies (installed from `requirements.txt`), including:
 
-### Installing Visualization Dependencies
+- `plotly`, `dash`, `dash-bootstrap-components`
+- `matplotlib`
+- `pyvista`
 
-To install visualization, dashboard, and 3D visualization dependencies:
+SMRForge also supports **optional** features via pip extras (installed inside the container).
+
+### Visualization dependencies
+
+Visualization dependencies are **already included** in the images. The `.[viz]` extra is kept for backward compatibility and **does not install anything additional**.
 
 ```bash
-# After container is running
-docker compose exec smrforge pip install -e ".[viz]"
+# Optional: re-install the package (no extra deps are added)
+docker compose exec smrforge pip install ".[viz]"
 ```
-
-This installs:
-- `plotly` - Interactive 3D plots
-- `pyvista` - Advanced 3D visualization and VTK export
-- `dash` - Web-based dashboards
-- `dash-bootstrap-components` - Bootstrap styling for Dash
 
 ### Installing Other Optional Dependencies
 
 ```bash
-# Development dependencies
-docker compose exec smrforge pip install -e ".[dev]"
-
 # Uncertainty quantification
-docker compose exec smrforge pip install -e ".[uq]"
+docker compose exec smrforge pip install ".[uq]"
 
 # All optional dependencies
-docker compose exec smrforge pip install -e ".[all]"
+docker compose exec smrforge pip install ".[all]"
 ```
 
 ### Making Dependencies Persistent
 
-If you want visualization dependencies included in the image permanently, you can:
+If you want optional extras (like UQ) included in the image permanently, you can:
 
-1. **Modify the Dockerfile** - Uncomment the visualization installation lines in `Dockerfile` (around line 66-77)
+1. **Modify the Dockerfile** - add a `RUN pip install ".[uq]"` (or add packages to `requirements.txt`)
 2. **Rebuild the image** - `docker compose build smrforge`
 
 Or create a custom Dockerfile that includes the dependencies:
 
 ```dockerfile
 FROM smrforge:latest
-RUN pip install -e ".[viz]"
+RUN pip install ".[uq]"
 ```
 
 ## Common Use Cases
@@ -158,14 +168,11 @@ docker compose up smrforge-jupyter
 ### Running Tests
 
 ```bash
-# Install dev dependencies first
-docker compose run --rm smrforge pip install -e ".[dev]"
+# Recommended: use the dev container (includes pytest + tooling)
+docker compose run --rm smrforge-dev pytest tests/
 
-# Run tests
-docker compose run --rm smrforge pytest tests/
-
-# Run with coverage
-docker compose run --rm smrforge pytest --cov=smrforge tests/
+# With coverage
+docker compose run --rm smrforge-dev pytest --cov=smrforge tests/
 ```
 
 ## Directory Structure
@@ -264,6 +271,9 @@ environment:
   - SMRFORGE_DATA_PATH=/app/data/nuclear_data
   # Optional: set custom ENDF directory path
   - SMRFORGE_ENDF_DIR=/app/endf-data
+  # Optional: override headless visualization defaults
+  - MPLBACKEND=Agg
+  - PYVISTA_OFF_SCREEN=true
 ```
 
 ## Troubleshooting
@@ -387,6 +397,7 @@ After successful build, verify packages:
 ```bash
 docker compose exec smrforge python -c "import smrforge; print('OK')"
 docker compose exec smrforge python -c "import numpy, scipy, matplotlib, pandas; print('Core packages OK')"
+docker compose exec smrforge python -c "import requests, httpx, tqdm, yaml, pint; print('Downloader/config/units deps OK')"
 docker compose exec smrforge python -c "import sandy; print('SANDY OK')" || echo "SANDY not installed (optional)"
 ```
 
@@ -424,17 +435,15 @@ For production deployments, you might want a smaller image. Create `Dockerfile.p
 FROM python:3.11-slim as builder
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --user -r requirements.txt
+RUN pip install --prefix=/install -r requirements.txt
 
 # Runtime stage
 FROM python:3.11-slim
 WORKDIR /app
-COPY --from=builder /root/.local /root/.local
+COPY --from=builder /install /usr/local
 COPY smrforge/ /app/smrforge/
-COPY setup.py /app/
-RUN pip install -e . && \
-    rm -rf /root/.cache
-ENV PATH=/root/.local/bin:$PATH
+COPY setup.py pyproject.toml README.md README_PYPI.md MANIFEST.in /app/
+RUN pip install --no-cache-dir --no-deps .
 CMD ["python", "-c", "import smrforge; print('SMRForge ready')"]
 ```
 

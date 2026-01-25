@@ -637,8 +637,21 @@ class HTGRAnalysisPipeline:
         )
         
         print(f"Generated cross-section table with {len(xs_df)} entries")
-        print(f"Available nuclides: {xs_df['nuclide'].unique().to_list()}")
-        print(f"Available reactions: {xs_df['reaction'].unique().to_list()}")
+        # NOTE: Polars does not support `unique()` on Object dtype.
+        # Our `nuclide` column may be a Python-object column (Nuclide instances),
+        # so compute uniques via Python and stringify for robust logging.
+        try:
+            nuclide_vals = xs_df["nuclide"].to_list()
+            nuclides = sorted({str(v) for v in nuclide_vals if v is not None})
+        except Exception:
+            nuclides = []
+        try:
+            reactions = sorted({str(v) for v in xs_df["reaction"].to_list() if v is not None})
+        except Exception:
+            reactions = []
+
+        print(f"Available nuclides: {nuclides}")
+        print(f"Available reactions: {reactions}")
         
         # Diagnostic: Check if we have capture/fission data
         capture_data = xs_df.filter(pl.col("reaction") == "capture")
