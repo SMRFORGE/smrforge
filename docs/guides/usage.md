@@ -264,6 +264,10 @@ See the `examples/` directory for more complete examples:
 - `examples/geometry_import_example.py` - Geometry import/export (JSON)
 - `examples/complete_integration_example.py` - Complete workflow
 
+### Visualization screenshots
+
+For a quick visual overview, see the [Visualization gallery](visualization-gallery.md).
+
 ---
 
 ## Tips

@@ -25,6 +25,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 
    guides/dashboard-guide
    guides/usage
+   guides/visualization-gallery
    guides/data-downloader-guide
    guides/testing-notebooks
 

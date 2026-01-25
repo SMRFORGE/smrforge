@@ -79,6 +79,10 @@ def _plot_prismatic_layout(
     """Plot prismatic core layout."""
     patches = []
     colors = []
+    min_x = float("inf")
+    max_x = float("-inf")
+    min_y = float("inf")
+    max_y = float("-inf")
 
     # Get color mapping
     if color_by == "type":
@@ -96,6 +100,16 @@ def _plot_prismatic_layout(
             hex_poly = Polygon(vertices, closed=True)
             patches.append(hex_poly)
             colors.append(color_map.get(block.block_type, "gray"))
+            try:
+                vx = [float(v[0]) for v in vertices]
+                vy = [float(v[1]) for v in vertices]
+                min_x = min(min_x, *vx)
+                max_x = max(max_x, *vx)
+                min_y = min(min_y, *vy)
+                max_y = max(max_y, *vy)
+            except Exception:
+                # Best-effort extents only
+                pass
 
             if show_labels:
                 ax.text(
@@ -122,6 +136,13 @@ def _plot_prismatic_layout(
             rect = Rectangle((x, y), width, block.height)
             patches.append(rect)
             colors.append(color_map.get(block.block_type, "gray"))
+            try:
+                min_x = min(min_x, float(x))
+                max_x = max(max_x, float(x + width))
+                min_y = min(min_y, float(y))
+                max_y = max(max_y, float(y + block.height))
+            except Exception:
+                pass
 
             if show_labels:
                 ax.text(
@@ -136,6 +157,15 @@ def _plot_prismatic_layout(
     collection = PatchCollection(patches, facecolors=colors, edgecolors="black", linewidths=0.5)
     ax.add_collection(collection)
 
+    # Ensure reasonable axes limits (matplotlib does not auto-scale for collections).
+    if min_x != float("inf") and min_y != float("inf"):
+        dx = max_x - min_x
+        dy = max_y - min_y
+        pad_x = 0.05 * dx if dx > 0 else 1.0
+        pad_y = 0.05 * dy if dy > 0 else 1.0
+        ax.set_xlim(min_x - pad_x, max_x + pad_x)
+        ax.set_ylim(min_y - pad_y, max_y + pad_y)
+
 
 def _plot_pebble_bed_layout(
     core: "PebbleBedCore",
@@ -146,11 +176,22 @@ def _plot_pebble_bed_layout(
     **kwargs,
 ):
     """Plot pebble bed core layout."""
+    min_x = float("inf")
+    max_x = float("-inf")
+    min_y = float("inf")
+    max_y = float("-inf")
     if view == "xy":
         # Top view
         for pebble in core.pebbles:
             circle = Circle((pebble.position.x, pebble.position.y), pebble.radius)
             ax.add_patch(circle)
+            try:
+                min_x = min(min_x, float(pebble.position.x - pebble.radius))
+                max_x = max(max_x, float(pebble.position.x + pebble.radius))
+                min_y = min(min_y, float(pebble.position.y - pebble.radius))
+                max_y = max(max_y, float(pebble.position.y + pebble.radius))
+            except Exception:
+                pass
 
             if show_labels:
                 ax.text(
@@ -174,6 +215,21 @@ def _plot_pebble_bed_layout(
 
             circle = Circle((x, y), pebble.radius)
             ax.add_patch(circle)
+            try:
+                min_x = min(min_x, float(x - pebble.radius))
+                max_x = max(max_x, float(x + pebble.radius))
+                min_y = min(min_y, float(y - pebble.radius))
+                max_y = max(max_y, float(y + pebble.radius))
+            except Exception:
+                pass
+
+    if min_x != float("inf") and min_y != float("inf"):
+        dx = max_x - min_x
+        dy = max_y - min_y
+        pad_x = 0.05 * dx if dx > 0 else 1.0
+        pad_y = 0.05 * dy if dy > 0 else 1.0
+        ax.set_xlim(min_x - pad_x, max_x + pad_x)
+        ax.set_ylim(min_y - pad_y, max_y + pad_y)
 
 
 def plot_flux_on_geometry(
