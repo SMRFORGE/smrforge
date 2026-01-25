@@ -7,4 +7,9 @@ try:
 except ImportError:
     pass
 
+try:
+    from smrforge.uncertainty.visualization import *
+except ImportError:
+    pass
+
 __all__ = []

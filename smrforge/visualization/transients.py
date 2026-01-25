@@ -9,7 +9,7 @@ Provides plotting capabilities for:
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -35,6 +35,8 @@ def plot_transient(
     output: Optional[Union[str, Path]] = None,
     backend: str = "plotly",
     show_plot: bool = True,
+    events: Optional[List[Tuple[float, str, str]]] = None,
+    annotate_peaks: bool = False,
     **kwargs,
 ):
     """
@@ -99,19 +101,42 @@ def plot_transient(
     if precursors is not None:
         precursors = np.array(precursors)
 
+    # Optional auto-event generation
+    if events is None:
+        events = []
+    if annotate_peaks:
+        try:
+            if power.size:
+                t_peak = float(time[int(np.argmax(power))])
+                events.append((t_peak, "Peak power", "info"))
+        except Exception:
+            pass
+        try:
+            if reactivity is not None and reactivity.size:
+                t_rho = float(time[int(np.argmax(reactivity))])
+                events.append((t_rho, "Max reactivity", "warning"))
+        except Exception:
+            pass
+        scram_t = result.get("scram_time", result.get("t_scram", None))
+        if scram_t is not None:
+            try:
+                events.append((float(scram_t), "SCRAM", "danger"))
+            except Exception:
+                pass
+
     if backend == "plotly":
         if not _PLOTLY_AVAILABLE:
             raise ImportError("Plotly not available. Install with: pip install plotly")
         return _plot_transient_plotly(
             time, power, T_fuel, T_mod, reactivity, precursors,
-            output=output, show_plot=show_plot, **kwargs
+            output=output, show_plot=show_plot, events=events, **kwargs
         )
     elif backend == "matplotlib":
         if not _MATPLOTLIB_AVAILABLE:
             raise ImportError("Matplotlib not available. Install with: pip install matplotlib")
         return _plot_transient_matplotlib(
             time, power, T_fuel, T_mod, reactivity, precursors,
-            output=output, show_plot=show_plot, **kwargs
+            output=output, show_plot=show_plot, events=events, **kwargs
         )
     else:
         raise ValueError(f"Unknown backend: {backend}. Must be 'plotly' or 'matplotlib'")
@@ -126,6 +151,7 @@ def _plot_transient_plotly(
     precursors: Optional[np.ndarray],
     output: Optional[Union[str, Path]] = None,
     show_plot: bool = True,
+    events: Optional[List[Tuple[float, str, str]]] = None,
     **kwargs,
 ):
     """Plot transient results using Plotly."""
@@ -235,6 +261,25 @@ def _plot_transient_plotly(
         **kwargs.get("layout", {}),
     )
 
+    # Optional event annotations
+    if events:
+        for t_evt, label, kind in events:
+            color = {"info": "blue", "warning": "orange", "danger": "red"}.get(kind, "gray")
+            try:
+                fig.add_vline(x=float(t_evt), line_width=1, line_dash="dash", line_color=color)
+                fig.add_annotation(
+                    x=float(t_evt),
+                    y=1.02,
+                    xref="x",
+                    yref="paper",
+                    text=label,
+                    showarrow=False,
+                    font=dict(color=color),
+                )
+            except Exception:
+                # Best-effort annotations only
+                pass
+
     # Save or show
     if output:
         output_path = Path(output)
@@ -258,6 +303,7 @@ def _plot_transient_matplotlib(
     precursors: Optional[np.ndarray],
     output: Optional[Union[str, Path]] = None,
     show_plot: bool = True,
+    events: Optional[List[Tuple[float, str, str]]] = None,
     **kwargs,
 ):
     """Plot transient results using Matplotlib."""
@@ -312,6 +358,29 @@ def _plot_transient_matplotlib(
 
     # X-axis label on bottom plot
     axes[-1].set_xlabel("Time [s]")
+
+    # Optional event annotations (apply to all subplots)
+    if events:
+        for t_evt, label, kind in events:
+            color = {"info": "blue", "warning": "orange", "danger": "red"}.get(kind, "gray")
+            for ax in axes:
+                try:
+                    ax.axvline(float(t_evt), linestyle="--", color=color, linewidth=1, alpha=0.8)
+                except Exception:
+                    pass
+            try:
+                axes[0].text(
+                    float(t_evt),
+                    1.02,
+                    label,
+                    transform=axes[0].get_xaxis_transform(),
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                    color=color,
+                )
+            except Exception:
+                pass
 
     plt.tight_layout()
 

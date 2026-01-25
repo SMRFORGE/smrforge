@@ -14,6 +14,10 @@ try:
     import seaborn as sns
 except ImportError:
     sns = None  # Optional dependency
+try:
+    import plotly.graph_objects as go
+except ImportError:
+    go = None  # Optional dependency
 from numba import njit, prange
 from rich.console import Console
 from rich.progress import Progress
@@ -1102,6 +1106,69 @@ class VisualizationTools:
 
         plt.tight_layout()
         return fig
+
+    @staticmethod
+    def plot_distribution_plotly(
+        results: "UQResults",
+        output_idx: int = 0,
+        bins: int = 50,
+    ):
+        """
+        Plotly-based distribution plot for dashboards.
+
+        This is a lightweight wrapper around `smrforge.uncertainty.visualization`.
+        """
+        if go is None:
+            raise ImportError("plotly is required for plot_distribution_plotly. Install with: pip install plotly")
+        from smrforge.uncertainty.visualization import plot_uq_distribution
+
+        return plot_uq_distribution(results, output_idx=output_idx, bins=bins, backend="plotly")
+
+    @staticmethod
+    def plot_correlation_matrix(
+        results: "UQResults",
+        include_outputs: bool = True,
+        backend: str = "plotly",
+    ):
+        """Correlation matrix for UQ (plotly or matplotlib)."""
+        from smrforge.uncertainty.visualization import plot_uq_correlation_matrix
+
+        return plot_uq_correlation_matrix(results, include_outputs=include_outputs, backend=backend)
+
+    @staticmethod
+    def plot_sobol_indices_plotly(
+        sobol_results: Dict,
+        output_name: str,
+        parameter_names: List[str],
+    ):
+        """Plotly Sobol indices for dashboards."""
+        if go is None:
+            raise ImportError("plotly is required for plot_sobol_indices_plotly. Install with: pip install plotly")
+        from smrforge.uncertainty.visualization import plot_uq_sobol_indices
+
+        return plot_uq_sobol_indices(
+            sobol_results,
+            output_name=output_name,
+            parameter_names=parameter_names,
+            backend="plotly",
+        )
+
+    @staticmethod
+    def plot_morris_indices(
+        morris_results: Dict,
+        output_name: str,
+        parameter_names: List[str],
+        backend: str = "plotly",
+    ):
+        """Morris indices (plotly or matplotlib)."""
+        from smrforge.uncertainty.visualization import plot_uq_morris_indices
+
+        return plot_uq_morris_indices(
+            morris_results,
+            output_name=output_name,
+            parameter_names=parameter_names,
+            backend=backend,
+        )
 
 
 # Example HTGR-specific UQ problem

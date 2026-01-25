@@ -15,6 +15,7 @@ except ImportError:  # pragma: no cover
     _DASH_AVAILABLE = False
 
 from smrforge.utils.logging import get_logger
+from smrforge.visualization._viz_common import as_plotly_dict
 
 logger = get_logger(__name__)
 
@@ -60,6 +61,35 @@ def _demo_keff() -> tuple[str, dict]:
         ]
     )
     return text, _blank_figure(f"k-eff = {k:.6f} (no plot)")
+
+
+def _demo_neutronics_dashboard() -> tuple[str, dict]:
+    import numpy as np
+    from smrforge.visualization.tally_data import plot_neutronics_dashboard
+
+    # Synthetic multi-group flux: [nz, nr, ng]
+    ng = 26
+    nz, nr = 20, 15
+    energy_groups = np.logspace(7, -5, ng + 1)
+    group_centers = np.sqrt(energy_groups[:-1] * energy_groups[1:])
+    spectrum_shape = np.exp(-0.8 * np.log10(group_centers / group_centers.min() + 1.0))
+    spectrum_shape = spectrum_shape / np.max(spectrum_shape)
+
+    # Spatially varying amplitude
+    z = np.linspace(0, 1, nz)[:, None]
+    r = np.linspace(0, 1, nr)[None, :]
+    amp = np.exp(-3.0 * (r - 0.2) ** 2) * (0.8 + 0.2 * np.cos(2 * np.pi * z))
+    flux = amp[:, :, None] * spectrum_shape[None, None, :]
+
+    fig = plot_neutronics_dashboard(flux, energy_groups, k_eff=1.0000, backend="plotly")
+    text = "\n".join(
+        [
+            "Neutronics dashboard demo (synthetic)",
+            f"  flux shape: {flux.shape} (nz, nr, ng)",
+            f"  ng: {ng}",
+        ]
+    )
+    return text, as_plotly_dict(fig)
 
 
 def _demo_viz_geometry() -> tuple[str, dict]:
@@ -175,11 +205,13 @@ def _demo_lumped_thermal() -> tuple[str, dict]:
 
 def _demo_parameter_sweep() -> tuple[str, dict]:
     from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
+    from smrforge.visualization.sweep_plots import plot_sweep_heatmap
 
     cfg = SweepConfig(
-        parameters={"enrichment": [0.15, 0.195, 0.24]},
+        parameters={"enrichment": [0.15, 0.195, 0.24], "power_mw": [8.0, 10.0, 12.0]},
         analysis_types=["keff"],
-        reactor_template="valar-10",
+        # Use a custom base reactor name so create_reactor doesn't lock into a preset.
+        reactor_template={"name": "sweep-demo"},
         parallel=False,
     )
     sweep = ParameterSweep(cfg)
@@ -196,13 +228,43 @@ def _demo_parameter_sweep() -> tuple[str, dict]:
         ]
     )
 
-    fig = go.Figure()
-    if not df.empty and "k_eff" in df.columns:
-        fig.add_trace(go.Scatter(x=df["parameters"].apply(lambda p: p["enrichment"]), y=df["k_eff"], mode="markers+lines"))
-        fig.update_layout(title="k_eff vs enrichment", xaxis_title="enrichment", yaxis_title="k_eff")
-    else:
-        fig.update_layout(title="Sweep completed (no plotable data)")
-    return text, fig.to_dict()
+    if df.empty:
+        return text, _blank_figure("Sweep completed (no data)")
+
+    fig = plot_sweep_heatmap(result, x_param="enrichment", y_param="power_mw", metric="k_eff", backend="plotly")
+    return text, as_plotly_dict(fig)
+
+
+def _demo_sweep_heatmap() -> tuple[str, dict]:
+    from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
+    from smrforge.visualization.sweep_plots import plot_sweep_heatmap
+
+    cfg = SweepConfig(
+        parameters={"enrichment": [0.15, 0.195, 0.24], "power_mw": [8.0, 10.0, 12.0]},
+        analysis_types=["keff"],
+        reactor_template={"name": "sweep-viz"},
+        parallel=False,
+    )
+    res = ParameterSweep(cfg).run()
+    fig = plot_sweep_heatmap(res, x_param="enrichment", y_param="power_mw", metric="k_eff", backend="plotly")
+    text = "\n".join(["Sweep visualization: heatmap", f"  cases: {len(res.results)}"])
+    return text, as_plotly_dict(fig)
+
+
+def _demo_sweep_tornado() -> tuple[str, dict]:
+    from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
+    from smrforge.visualization.sweep_plots import plot_sweep_tornado
+
+    cfg = SweepConfig(
+        parameters={"enrichment": [0.15, 0.195, 0.24], "power_mw": [8.0, 10.0, 12.0]},
+        analysis_types=["keff"],
+        reactor_template={"name": "sweep-viz"},
+        parallel=False,
+    )
+    res = ParameterSweep(cfg).run()
+    fig = plot_sweep_tornado(res, metric="k_eff", mode="range", backend="plotly")
+    text = "\n".join(["Sweep visualization: tornado", f"  cases: {len(res.results)}"])
+    return text, as_plotly_dict(fig)
 
 
 def _demo_uq_mc() -> tuple[str, dict]:
@@ -234,6 +296,126 @@ def _demo_uq_mc() -> tuple[str, dict]:
     return text, fig.to_dict()
 
 
+def _demo_uq_distribution() -> tuple[str, dict]:
+    import numpy as np
+    from smrforge.uncertainty.uq import UQResults, UncertainParameter
+    from smrforge.uncertainty.visualization import plot_uq_distribution
+
+    params = [
+        UncertainParameter(name="enrichment", distribution="normal", nominal=0.195, uncertainty=0.01),
+        UncertainParameter(name="power_mw", distribution="uniform", nominal=10.0, uncertainty=(8.0, 12.0)),
+    ]
+    n = 1000
+    samples = np.column_stack([p.sample(n, random_state=10 + i) for i, p in enumerate(params)])
+    # Simple model: keff responds mostly to enrichment, lightly to power
+    keff = 1.0 + 0.8 * (samples[:, 0] - 0.195) - 0.002 * (samples[:, 1] - 10.0)
+    outputs = keff.reshape(-1, 1)
+    percentiles = {p: np.percentile(outputs, p, axis=0) for p in (5, 25, 50, 75, 95)}
+    res = UQResults(
+        parameter_names=[p.name for p in params],
+        parameter_samples=samples,
+        output_samples=outputs,
+        output_names=["k_eff"],
+        mean=np.mean(outputs, axis=0),
+        std=np.std(outputs, axis=0),
+        percentiles=percentiles,
+    )
+    fig = plot_uq_distribution(res, output_idx=0, backend="plotly")
+    text = "\n".join(["UQ distribution demo (synthetic model)", f"  n_samples: {n}"])
+    return text, as_plotly_dict(fig)
+
+
+def _demo_uq_correlations() -> tuple[str, dict]:
+    import numpy as np
+    from smrforge.uncertainty.uq import UQResults, UncertainParameter
+    from smrforge.uncertainty.visualization import plot_uq_correlation_matrix
+
+    params = [
+        UncertainParameter(name="enrichment", distribution="normal", nominal=0.195, uncertainty=0.01),
+        UncertainParameter(name="power_mw", distribution="uniform", nominal=10.0, uncertainty=(8.0, 12.0)),
+        UncertainParameter(name="core_height", distribution="uniform", nominal=200.0, uncertainty=(180.0, 220.0)),
+    ]
+    n = 800
+    samples = np.column_stack([p.sample(n, random_state=20 + i) for i, p in enumerate(params)])
+    keff = 1.0 + 0.9 * (samples[:, 0] - 0.195) - 0.001 * (samples[:, 1] - 10.0) + 0.0002 * (samples[:, 2] - 200.0)
+    outputs = keff.reshape(-1, 1)
+    percentiles = {p: np.percentile(outputs, p, axis=0) for p in (5, 50, 95)}
+    res = UQResults(
+        parameter_names=[p.name for p in params],
+        parameter_samples=samples,
+        output_samples=outputs,
+        output_names=["k_eff"],
+        mean=np.mean(outputs, axis=0),
+        std=np.std(outputs, axis=0),
+        percentiles=percentiles,
+    )
+    fig = plot_uq_correlation_matrix(res, include_outputs=True, backend="plotly")
+    text = "\n".join(["UQ correlations demo (synthetic model)", f"  n_samples: {n}"])
+    return text, as_plotly_dict(fig)
+
+
+def _demo_burnup_dashboard() -> tuple[str, dict]:
+    import numpy as np
+    from smrforge.burnup.solver import NuclideInventory
+    from smrforge.core.reactor_core import Nuclide
+    from smrforge.visualization.material_composition import plot_burnup_dashboard
+
+    # Synthetic inventory (no nuclear data required)
+    t_days = np.linspace(0.0, 365.0, 61)
+    t_s = t_days * 24.0 * 3600.0
+    burnup = 50.0 * (t_days / t_days.max())
+
+    u235 = Nuclide(Z=92, A=235)
+    u238 = Nuclide(Z=92, A=238)
+    pu239 = Nuclide(Z=94, A=239)
+    xe135 = Nuclide(Z=54, A=135)
+    nuclides = [u235, u238, pu239, xe135]
+
+    c_u235 = 1.0 * np.exp(-2.0 * t_days / t_days.max())
+    c_u238 = 5.0 * np.ones_like(t_days)
+    c_pu239 = 0.2 + 0.8 * (1.0 - np.exp(-3.0 * t_days / t_days.max()))
+    c_xe = 1e-3 + 2e-2 * (1.0 - np.exp(-4.0 * t_days / t_days.max()))
+    concentrations = np.vstack([c_u235, c_u238, c_pu239, c_xe])
+
+    inv = NuclideInventory(nuclides=nuclides, concentrations=concentrations, times=t_s, burnup=burnup)
+    fig = plot_burnup_dashboard(inv, backend="plotly")
+    text = "\n".join(["Burnup dashboard demo (synthetic inventory)", f"  steps: {len(t_days)}"])
+    return text, as_plotly_dict(fig)
+
+
+def _demo_mesh_diagnostics() -> tuple[str, dict]:
+    import numpy as np
+    from smrforge.geometry.mesh_generation import AdvancedMeshGenerator
+    from smrforge.visualization.mesh_diagnostics import plot_mesh_verification_dashboard
+
+    rng = np.random.default_rng(0)
+    pts = rng.normal(size=(200, 2))
+    pts = pts / np.max(np.linalg.norm(pts, axis=1)) * 50.0
+    gen = AdvancedMeshGenerator()
+    vertices, triangles = gen.generate_2d_unstructured_mesh(points=pts)
+    quality = gen.evaluate_mesh_quality(vertices, triangles)
+
+    # Synthetic size distribution (lognormal)
+    sizes = rng.lognormal(mean=0.0, sigma=0.7, size=500)
+    fig = plot_mesh_verification_dashboard(quality=quality, sizes=sizes, backend="plotly")
+    text = "\n".join(["Mesh diagnostics demo", f"  vertices: {len(vertices)}", f"  triangles: {len(triangles)}"])
+    return text, as_plotly_dict(fig)
+
+
+def _demo_validation_viz() -> tuple[str, dict]:
+    from smrforge.validation.data_validation import ValidationLevel, ValidationResult
+    from smrforge.visualization.validation_plots import plot_validation_issues, plot_validation_summary
+
+    res = ValidationResult(valid=True)
+    res.add_issue(ValidationLevel.WARNING, "temperature", "Below expected minimum", value=250.0, expected=">= 273 K")
+    res.add_issue(ValidationLevel.ERROR, "pressure", "Negative pressure", value=-1.0, expected=">= 0 Pa")
+    res.add_issue(ValidationLevel.ERROR, "k_eff", "Unphysical criticality", value=4.2, expected="<= 3.0")
+
+    fig = plot_validation_summary(res, backend="plotly")
+    # If user wants details, they can switch to issues plot; keep summary here.
+    text = "\n".join(["Validation visualization demo", f"  valid: {res.valid}", f"  issues: {len(res.issues)}"])
+    return text, as_plotly_dict(fig)
+
 def _demo_optimization() -> tuple[str, dict]:
     import numpy as np
     from smrforge.optimization.design import DesignOptimizer
@@ -254,6 +436,18 @@ def _demo_optimization() -> tuple[str, dict]:
         ]
     )
     return text, _blank_figure("Optimization demo (no plot)")
+
+
+def _demo_optimization_trace() -> tuple[str, dict]:
+    import numpy as np
+    from smrforge.visualization.optimization_plots import plot_optimization_trace
+
+    # Synthetic decreasing objective history (fast + deterministic).
+    it = np.arange(40)
+    hist = (1.0 / (1.0 + 0.15 * it)) + 0.01 * np.sin(it / 3.0)
+    fig = plot_optimization_trace(hist, backend="plotly", title="Optimization trace (synthetic)")
+    text = "\n".join(["Optimization trace demo", f"  iterations: {len(hist)}"])
+    return text, as_plotly_dict(fig)
 
 
 def _demo_economics() -> tuple[str, dict]:
@@ -288,6 +482,38 @@ def _demo_economics() -> tuple[str, dict]:
     fig.update_layout(title="Capital cost breakdown (top components)", xaxis_tickangle=-30, yaxis_title="USD")
     return text, fig.to_dict()
 
+
+def _demo_economics_capex() -> tuple[str, dict]:
+    from smrforge.economics.cost_modeling import CapitalCostEstimator, OperatingCostEstimator, LCOECalculator
+    from smrforge.visualization.economics_plots import plot_capex_breakdown
+
+    power_electric = 10e6 * 0.33
+    cap = CapitalCostEstimator(power_electric=power_electric, reactor_type="prismatic", nth_of_a_kind=1)
+    overnight = cap.estimate_overnight_cost()
+    breakdown = cap.get_cost_breakdown()
+    fig = plot_capex_breakdown(breakdown, backend="plotly", kind="waterfall", title="CAPEX waterfall")
+    text = "\n".join(["Economics demo: CAPEX waterfall", f"  overnight cost (USD): {overnight:,.0f}"])
+    return text, as_plotly_dict(fig)
+
+
+def _demo_economics_lcoe() -> tuple[str, dict]:
+    from smrforge.economics.cost_modeling import CapitalCostEstimator, OperatingCostEstimator, LCOECalculator
+    from smrforge.visualization.economics_plots import plot_lcoe_breakdown
+
+    power_electric = 10e6 * 0.33
+    cap = CapitalCostEstimator(power_electric=power_electric, reactor_type="prismatic", nth_of_a_kind=1)
+    op = OperatingCostEstimator(
+        power_electric=power_electric,
+        fuel_loading=150.0,
+        cycle_length=3650.0,
+        target_burnup=150.0,
+        capacity_factor=0.95,
+    )
+    lcoe = LCOECalculator(capital_cost=cap.estimate_overnight_cost(), power_electric=power_electric, operating_cost_estimator=op)
+    breakdown = lcoe.get_cost_breakdown()
+    fig = plot_lcoe_breakdown(breakdown, backend="plotly", title="LCOE breakdown")
+    text = "\n".join(["Economics demo: LCOE", f"  total LCOE (USD/kWh): {breakdown.get('total_lcoe', lcoe.calculate_lcoe()):.4f}"])
+    return text, as_plotly_dict(fig)
 
 def _demo_control_pid() -> tuple[str, dict]:
     import numpy as np
@@ -325,12 +551,23 @@ _DEMO_RUNNERS = {
     "presets": _demo_presets,
     "keff": _demo_keff,
     "viz_geometry": _demo_viz_geometry,
+    "neutronics_dashboard": _demo_neutronics_dashboard,
     "quick_transient": _demo_quick_transient,
     "lumped_thermal": _demo_lumped_thermal,
     "parameter_sweep": _demo_parameter_sweep,
+    "sweep_heatmap": _demo_sweep_heatmap,
+    "sweep_tornado": _demo_sweep_tornado,
     "uq_mc": _demo_uq_mc,
+    "uq_distribution": _demo_uq_distribution,
+    "uq_correlations": _demo_uq_correlations,
+    "burnup_dashboard": _demo_burnup_dashboard,
+    "mesh_diagnostics": _demo_mesh_diagnostics,
+    "validation_viz": _demo_validation_viz,
     "optimization": _demo_optimization,
+    "optimization_trace": _demo_optimization_trace,
     "economics": _demo_economics,
+    "economics_capex": _demo_economics_capex,
+    "economics_lcoe": _demo_economics_lcoe,
     "control_pid": _demo_control_pid,
 }
 

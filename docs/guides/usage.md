@@ -268,6 +268,8 @@ See the `examples/` directory for more complete examples:
 
 For a quick visual overview, see the [Visualization gallery](visualization-gallery.md).
 
+For copy-paste plotting recipes across sweeps/UQ/burnup/transients/validation/economics, see the [Visual analytics cookbook](visual-analytics.md).
+
 ---
 
 ## Tips

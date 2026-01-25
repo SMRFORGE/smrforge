@@ -128,8 +128,12 @@ except ImportError:
 try:
     from smrforge.visualization.material_composition import (
         plot_burnup_composition,
+        plot_burnup_dashboard,
+        plot_burnup_vs_time,
+        plot_composition_stacked_area,
         plot_material_property,
         plot_nuclide_concentration,
+        plot_nuclide_evolution,
     )
 
     _MATERIAL_COMPOSITION_AVAILABLE = True
@@ -139,6 +143,8 @@ except ImportError:
 try:
     from smrforge.visualization.tally_data import (
         plot_energy_spectrum,
+        plot_flux_spectrum_comparison,
+        plot_neutronics_dashboard,
         plot_spatial_distribution,
         plot_time_dependent_tally,
         plot_uncertainty,
@@ -157,6 +163,58 @@ try:
     _TRANSIENT_VIS_AVAILABLE = True
 except ImportError:
     _TRANSIENT_VIS_AVAILABLE = False
+
+try:
+    from smrforge.visualization.mesh_diagnostics import (
+        plot_mesh_cell_size_distribution,
+        plot_mesh_quality_metrics,
+        plot_mesh_verification_dashboard,
+    )
+
+    _MESH_DIAGNOSTICS_AVAILABLE = True
+except ImportError:
+    _MESH_DIAGNOSTICS_AVAILABLE = False
+
+try:
+    from smrforge.visualization.sweep_plots import (
+        plot_sweep_correlation_matrix,
+        plot_sweep_heatmap,
+        plot_sweep_pareto,
+        plot_sweep_tornado,
+    )
+
+    _SWEEP_PLOTS_AVAILABLE = True
+except ImportError:
+    _SWEEP_PLOTS_AVAILABLE = False
+
+try:
+    from smrforge.visualization.validation_plots import (
+        plot_validation_issues,
+        plot_validation_summary,
+    )
+
+    _VALIDATION_PLOTS_AVAILABLE = True
+except ImportError:
+    _VALIDATION_PLOTS_AVAILABLE = False
+
+try:
+    from smrforge.visualization.economics_plots import (
+        plot_capex_breakdown,
+        plot_lcoe_breakdown,
+    )
+
+    _ECONOMICS_PLOTS_AVAILABLE = True
+except ImportError:
+    _ECONOMICS_PLOTS_AVAILABLE = False
+
+try:
+    from smrforge.visualization.optimization_plots import (
+        plot_optimization_trace,
+    )
+
+    _OPTIMIZATION_PLOTS_AVAILABLE = True
+except ImportError:
+    _OPTIMIZATION_PLOTS_AVAILABLE = False
 
 __all__ = []
 
@@ -256,6 +314,10 @@ if _MATERIAL_COMPOSITION_AVAILABLE:
             "plot_nuclide_concentration",
             "plot_material_property",
             "plot_burnup_composition",
+            "plot_nuclide_evolution",
+            "plot_composition_stacked_area",
+            "plot_burnup_vs_time",
+            "plot_burnup_dashboard",
         ]
     )
 
@@ -263,6 +325,8 @@ if _TALLY_DATA_AVAILABLE:
     __all__.extend(
         [
             "plot_energy_spectrum",
+            "plot_flux_spectrum_comparison",
+            "plot_neutronics_dashboard",
             "plot_spatial_distribution",
             "plot_time_dependent_tally",
             "plot_uncertainty",
@@ -274,5 +338,47 @@ if _TRANSIENT_VIS_AVAILABLE:
         [
             "plot_transient",
             "plot_lumped_thermal",
+        ]
+    )
+
+if _MESH_DIAGNOSTICS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_mesh_quality_metrics",
+            "plot_mesh_cell_size_distribution",
+            "plot_mesh_verification_dashboard",
+        ]
+    )
+
+if _SWEEP_PLOTS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_sweep_heatmap",
+            "plot_sweep_tornado",
+            "plot_sweep_pareto",
+            "plot_sweep_correlation_matrix",
+        ]
+    )
+
+if _VALIDATION_PLOTS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_validation_summary",
+            "plot_validation_issues",
+        ]
+    )
+
+if _ECONOMICS_PLOTS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_capex_breakdown",
+            "plot_lcoe_breakdown",
+        ]
+    )
+
+if _OPTIMIZATION_PLOTS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_optimization_trace",
         ]
     )

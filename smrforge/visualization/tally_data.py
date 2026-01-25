@@ -169,6 +169,166 @@ def _plot_spectrum_matplotlib(flux, group_centers, show_uncertainty, uncertainty
     return fig, ax
 
 
+def plot_flux_spectrum_comparison(
+    fluxes: Dict[str, np.ndarray],
+    energy_groups: np.ndarray,
+    position: Optional[Tuple[int, ...]] = None,
+    backend: str = "plotly",
+    normalize: bool = True,
+    **kwargs,
+):
+    """
+    Compare multiple flux spectra on the same axes.
+
+    Args:
+        fluxes: Mapping label -> flux array [..., ng] or [ng]
+        energy_groups: Energy group boundaries [eV] (length ng+1)
+        position: Optional position tuple for multi-dimensional flux
+        backend: Visualization backend
+        normalize: If True, normalize each spectrum to its max
+    """
+    if not isinstance(fluxes, dict) or len(fluxes) == 0:
+        raise ValueError("fluxes must be a non-empty dict")
+
+    group_centers = np.sqrt(energy_groups[:-1] * energy_groups[1:])
+
+    def extract(arr: np.ndarray) -> np.ndarray:
+        a = np.asarray(arr)
+        if position is not None and a.ndim > 1:
+            a = a[position]
+        if a.ndim > 1:
+            a = np.sum(a, axis=tuple(range(a.ndim - 1)))
+        a = np.asarray(a, dtype=float).reshape(-1)
+        if normalize and np.max(a) > 0:
+            a = a / np.max(a)
+        return a
+
+    spectra = {k: extract(v) for k, v in fluxes.items()}
+
+    if backend == "plotly":
+        if not _PLOTLY_AVAILABLE:
+            raise ImportError("plotly is required")
+        fig = go.Figure()
+        for label, spec in spectra.items():
+            fig.add_trace(go.Scatter(x=group_centers, y=spec, mode="lines+markers", name=label))
+        fig.update_layout(
+            title=kwargs.get("title", "Flux spectrum comparison"),
+            xaxis_title="Energy (eV)",
+            yaxis_title=("Normalized flux" if normalize else "Flux"),
+            xaxis_type="log",
+            yaxis_type=("linear" if normalize else "log"),
+        )
+        return fig
+
+    if backend == "matplotlib":
+        if not _MATPLOTLIB_AVAILABLE:
+            raise ImportError("matplotlib is required")
+        fig, ax = plt.subplots(figsize=kwargs.get("figsize", (10, 6)))
+        for label, spec in spectra.items():
+            ax.plot(group_centers, spec, "o-", linewidth=2, markersize=4, label=label)
+        ax.set_xscale("log")
+        if not normalize:
+            ax.set_yscale("log")
+        ax.set_title(kwargs.get("title", "Flux spectrum comparison"))
+        ax.set_xlabel("Energy (eV)")
+        ax.set_ylabel("Normalized flux" if normalize else "Flux")
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        return fig, ax
+
+    raise ValueError(f"Unknown backend: {backend}")
+
+
+def plot_neutronics_dashboard(
+    flux: np.ndarray,
+    energy_groups: np.ndarray,
+    *,
+    k_eff: Optional[float] = None,
+    backend: str = "plotly",
+    title: Optional[str] = None,
+    **kwargs,
+):
+    """
+    Lightweight neutronics dashboard:
+    - total flux spectrum (summed over space)
+    - optional 2D heatmap of total flux over indices (if flux is 3D: [nz, nr, ng])
+    """
+    arr = np.asarray(flux)
+    if arr.ndim < 1:
+        raise ValueError("flux must be at least 1D")
+
+    group_centers = np.sqrt(energy_groups[:-1] * energy_groups[1:])
+
+    if arr.ndim == 1:
+        spectrum = arr.astype(float)
+        spatial_map = None
+    else:
+        spectrum = np.sum(arr, axis=tuple(range(arr.ndim - 1))).astype(float).reshape(-1)
+        spatial_map = np.sum(arr, axis=-1).astype(float) if arr.ndim == 3 else None
+
+    plot_title = title or "Neutronics dashboard"
+    if k_eff is not None:
+        plot_title = f"{plot_title} (k_eff={k_eff:.6f})"
+
+    if backend == "plotly":
+        if not _PLOTLY_AVAILABLE:
+            raise ImportError("plotly is required")
+        if make_subplots is None:
+            raise ImportError("plotly.subplots is required")
+
+        has_map = spatial_map is not None
+        fig = make_subplots(
+            rows=2 if has_map else 1,
+            cols=1,
+            subplot_titles=(["Energy spectrum"] + (["Total flux (indices)"] if has_map else [])),
+            vertical_spacing=0.12,
+        )
+        fig.add_trace(go.Scatter(x=group_centers, y=spectrum, mode="lines+markers", name="total spectrum"), row=1, col=1)
+        fig.update_xaxes(type="log", title_text="Energy (eV)", row=1, col=1)
+        fig.update_yaxes(type="log", title_text="Flux (a.u.)", row=1, col=1)
+
+        if has_map:
+            fig.add_trace(go.Heatmap(z=spatial_map, colorscale=kwargs.get("colorscale", "Viridis")), row=2, col=1)
+            fig.update_xaxes(title_text="r index", row=2, col=1)
+            fig.update_yaxes(title_text="z index", row=2, col=1)
+
+        fig.update_layout(title=plot_title, height=650 if has_map else 350)
+        return fig
+
+    if backend == "matplotlib":
+        if not _MATPLOTLIB_AVAILABLE:
+            raise ImportError("matplotlib is required")
+        has_map = spatial_map is not None
+        fig = plt.figure(figsize=kwargs.get("figsize", (10, 8 if has_map else 5)))
+        if has_map:
+            gs = fig.add_gridspec(2, 1, height_ratios=[1, 1.2])
+            ax1 = fig.add_subplot(gs[0, 0])
+            ax2 = fig.add_subplot(gs[1, 0])
+        else:
+            ax1 = fig.add_subplot(1, 1, 1)
+            ax2 = None
+
+        ax1.plot(group_centers, spectrum, "o-", linewidth=2, markersize=4)
+        ax1.set_xscale("log")
+        ax1.set_yscale("log")
+        ax1.set_title(plot_title)
+        ax1.set_xlabel("Energy (eV)")
+        ax1.set_ylabel("Flux (a.u.)")
+        ax1.grid(True, alpha=0.3)
+
+        if ax2 is not None:
+            im = ax2.imshow(spatial_map, aspect="auto", origin="lower", cmap=kwargs.get("cmap", "viridis"))
+            ax2.set_title("Total flux (indices)")
+            ax2.set_xlabel("r index")
+            ax2.set_ylabel("z index")
+            fig.colorbar(im, ax=ax2, label="a.u.")
+
+        fig.tight_layout()
+        return fig, ax1 if ax2 is None else (ax1, ax2)
+
+    raise ValueError(f"Unknown backend: {backend}")
+
+
 def plot_spatial_distribution(
     tally_data: np.ndarray,
     positions: np.ndarray,
@@ -483,3 +643,13 @@ def _plot_uncertainty_matplotlib(mean, uncertainty, positions, **kwargs):
     ax.grid(True, alpha=0.3)
     
     return fig, ax
+
+
+__all__ = [
+    "plot_energy_spectrum",
+    "plot_flux_spectrum_comparison",
+    "plot_neutronics_dashboard",
+    "plot_spatial_distribution",
+    "plot_time_dependent_tally",
+    "plot_uncertainty",
+]
