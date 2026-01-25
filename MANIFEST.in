@@ -1,5 +1,6 @@
 # Include README and license
 include README.md
+include README_PYPI.md
 include LICENSE
 
 # Include logo for documentation and packaging

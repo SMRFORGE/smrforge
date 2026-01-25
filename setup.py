@@ -2,12 +2,22 @@
 SMRForge setup configuration
 """
 
-from setuptools import setup, find_packages
 from pathlib import Path
 
-# Read README
-readme_file = Path(__file__).parent / "README.md"
-long_description = readme_file.read_text(encoding='utf-8') if readme_file.exists() else ""
+from setuptools import find_packages, setup
+
+
+def _read_long_description() -> str:
+    """Prefer a PyPI-safe README if present."""
+    root = Path(__file__).parent
+    for filename in ("README_PYPI.md", "README.md"):
+        path = root / filename
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+    return ""
+
+
+long_description = _read_long_description()
 
 setup(
     name="smrforge",
