@@ -4,35 +4,47 @@
 .theme-light {
     --bg-color: #ffffff;
     --text-color: #212529;
+    --muted-text-color: #6c757d;
     --border-color: #dee2e6;
     --card-bg: #ffffff;
     --sidebar-bg: #f8f9fa;
+    --hover-bg: rgba(0, 0, 0, 0.05);
+    --active-bg: rgba(0, 0, 0, 0.08);
 }
 
 .theme-dark {
     --bg-color: #222222;
-    --text-color: #ffffff;
+    /* Slightly softer than pure white (less glare) */
+    --text-color: #e9ecef;
+    --muted-text-color: rgba(233, 236, 239, 0.78);
     --border-color: #444444;
     --card-bg: #2c2c2c;
     --sidebar-bg: #1a1a1a;
+    --hover-bg: rgba(255, 255, 255, 0.10);
+    --active-bg: rgba(255, 255, 255, 0.16);
 }
 
 .theme-gray {
     --bg-color: #3a3a3a;
-    --text-color: #e0e0e0;
+    --text-color: #e3e6ea;
+    --muted-text-color: rgba(227, 230, 234, 0.75);
     --border-color: #555555;
     --card-bg: #4a4a4a;
     --sidebar-bg: #2d2d2d;
+    --hover-bg: rgba(255, 255, 255, 0.08);
+    --active-bg: rgba(255, 255, 255, 0.12);
 }
 
 /* Apply theme variables */
+body.theme-light,
 body.theme-dark,
 body.theme-gray {
     background-color: var(--bg-color);
     color: var(--text-color);
 }
 
-/* Card styling for dark/gray themes */
+/* Card styling (all themes) */
+.theme-light .card,
 .theme-dark .card,
 .theme-gray .card {
     background-color: var(--card-bg);
@@ -40,6 +52,7 @@ body.theme-gray {
     color: var(--text-color);
 }
 
+.theme-light .card-header,
 .theme-dark .card-header,
 .theme-gray .card-header {
     background-color: var(--card-bg);
@@ -48,29 +61,34 @@ body.theme-gray {
 }
 
 /* Sidebar styling */
+.theme-light .nav,
 .theme-dark .nav,
 .theme-gray .nav {
     background-color: var(--sidebar-bg);
 }
 
+.theme-light .nav-link,
 .theme-dark .nav-link,
 .theme-gray .nav-link {
     color: var(--text-color);
 }
 
+.theme-light .nav-link:hover,
 .theme-dark .nav-link:hover,
 .theme-gray .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--hover-bg);
     color: var(--text-color);
 }
 
+.theme-light .nav-link.active,
 .theme-dark .nav-link.active,
 .theme-gray .nav-link.active {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--active-bg);
     color: var(--text-color);
 }
 
 /* Input styling */
+.theme-light .form-control,
 .theme-dark .form-control,
 .theme-gray .form-control {
     background-color: var(--card-bg);
@@ -78,6 +96,7 @@ body.theme-gray {
     color: var(--text-color);
 }
 
+.theme-light .form-control:focus,
 .theme-dark .form-control:focus,
 .theme-gray .form-control:focus {
     background-color: var(--card-bg);
@@ -86,31 +105,77 @@ body.theme-gray {
 }
 
 /* Dropdown styling */
+/* Dash dropdowns have two possible class sets depending on Dash/react-select version */
+.theme-light .Select-control,
 .theme-dark .Select-control,
-.theme-gray .Select-control {
-    background-color: var(--card-bg);
-    border-color: var(--border-color);
-    color: var(--text-color);
+.theme-gray .Select-control,
+.theme-light .Select__control,
+.theme-dark .Select__control,
+.theme-gray .Select__control {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-color) !important;
+}
+
+.theme-light .Select-placeholder,
+.theme-dark .Select-placeholder,
+.theme-gray .Select-placeholder,
+.theme-light .Select__placeholder,
+.theme-dark .Select__placeholder,
+.theme-gray .Select__placeholder {
+    color: var(--muted-text-color) !important;
+}
+
+.theme-light .Select-value-label,
+.theme-dark .Select-value-label,
+.theme-gray .Select-value-label,
+.theme-light .Select__single-value,
+.theme-dark .Select__single-value,
+.theme-gray .Select__single-value {
+    color: var(--text-color) !important;
+}
+
+.theme-light .Select-menu-outer,
+.theme-dark .Select-menu-outer,
+.theme-gray .Select-menu-outer,
+.theme-light .Select__menu,
+.theme-dark .Select__menu,
+.theme-gray .Select__menu {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+.theme-light .Select-option,
+.theme-dark .Select-option,
+.theme-gray .Select-option,
+.theme-light .Select__option,
+.theme-dark .Select__option,
+.theme-gray .Select__option {
+    color: var(--text-color) !important;
 }
 
 /* Table styling */
+.theme-light .table,
 .theme-dark .table,
 .theme-gray .table {
     color: var(--text-color);
 }
 
+.theme-light .table thead th,
 .theme-dark .table thead th,
 .theme-gray .table thead th {
     border-bottom-color: var(--border-color);
     color: var(--text-color);
 }
 
+.theme-light .table tbody td,
 .theme-dark .table tbody td,
 .theme-gray .table tbody td {
     border-top-color: var(--border-color);
 }
 
 /* Alert styling */
+.theme-light .alert,
 .theme-dark .alert,
 .theme-gray .alert {
     background-color: var(--card-bg);
@@ -119,12 +184,14 @@ body.theme-gray {
 }
 
 /* Button styling adjustments for dark themes */
+.theme-light .btn-outline-secondary,
 .theme-dark .btn-outline-secondary,
 .theme-gray .btn-outline-secondary {
     border-color: var(--border-color);
     color: var(--text-color);
 }
 
+.theme-light .btn-outline-secondary:hover,
 .theme-dark .btn-outline-secondary:hover,
 .theme-gray .btn-outline-secondary:hover {
     background-color: var(--border-color);
@@ -133,15 +200,24 @@ body.theme-gray {
 }
 
 /* HR styling */
+.theme-light hr,
 .theme-dark hr,
 .theme-gray hr {
     border-top-color: var(--border-color);
 }
 
 /* Text muted styling */
+.theme-light .text-muted,
 .theme-dark .text-muted,
 .theme-gray .text-muted {
-    color: rgba(255, 255, 255, 0.6) !important;
+    color: var(--muted-text-color) !important;
+}
+
+/* Ensure labels/headings inherit theme text color */
+.theme-light label,
+.theme-dark label,
+.theme-gray label {
+    color: var(--text-color);
 }
 
 /* Ensure Plotly graphs work well in dark mode */

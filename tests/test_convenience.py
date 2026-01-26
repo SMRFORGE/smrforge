@@ -335,6 +335,16 @@ class TestSimpleReactor:
         """Test create_reactor error path for invalid preset (lines 152-153)."""
         with pytest.raises(ValueError, match="Unknown preset"):
             create_reactor(name="definitely-nonexistent-preset-xyz-123")
+
+    def test_create_reactor_supports_all_listed_presets(self):
+        """All presets returned by list_presets() should be creatable."""
+        presets = list_presets()
+        assert isinstance(presets, list)
+        for preset in presets:
+            reactor = create_reactor(preset)
+            assert reactor is not None
+            assert hasattr(reactor, "spec")
+            assert reactor.spec.name
     
     def test_analyze_preset_return_path(self):
         """Test analyze_preset return path (line 215)."""

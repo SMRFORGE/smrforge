@@ -61,6 +61,28 @@ except ImportError:
     class MicroHTGR:  # type: ignore[no-redef]
         pass
 
+# LWR presets (optional). These are registered in the design library when
+# available, so `create_reactor("<preset>")` must support them too.
+try:
+    from ..presets.smr_lwr import BWRX300, CAREM32MWe, NuScalePWR77MWe, SMART100MWe
+
+    _LWR_PRESETS_AVAILABLE = True
+except Exception:
+    _LWR_PRESETS_AVAILABLE = False
+
+    # Dummy classes for type hints and for tests that validate import-error paths
+    class NuScalePWR77MWe:  # type: ignore[no-redef]
+        pass
+
+    class SMART100MWe:  # type: ignore[no-redef]
+        pass
+
+    class CAREM32MWe:  # type: ignore[no-redef]
+        pass
+
+    class BWRX300:  # type: ignore[no-redef]
+        pass
+
 
 # -----------------------------------------------------------------------------
 # Library caching
@@ -130,12 +152,24 @@ def create_reactor(
         if name not in preset_names:
             raise ValueError(f"Unknown preset '{name}'. Available: {preset_names}")
 
-        preset_class = {
+        preset_class_map = {
             "valar-10": ValarAtomicsReactor,
             "gt-mhr-350": GTMHR350,
             "htr-pm-200": HTRPM200,
             "micro-htgr-1": MicroHTGR,
-        }.get(name)
+        }
+
+        if _LWR_PRESETS_AVAILABLE:
+            preset_class_map.update(
+                {
+                    "nuscale-77mwe": NuScalePWR77MWe,
+                    "smart-100mwe": SMART100MWe,
+                    "carem-32mwe": CAREM32MWe,
+                    "bwrx-300": BWRX300,
+                }
+            )
+
+        preset_class = preset_class_map.get(name)
 
         if preset_class is None:
             raise ValueError(f"Unknown preset '{name}'. Available: {preset_names}")
