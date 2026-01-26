@@ -577,8 +577,8 @@ def collapse_with_adjoint_weighting(
             elif E_center < coarse_group_structure[0]:
                 g_coarse = 0
         
-        # Group width
-        dE = E_high - E_low
+        # Group width (always positive)
+        dE = abs(E_high - E_low)
         
         # Accumulate importance-weighted quantities
         if 0 <= g_coarse < n_coarse:
@@ -623,7 +623,7 @@ def collapse_with_adjoint_weighting(
                         g_coarse_check = 0
                 
                 if g_coarse_check == g_coarse:
-                    dE = E_high - E_low
+                    dE = abs(E_high - E_low)  # Always positive
                     importance = fine_importance[g_fine]
                     numerator += fine_cross_sections[g_fine] * importance * dE
                     denominator += importance * dE
@@ -650,7 +650,7 @@ def collapse_with_adjoint_weighting(
                             g_coarse_check = 0
                         
                         if g_coarse_check == g_coarse:
-                            dE = E_high - E_low
+                            dE = abs(E_high - E_low)  # Always positive
                             numerator_flux += fine_cross_sections[g_fine] * fine_flux[g_fine] * dE
                     coarse_xs[g_coarse] = numerator_flux / coarse_flux[g_coarse]
                 else:

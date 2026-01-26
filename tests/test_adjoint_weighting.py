@@ -40,10 +40,6 @@ class TestAdjointWeighting:
         )
 
         assert len(coarse_xs) == 3  # 4 boundaries = 3 groups
-        # Note: Function may return zeros if group mapping fails
-        # This is a known issue - skip until fixed
-        if np.all(coarse_xs == 0):
-            pytest.skip("Group mapping returns zeros - known issue")
         assert np.all(coarse_xs > 0)
 
     def test_adjoint_weighting_preserves_reaction_rates(self):
@@ -60,11 +56,6 @@ class TestAdjointWeighting:
             fine_groups, coarse_groups, fine_xs, fine_flux, fine_adjoint
         )
 
-        # Note: Function may return zeros if group mapping fails
-        # This is a known issue - skip until fixed
-        if np.all(coarse_xs == 0):
-            pytest.skip("Group mapping returns zeros - known issue")
-        
         # With uniform flux and adjoint, should get approximately same value
         # Note: may not be exactly 5.0 due to group boundaries, but should be close
         assert np.all(coarse_xs > 0)
@@ -86,8 +77,4 @@ class TestAdjointWeighting:
         )
 
         assert len(coarse_xs) == 3  # 4 boundaries = 3 groups
-        # Note: Function may return zeros if group mapping fails
-        # This is a known issue - skip until fixed
-        if np.all(coarse_xs == 0):
-            pytest.skip("Group mapping returns zeros - known issue")
         assert np.all(coarse_xs > 0)
