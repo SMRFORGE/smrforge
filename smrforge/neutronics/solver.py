@@ -13,6 +13,7 @@ This module provides:
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
+import sys
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -45,6 +46,22 @@ from ..validation.validators import DataValidator, ValidationResult
 
 # Get logger for this module
 logger = get_logger("smrforge.neutronics")
+
+
+def _supports_unicode_output() -> bool:
+    """
+    Best-effort check for Unicode console output support.
+
+    Some Windows terminals default to cp1252, which cannot encode Rich's braille
+    spinner glyphs and will raise UnicodeEncodeError during rendering.
+    """
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    try:
+        # Rich spinners commonly use braille patterns.
+        "⠙".encode(encoding)
+        return True
+    except Exception:
+        return False
 
 
 class MultiGroupDiffusion:
@@ -354,8 +371,15 @@ class MultiGroupDiffusion:
             self.flux = np.ones_like(self.flux)
             logger.warning("Initial flux normalization failed, using uniform distribution")
 
-        # Use progress bar if Rich is available and verbose is enabled
-        use_progress = _RICH_AVAILABLE and self.options.verbose and self.options.max_iterations > 10
+        # Use progress bar if Rich is available and verbose is enabled.
+        # On some Windows terminals (cp1252), Rich's spinner glyphs can trigger
+        # UnicodeEncodeError; avoid progress rendering in that case.
+        use_progress = (
+            _RICH_AVAILABLE
+            and self.options.verbose
+            and self.options.max_iterations > 10
+            and _supports_unicode_output()
+        )
         
         if use_progress:
             progress = Progress(

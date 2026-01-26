@@ -7,6 +7,7 @@ to final calculation results, ensuring all components integrate correctly.
 
 import pytest
 from pathlib import Path
+import os
 
 import numpy as np
 
@@ -33,6 +34,13 @@ from smrforge.gamma_transport import GammaTransportSolver, GammaTransportOptions
 @pytest.fixture
 def cache_with_endf():
     """Create cache with ENDF directory if available."""
+    env_dir = os.environ.get("LOCAL_ENDF_DIR")
+    if env_dir:
+        endf_dir = Path(env_dir)
+        if endf_dir.exists():
+            cache = NuclearDataCache(local_endf_dir=endf_dir)
+            return cache
+
     possible_dirs = [
         Path.home() / "Downloads" / "ENDF-B-VIII.1",
         Path("C:/Users/cmwha/Downloads/ENDF-B-VIII.1"),
@@ -57,7 +65,7 @@ class TestENDFFileDiscovery:
         if neutron_file:
             assert neutron_file.exists()
             assert neutron_file.suffix == ".endf"
-            print(f"✓ Found neutron file: {neutron_file.name}")
+            print(f"[OK] Found neutron file: {neutron_file.name}")
     
     def test_decay_file_discovery(self, cache_with_endf):
         """Test that decay data files can be discovered."""
@@ -66,7 +74,7 @@ class TestENDFFileDiscovery:
         
         if decay_file:
             assert decay_file.exists()
-            print(f"✓ Found decay file: {decay_file.name}")
+            print(f"[OK] Found decay file: {decay_file.name}")
     
     def test_fission_yield_file_discovery(self, cache_with_endf):
         """Test that fission yield files can be discovered."""
@@ -75,7 +83,7 @@ class TestENDFFileDiscovery:
         
         if yield_file:
             assert yield_file.exists()
-            print(f"✓ Found fission yield file: {yield_file.name}")
+            print(f"[OK] Found fission yield file: {yield_file.name}")
     
     def test_tsl_file_discovery(self, cache_with_endf):
         """Test that TSL files can be discovered."""
@@ -83,7 +91,7 @@ class TestENDFFileDiscovery:
         assert isinstance(materials, list)
         
         if len(materials) > 0:
-            print(f"✓ Found {len(materials)} TSL materials: {materials[:5]}")
+            print(f"[OK] Found {len(materials)} TSL materials: {materials[:5]}")
     
     def test_photon_file_discovery(self, cache_with_endf):
         """Test that photon atomic data files can be discovered."""
@@ -91,7 +99,7 @@ class TestENDFFileDiscovery:
         assert isinstance(elements, list)
         
         if len(elements) > 0:
-            print(f"✓ Found {len(elements)} photon elements: {elements[:10]}")
+            print(f"[OK] Found {len(elements)} photon elements: {elements[:10]}")
     
     def test_gamma_production_file_discovery(self, cache_with_endf):
         """Test that gamma production files can be discovered."""
@@ -100,7 +108,7 @@ class TestENDFFileDiscovery:
         
         if gamma_file:
             assert gamma_file.exists()
-            print(f"✓ Found gamma production file: {gamma_file.name}")
+            print(f"[OK] Found gamma production file: {gamma_file.name}")
 
 
 class TestENDFDataParsing:
@@ -119,7 +127,7 @@ class TestENDFDataParsing:
             assert np.all(energy > 0)
             assert np.all(sigma_f >= 0)
             
-            print(f"✓ Parsed neutron cross-sections: {len(energy)} points")
+            print(f"[OK] Parsed neutron cross-sections: {len(energy)} points")
         except Exception as e:
             pytest.skip(f"Could not parse neutron cross-sections: {e}")
     
@@ -137,7 +145,7 @@ class TestENDFDataParsing:
             if decay_data:
                 assert decay_data.decay_constant >= 0
                 assert len(decay_data.daughters) >= 0
-                print(f"✓ Parsed decay data: λ = {decay_data.decay_constant:.2e} s⁻¹")
+                print(f"[OK] Parsed decay data: lambda = {decay_data.decay_constant:.2e} s^-1")
         except Exception as e:
             pytest.skip(f"Could not parse decay data: {e}")
     
@@ -150,7 +158,7 @@ class TestENDFDataParsing:
             
             if yield_data:
                 if len(yield_data.yields) > 0:
-                    print(f"✓ Parsed fission yields: {len(yield_data.yields)} products")
+                    print(f"[OK] Parsed fission yields: {len(yield_data.yields)} products")
                 else:
                     pytest.skip("Fission yield parser returned no products")
         except Exception as e:
@@ -167,8 +175,8 @@ class TestENDFDataParsing:
                 if tsl_data:
                     assert len(tsl_data.alpha_values) > 0
                     assert len(tsl_data.beta_values) > 0
-                    print(f"✓ Parsed TSL data for {materials[0]}: "
-                          f"{len(tsl_data.alpha_values)}×{len(tsl_data.beta_values)} grid")
+                    print(f"[OK] Parsed TSL data for {materials[0]}: "
+                          f"{len(tsl_data.alpha_values)}x{len(tsl_data.beta_values)} grid")
             except Exception as e:
                 pytest.skip(f"Could not parse TSL data: {e}")
     
@@ -183,7 +191,7 @@ class TestENDFDataParsing:
                 if photon_data:
                     assert len(photon_data.energy) > 0
                     assert len(photon_data.sigma_total) > 0
-                    print(f"✓ Parsed photon data for {elements[0]}: {len(photon_data.energy)} points")
+                    print(f"[OK] Parsed photon data for {elements[0]}: {len(photon_data.energy)} points")
             except Exception as e:
                 pytest.skip(f"Could not parse photon data: {e}")
     
@@ -196,7 +204,7 @@ class TestENDFDataParsing:
             
             if gamma_data:
                 assert len(gamma_data.prompt_spectra) > 0 or len(gamma_data.delayed_spectra) > 0
-                print(f"✓ Parsed gamma production data: "
+                print(f"[OK] Parsed gamma production data: "
                       f"{len(gamma_data.prompt_spectra)} prompt, "
                       f"{len(gamma_data.delayed_spectra)} delayed spectra")
         except Exception as e:
@@ -244,7 +252,7 @@ class TestNeutronicsWorkflow:
             assert np.all(flux >= 0)
             assert np.any(flux > 0)
             
-            print(f"✓ Neutronics workflow: k_eff = {k_eff:.6f}, "
+            print(f"[OK] Neutronics workflow: k_eff = {k_eff:.6f}, "
                   f"max flux = {np.max(flux):.4e}")
         except Exception as e:
             pytest.skip(f"Neutronics solver failed: {e}")
@@ -297,14 +305,14 @@ class TestBurnupWorkflow:
             decay_data = parser.parse_file(decay_file)
         if decay_data:
             assert decay_data.decay_constant >= 0
-            print(f"✓ Burnup workflow: Decay data accessible (λ = {decay_data.decay_constant:.2e} s⁻¹)")
+            print(f"[OK] Burnup workflow: Decay data accessible (lambda = {decay_data.decay_constant:.2e} s^-1)")
         
         # Check yield data access
         yield_data = get_fission_yield_data(u235, cache=cache_with_endf)
         if yield_data and len(yield_data.yields) > 0:
-            print(f"✓ Burnup workflow: Fission yield data accessible")
+            print("[OK] Burnup workflow: Fission yield data accessible")
         elif yield_data:
-            print("✓ Burnup workflow: Fission yield parser OK (no yields parsed)")
+            print("[OK] Burnup workflow: Fission yield parser OK (no yields parsed)")
 
 
 class TestDecayHeatWorkflow:
@@ -335,7 +343,7 @@ class TestDecayHeatWorkflow:
             assert np.all(result.gamma_decay_heat >= 0)
             assert np.all(result.beta_decay_heat >= 0)
             
-            print(f"✓ Decay heat workflow: "
+            print(f"[OK] Decay heat workflow: "
                   f"Total heat at 1d = {result.get_decay_heat_at_time(86400):.4e} W")
         except Exception as e:
             pytest.skip(f"Decay heat calculation failed: {e}")
@@ -358,8 +366,8 @@ class TestDecayHeatWorkflow:
             assert gamma_source.shape == (len(times), len(energy_groups) - 1)
             assert np.all(gamma_source >= 0)
             
-            print(f"✓ Gamma source generation: shape {gamma_source.shape}, "
-                  f"max = {np.max(gamma_source):.4e} photons/cm³/s")
+            print(f"[OK] Gamma source generation: shape {gamma_source.shape}, "
+                  f"max = {np.max(gamma_source):.4e} photons/cm^3/s")
         except Exception as e:
             pytest.skip(f"Gamma source generation failed: {e}")
 
@@ -401,7 +409,7 @@ class TestGammaTransportWorkflow:
             assert dose_rate.shape == (n_axial, n_radial)
             assert np.all(dose_rate >= 0)
             
-            print(f"✓ Gamma transport workflow: max flux = {np.max(flux):.4e} photons/cm²/s, "
+            print(f"[OK] Gamma transport workflow: max flux = {np.max(flux):.4e} photons/cm^2/s, "
                   f"max dose = {np.max(dose_rate):.4e} Sv/h")
         except Exception as e:
             pytest.skip(f"Gamma transport solver failed: {e}")
@@ -442,7 +450,7 @@ class TestGammaTransportWorkflow:
             assert flux.shape == (n_axial, n_radial, options.n_groups)
             assert np.all(flux >= 0)
             
-            print(f"✓ Time-dependent gamma transport: max flux = {np.max(flux):.4e} photons/cm²/s")
+            print(f"[OK] Time-dependent gamma transport: max flux = {np.max(flux):.4e} photons/cm^2/s")
         except Exception as e:
             pytest.skip(f"Time-dependent gamma transport failed: {e}")
 
@@ -461,7 +469,7 @@ class TestIntegratedWorkflow:
         geometry.core_height = 200.0
         geometry.core_diameter = 100.0
         geometry.generate_mesh(n_radial=5, n_axial=3)
-        print("✓ Step 1: Geometry created")
+        print("[OK] Step 1: Geometry created")
         
         # 2. Neutronics (simplified cross-sections)
         n_groups = 2
@@ -482,9 +490,9 @@ class TestIntegratedWorkflow:
         
         try:
             k_eff, flux = neutronics.solve_steady_state()
-            print(f"✓ Step 2: Neutronics solved (k_eff = {k_eff:.6f})")
+            print(f"[OK] Step 2: Neutronics solved (k_eff = {k_eff:.6f})")
         except Exception:
-            print("⚠ Step 2: Neutronics solver skipped (convergence issue)")
+            print("[WARN] Step 2: Neutronics solver skipped (convergence issue)")
         
         # 3. Burnup setup
         u235 = Nuclide(Z=92, A=235)
@@ -500,9 +508,9 @@ class TestIntegratedWorkflow:
         yield_data = get_fission_yield_data(u235, cache=cache_with_endf)
         
         if decay_data or yield_data:
-            print("✓ Step 3: Burnup solver configured with ENDF data")
+            print("[OK] Step 3: Burnup solver configured with ENDF data")
         else:
-            print("⚠ Step 3: Burnup solver configured (ENDF data not available)")
+            print("[WARN] Step 3: Burnup solver configured (ENDF data not available)")
         
         # 4. Decay heat calculation
         calc = DecayHeatCalculator(cache=cache_with_endf)
@@ -511,18 +519,18 @@ class TestIntegratedWorkflow:
         
         try:
             decay_result = calc.calculate_decay_heat(concentrations, times)
-            print(f"✓ Step 4: Decay heat calculated "
+            print(f"[OK] Step 4: Decay heat calculated "
                   f"(1d heat = {decay_result.get_decay_heat_at_time(86400):.4e} W)")
         except Exception:
-            print("⚠ Step 4: Decay heat calculation skipped")
+            print("[WARN] Step 4: Decay heat calculation skipped")
         
         # 5. Gamma source generation
         try:
             energy_groups = np.logspace(-2, 1, 21)
             gamma_source = calc.calculate_gamma_source(concentrations, times, energy_groups)
-            print(f"✓ Step 5: Gamma source generated (shape: {gamma_source.shape})")
+            print(f"[OK] Step 5: Gamma source generated (shape: {gamma_source.shape})")
         except Exception:
-            print("⚠ Step 5: Gamma source generation skipped")
+            print("[WARN] Step 5: Gamma source generation skipped")
         
         # 6. Gamma transport
         transport_options = GammaTransportOptions(n_groups=20, verbose=False)
@@ -534,13 +542,13 @@ class TestIntegratedWorkflow:
             source_3d[1, 2, :] = 1e10
             flux_gamma = transport.solve(source_3d)
             dose_rate = transport.compute_dose_rate(flux_gamma)
-            print(f"✓ Step 6: Gamma transport solved "
+            print(f"[OK] Step 6: Gamma transport solved "
                   f"(max dose = {np.max(dose_rate):.4e} Sv/h)")
         except Exception:
-            print("⚠ Step 6: Gamma transport skipped")
+            print("[WARN] Step 6: Gamma transport skipped")
         
         print("=" * 60)
-        print("✓ Complete workflow validation finished")
+        print("[OK] Complete workflow validation finished")
         print("=" * 60)
 
 

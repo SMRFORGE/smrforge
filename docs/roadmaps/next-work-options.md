@@ -93,19 +93,29 @@ Based on recent work, the following HIGH and MEDIUM priority items have been **C
 
 ### Option 3: Validation and Benchmarking Framework (Medium Impact, Low-Medium Effort)
 
-**What:** Use ENDF standards data for validation and benchmarking
+**What:** Use real ENDF data + standards/reference benchmarks for validation and benchmarking
+
+**Real ENDF available (Windows):** `C:\Users\cmwha\Downloads\ENDF-B-VIII.1`
 
 **Current Status:**
-- ❌ Standards data not used
-- ⚠️ No systematic validation framework
-- ⚠️ Limited benchmarking capabilities
+- ✅ Real ENDF-B-VIII.1 parsing + end-to-end workflow validation is runnable
+- ✅ “Standards/reference” benchmarking is supported via a benchmark database file (`--benchmarks`) with k-eff comparison implemented (extend with additional reference datasets as they become available)
+- ✅ Validation reporting is standardized: `validate run` writes a text report + structured JSON results (beyond test output)
 
 **What to do:**
-- Implement standards data parser (`standards-version.VIII.1`)
-- Create validation test suite using standard cross-sections
-- Benchmark k-eff calculations against reference values
-- Create validation report generator
+- Add a reference/standards layer (if available in ENDF layout, e.g. `standards-version.VIII.1`; otherwise document the alternative source)
+- Add benchmark cases with expected outputs (e.g., reference k-eff / reaction rates) and tolerance bands
+- Generate a structured validation report (text + JSON), including:
+  - pass/fail summary, runtimes, environment info
+  - discovered ENDF inventory (neutrons/decay/nfy/tsl/photoat/gammas)
+  - benchmark deltas vs reference values
 - Integrate into CI/CD pipeline
+
+**How to run the real-data validation now (PowerShell):**
+
+```powershell
+smrforge validate run --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" --verbose
+```
 
 **Impact:**
 - **Medium** - Improves confidence in calculations

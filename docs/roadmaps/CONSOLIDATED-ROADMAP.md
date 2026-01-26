@@ -625,7 +625,23 @@ designer.show()  # Interactive sliders, live updates
 
 ### Phase 1: Immediate (Next 1 Month) ✅ **COMPLETE**
 1. ⚠️ Complete API documentation review - **In Progress**
-2. ⚠️ Execute validation tests with real data - **Framework Complete, Execution Pending**
+2. ✅ Execute validation tests with real data - **Executed with local ENDF-B-VIII.1**
+
+   **Local ENDF directory (Windows):** `C:\Users\cmwha\Downloads\ENDF-B-VIII.1`
+
+   **Run via CLI (PowerShell):**
+
+   ```powershell
+   smrforge validate run --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" --verbose
+   ```
+
+   **Run via script (PowerShell):**
+
+   ```powershell
+   python scripts\run_validation.py --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" --verbose
+   ```
+
+   **Latest run result (Windows):** 26 passed, 1 skipped (`H2O` TSL material not found)
 3. ✅ **Parameter Sweep Workflow** - **COMPLETE** (January 2026) - Addresses common workflow pain point
 4. ✅ **Design Comparison & Trade Studies** - **COMPLETE** (January 2026) - Essential for design decisions
 

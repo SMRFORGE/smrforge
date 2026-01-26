@@ -1,0 +1,21 @@
+{
+  "burnup_benchmarks": {
+    "simple_neutronics_2g": {
+      "test_case": "simple_neutronics_2g",
+      "problem_description": "Deterministic 2-group diffusion regression benchmark (PrismaticCore: H=100 cm, D=50 cm; mesh 3 axial x 5 radial; fixed 2-group XS).",
+      "initial_composition": {},
+      "time_steps": [0],
+      "benchmark_compositions": [{}],
+      "benchmark_k_eff": [
+        {
+          "value": 1.328183724209,
+          "uncertainty": 0.02,
+          "unit": "",
+          "source": "SMRForge regression baseline",
+          "notes": "This is a stability/regression reference (not an external standards benchmark)."
+        }
+      ],
+      "reference_source": "SMRForge"
+    }
+  }
+}

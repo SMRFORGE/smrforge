@@ -15,6 +15,7 @@ This test file implements the validation tasks from the development roadmap:
 import pytest
 from pathlib import Path
 import numpy as np
+import os
 
 from smrforge.core.reactor_core import Nuclide, NuclearDataCache, Library
 from smrforge.geometry import PrismaticCore
@@ -25,6 +26,13 @@ from tests.validation_benchmarks import ValidationBenchmarker
 @pytest.fixture
 def cache_with_endf():
     """Create cache with ENDF directory if available."""
+    env_dir = os.environ.get("LOCAL_ENDF_DIR")
+    if env_dir:
+        endf_dir = Path(env_dir)
+        if endf_dir.exists():
+            cache = NuclearDataCache(local_endf_dir=endf_dir)
+            return cache
+
     possible_dirs = [
         Path.home() / "Downloads" / "ENDF-B-VIII.1",
         Path("C:/Users/cmwha/Downloads/ENDF-B-VIII.1"),

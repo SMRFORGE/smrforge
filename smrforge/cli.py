@@ -1234,12 +1234,15 @@ def validate_run(args):
                     else:
                         endf_path = Path(args.endf_dir)
                         endf_str = str(endf_path.absolute())
+                    # Keep both env vars for compatibility (tests/scripts vs core auto-detection)
                     os.environ['LOCAL_ENDF_DIR'] = endf_str
+                    os.environ['SMRFORGE_ENDF_DIR'] = endf_str
                     cmd.extend(['--endf-dir', endf_str])
                 except (TypeError, AttributeError):
                     # Handle Mock objects or other non-Path types
                     endf_str = str(args.endf_dir)
                     os.environ['LOCAL_ENDF_DIR'] = endf_str
+                    os.environ['SMRFORGE_ENDF_DIR'] = endf_str
                     cmd.extend(['--endf-dir', endf_str])
                 _print_info(f"Using ENDF directory: {args.endf_dir}")
             
@@ -1275,8 +1278,17 @@ def validate_run(args):
         if args.tests:
             cmd.extend(['--tests'] + args.tests)
         
+        if args.benchmarks:
+            cmd.extend(['--benchmarks', str(args.benchmarks)])
+
         if args.output:
             cmd.extend(['--output', str(args.output)])
+            # Also write structured JSON results next to the report for tooling.
+            try:
+                json_out = Path(args.output).with_suffix(".json")
+                cmd.extend(["--json-output", str(json_out)])
+            except Exception:
+                pass
         
         if args.verbose:
             cmd.append('--verbose')
