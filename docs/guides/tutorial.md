@@ -180,6 +180,45 @@ smrforge reactor list
 smrforge reactor analyze --reactor reactor.json --keff
 ```
 
+### Windows note (PowerShell vs Bash)
+
+Many multi-line examples on the internet use Bash line continuations (`\`). **PowerShell does not use `\`**.
+
+- **PowerShell**: use the backtick (`` ` ``) at the end of each continued line.
+- **Git Bash / WSL**: use `\` at the end of each continued line.
+
+### Beginner workflow (CLI): preset → input file → results file → plots
+
+This is the safest “start-to-finish” workflow using a preset design.
+
+1) **Create the input file** (`reactor.json`) from a preset:
+
+```bash
+smrforge reactor create --preset valar-10 --output reactor.json
+```
+
+2) **Run neutronics** and save the results to `results.json`:
+
+```bash
+smrforge reactor analyze --reactor reactor.json --neutronics --output results.json
+```
+
+3) **Make a geometry image** from `reactor.json`:
+
+```bash
+smrforge visualize geometry --reactor reactor.json --output geometry.png --format png
+```
+
+4) **Validate the reactor input** (sanity checks) from `reactor.json`:
+
+```bash
+smrforge validate design --reactor reactor.json --output validation_report.json
+```
+
+Notes:
+- `reactor.json` is your **input data** you can edit and reuse.
+- `results.json` is your **output data** from analysis.
+
 **Launch the web dashboard:**
 ```bash
 smrforge serve
@@ -440,10 +479,13 @@ You can also visualize from the command line:
 
 ```bash
 # Visualize geometry
-smrforge visualize geometry --reactor reactor.json
+smrforge visualize geometry --reactor reactor.json --output geometry.png --format png
 
-# Visualize flux distribution
-smrforge visualize flux --reactor reactor.json
+# Visualize flux distribution (requires a results file)
+#
+# NOTE: As of this version, `smrforge visualize flux` prints the Python API snippet
+# for plotting. It does not generate a plot by itself yet.
+smrforge visualize flux --results results.json
 ```
 
 ---

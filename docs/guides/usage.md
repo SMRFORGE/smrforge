@@ -51,6 +51,59 @@ results = reactor.solve()
 
 ---
 
+## Beginner Workflow (Start Here)
+
+This is the simplest end-to-end workflow using **preset data**.
+
+### Option 1: Python-only workflow (recommended for “all features”)
+
+1) **Create a reactor from a preset**:
+
+```python
+import smrforge as smr
+
+reactor = smr.create_reactor("valar-10")
+print(reactor.spec)
+```
+
+2) **Run neutronics**:
+
+```python
+results = reactor.solve()
+print("k_eff:", results["k_eff"])
+```
+
+3) **Save the reactor to a reusable input file**:
+
+```python
+reactor.save("reactor.json")
+```
+
+### Option 2: CLI workflow (best for quick runs)
+
+1) **Create an input file** from a preset:
+
+```bash
+smrforge reactor create --preset valar-10 --output reactor.json
+```
+
+2) **Analyze** and write a results file:
+
+```bash
+smrforge reactor analyze --reactor reactor.json --neutronics --output results.json
+```
+
+3) **Visualize geometry**:
+
+```bash
+smrforge visualize geometry --reactor reactor.json --output geometry.png --format png
+```
+
+Notes:
+- In the current CLI, burnup and flux plotting are primarily done via the Python API (the CLI commands print guidance).
+
+---
+
 ## Examples
 
 ### 1. Quick k-eff Calculation

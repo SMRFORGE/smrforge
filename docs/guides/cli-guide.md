@@ -9,21 +9,22 @@
 
 1. [Introduction](#introduction)
 2. [Installation and Setup](#installation-and-setup)
-3. [Getting Help](#getting-help)
-4. [Command Overview](#command-overview)
-5. [Reactor Operations](#reactor-operations)
-6. [Data Management](#data-management)
-7. [Burnup Calculations](#burnup-calculations)
-8. [Transient Analysis](#transient-analysis)
-9. [Thermal Hydraulics](#thermal-hydraulics)
-10. [Validation and Testing](#validation-and-testing)
-11. [Visualization](#visualization)
-12. [Configuration Management](#configuration-management)
-13. [Workflow Automation](#workflow-automation)
-14. [Interactive Shell](#interactive-shell)
-15. [Web Dashboard](#web-dashboard)
-16. [Advanced Usage](#advanced-usage)
-17. [Troubleshooting](#troubleshooting)
+3. [Beginner Quickstart (Start Here)](#beginner-quickstart-start-here)
+4. [Getting Help](#getting-help)
+5. [Command Overview](#command-overview)
+6. [Reactor Operations](#reactor-operations)
+7. [Data Management](#data-management)
+8. [Burnup Calculations](#burnup-calculations)
+9. [Transient Analysis](#transient-analysis)
+10. [Thermal Hydraulics](#thermal-hydraulics)
+11. [Validation and Testing](#validation-and-testing)
+12. [Visualization](#visualization)
+13. [Configuration Management](#configuration-management)
+14. [Workflow Automation](#workflow-automation)
+15. [Interactive Shell](#interactive-shell)
+16. [Web Dashboard](#web-dashboard)
+17. [Advanced Usage](#advanced-usage)
+18. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -96,6 +97,86 @@ source scripts/smrforge-completion.bash
 
 ---
 
+## Beginner Quickstart (Start Here)
+
+This section assumes you have **never** used SMRForge before. Follow these steps **in order**.
+
+### Step 0 — Pick a terminal (Windows users)
+
+Many examples online use Bash line continuations (`\`). **PowerShell does not use `\`**.
+
+- **PowerShell**: multi-line commands use the **backtick** (`` ` ``) at end-of-line.
+- **Git Bash**: Bash-compatible (supports `\`). Install “Git for Windows”, then select **Git Bash** as your Cursor terminal profile.
+- **WSL (Ubuntu)**: Bash-compatible, but requires WSL to be installed first.
+
+### Step 1 — Confirm SMRForge runs
+
+Run:
+
+```bash
+smrforge --version
+smrforge --help
+```
+
+If `smrforge` is not found, try:
+
+```bash
+python -m smrforge.cli --help
+```
+
+### Step 2 — List presets (built-in reactor designs)
+
+Run:
+
+```bash
+smrforge reactor list
+```
+
+Pick one preset name (e.g. `valar-10`) and keep using that name below.
+
+### Step 3 — Create a reactor input file from a preset
+
+This creates `reactor.json`, which you will reuse as input for multiple features.
+
+```bash
+smrforge reactor create --preset valar-10 --output reactor.json
+```
+
+### Step 4 — Analyze the reactor (generate a results file)
+
+Run:
+
+```bash
+smrforge reactor analyze --reactor reactor.json --neutronics --output results.json
+```
+
+### Step 5 — Visualize geometry (works from `reactor.json`)
+
+2D PNG:
+
+```bash
+smrforge visualize geometry --reactor reactor.json --output geometry.png --format png
+```
+
+3D HTML (requires Plotly; safe to try):
+
+```bash
+smrforge visualize geometry --reactor reactor.json --3d --backend plotly --output geometry.html --format html
+```
+
+### Step 6 — Burnup and flux visualization (important note)
+
+As of this version:
+
+- `smrforge burnup run` **does not** generate a full burnup results file yet; it prints the Python API snippet and can save your chosen burnup options.
+- `smrforge burnup visualize` can plot `k_eff` / `burnup` **only if** your results file already contains those arrays.
+- `smrforge visualize flux` currently prints Python API guidance; it does not generate a plot by itself yet.
+
+If your goal is “use every feature end-to-end from a preset”, expect a mixed workflow:
+
+- **CLI**: presets → reactor create/analyze → geometry visualization → validation
+- **Python API**: burnup inventory workflows and flux plotting
+
 ## Getting Help
 
 ### General Help
@@ -141,12 +222,52 @@ smrforge reactor create --preset valar-10 --verbose
 | `transient` | Transient analysis | `run` |
 | `thermal` | Thermal hydraulics | `lumped` |
 | `validate` | Validation/testing | `run`, `design` |
-| `visualize` | Visualization | `geometry`, `flux`, `burnup` |
+| `visualize` | Visualization | `geometry`, `flux` |
 | `config` | Configuration | `show`, `set`, `init` |
 | `workflow` | Workflow automation | `run` |
 | `sweep` | Parameter sweeps | None |
 
 ---
+
+## What each feature needs (inputs → outputs)
+
+If you’re new, this is the “map” so you know what to run first.
+
+- **`smrforge reactor list`**
+  - **Input**: none
+  - **Output**: prints available preset names
+
+- **`smrforge reactor create`**
+  - **Input**: preset name (`--preset ...`) or a config file (`--config ...`)
+  - **Output**: a reactor input file (usually `reactor.json`)
+
+- **`smrforge reactor analyze`**
+  - **Input**: a reactor input file (`--reactor reactor.json`)
+  - **Output**: a results file (e.g. `results.json`)
+
+- **`smrforge visualize geometry`**
+  - **Input**: a reactor input file (`--reactor reactor.json`)
+  - **Output**: an image/HTML file (e.g. `geometry.png` / `geometry.html`)
+
+- **`smrforge validate design`**
+  - **Input**: a reactor input file (`--reactor reactor.json`) or a preset (`--preset valar-10`)
+  - **Output**: a validation report JSON (optional via `--output ...`)
+
+- **`smrforge data setup / download / validate`**
+  - **Input**: (optional) directories / nuclide set choices
+  - **Output**: an ENDF data directory on disk
+  - **Used by**: advanced workflows/tests that need real nuclear data files
+
+- **`smrforge transient run`**
+  - **Input**: `--power` and `--temperature` (and transient parameters like `--reactivity`)
+  - **Output**: a transient results JSON (optional via `--output ...`) and optional plots
+
+- **`smrforge thermal lumped`**
+  - **Input**: optional thermal config file (`--config ...`) and simulation options
+  - **Output**: a results JSON (optional via `--output ...`) and optional plots
+
+- **Burnup + flux plotting**
+  - In this version, these are primarily **Python API workflows**; the CLI subcommands provide guidance but don’t fully generate plots/results end-to-end yet.
 
 ## Reactor Operations
 
@@ -174,14 +295,29 @@ smrforge reactor create --config reactor_config.yaml --output reactor.json
 
 #### Custom Parameters
 
+**Bash (Linux/macOS/Git Bash):**
+
 ```bash
 smrforge reactor create \
     --power 10 \
     --enrichment 0.195 \
-    --type htgr \
+    --type prismatic \
     --core-height 200 \
     --core-diameter 100 \
     --fuel-type UCO \
+    --output reactor.json
+```
+
+**PowerShell (Windows):**
+
+```powershell
+smrforge reactor create `
+    --power 10 `
+    --enrichment 0.195 `
+    --type prismatic `
+    --core-height 200 `
+    --core-diameter 100 `
+    --fuel-type UCO `
     --output reactor.json
 ```
 
@@ -191,7 +327,7 @@ smrforge reactor create \
 - `--config FILE` - Load from configuration file (JSON or YAML)
 - `--power FLOAT` - Thermal power [MW]
 - `--enrichment FLOAT` - Fuel enrichment (0-1)
-- `--type STR` - Reactor type (`htgr`, `pwr`, `bwr`, `fast`)
+- `--type STR` - Reactor type (`prismatic`, `pebble_bed`, `annular`, `hybrid`)
 - `--core-height FLOAT` - Core height [cm]
 - `--core-diameter FLOAT` - Core diameter [cm]
 - `--fuel-type STR` - Fuel type (`UCO`, `UO2`, `UC`, `UN`)
@@ -231,16 +367,15 @@ smrforge reactor analyze --reactor reactor.json --neutronics --output results.js
 
 #### Options
 
-- `--reactor FILE` - Reactor specification file (JSON/YAML)
+- `--reactor FILE` - Reactor specification file (JSON)
 - `--keff` - Calculate k_eff only
 - `--neutronics` - Full neutronics analysis
 - `--burnup` - Burnup analysis
 - `--safety` - Safety analysis
-- `--complete` - Complete analysis (all above)
+- `--full` - Complete analysis (all above)
+- `--max-iterations INT` - Solver max iterations
+- `--tolerance FLOAT` - Solver tolerance
 - `--output FILE` - Output file for results
-- `--plot` - Generate plots
-- `--plot-output DIR` - Plot output directory
-- `--plot-backend STR` - Plot backend (`plotly`, `matplotlib`)
 
 #### Advanced Options
 
@@ -250,15 +385,15 @@ smrforge reactor analyze \
     --reactor reactor.json \
     --neutronics \
     --max-iterations 200 \
-    --tolerance 1e-7 \
-    --parallel
+    --tolerance 1e-7
 
-# Parallel execution
+# Batch processing (glob patterns) + parallel workers
 smrforge reactor analyze \
-    --reactor reactor.json \
-    --neutronics \
+    --batch "reactors/*.json" \
+    --keff \
     --parallel \
-    --workers 8
+    --workers 8 \
+    --output batch_keff.json
 ```
 
 ### Compare Reactors
@@ -318,22 +453,19 @@ smrforge data download \
 smrforge data download \
     --library ENDF-B-VIII.1 \
     --nuclide-set common_smr \
-    --output-dir ~/ENDF-Data
-
-# Parallel downloads
-smrforge data download \
-    --library ENDF-B-VIII.1 \
-    --nuclide-set common_smr \
-    --parallel
+    --output ~/ENDF-Data \
+    --max-workers 8 \
+    --validate
 ```
 
 **Options:**
 - `--library STR` - ENDF library (`ENDF-B-VIII.0`, `ENDF-B-VIII.1`)
 - `--nuclide-set STR` - Predefined nuclide set (`common_smr`, `all_actinides`, etc.)
 - `--nuclides NUCLIDES...` - Specific nuclides (e.g., `U235 U238 Pu239`)
-- `--output-dir DIR` - Download directory
-- `--parallel` - Parallel downloads (faster)
-- `--workers INT` - Number of parallel workers
+- `--output DIR` - Download directory
+- `--max-workers INT` - Parallel downloads
+- `--validate` - Validate downloaded files
+- `--resume` - Resume interrupted download
 
 **Available Nuclide Sets:**
 - `common_smr` - Common SMR isotopes (U235, U238, Pu239, etc.)
@@ -350,7 +482,7 @@ Validate ENDF files for correctness and completeness.
 smrforge data validate --endf-dir ~/ENDF-Data
 
 # Validate specific files
-smrforge data validate --endf-files file1.endf file2.endf
+smrforge data validate --files file1.endf file2.endf
 
 # Detailed validation report
 smrforge data validate --endf-dir ~/ENDF-Data --output report.json
@@ -358,7 +490,7 @@ smrforge data validate --endf-dir ~/ENDF-Data --output report.json
 
 **Options:**
 - `--endf-dir DIR` - ENDF directory to validate
-- `--endf-files FILES...` - Specific ENDF files to validate
+- `--files FILES...` - Specific ENDF files to validate
 - `--output FILE` - Validation report output file
 
 ---
@@ -367,7 +499,9 @@ smrforge data validate --endf-dir ~/ENDF-Data --output report.json
 
 ### Run Burnup Calculation
 
-Calculate nuclide inventory over time (depletion).
+Burnup/depletion tracks nuclide inventory over time.
+
+**Important:** In this version, `smrforge burnup run` prints guidance for running burnup via the Python API and can save your chosen burnup options. It does **not** generate a full burnup inventory/results file by itself yet.
 
 ```bash
 # Basic burnup calculation
@@ -388,14 +522,8 @@ smrforge burnup run \
     --reactor reactor.json \
     --time-steps 0 365 730 1095 \
     --power-density 50 \
+    --checkpoint-interval 30 \
     --checkpoint-dir checkpoints/
-
-# Continuous output (save at each step)
-smrforge burnup run \
-    --reactor reactor.json \
-    --time-steps 0 365 730 \
-    --power-density 50 \
-    --save-intermediate
 ```
 
 **Options:**
@@ -403,40 +531,40 @@ smrforge burnup run \
 - `--time-steps FLOATS...` - Time steps [days] (e.g., `0 365 730`)
 - `--power-density FLOAT` - Power density [W/cm³]
 - `--output FILE` - Output file for results
-- `--checkpoint-dir DIR` - Checkpoint directory (for long calculations)
-- `--save-intermediate` - Save results at each time step
-- `--plot` - Generate burnup plots
-- `--plot-output DIR` - Plot output directory
+- `--checkpoint-interval FLOAT` - Checkpoint every N days
+- `--checkpoint-dir DIR` - Directory for checkpoint files
+- `--resume-from FILE` - Resume from a checkpoint file
+- `--adaptive-tracking` - Enable adaptive nuclide tracking
+- `--nuclide-threshold FLOAT` - Threshold for tracking nuclides
 
 ### Visualize Burnup Results
 
 Generate plots from burnup calculation results.
 
 ```bash
-# Plot nuclide concentrations
-smrforge burnup visualize \
-    --input burnup_results.json \
-    --plot-concentrations
-
 # Plot k_eff evolution
 smrforge burnup visualize \
-    --input burnup_results.json \
-    --plot-keff
+    --results burnup_results.json \
+    --keff \
+    --output burnup_keff.png \
+    --format png
 
-# All plots
+# Plot burnup evolution
 smrforge burnup visualize \
-    --input burnup_results.json \
-    --output plots/ \
-    --backend plotly
+    --results burnup_results.json \
+    --burnup \
+    --output burnup_burnup.png \
+    --format png
 ```
 
 **Options:**
-- `--input FILE` - Burnup results file
-- `--plot-concentrations` - Plot nuclide concentrations vs. time
-- `--plot-keff` - Plot k_eff evolution
-- `--plot-power` - Plot power distribution evolution
-- `--output DIR` - Plot output directory
-- `--backend STR` - Plot backend (`plotly`, `matplotlib`)
+- `--results FILE` - Burnup results file (JSON or HDF5)
+- `--keff` - Plot k-eff evolution (if present in file)
+- `--burnup` - Plot burnup evolution (if present in file)
+- `--composition` - Prints guidance for composition plotting via Python API
+- `--nuclides U235 U238 ...` - Nuclides to plot (Python API workflow)
+- `--output FILE` - Output plot file path (not a directory)
+- `--format png|pdf|svg|html` - Output format
 
 ---
 
@@ -447,54 +575,53 @@ smrforge burnup visualize \
 Analyze reactor behavior during transients (reactivity insertion, decay heat removal, etc.).
 
 ```bash
-# Quick transient analysis
+# Reactivity insertion transient (requires power + temperature)
 smrforge transient run \
-    --type reactivity_insertion \
-    --reactivity 0.01 \
-    --duration 100
-
-# With reactor specification
-smrforge transient run \
-    --reactor reactor.json \
+    --power 1000000 \
+    --temperature 600 \
     --type reactivity_insertion \
     --reactivity 0.01 \
     --duration 100 \
     --output transient_results.json
 
-# Decay heat removal
+# Decay heat transient
 smrforge transient run \
-    --reactor reactor.json \
-    --type decay_heat_removal \
+    --power 1000000 \
+    --temperature 600 \
+    --type decay_heat \
     --duration 3600 \
     --output decay_heat.json
 
-# With plots
+# With plots (plot-output is a file path)
 smrforge transient run \
-    --reactor reactor.json \
+    --power 1000000 \
+    --temperature 600 \
     --type reactivity_insertion \
     --reactivity 0.01 \
     --duration 100 \
     --plot \
-    --plot-output plots/
+    --plot-output transient_plot.png \
+    --plot-backend matplotlib
 ```
 
 **Transient Types:**
 - `reactivity_insertion` - Reactivity insertion transient
-- `decay_heat_removal` - Decay heat removal transient
-- `power_transient` - Power transient
-- `temperature_transient` - Temperature transient
+- `reactivity_step` - Step reactivity insertion transient
+- `power_change` - Power change transient
+- `decay_heat` - Decay heat transient
 
 **Options:**
-- `--reactor FILE` - Reactor specification file (optional)
+- `--power FLOAT` - Initial reactor power [W] (required)
+- `--temperature FLOAT` - Initial temperature [K] (required)
 - `--type STR` - Transient type
-- `--reactivity FLOAT` - Reactivity insertion [dk/k]
+- `--reactivity FLOAT` - Reactivity inserted [dk/k] (reactivity transient types)
 - `--duration FLOAT` - Transient duration [seconds]
-- `--power FLOAT` - Initial power [W] (for power transient)
-- `--temperature FLOAT` - Initial temperature [K] (for temperature transient)
 - `--output FILE` - Output file for results
 - `--plot` - Generate plots
-- `--plot-output DIR` - Plot output directory
+- `--plot-output FILE` - Save plot to file
 - `--plot-backend STR` - Plot backend (`plotly`, `matplotlib`)
+- `--scram-available` - Scram available (default: True)
+- `--scram-delay FLOAT` - Scram delay [s]
 - `--long-term` - Enable long-term optimization (for durations > 1 day)
 
 ---
@@ -522,16 +649,19 @@ smrforge thermal lumped \
 smrforge thermal lumped \
     --duration 3600 \
     --plot \
-    --plot-output plots/
+    --plot-output thermal_plot.png \
+    --plot-backend matplotlib
 ```
 
 **Options:**
 - `--duration FLOAT` - Analysis duration [seconds]
+- `--config FILE` - Configuration file (JSON/YAML) with lump definitions
 - `--max-step FLOAT` - Maximum time step [seconds]
 - `--adaptive` - Enable adaptive time stepping
 - `--output FILE` - Output file for results
 - `--plot` - Generate plots
-- `--plot-output DIR` - Plot output directory
+- `--plot-output FILE` - Save plot to file
+- `--plot-backend plotly|matplotlib` - Plotting backend
 
 ---
 
@@ -539,26 +669,24 @@ smrforge thermal lumped \
 
 ### Run Validation Tests
 
-Run validation test suite and compare with benchmarks.
+Run SMRForge’s validation test suite (pytest-based). This is primarily for developers / verifying an installation.
 
 ```bash
 # Run all validation tests
 smrforge validate run
 
-# Run specific test suite
-smrforge validate run --suite benchmarks
+# Use a specific ENDF directory
+smrforge validate run --endf-dir ~/ENDF-Data --verbose
 
-# Generate validation report
-smrforge validate run --output validation_report.json
-
-# Compare with benchmark
-smrforge validate run --benchmark oak-ridge-1
+# Run specific tests
+smrforge validate run --tests tests/test_validation_comprehensive.py tests/test_endf_workflows_e2e.py --verbose
 ```
 
 **Options:**
-- `--suite STR` - Test suite (`all`, `benchmarks`, `unit`, `integration`)
-- `--benchmark STR` - Specific benchmark to run
-- `--output FILE` - Validation report output file
+- `--endf-dir DIR` - ENDF directory
+- `--tests FILES...` - Specific pytest files to run
+- `--benchmarks FILE` - Benchmark database file (optional)
+- `--output FILE` - Output file for results
 - `--verbose` - Verbose output
 
 ### Validate Reactor Design
@@ -574,19 +702,15 @@ smrforge validate design \
     --reactor reactor.json \
     --output validation_report.json
 
-# Strict validation
-smrforge validate design \
-    --reactor reactor.json \
-    --strict
+# Validate a preset directly (no reactor file needed)
+smrforge validate design --preset valar-10 --output preset_validation.json
 ```
 
 **Options:**
-- `--reactor FILE` - Reactor specification file
+- `--reactor FILE` - Reactor file
+- `--preset NAME` - Preset name
+- `--constraints FILE` - Constraint set file (JSON)
 - `--output FILE` - Validation report output file
-- `--strict` - Strict validation (fail on warnings)
-- `--check-metallurgy` - Check metallurgical constraints
-- `--check-thermal` - Check thermal constraints
-- `--check-neutronics` - Check neutronics constraints
 
 ---
 
@@ -598,50 +722,37 @@ Generate 2D or 3D geometry visualizations.
 
 ```bash
 # Basic geometry visualization
-smrforge visualize geometry --reactor reactor.json
+smrforge visualize geometry --reactor reactor.json --output geometry.png --format png
 
 # 3D visualization
 smrforge visualize geometry \
     --reactor reactor.json \
     --3d \
     --output geometry_3d.html
-
-# Custom view
-smrforge visualize geometry \
-    --reactor reactor.json \
-    --view xz \
-    --output geometry_xz.png
 ```
 
 **Options:**
 - `--reactor FILE` - Reactor specification file
 - `--3d` - Generate 3D visualization
-- `--view STR` - 2D view (`xy`, `xz`, `yz`)
 - `--output FILE` - Output file (HTML for 3D, PNG/SVG for 2D)
-- `--backend STR` - Backend (`plotly`, `matplotlib`, `pyvista`)
+- `--format png|pdf|svg|html` - Output format
+- `--backend plotly|pyvista` - Visualization backend
+- `--interactive` - Display interactive window (if supported)
 
 ### Visualize Flux Distribution
 
 Plot neutron flux distribution.
 
 ```bash
-# Flux distribution from neutronics results
-smrforge visualize flux \
-    --input neutronics_results.json \
-    --output flux_plot.png
-
-# Group-wise flux
-smrforge visualize flux \
-    --input neutronics_results.json \
-    --groups 1 2 3 \
-    --output flux_groups.png
+# Flux plotting (currently prints Python API guidance)
+smrforge visualize flux --results results.json
 ```
 
 **Options:**
-- `--input FILE` - Neutronics results file
-- `--groups INTS...` - Energy groups to plot
+- `--results FILE` - Neutronics results file (JSON)
+- `--group INT` - Energy group index
 - `--output FILE` - Output file
-- `--backend STR` - Backend (`plotly`, `matplotlib`)
+  (Note: as of this version, the CLI prints guidance; plotting is done via Python API.)
 
 ### Visualize Burnup Results
 
@@ -707,12 +818,6 @@ Execute workflow from YAML file.
 ```bash
 # Run workflow
 smrforge workflow run workflow.yaml
-
-# With output directory
-smrforge workflow run workflow.yaml --output-dir results/
-
-# Verbose output
-smrforge workflow run workflow.yaml --verbose
 ```
 
 **Workflow YAML Example:**
@@ -721,35 +826,18 @@ smrforge workflow run workflow.yaml --verbose
 name: Reactor Analysis Workflow
 steps:
   - name: Create Reactor
-    type: reactor_create
+    type: create_reactor
     preset: valar-10
     output: reactor.json
   
   - name: Neutronics Analysis
-    type: reactor_analyze
-    reactor: reactor.json
-    analysis: neutronics
-    output: neutronics_results.json
-  
-  - name: Burnup Calculation
-    type: burnup_run
-    reactor: reactor.json
-    time_steps: [0, 365, 730]
-    power_density: 50
-    output: burnup_results.json
-  
-  - name: Generate Plots
-    type: visualize
-    inputs:
-      - neutronics_results.json
-      - burnup_results.json
-    output_dir: plots/
+    type: analyze
+    neutronics: true
+    output: results.json
 ```
 
 **Options:**
 - `workflow FILE` - Workflow YAML file
-- `--output-dir DIR` - Output directory for workflow results
-- `--verbose` - Verbose output
 
 ---
 
@@ -826,13 +914,17 @@ smrforge reactor analyze \
 smrforge data download \
     --library ENDF-B-VIII.1 \
     --nuclide-set common_smr \
-    --parallel \
-    --workers 4
+    --output ~/ENDF-Data \
+    --max-workers 8 \
+    --validate
 ```
 
 **Parallel Options:**
-- `--parallel` - Enable parallel execution
-- `--workers INT` - Number of parallel workers (default: auto)
+- `smrforge reactor analyze --batch ...`:
+  - `--parallel` - Enable parallel batch execution
+  - `--workers INT` - Number of worker processes (default: 4)
+- `smrforge data download ...`:
+  - `--max-workers INT` - Parallel downloads
 
 ### Batch Processing
 
@@ -857,10 +949,7 @@ Export results in various formats.
 smrforge reactor analyze --reactor reactor.json --neutronics --output results.json
 
 # YAML output
-smrforge reactor analyze --reactor reactor.json --neutronics --output results.yaml
-
-# CSV export (for tabular data)
-smrforge burnup visualize --input burnup_results.json --export-csv burnup.csv
+# (Reactor creation supports YAML. Many analysis outputs are JSON in this version.)
 ```
 
 ### Combining Commands
@@ -868,10 +957,6 @@ smrforge burnup visualize --input burnup_results.json --export-csv burnup.csv
 Chain commands together using pipes or scripts.
 
 ```bash
-# Create and analyze in one line
-smrforge reactor create --preset valar-10 --output - | \
-    smrforge reactor analyze --reactor - --neutronics
-
 # Shell script example
 #!/bin/bash
 REACTOR="reactor.json"
@@ -994,7 +1079,9 @@ smrforge data setup
 smrforge data download \
     --library ENDF-B-VIII.1 \
     --nuclide-set common_smr \
-    --parallel
+    --output ~/ENDF-Data \
+    --max-workers 8 \
+    --validate
 
 # 3. Create reactor
 smrforge reactor create \
@@ -1005,27 +1092,20 @@ smrforge reactor create \
 smrforge reactor analyze \
     --reactor reactor.json \
     --neutronics \
-    --output neutronics_results.json \
-    --plot
+    --output results.json
 
-# 5. Burnup calculation
-smrforge burnup run \
+# 5. Visualize geometry (2D)
+smrforge visualize geometry \
     --reactor reactor.json \
-    --time-steps 0 365 730 1095 \
-    --power-density 50 \
-    --output burnup_results.json \
-    --checkpoint-dir checkpoints/
+    --output geometry.png \
+    --format png
 
-# 6. Visualize results
-smrforge visualize flux \
-    --input neutronics_results.json \
-    --output flux_plot.png
+# 6. Burnup + flux plots
+# NOTE: In this version, burnup + flux plotting are primarily done via the Python API.
+# - `smrforge burnup run` saves options + prints the Python API snippet.
+# - `smrforge visualize flux` prints the Python API snippet.
 
-smrforge burnup visualize \
-    --input burnup_results.json \
-    --output plots/
-
-# 7. Validate design
+# 7. Validate design (constraints/sanity checks)
 smrforge validate design \
     --reactor reactor.json \
     --output validation_report.json
@@ -1035,30 +1115,18 @@ smrforge validate design \
 
 ```bash
 #!/bin/bash
-# Parameter sweep: enrichment vs. k_eff
-
-for enrichment in 0.15 0.17 0.19 0.21 0.23; do
-    reactor_file="reactor_${enrichment}.json"
-    results_file="results_${enrichment}.json"
-    
-    # Create reactor with specific enrichment
-    smrforge reactor create \
-        --preset valar-10 \
-        --enrichment "$enrichment" \
-        --output "$reactor_file"
-    
-    # Analyze
-    smrforge reactor analyze \
-        --reactor "$reactor_file" \
-        --keff \
-        --output "$results_file"
-done
-
-# Compare results
-smrforge reactor compare \
-    --reactors reactor_*.json \
-    --metrics keff enrichment \
-    --output sweep_comparison.json
+# Parameter sweep: enrichment vs. k_eff (advanced)
+#
+# The sweep command accepts either:
+# - name:start:end:step   (range sweep)
+# - name:val1,val2,val3   (explicit values)
+#
+# You can pass a preset name directly via --reactor.
+smrforge sweep \
+    --reactor valar-10 \
+    --params enrichment:0.15:0.25:0.02 \
+    --analysis keff \
+    --output sweep_results/
 ```
 
 ### Transient Analysis Example
@@ -1110,7 +1178,7 @@ smrforge data validate --endf-dir <dir>
 
 # Burnup
 smrforge burnup run --reactor <file> --time-steps <times...>
-smrforge burnup visualize --input <file>
+smrforge burnup visualize --results <file> --keff --output keff.png --format png
 
 # Transient
 smrforge transient run --type <type> --duration <time>
@@ -1124,7 +1192,7 @@ smrforge validate design --reactor <file>
 
 # Visualization
 smrforge visualize geometry --reactor <file>
-smrforge visualize flux --input <file>
+smrforge visualize flux --results <file>
 
 # Configuration
 smrforge config show

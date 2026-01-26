@@ -4,6 +4,14 @@
 
 Comprehensive end-to-end examples demonstrating the full power of SMRForge for SMR design and analysis.
 
+**Important (read first):**
+
+- These examples are **advanced Python API** workflows (not beginner tutorials).
+- Many examples require **optional dependencies** and/or **local ENDF nuclear data** to be set up first.
+- If you are brand new, start with:
+  - `docs/guides/tutorial.md` (step-by-step)
+  - `docs/guides/cli-guide.md` → **Beginner Quickstart**
+
 ---
 
 ## Table of Contents
