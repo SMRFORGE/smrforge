@@ -37,36 +37,86 @@ except ImportError:
 console = Console() if _RICH_AVAILABLE else None
 
 
+def _supports_unicode(text: str) -> bool:
+    """Best-effort check whether the active output encoding supports `text`."""
+    stream = None
+    if _RICH_AVAILABLE and console is not None:
+        stream = getattr(console, "file", None)
+    if stream is None:
+        stream = sys.stdout
+    encoding = getattr(stream, "encoding", None) or "utf-8"
+    try:
+        text.encode(encoding)
+        return True
+    except Exception:
+        return False
+
+
+_GLYPH_SUCCESS = "✓" if _supports_unicode("✓") else "OK"
+_GLYPH_ERROR = "✗" if _supports_unicode("✗") else "X"
+_GLYPH_INFO = "ℹ" if _supports_unicode("ℹ") else "i"
+_GLYPH_WARNING = "⚠" if _supports_unicode("⚠") else "!"
+
+
+def _to_jsonable(obj: Any) -> Any:
+    """Convert common non-JSON types (e.g., numpy arrays) into JSON-safe values."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, np.generic):
+        return obj.item()
+    if isinstance(obj, Path):
+        return str(obj)
+    if isinstance(obj, dict):
+        return {str(k): _to_jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_jsonable(v) for v in obj]
+    if isinstance(obj, set):
+        return [_to_jsonable(v) for v in sorted(obj, key=str)]
+    return obj
+
+
 def _print_success(message: str):
     """Print success message with styling if rich is available."""
     if _RICH_AVAILABLE:
-        console.print(f"[bold green]✓[/bold green] {message}")
+        try:
+            console.print(f"[bold green]{_GLYPH_SUCCESS}[/bold green] {message}")
+        except UnicodeEncodeError:
+            print(f"{_GLYPH_SUCCESS} {message}")
     else:
-        print(f"✓ {message}")
+        print(f"{_GLYPH_SUCCESS} {message}")
 
 
 def _print_error(message: str):
     """Print error message with styling if rich is available."""
     if _RICH_AVAILABLE:
-        console.print(f"[bold red]✗[/bold red] {message}")
+        try:
+            console.print(f"[bold red]{_GLYPH_ERROR}[/bold red] {message}")
+        except UnicodeEncodeError:
+            print(f"{_GLYPH_ERROR} {message}")
     else:
-        print(f"✗ {message}")
+        print(f"{_GLYPH_ERROR} {message}")
 
 
 def _print_info(message: str):
     """Print info message with styling if rich is available."""
     if _RICH_AVAILABLE:
-        console.print(f"[blue]ℹ[/blue] {message}")
+        try:
+            console.print(f"[blue]{_GLYPH_INFO}[/blue] {message}")
+        except UnicodeEncodeError:
+            print(f"{_GLYPH_INFO} {message}")
     else:
-        print(f"ℹ {message}")
+        print(f"{_GLYPH_INFO} {message}")
 
 
 def _print_warning(message: str):
     """Print warning message with styling if rich is available."""
     if _RICH_AVAILABLE:
-        console.print(f"[bold yellow]⚠[/bold yellow] {message}")
+        try:
+            console.print(f"[bold yellow]{_GLYPH_WARNING}[/bold yellow] {message}")
+        except UnicodeEncodeError:
+            print(f"{_GLYPH_WARNING} {message}")
     else:
-        print(f"⚠ {message}")
+        print(f"{_GLYPH_WARNING} {message}")
 
 
 def serve_dashboard(args):
@@ -153,6 +203,10 @@ def reactor_create(args):
     try:
         import smrforge as smr
         from smrforge.validation.models import ReactorSpecification
+        
+        def _enum_value(v):
+            """Return enum value for JSON/YAML serialization (fallback to raw)."""
+            return getattr(v, "value", v)
         
         # Try multiple import strategies for convenience functions
         create_reactor = None
@@ -267,13 +321,13 @@ def reactor_create(args):
                     'name': reactor.spec.name if hasattr(reactor, 'spec') else 'reactor',
                     'power_mw': reactor.spec.power_thermal / 1e6 if hasattr(reactor, 'spec') else None,
                     'enrichment': reactor.spec.enrichment if hasattr(reactor, 'spec') else None,
-                    'reactor_type': str(reactor.spec.reactor_type) if hasattr(reactor, 'spec') else None,
-                    'fuel_type': str(reactor.spec.fuel_type) if hasattr(reactor, 'spec') else None,
+                    'reactor_type': _enum_value(reactor.spec.reactor_type) if hasattr(reactor, 'spec') else None,
+                    'fuel_type': _enum_value(reactor.spec.fuel_type) if hasattr(reactor, 'spec') else None,
                     'core_height': reactor.spec.core_height if hasattr(reactor, 'spec') else None,
                     'core_diameter': reactor.spec.core_diameter if hasattr(reactor, 'spec') else None,
                 }
                 with open(output_path, 'w') as f:
-                    json.dump(reactor_dict, f, indent=2)
+                    json.dump(_to_jsonable(reactor_dict), f, indent=2)
                 _print_success(f"Saved reactor to {output_path} (JSON format)")
             elif output_format in ['yaml', 'yml']:
                 if not _YAML_AVAILABLE:
@@ -283,8 +337,8 @@ def reactor_create(args):
                     'name': reactor.spec.name if hasattr(reactor, 'spec') else 'reactor',
                     'power_mw': reactor.spec.power_thermal / 1e6 if hasattr(reactor, 'spec') else None,
                     'enrichment': reactor.spec.enrichment if hasattr(reactor, 'spec') else None,
-                    'reactor_type': str(reactor.spec.reactor_type) if hasattr(reactor, 'spec') else None,
-                    'fuel_type': str(reactor.spec.fuel_type) if hasattr(reactor, 'spec') else None,
+                    'reactor_type': _enum_value(reactor.spec.reactor_type) if hasattr(reactor, 'spec') else None,
+                    'fuel_type': _enum_value(reactor.spec.fuel_type) if hasattr(reactor, 'spec') else None,
                     'core_height': reactor.spec.core_height if hasattr(reactor, 'spec') else None,
                     'core_diameter': reactor.spec.core_diameter if hasattr(reactor, 'spec') else None,
                 }
@@ -394,7 +448,7 @@ def reactor_analyze(args):
         if args.output:
             output_path = Path(args.output)
             with open(output_path, 'w') as f:
-                json.dump(results, f, indent=2)
+                json.dump(_to_jsonable(results), f, indent=2)
             _print_success(f"Results saved to {output_path}")
         else:
             if _RICH_AVAILABLE:
@@ -406,7 +460,7 @@ def reactor_analyze(args):
                 console.print(table)
             else:
                 print("\nResults:")
-                print(json.dumps(results, indent=2))
+                print(json.dumps(_to_jsonable(results), indent=2))
         
     except ImportError as e:
         _print_error(f"Failed to import SMRForge modules: {e}")
@@ -583,14 +637,14 @@ def _reactor_analyze_batch(args):
         # Save summary
         summary_file = output_dir / 'batch_results.json'
         with open(summary_file, 'w') as f:
-            json.dump(batch_results, f, indent=2)
+            json.dump(_to_jsonable(batch_results), f, indent=2)
         _print_success(f"Batch results saved to {summary_file}")
         
         # Save individual results
         for reactor_file, result in all_results.items():
             result_file = output_dir / f"{reactor_file.stem}_results.json"
             with open(result_file, 'w') as f:
-                json.dump(result, f, indent=2)
+                json.dump(_to_jsonable(result), f, indent=2)
         
         # Display summary
         if _RICH_AVAILABLE:
@@ -601,11 +655,11 @@ def _reactor_analyze_batch(args):
             
             for reactor_file, result in all_results.items():
                 k_eff = result.get('k_eff', 'N/A')
-                table.add_row(reactor_file.name, str(k_eff), "✓ Success")
+                table.add_row(reactor_file.name, str(k_eff), f"{_GLYPH_SUCCESS} Success")
             
             for reactor_file, error in errors.items():
                 error_msg = error[:50] + "..." if len(error) > 50 else error
-                table.add_row(reactor_file.name, "N/A", f"✗ Error: {error_msg}")
+                table.add_row(reactor_file.name, "N/A", f"{_GLYPH_ERROR} Error: {error_msg}")
             
             console.print(table)
         else:
@@ -840,7 +894,7 @@ def reactor_compare(args):
                 _print_success(f"HTML comparison report saved to {args.output}")
             else:
                 with open(args.output, 'w') as f:
-                    json.dump(comparison, f, indent=2, default=str)
+                    json.dump(_to_jsonable(comparison), f, indent=2, default=str)
                 _print_success(f"Comparison saved to {args.output}")
         
     except ImportError as e:
@@ -993,7 +1047,7 @@ def data_validate(args):
                     'results': scan_results
                 }
                 with open(args.output, 'w') as f:
-                    json.dump(report, f, indent=2)
+                    json.dump(_to_jsonable(report), f, indent=2)
                 _print_success(f"Validation report saved to {args.output}")
             
         elif args.files:
@@ -1106,7 +1160,7 @@ def burnup_run(args):
                 'nuclide_threshold': float(burnup_options.nuclide_threshold),
             }
             with open(output_path, 'w') as f:
-                json.dump(options_dict, f, indent=2)
+                json.dump(_to_jsonable(options_dict), f, indent=2)
             _print_success(f"Burnup options saved to {output_path}")
         
     except ImportError as e:
@@ -1975,14 +2029,14 @@ def workflow_run(args):
                         'name': reactor.spec.name if hasattr(reactor, 'spec') else 'reactor',
                         'power_thermal': reactor.spec.power_thermal if hasattr(reactor, 'spec') else 0,
                         'enrichment': reactor.spec.enrichment if hasattr(reactor, 'spec') else 0,
-                        'reactor_type': str(reactor.spec.reactor_type) if hasattr(reactor, 'spec') else 'unknown',
+                        'reactor_type': getattr(reactor.spec.reactor_type, "value", str(reactor.spec.reactor_type)) if hasattr(reactor, 'spec') else 'unknown',
                     }
                     
                     with open(output_path, 'w') as f:
                         if output_path.suffix.lower() in ['.yaml', '.yml']:
                             yaml.safe_dump(reactor_dict, f)
                         else:
-                            json.dump(reactor_dict, f, indent=2)
+                            json.dump(_to_jsonable(reactor_dict), f, indent=2)
                     _print_success(f"Saved reactor to: {output_path}")
             
             elif step_type == 'analyze':
@@ -2017,7 +2071,7 @@ def workflow_run(args):
                         output_path = Path.cwd() / output_path
                     output_path.parent.mkdir(parents=True, exist_ok=True)
                     with open(output_path, 'w') as f:
-                        json.dump(results, f, indent=2)
+                        json.dump(_to_jsonable(results), f, indent=2)
                     _print_success(f"Saved results to: {output_path}")
             
             elif step_type == 'visualize':
@@ -2274,7 +2328,7 @@ def transient_run(args):
             }
             
             with open(args.output, 'w') as f:
-                json.dump(output_data, f, indent=2)
+                json.dump(_to_jsonable(output_data), f, indent=2)
             _print_success(f"Results saved to {args.output}")
         
     except Exception as e:
@@ -2424,7 +2478,7 @@ def thermal_lumped(args):
                     output_data[key] = value.tolist()
             
             with open(args.output, 'w') as f:
-                json.dump(output_data, f, indent=2)
+                json.dump(_to_jsonable(output_data), f, indent=2)
             _print_success(f"Results saved to {args.output}")
         
     except Exception as e:
@@ -2493,7 +2547,7 @@ def validate_design(args):
                 "metrics": validation.metrics
             }
             with open(Path(args.output), 'w') as f:
-                json.dump(report, f, indent=2)
+                json.dump(_to_jsonable(report), f, indent=2)
             _print_success(f"Validation report saved to {args.output}")
         
     except Exception as e:
