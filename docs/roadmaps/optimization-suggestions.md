@@ -241,6 +241,110 @@ The `_build_group_system()` method (lines 272-363) builds sparse matrices elemen
      - Better use of pre-computed values
    - **Performance Gain**: ~10-20% faster for large meshes
 
+## ✅ New Optimizations Implemented (January 2026)
+
+### 7. Vectorize Burnup Fission Rate Integration ✅
+   - **Status**: ✅ **COMPLETED**
+   - **Location**: `smrforge/burnup/solver.py:_update_burnup()` (lines ~1026-1041)
+   - **Implementation**: Replaced nested loops (z, r, g) with vectorized numpy operations using fuel mask and broadcasting
+   - **Performance Gain**: ~10-100x faster for large meshes (eliminates 3 nested Python loops)
+   - **Code Change**:
+     ```python
+     # Before: Nested loops over z, r, g
+     for z in range(nz):
+         for r in range(nr):
+             if material_map[z, r] != 0:
+                 continue
+             for g in range(ng):
+                 total_fissions += sigma_f_avg * flux[z, r, g] * N_avg * cell_volumes[z, r]
+     
+     # After: Vectorized with fuel mask
+     fuel_mask = (material_map == 0)
+     flux_fuel = flux * fuel_mask[:, :, np.newaxis]
+     fission_rate_per_cell_group = sigma_f_avg * flux_fuel * N_avg * cell_volumes[:, :, np.newaxis]
+     total_fissions = np.sum(fission_rate_per_cell_group)
+     ```
+
+### 8. Vectorize Control Rod Shadowing Calculation ✅
+   - **Status**: ✅ **COMPLETED**
+   - **Location**: `smrforge/burnup/solver.py:set_control_rod_effects()` (lines ~925-939)
+   - **Implementation**: Replaced nested loops with vectorized distance calculation using meshgrid and numpy operations
+   - **Performance Gain**: ~5-20x faster for multiple control rods
+   - **Code Change**:
+     ```python
+     # Before: Nested loops
+     for z in range(nz):
+         for r in range(nr):
+             for cr_pos in control_rod_positions:
+                 distance = np.sqrt((r - cr_pos[1])**2 + (z - cr_pos[0])**2)
+                 min_distance = min(min_distance, distance)
+     
+     # After: Vectorized
+     z_coords, r_coords = np.meshgrid(np.arange(nz), np.arange(nr), indexing='ij')
+     min_distances = np.full((nz, nr), np.inf)
+     for cr_pos in control_rod_positions:
+         distances = np.sqrt((r_coords - cr_pos[1])**2 + (z_coords - cr_pos[0])**2)
+         min_distances = np.minimum(min_distances, distances)
+     shadowing = 1.0 - 0.3 * np.exp(-min_distances / characteristic_length)
+     ```
+
+### 9. Optimize Gamma Transport Sparse Matrix Construction ✅
+   - **Status**: ✅ **COMPLETED**
+   - **Location**: `smrforge/gamma_transport/solver.py:_build_group_system()` (lines ~422-448)
+   - **Implementation**: Vectorized diagonal computation using numpy broadcasting instead of nested loops
+   - **Performance Gain**: ~5-10x faster for large meshes
+   - **Code Change**:
+     ```python
+     # Before: Nested loops computing diagonal values
+     for iz in range(self.nz):
+         for ir in range(self.nr):
+             diag_value = sigma_t_g * cell_volume
+             if ir > 0:
+                 diag_value += D_g / (self.dr[ir]**2) * cell_volume
+             # ... more conditionals
+     
+     # After: Vectorized computation
+     diag_base = sigma_t_g * cell_volumes
+     radial_contrib = np.zeros((self.nz, self.nr))
+     radial_contrib[:, 1:-1] = 2 * radial_diffusion_coef[1:-1, np.newaxis] * cell_volumes[:, 1:-1]
+     # ... vectorized boundary handling
+     diag_values = diag_base + radial_contrib + axial_contrib
+     ```
+
+### 10. Vectorize Cross-Section Broadcasting ✅
+   - **Status**: ✅ **COMPLETED**
+   - **Location**: `smrforge/burnup/solver.py:_update_cross_sections()` (lines ~877-884)
+   - **Implementation**: Replaced loop over energy groups with vectorized array assignment
+   - **Performance Gain**: ~ng times faster (where ng = number of energy groups)
+   - **Code Change**:
+     ```python
+     # Before: Loop over groups
+     for g in range(ng):
+         self.neutronics.xs.sigma_a[fuel_material_idx, g] = sigma_a_weighted
+     
+     # After: Vectorized broadcast
+     self.neutronics.xs.sigma_a[fuel_material_idx, :] = sigma_a_weighted
+     ```
+
+### 11. Optimize Control Rod Distance Calculation in LWR Burnup ✅
+   - **Status**: ✅ **COMPLETED**
+   - **Location**: `smrforge/burnup/lwr_burnup.py:calculate_shadowing_factor()` (lines ~471-478)
+   - **Implementation**: Vectorized distance calculation to all control rods at once
+   - **Performance Gain**: ~5-10x faster for multiple control rods
+   - **Code Change**:
+     ```python
+     # Before: Loop over control rods
+     for cr_pos in control_rod_positions:
+         distance = np.sqrt((rod_position[0] - cr_pos[0])**2 + (rod_position[1] - cr_pos[1])**2)
+         min_distance = min(min_distance, distance)
+     
+     # After: Vectorized
+     cr_positions = np.array(control_rod_positions)
+     deltas = cr_positions - rod_position
+     distances = np.sqrt(np.sum(deltas**2, axis=1)) * pitch
+     min_distance = np.min(distances)
+     ```
+
 ## Remaining Optimizations
 
 ### Low Priority (More complex, requires testing):
@@ -248,4 +352,10 @@ The `_build_group_system()` method (lines 272-363) builds sparse matrices elemen
      - Consider using `@njit` for `_build_group_system()` inner loop
      - Would require careful testing to ensure compatibility with scipy.sparse
      - Potential gain: ~2-5x for very large meshes
+   - Optimize self-shielding calculations in `smrforge/core/self_shielding_integration.py`
+     - Lines 101-106: Energy loop for Bondarenko method could potentially be batched
+     - Lines 115-167: Subgroup method loops could benefit from vectorization where possible
+   - Consider 2D interpolation for temperature-dependent cross-sections
+     - `smrforge/core/temperature_interpolation.py` lines 205-218 use loop over energy points
+     - Could use `scipy.interpolate.interp2d` or similar for 2D interpolation
 

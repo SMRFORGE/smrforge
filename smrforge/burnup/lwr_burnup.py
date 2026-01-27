@@ -468,14 +468,18 @@ class RodWiseBurnupTracker:
         if not control_rod_positions:
             return 1.0
         
-        min_distance = float('inf')
-        for cr_pos in control_rod_positions:
-            # Calculate distance in lattice units
-            dr = rod_position[0] - cr_pos[0]
-            dc = rod_position[1] - cr_pos[1]
-            distance = np.sqrt(dr**2 + dc**2) * pitch
+        # Vectorized distance calculation for better performance
+        if control_rod_positions:
+            cr_positions = np.array(control_rod_positions)  # [n_rods, 2]
+            rod_pos = np.array(rod_position)  # [2]
             
-            min_distance = min(min_distance, distance)
+            # Vectorized: compute distances to all control rods at once
+            # [n_rods, 2] - [2] = [n_rods, 2] (broadcasting)
+            deltas = cr_positions - rod_pos
+            distances = np.sqrt(np.sum(deltas**2, axis=1)) * pitch  # [n_rods]
+            min_distance = np.min(distances)
+        else:
+            min_distance = float('inf')
         
         # Shadowing decreases with distance
         # Simplified model: shadowing factor = 1 - exp(-distance / characteristic_length)

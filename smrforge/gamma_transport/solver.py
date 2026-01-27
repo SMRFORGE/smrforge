@@ -419,30 +419,42 @@ class GammaTransportSolver:
         # Optimized: pre-compute cell volumes once
         cell_volumes = self._cell_volumes()  # [nz, nr]
         
+        # Pre-compute diffusion coefficients for vectorization
+        # Radial diffusion coefficients: [nr]
+        dr_squared = self.dr ** 2
+        radial_diffusion_coef = D_g / dr_squared  # [nr]
+        
+        # Axial diffusion coefficients: [nz]
+        dz_squared = self.dz ** 2
+        axial_diffusion_coef = D_g / dz_squared  # [nz]
+        
+        # Vectorized diagonal computation
+        # Base absorption term: [nz, nr]
+        diag_base = sigma_t_g * cell_volumes
+        
+        # Add radial diffusion contributions (vectorized)
+        # Inner cells (ir > 0 and ir < nr-1) get contributions from both sides
+        radial_contrib = np.zeros((self.nz, self.nr))
+        radial_contrib[:, 1:-1] = 2 * radial_diffusion_coef[1:-1, np.newaxis] * cell_volumes[:, 1:-1]  # Inner cells
+        radial_contrib[:, 0] = radial_diffusion_coef[0] * cell_volumes[:, 0]  # Left boundary
+        radial_contrib[:, -1] = radial_diffusion_coef[-1] * cell_volumes[:, -1]  # Right boundary
+        
+        # Add axial diffusion contributions (vectorized)
+        axial_contrib = np.zeros((self.nz, self.nr))
+        axial_contrib[1:-1, :] = 2 * axial_diffusion_coef[1:-1, np.newaxis] * cell_volumes[1:-1, :]  # Inner cells
+        axial_contrib[0, :] = axial_diffusion_coef[0] * cell_volumes[0, :]  # Bottom boundary
+        axial_contrib[-1, :] = axial_diffusion_coef[-1] * cell_volumes[-1, :]  # Top boundary
+        
+        # Total diagonal: [nz, nr]
+        diag_values = diag_base + radial_contrib + axial_contrib
+        
+        # Build sparse matrix structure (still need loops for indexing, but computation is vectorized)
         for iz in range(self.nz):
             for ir in range(self.nr):
                 idx = iz * self.nr + ir
-                
-                # Diagonal: absorption + diffusion
-                cell_volume = cell_volumes[iz, ir]  # Use pre-computed volume
-                diag_value = sigma_t_g * cell_volume
-                
-                # Add diffusion terms (simplified)
-                # Radial diffusion
-                if ir > 0:
-                    diag_value += D_g / (self.dr[ir] ** 2) * cell_volume
-                if ir < self.nr - 1:
-                    diag_value += D_g / (self.dr[ir] ** 2) * cell_volume
-                
-                # Axial diffusion
-                if iz > 0:
-                    diag_value += D_g / (self.dz[iz] ** 2) * cell_volume
-                if iz < self.nz - 1:
-                    diag_value += D_g / (self.dz[iz] ** 2) * cell_volume
-                
                 rows.append(idx)
                 cols.append(idx)
-                data.append(diag_value)
+                data.append(diag_values[iz, ir])
                 
                 # Off-diagonal: diffusion coupling
                 # (Simplified - full implementation would use proper finite difference)
