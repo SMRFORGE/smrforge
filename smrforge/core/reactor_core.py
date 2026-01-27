@@ -3867,7 +3867,16 @@ def scan_endf_directory(endf_dir: Path) -> Dict[str, Any]:
         "nuclides": [],
         "library_versions": set(),
         "directory_structure": "unknown",
+        "has_standards": False,
+        "standards_files": 0,
     }
+    
+    # Detect standards directory (for validation/benchmarking)
+    standards_dir = endf_dir / "standards-version.VIII.1"
+    if standards_dir.exists() and standards_dir.is_dir():
+        results["has_standards"] = True
+        standards_files = list(standards_dir.glob("std-*.endf"))
+        results["standards_files"] = len(standards_files)
     
     # Detect directory structure
     if (endf_dir / "neutrons-version.VIII.1").exists():

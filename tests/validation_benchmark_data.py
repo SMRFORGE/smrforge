@@ -147,6 +147,7 @@ class BenchmarkDatabase:
         self.decay_heat_benchmarks: Dict[str, DecayHeatBenchmark] = {}
         self.gamma_transport_benchmarks: Dict[str, GammaTransportBenchmark] = {}
         self.burnup_benchmarks: Dict[str, BurnupBenchmark] = {}
+        self.cross_section_benchmarks: Dict[str, Dict[str, Any]] = {}
         self.data_file = data_file
         
         if data_file and data_file.exists():
@@ -179,6 +180,7 @@ class BenchmarkDatabase:
                 name: bm.to_dict()
                 for name, bm in self.burnup_benchmarks.items()
             },
+            "cross_section_benchmarks": self.cross_section_benchmarks,
         }
         
         output_file.write_text(json.dumps(data, indent=2))
@@ -260,6 +262,9 @@ class BenchmarkDatabase:
                 reference_source=bm_data.get("reference_source", "IAEA"),
             )
             self.burnup_benchmarks[name] = benchmark
+        
+        # Load cross-section benchmarks (simple dict format)
+        self.cross_section_benchmarks = data.get("cross_section_benchmarks", {})
 
 
 def compare_with_benchmark(

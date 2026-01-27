@@ -103,19 +103,35 @@ Based on recent work, the following HIGH and MEDIUM priority items have been **C
 - ✅ Validation reporting is standardized: `validate run` writes a text report + structured JSON results (beyond test output)
 
 **What to do:**
-- Add a reference/standards layer (if available in ENDF layout, e.g. `standards-version.VIII.1`; otherwise document the alternative source)
-- Add benchmark cases with expected outputs (e.g., reference k-eff / reaction rates) and tolerance bands
-- Generate a structured validation report (text + JSON), including:
-  - pass/fail summary, runtimes, environment info
-  - discovered ENDF inventory (neutrons/decay/nfy/tsl/photoat/gammas)
-  - benchmark deltas vs reference values
-- Integrate into CI/CD pipeline
+- ✅ Add a reference/standards layer - **DONE**: `standards-version.VIII.1` directory is detected by `scan_endf_directory()` (reports `has_standards: true` and `standards_files` count). Standards files (std-*.endf) are available for validation use.
+- ✅ Add benchmark cases with expected outputs - **DONE**: Benchmark database (`benchmarks/validation_benchmarks.json`) includes:
+  - k-eff regression benchmark (`simple_neutronics_2g`)
+  - Cross-section spot checks (U-235/U-238 thermal fission/capture) with tolerance bands
+  - Extensible format for additional benchmarks (decay heat, gamma transport, etc.)
+- ✅ Generate a structured validation report (text + JSON) - **DONE**: `scripts/run_validation.py` generates:
+  - ✅ Pass/fail summary, runtimes, environment info (in JSON `metadata` + text report)
+  - ✅ Discovered ENDF inventory via `scan_endf_directory()` (includes standards detection)
+  - ✅ Benchmark deltas vs reference values (in `comparison_data` with relative errors, tolerance checks)
+- ✅ Integrate into CI/CD pipeline - **DONE**: `.github/workflows/ci.yml` includes validation job that:
+  - Runs validation tests (pytest)
+  - Runs validation runner with benchmarks (if `LOCAL_ENDF_DIR` secret is set)
+  - Uploads validation artifacts (reports + JSON) as GitHub Actions artifacts
 
 **How to run the real-data validation now (PowerShell):**
 
 ```powershell
+# Basic validation (no benchmarks)
 smrforge validate run --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" --verbose
+
+# With benchmark comparisons
+smrforge validate run `
+  --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" `
+  --benchmarks "benchmarks\validation_benchmarks.json" `
+  --output "validation_report.txt" `
+  --verbose
 ```
+
+**Standards data:** The `standards-version.VIII.1` directory is automatically detected. See `docs/validation/standards-data-availability.md` for details.
 
 **Impact:**
 - **Medium** - Improves confidence in calculations

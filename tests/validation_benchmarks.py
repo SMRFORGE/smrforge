@@ -395,6 +395,97 @@ class ValidationBenchmarker:
                 message=f"Burnup validation failed: {e}",
             )
     
+    def validate_cross_section_spot_check(
+        self,
+        nuclide: Nuclide,
+        reaction: str,
+        energy_ev: float,
+        expected_value: float,
+        tolerance: float = 0.05,
+    ) -> ValidationResult:
+        """
+        Validate cross-section value at a specific energy point (spot check).
+        
+        Compares calculated cross-section value against expected reference value.
+        Useful for validating cross-section interpolation and parsing accuracy.
+        
+        Args:
+            nuclide: Nuclide to check
+            reaction: Reaction type (e.g., "fission", "capture", "total")
+            energy_ev: Energy in eV for spot check
+            expected_value: Expected cross-section value (barns)
+            tolerance: Relative tolerance for comparison (default: 0.05 = 5%)
+        
+        Returns:
+            ValidationResult with comparison metrics
+        """
+        try:
+            from tests.validation_benchmark_data import BenchmarkValue, compare_with_benchmark
+            
+            def get_xs():
+                return self.cache.get_cross_section(nuclide, reaction, energy_ev)
+            
+            timing = self.time_function(get_xs)
+            
+            energy_array, sigma_array = self.cache.get_cross_section(nuclide, reaction, energy_ev)
+            
+            if len(energy_array) == 0 or len(sigma_array) == 0:
+                return ValidationResult(
+                    test_name=f"Cross-section spot check ({nuclide}, {reaction})",
+                    passed=False,
+                    message=f"No cross-section data found at {energy_ev:.2e} eV",
+                    timing=timing,
+                )
+            
+            # Interpolate to exact energy if needed
+            if energy_ev not in energy_array:
+                # Find nearest point or interpolate
+                idx = np.argmin(np.abs(energy_array - energy_ev))
+                calculated_value = float(sigma_array[idx])
+            else:
+                idx = np.where(energy_array == energy_ev)[0][0]
+                calculated_value = float(sigma_array[idx])
+            
+            benchmark_value = BenchmarkValue(
+                value=expected_value,
+                uncertainty=expected_value * tolerance,
+                unit="barns",
+                source="Reference benchmark",
+            )
+            
+            comparison = compare_with_benchmark(calculated_value, benchmark_value, tolerance=tolerance)
+            
+            metrics = {
+                "nuclide": str(nuclide),
+                "reaction": reaction,
+                "energy_ev": float(energy_ev),
+                "calculated": calculated_value,
+                "expected": expected_value,
+                "relative_error_percent": comparison["relative_error_percent"],
+                "within_tolerance": comparison["within_tolerance"],
+            }
+            
+            comparison_data = {
+                "comparison": comparison,
+                "note": "Cross-section spot check at specific energy point",
+            }
+            
+            return ValidationResult(
+                test_name=f"Cross-section spot check ({nuclide}, {reaction} @ {energy_ev:.2e} eV)",
+                passed=comparison["within_tolerance"],
+                message=f"XS check: calculated={calculated_value:.4e} b, expected={expected_value:.4e} b, "
+                       f"error={comparison['relative_error_percent']:.2f}%",
+                timing=timing,
+                metrics=metrics,
+                comparison_data=comparison_data,
+            )
+        except Exception as e:
+            return ValidationResult(
+                test_name=f"Cross-section spot check ({nuclide}, {reaction})",
+                passed=False,
+                message=f"Cross-section spot check failed: {e}",
+            )
+    
     def benchmark_k_eff(
         self,
         calculated_k_eff: List[float],

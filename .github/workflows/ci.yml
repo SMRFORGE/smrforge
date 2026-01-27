@@ -122,6 +122,33 @@ jobs:
         run: |
           pytest tests/validation_benchmarks.py -v --tb=short || \
             echo "Validation benchmarks skipped (ENDF files may not be available)"
+      
+      - name: Run validation runner with benchmarks (if available)
+        continue-on-error: true
+        env:
+          LOCAL_ENDF_DIR: ${{ secrets.ENDF_DIR || '' }}
+        run: |
+          if [ -n "$LOCAL_ENDF_DIR" ] && [ -d "$LOCAL_ENDF_DIR" ]; then
+            python scripts/run_validation.py \
+              --endf-dir "$LOCAL_ENDF_DIR" \
+              --benchmarks benchmarks/validation_benchmarks.json \
+              --output validation_report.txt \
+              --json-output validation_results.json || \
+              echo "Validation runner completed with warnings/errors"
+          else
+            echo "ENDF directory not available in CI (set LOCAL_ENDF_DIR secret for full validation)"
+          fi
+      
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-reports
+          path: |
+            validation_report.txt
+            validation_results.json
+          retention-days: 30
+          if-no-files-found: ignore
 
   lint:
     name: Lint Code

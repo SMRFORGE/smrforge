@@ -253,6 +253,29 @@ def main():
         except Exception as e:
             results_payload["metadata"]["burnup_validation_error"] = str(e)
 
+        # Cross-section spot checks (if benchmark database has cross-section benchmarks)
+        if benchmark_db and hasattr(benchmark_db, "cross_section_benchmarks") and benchmark_db.cross_section_benchmarks:
+            try:
+                from tests.validation_benchmark_data import BenchmarkValue
+                for test_case, xs_bm in benchmark_db.cross_section_benchmarks.items():
+                    nuclide_str = xs_bm.get("nuclide", "")
+                    # Parse nuclide string (e.g., "U235" -> Z=92, A=235)
+                    if nuclide_str.startswith("U") and len(nuclide_str) >= 4:
+                        A = int(nuclide_str[1:])
+                        Z = 92  # Uranium
+                        nuclide = Nuclide(Z=Z, A=A)
+                        reaction = xs_bm.get("reaction", "fission")
+                        energy_ev = float(xs_bm.get("energy_ev", 0.0253))
+                        expected_value = float(xs_bm.get("expected_value", 0.0))
+                        tolerance = float(xs_bm.get("tolerance", 0.05))
+                        bench.results.append(
+                            bench.validate_cross_section_spot_check(
+                                nuclide, reaction, energy_ev, expected_value, tolerance
+                            )
+                        )
+            except Exception as e:
+                results_payload["metadata"]["cross_section_benchmark_error"] = str(e)
+
         # k_eff benchmark against benchmark database (if provided)
         if benchmark_db and benchmark_db.burnup_benchmarks:
             try:

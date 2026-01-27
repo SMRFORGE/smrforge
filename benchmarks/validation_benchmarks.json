@@ -17,5 +17,43 @@
       ],
       "reference_source": "SMRForge"
     }
+  },
+  "cross_section_benchmarks": {
+    "u235_fission_high_energy": {
+      "test_case": "u235_fission_high_energy",
+      "nuclide": "U235",
+      "reaction": "fission",
+      "energy_ev": 29000000.0,
+      "expected_value": 2.128,
+      "uncertainty": 0.1,
+      "unit": "barns",
+      "source": "SMRForge parser output (regression baseline)",
+      "tolerance": 0.10,
+      "notes": "U-235 fission cross-section at ~29 MeV (high-energy region). This is a regression baseline based on current parser output. Note: Parser currently returns limited energy grid; thermal values require enhanced parser."
+    },
+    "u235_capture_high_energy": {
+      "test_case": "u235_capture_high_energy",
+      "nuclide": "U235",
+      "reaction": "capture",
+      "energy_ev": 29000000.0,
+      "expected_value": 0.001,
+      "uncertainty": 0.0001,
+      "unit": "barns",
+      "source": "SMRForge parser output (regression baseline)",
+      "tolerance": 0.20,
+      "notes": "U-235 capture cross-section at ~29 MeV. Regression baseline. Enhanced parser needed for thermal region validation."
+    },
+    "u238_capture_high_energy": {
+      "test_case": "u238_capture_high_energy",
+      "nuclide": "U238",
+      "reaction": "capture",
+      "energy_ev": 29000000.0,
+      "expected_value": 0.0005,
+      "uncertainty": 0.0001,
+      "unit": "barns",
+      "source": "SMRForge parser output (regression baseline)",
+      "tolerance": 0.20,
+      "notes": "U-238 capture cross-section at ~29 MeV. Regression baseline. Enhanced parser needed for thermal region validation."
+    }
   }
 }
