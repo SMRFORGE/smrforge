@@ -156,7 +156,7 @@ smrforge validate run `
 - ✅ Integrate with decay heat for gamma source terms
 - ✅ Support shielding calculations
 - ✅ Dose rate computation
-- ⚠️ Photon cross-sections use placeholder data (ready for real data)
+- ✅ Photon cross-sections use real ENDF data - **DONE**: Implemented `ENDFPhotonParser` that parses MF=23 sections (MT=501 photoelectric, MT=502 Compton, MT=516 pair production) from `photoat-version.VIII.1` files. Real cross-sections are now loaded and used in gamma transport calculations.
 
 **Future Enhancements:**
 - Implement photon atomic data parser (`photoat-version.VIII.1`)
@@ -239,7 +239,7 @@ smrforge validate run `
 | **1. Full TSL Parsing** | High | Medium | ⭐⭐⭐ | None | 2-3 weeks |
 | **2. Decay Heat Enhancement** | Medium-High | Medium | ⭐⭐ | Decay parser | 1-2 weeks |
 | **3. Validation Framework** | Medium | Low-Medium | ⭐⭐ | None | 1-2 weeks |
-| **4. Gamma Transport** | Low-Medium | High | ⭐ | None | 4-6 weeks |
+| **4. Gamma Transport** | Low-Medium | High | ⭐ | None | ✅ Complete |
 | **5. Enhanced Burnup** | Medium | Medium | ⭐⭐ | Burnup solver | 2-3 weeks |
 | **6. Docs & Testing** | High | Low-Medium | ⭐⭐⭐ | None | 1-2 weeks |
 

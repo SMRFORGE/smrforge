@@ -2187,8 +2187,8 @@ class NuclearDataCache:
             self._photon_file_index = index
             return index
         
-        # Scan for photon files (p-*.endf)
-        photon_patterns = ["p-*.endf", "p-*.ENDF", "p-*.Endf"]
+        # Scan for photon files (photoat-*.endf for ENDF-B-VIII.1, p-*.endf for legacy)
+        photon_patterns = ["photoat-*.endf", "photoat-*.ENDF", "photoat-*.Endf", "p-*.endf", "p-*.ENDF", "p-*.Endf"]
         all_photon_files = []
         for pattern in photon_patterns:
             all_photon_files.extend(photoat_dir.glob(pattern))

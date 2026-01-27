@@ -175,10 +175,17 @@ class ENDFPhotonParser:
         """
         Parse element and Z from photon filename.
         
-        Format: p-ZZZ_Element_AAA.endf or p-ZZZ_Element.endf
+        Format: photoat-ZZZ_Element_AAA.endf or photoat-ZZZ_Element.endf
+        Also supports: p-ZZZ_Element_AAA.endf (legacy format)
         """
-        pattern = r"^p-(\d+)_([A-Z][a-z]?)(?:_\d+)?\.endf$"
-        match = re.match(pattern, filename)
+        # Try photoat- prefix first (ENDF-B-VIII.1 format)
+        pattern1 = r"^photoat-(\d+)_([A-Z][a-z]?)(?:_\d+)?\.endf$"
+        match = re.match(pattern1, filename, re.IGNORECASE)
+        
+        if not match:
+            # Try legacy p- prefix
+            pattern2 = r"^p-(\d+)_([A-Z][a-z]?)(?:_\d+)?\.endf$"
+            match = re.match(pattern2, filename, re.IGNORECASE)
         
         if not match:
             return None
@@ -187,6 +194,8 @@ class ENDFPhotonParser:
         
         try:
             Z = int(z_str)
+            # Normalize element symbol (capitalize first letter)
+            element = element.capitalize()
             return element, Z
         except ValueError:
             return None
@@ -202,102 +211,205 @@ class ENDFPhotonParser:
         Returns:
             Tuple of (energy, cross_section) arrays or None if not found
         """
-        # Look for MF=23, MT=mt section
+        # Look for MF=23, MT=mt section header
+        # ENDF format: MF/MT are in the last 5 characters (columns 66-72 for MF, 72-75 for MT)
+        # For photon files, MT is 3-digit (501, 502, 516)
+        section_start = None
+        
         for i, line in enumerate(lines):
             if len(line) < 75:
                 continue
             
-            # ENDF format: MF at columns 71-72 (0-indexed: 70-72), MT at columns 73-75 (0-indexed: 72-75)
-            # Some files may have slightly different formatting with 3-digit MTs spanning positions
-            # Check standard positions first
-            mf = line[70:72].strip() if len(line) >= 72 else ""
-            mt_str = line[72:75].strip() if len(line) >= 75 else ""
+            # Check for MF=23, MT=mt in standard ENDF positions (columns 66-75)
+            # Format: "MF MT" or "MFMT" at end of line
+            line_end = line[66:].strip() if len(line) > 66 else ""
             
-            # For 3-digit MTs (like 501, 502, 516), check if they span across positions 71-74
-            # Standard ENDF uses 2-digit MT, but photon files use 3-digit MTs
-            # If standard position doesn't give expected values, try alternative positions
-            # Some files have "MF MT" as a space-separated pair around position 66-73
-            if mf != "23" or not mt_str or not mt_str.isdigit():
-                line_end = line[66:78].strip() if len(line) > 78 else line[66:].strip()
-                parts = line_end.split()
-                if len(parts) >= 2:
-                    # Check if first part is "23"
-                    if parts[0] == "23":
-                        mf = "23"
-                    # Extract MT from second part (handles 3-digit MTs like 501)
+            # Try to extract MF and MT from ENDF format
+            # Standard ENDF: columns 66-70 = MAT, 70-72 = MF, 72-75 = MT
+            # But photon files may have different formatting
+            if len(line) >= 75:
+                try:
+                    # Standard positions: MF at 70-72, MT at 72-75
+                    mf_str = line[70:72].strip()
+                    mt_str = line[72:75].strip()
+                    
+                    # Try parsing standard positions
+                    if mf_str.isdigit() and mt_str.isdigit():
+                        mf_val = int(mf_str)
+                        mt_val = int(mt_str)
+                    else:
+                        # Try parsing from last 8 characters (MAT+MF+MT format like "10023501")
+                        # Format: MAT (3 digits) + MF (2 digits) + MT (3 digits) = 8 digits
+                        if len(line) >= 75:
+                            end_str = line[67:75].strip() if len(line) >= 75 else ""
+                            if end_str.isdigit() and len(end_str) >= 8:
+                                # Extract: MAT (100) + MF (23) + MT (501)
+                                mf_val = int(end_str[3:5])  # Positions 3-4 (0-indexed)
+                                mt_val = int(end_str[5:8])  # Positions 5-7
+                            else:
+                                # Fallback: try parsing from line end
+                                line_end = line[66:].strip()
+                                parts = line_end.split()
+                                if len(parts) >= 3:
+                                    # Last part might be "10023501" format
+                                    last_part = parts[-1]
+                                    if last_part.isdigit() and len(last_part) >= 8:
+                                        mf_val = int(last_part[3:5])
+                                        mt_val = int(last_part[5:8])
+                                    else:
+                                        continue
+                                else:
+                                    continue
+                    
+                    if mf_val == 23 and mt_val == mt:
+                        section_start = i
+                        break
+                except (ValueError, IndexError, AttributeError):
+                    continue
+            
+            # Also check for text header lines (e.g., "23        501")
+            if "23" in line[66:72] and str(mt) in line[72:80]:
+                # Check if this is a header line (not data)
+                if "MF/MT" in line or "Description" in line or line.strip().startswith("23"):
+                    # This might be a header, continue to find actual data section
+                    continue
+                # Check if it's a section marker
+                try:
+                    parts = line[66:].split()
                     if len(parts) >= 2:
-                        mt_str = parts[1].strip()
-                    # Also try direct extraction from positions 71-74 for 3-digit MTs as fallback
-                    elif len(line) >= 74:
-                        mt_str = line[71:74].strip()
+                        if parts[0] == "23" and parts[1] == str(mt):
+                            section_start = i
+                            break
+                except (ValueError, IndexError):
+                    continue
+        
+        if section_start is None:
+            return None
+        
+        # Parse data section starting from section_start
+        # ENDF format: After MF/MT header line, there are header lines:
+        # Line 1: "1000.00000 .999242000 ..." (control parameters - C1, C2, etc.)
+        # Line 2: "0.0 0.0 ... 1 NPOINTS" (NPOINTS = number of data points, interpolation flag)
+        # Line 3: "NPOINTS INTERP" (interpolation flag line, sometimes combined with line 2)
+        # Line 4+: actual data pairs (energy, xs)
+        
+        energy_list = []
+        xs_list = []
+        
+        # Skip header lines - look for actual data
+        # Data lines have energy values in reasonable range (1e-7 to 1e5 MeV)
+        i = section_start + 1
+        data_start = None
+        header_count = 0
+        
+        # Skip up to 4 header lines
+        while i < len(lines) and header_count < 4:
+            line = lines[i]
+            if len(line) < 22:
+                i += 1
+                header_count += 1
+                continue
             
-            # Try to match MT (handle both string comparison and int conversion)
+            # Check first two fields
+            first_field = line[0:11].strip()
+            second_field = line[11:22].strip()
+            
             try:
-                mt_match = mt_str == str(mt) or (mt_str and int(mt_str) == mt)
-            except (ValueError, TypeError):
-                mt_match = False
+                first_val = float(first_field)
+                second_val = float(second_field)
+                
+                # Header lines typically have:
+                # - "0.0 0.0" (control line)
+                # - "1000.00000 .999242000" (control parameters)
+                # - Very large integers (NPOINTS like 2021, 362) - these appear as first or second field
+                # - Lines where first field is a large integer (NPOINTS) or second field is large integer
+                
+                # Data lines have:
+                # - Energy in MeV: typically 1e-7 to 1e5
+                # - Cross-section in barns: typically 1e-12 to 1e6
+                
+                # Check if this looks like header (has large integers that are likely NPOINTS)
+                is_header = (
+                    first_val == 0.0 and second_val == 0.0  # Control line "0.0 0.0"
+                    or first_val == 1000.0  # Control parameter line
+                    or (first_val > 100 and first_val == int(first_val) and first_val < 1e6)  # NPOINTS (like 2021, 362)
+                    or (second_val > 100 and second_val == int(second_val) and second_val < 1e6)  # NPOINTS
+                    or (first_val > 1e6)  # Very large numbers (unlikely to be energy)
+                    or (second_val > 1e6)  # Very large numbers
+                )
+                
+                if not is_header and first_val > 0:
+                    # Check if values are in reasonable ranges for photon data
+                    # Energy: 1e-7 to 1e5 MeV, XS: 1e-12 to 1e6 barns
+                    if (1e-7 <= first_val <= 1e5) and (1e-12 <= second_val <= 1e6):
+                        data_start = i
+                        break
+            except (ValueError, IndexError):
+                pass
             
-            if mf == "23" and mt_match:
-                # Parse data
-                energy_list = []
-                xs_list = []
+            header_count += 1
+            i += 1
+        
+        if data_start is None:
+            # Default: skip 3 header lines
+            data_start = section_start + 3
+        
+        # Parse data pairs starting from data_start
+        i = data_start
+        while i < len(lines):
+            line = lines[i]
+            
+            # Check for end of section (next MF/MT or end marker)
+            if len(line) >= 75:
+                # Check if this is a new MF/MT section
+                mf_check_str = line[70:72].strip() if len(line) >= 72 else ""
+                mt_check_str = line[72:75].strip() if len(line) >= 75 else ""
                 
-                j = i + 1
-                while j < len(lines):
-                    data_line = lines[j]
-                    if len(data_line) < 75:
-                        j += 1
-                        continue
-                    
-                    # Check for end of section
-                    # On continuation lines, MF/MT might be at non-standard positions
-                    mf_check = data_line[70:72].strip() if len(data_line) >= 72 else ""
-                    
-                    # If standard position is empty or has unexpected value, try alternative positions
-                    # Some files have "MF MT" as a space-separated pair around position 66-73
-                    if not mf_check or (mf_check != "23" and mf_check != ""):
-                        # Check if "23" appears near the end of the line
-                        line_end = data_line[66:78].strip() if len(data_line) > 78 else data_line[66:].strip()
-                        parts = line_end.split()
-                        if len(parts) >= 2:
-                            # Check if first part is MF number
-                            if parts[0] == "23":
-                                mf_check = "23"
-                    
-                    if mf_check != "23" and mf_check != "":
+                if mf_check_str.isdigit() and mt_check_str.isdigit():
+                    mf_check = int(mf_check_str)
+                    mt_check = int(mt_check_str)
+                    if mf_check == 23 and mt_check != mt:
+                        # New section started
                         break
-                    
-                    # Check for end marker
-                    if data_line.strip().endswith("-1"):
-                        break
-                    
-                    # Parse data (energy, xs pairs)
-                    try:
-                        for k in range(0, 6, 2):
-                            if k * 11 + 11 <= len(data_line):
-                                energy_str = data_line[k * 11:(k + 1) * 11].strip()
-                                xs_str = data_line[(k + 1) * 11:(k + 2) * 11].strip()
+                
+                # Check for end marker
+                if line.strip().endswith("-1") or "SEND" in line or line.strip().endswith("0  0"):
+                    break
+            
+            # Parse data pairs (energy, xs) - ENDF format: 6 pairs per line, 11 chars each
+            try:
+                for k in range(0, 6, 2):  # Process pairs: 0-1, 2-3, 4-5
+                    start_pos = k * 11
+                    if start_pos + 22 <= len(line):
+                        energy_str = line[start_pos:start_pos + 11].strip()
+                        xs_str = line[start_pos + 11:start_pos + 22].strip()
+                        
+                        if energy_str and xs_str:
+                            # Handle ENDF scientific notation (e.g., "1.000000+2" -> "1.000000E+2")
+                            energy_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', energy_str)
+                            xs_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', xs_str)
+                            
+                            try:
+                                energy = float(energy_str_clean)  # MeV
+                                xs = float(xs_str_clean)  # barn
                                 
-                                if energy_str and xs_str:
-                                    # Handle ENDF scientific notation (e.g., "1.000000+2" -> "1.000000E+2")
-                                    # Replace "+" or "-" that comes after digits (scientific notation marker)
-                                    import re
-                                    energy_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', energy_str)
-                                    xs_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', xs_str)
-                                    
-                                    energy = float(energy_str_clean)  # MeV
-                                    xs = float(xs_str_clean)  # barn
-                                    
-                                    if energy > 0:
-                                        energy_list.append(energy)
-                                        xs_list.append(xs)
-                    except (ValueError, IndexError):
-                        pass
-                    
-                    j += 1
-                
-                if energy_list:
-                    return np.array(energy_list), np.array(xs_list)
+                                # Only add valid data (energy > 0, xs >= 0, reasonable ranges for photon data)
+                                # Photon energies: typically 1e-7 to 1e5 MeV
+                                # Photon cross-sections: typically 1e-12 to 1e6 barns
+                                if (energy > 0 and xs >= 0 and 
+                                    1e-7 <= energy <= 1e5 and 
+                                    1e-12 <= xs <= 1e6):
+                                    energy_list.append(energy)
+                                    xs_list.append(xs)
+                            except (ValueError, OverflowError):
+                                pass
+            except (ValueError, IndexError):
+                pass
+            
+            i += 1
+        
+        if energy_list and xs_list:
+            return np.array(energy_list), np.array(xs_list)
         
         return None
     
