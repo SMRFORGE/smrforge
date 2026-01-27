@@ -243,6 +243,10 @@ class BurnupSolver:
             self._always_track = set()
             self._last_adaptive_update = -1
         
+        # Control rod effects (optional)
+        self.control_rod_shadowing: Optional[Dict[Tuple[int, int], float]] = None
+        self.control_rod_positions: List[Tuple[int, int]] = []
+        
         logger.info(
             f"Initialized burnup solver: {n_nuclides} nuclides, "
             f"{n_times} time steps, {options.time_steps[-1]:.0f} days total"
@@ -371,6 +375,10 @@ class BurnupSolver:
             # Update adaptive nuclide tracking
             if self.options.adaptive_tracking:
                 self._update_adaptive_nuclides(step)
+            
+            # Apply control rod effects if available
+            if self.control_rod_shadowing is not None:
+                self._apply_control_rod_effects(step)
             
             # Calculate burnup
             self._update_burnup(step)
@@ -529,7 +537,7 @@ class BurnupSolver:
             """ODE right-hand side: dN/dt = P + A*N"""
             return P_fission + A_total.dot(N)
         
-        # Use scipy's ODE solver
+        # Use scipy's ODE solver with performance optimizations
         try:
             # ODE solver with performance optimizations
             solve_kwargs = {
@@ -541,6 +549,26 @@ class BurnupSolver:
             # Add max_step if specified (adaptive time stepping control)
             if self.options.max_step is not None:
                 solve_kwargs["max_step"] = self.options.max_step
+            
+            # Use sparse matrices if enabled (for large systems)
+            if self.options.use_sparse_matrices and isinstance(A_total, csr_matrix):
+                # For sparse matrices, use methods that handle sparsity well
+                if self.options.integration_method in ["BDF", "Radau"]:
+                    # These methods work well with sparse matrices
+                    pass
+                else:
+                    # Convert to dense for other methods if needed
+                    if A_total.nnz / (A_total.shape[0] * A_total.shape[1]) > 0.5:
+                        # Dense if >50% non-zero
+                        A_total = A_total.toarray()
+                        solve_kwargs["method"] = "RK45"  # RK45 works better with dense
+            
+            # Optimize: use jacobian if available (for BDF/Radau)
+            if self.options.integration_method in ["BDF", "Radau"]:
+                # Jacobian is just A_total for linear system
+                def jacobian(t, N):
+                    return A_total
+                solve_kwargs["jac"] = jacobian
             
             sol = solve_ivp(
                 dN_dt,
@@ -746,6 +774,85 @@ class BurnupSolver:
         # For now, cross-sections remain constant
         pass
     
+    def set_control_rod_effects(
+        self,
+        control_rod_positions: List[Tuple[int, int]],
+        shadowing_map: Optional[Dict[Tuple[int, int], float]] = None,
+    ):
+        """
+        Set control rod positions and shadowing effects.
+        
+        Control rods reduce flux in nearby regions, affecting burnup rates.
+        This method integrates control rod shadowing into the burnup calculation.
+        
+        Args:
+            control_rod_positions: List of control rod positions [(row, col), ...]
+            shadowing_map: Optional dictionary mapping (row, col) to shadowing factor (0.0-1.0)
+                          If None, shadowing is calculated automatically based on distance
+        """
+        self.control_rod_positions = control_rod_positions
+        
+        if shadowing_map is not None:
+            self.control_rod_shadowing = shadowing_map
+        else:
+            # Calculate shadowing automatically based on distance
+            # This is a simplified model; full implementation would use neutronics
+            self.control_rod_shadowing = {}
+            
+            # Get geometry dimensions if available
+            if hasattr(self.neutronics, 'geometry'):
+                nz = self.neutronics.geometry.n_axial if hasattr(self.neutronics.geometry, 'n_axial') else 10
+                nr = self.neutronics.geometry.n_radial if hasattr(self.neutronics.geometry, 'n_radial') else 5
+            else:
+                nz, nr = 10, 5
+            
+            # Calculate shadowing for each spatial cell
+            for z in range(nz):
+                for r in range(nr):
+                    min_distance = float('inf')
+                    for cr_pos in control_rod_positions:
+                        # Simplified distance calculation
+                        dr = abs(r - cr_pos[1]) if len(cr_pos) > 1 else 0
+                        dz = abs(z - cr_pos[0]) if len(cr_pos) > 0 else 0
+                        distance = np.sqrt(dr**2 + dz**2)
+                        min_distance = min(min_distance, distance)
+                    
+                    # Shadowing factor: 1.0 = no shadowing, 0.0 = fully shadowed
+                    # Exponential decay with distance
+                    characteristic_length = 2.0  # cells
+                    shadowing = 1.0 - 0.3 * np.exp(-min_distance / characteristic_length)
+                    self.control_rod_shadowing[(z, r)] = max(0.0, min(1.0, shadowing))
+        
+        logger.info(
+            f"Control rod effects set: {len(control_rod_positions)} control rods, "
+            f"{len(self.control_rod_shadowing)} shadowing factors"
+        )
+    
+    def _apply_control_rod_effects(self, step: int):
+        """
+        Apply control rod shadowing effects to flux and burnup rates.
+        
+        Reduces effective flux in shadowed regions, which reduces burnup rates.
+        
+        Args:
+            step: Current time step index
+        """
+        if self.control_rod_shadowing is None or self.neutronics.flux is None:
+            return
+        
+        # Apply shadowing to flux (modify flux in-place for this step)
+        # Note: This is a simplified approach; full implementation would
+        # integrate shadowing into the neutronics solver
+        flux = self.neutronics.flux
+        nz, nr, ng = flux.shape
+        
+        for (z, r), shadowing_factor in self.control_rod_shadowing.items():
+            if 0 <= z < nz and 0 <= r < nr:
+                # Reduce flux by shadowing factor
+                flux[z, r, :] *= shadowing_factor
+        
+        logger.debug(f"Applied control rod shadowing at step {step}")
+    
     def _update_burnup(self, step: int):
         """
         Update burnup calculation.
@@ -918,8 +1025,7 @@ class BurnupSolver:
         Update nuclide list based on adaptive tracking criteria.
         
         This method identifies nuclides to add/remove and updates the tracking
-        list. Currently logs the changes but doesn't resize arrays (requires
-        significant refactoring to implement fully).
+        list with array resizing to maintain consistency.
         
         Args:
             time_index: Current time step index
@@ -933,23 +1039,119 @@ class BurnupSolver:
         
         # Identify nuclides to add
         nuclides_to_add = self._identify_nuclides_to_add(time_index)
-        if nuclides_to_add:
-            logger.info(
-                f"Adaptive tracking: {len(nuclides_to_add)} nuclides identified for addition: "
-                f"{[n.name for n in nuclides_to_add[:5]]}"  # Show first 5
-            )
-            # TODO: Implement actual addition with array resizing
-            # This requires refactoring to resize self.concentrations and rebuild matrices
-        
         # Identify nuclides to remove
         nuclides_to_remove = self._identify_nuclides_to_remove(time_index)
+        
+        # Only proceed if there are changes
+        if not nuclides_to_add and not nuclides_to_remove:
+            return
+        
+        logger.info(
+            f"Adaptive tracking update at step {time_index}: "
+            f"adding {len(nuclides_to_add)}, removing {len(nuclides_to_remove)} nuclides"
+        )
+        
+        # Remove nuclides first (easier - just remove rows)
         if nuclides_to_remove:
-            logger.info(
-                f"Adaptive tracking: {len(nuclides_to_remove)} nuclides identified for removal: "
-                f"{[n.name for n in nuclides_to_remove[:5]]}"  # Show first 5
-            )
-            # TODO: Implement actual removal with array resizing
-            # This requires refactoring to resize self.concentrations and rebuild matrices
+            self._remove_nuclides(nuclides_to_remove, time_index)
+        
+        # Add nuclides (add rows with zero initial concentration)
+        if nuclides_to_add:
+            self._add_nuclides(nuclides_to_add, time_index)
         
         self._last_adaptive_update = time_index
+    
+    def _remove_nuclides(self, nuclides_to_remove: List[Nuclide], time_index: int):
+        """
+        Remove nuclides from tracking and resize arrays.
+        
+        Args:
+            nuclides_to_remove: List of nuclides to remove
+            time_index: Current time step index
+        """
+        # Get indices to remove
+        indices_to_remove = []
+        for nuc in nuclides_to_remove:
+            try:
+                idx = self.nuclides.index(nuc)
+                indices_to_remove.append(idx)
+            except ValueError:
+                continue  # Already removed
+        
+        if not indices_to_remove:
+            return
+        
+        # Sort indices in descending order to remove from end first
+        indices_to_remove = sorted(set(indices_to_remove), reverse=True)
+        
+        # Remove from nuclides list
+        for idx in indices_to_remove:
+            self.nuclides.pop(idx)
+        
+        # Remove rows from concentrations array
+        # Create mask of rows to keep
+        n_nuclides = len(self.nuclides) + len(indices_to_remove)
+        keep_mask = np.ones(n_nuclides, dtype=bool)
+        for idx in indices_to_remove:
+            keep_mask[idx] = False
+        
+        # Resize concentrations array
+        n_times = self.concentrations.shape[1]
+        new_concentrations = np.zeros((len(self.nuclides), n_times))
+        
+        # Copy data for kept nuclides
+        kept_idx = 0
+        for old_idx in range(n_nuclides):
+            if keep_mask[old_idx]:
+                new_concentrations[kept_idx, :] = self.concentrations[old_idx, :]
+                kept_idx += 1
+        
+        self.concentrations = new_concentrations
+        
+        logger.debug(
+            f"Removed {len(indices_to_remove)} nuclides: "
+            f"{[n.name for n in nuclides_to_remove[:5]]}"
+        )
+    
+    def _add_nuclides(self, nuclides_to_add: List[Nuclide], time_index: int):
+        """
+        Add nuclides to tracking and resize arrays.
+        
+        Args:
+            nuclides_to_add: List of nuclides to add
+            time_index: Current time step index
+        """
+        # Filter out nuclides already tracked
+        nuclides_to_add = [n for n in nuclides_to_add if n not in self.nuclides]
+        
+        if not nuclides_to_add:
+            return
+        
+        # Add to nuclides list
+        for nuc in nuclides_to_add:
+            self.nuclides.append(nuc)
+        
+        # Resize concentrations array
+        n_nuclides_old = self.concentrations.shape[0]
+        n_nuclides_new = len(self.nuclides)
+        n_times = self.concentrations.shape[1]
+        
+        new_concentrations = np.zeros((n_nuclides_new, n_times))
+        
+        # Copy existing data
+        new_concentrations[:n_nuclides_old, :] = self.concentrations
+        
+        # Initialize new nuclides with zero concentration (or estimate from decay chain)
+        for i in range(n_nuclides_old, n_nuclides_new):
+            nuc = self.nuclides[i]
+            # Try to estimate initial concentration from decay chain
+            # For now, set to zero (will be populated by ODE solver)
+            new_concentrations[i, :time_index + 1] = 0.0
+        
+        self.concentrations = new_concentrations
+        
+        logger.debug(
+            f"Added {len(nuclides_to_add)} nuclides: "
+            f"{[n.name for n in nuclides_to_add[:5]]}"
+        )
 

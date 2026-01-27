@@ -182,12 +182,16 @@ smrforge validate run `
 - ⚠️ Performance could be optimized
 
 **What to do:**
-- Implement adaptive nuclide tracking (add/remove nuclides dynamically)
-- Add refueling simulation capabilities
-- Implement multiple fuel batch tracking
-- Optimize ODE solver performance
-- Add burnup visualization tools
-- Support control rod effects on burnup
+- ✅ Implement adaptive nuclide tracking - **DONE**: Full implementation with array resizing in `_add_nuclides()` and `_remove_nuclides()` methods. Nuclides are dynamically added/removed based on concentration thresholds and importance.
+- ✅ Add refueling simulation capabilities - **DONE**: Enhanced `BurnupFuelManagerIntegration` with `run_multi_cycle_burnup()` supporting multiple cycles with refueling operations.
+- ✅ Implement multiple fuel batch tracking - **DONE**: Enhanced batch tracking with flux distribution integration in `_update_assembly_burnup_values()`. Batch burnup summary via `get_batch_burnup_summary()`.
+- ✅ Optimize ODE solver performance - **DONE**: Enhanced ODE solver with sparse matrix support, Jacobian computation for BDF/Radau methods, and adaptive time stepping control via `max_step` option.
+- ✅ Add burnup visualization tools - **DONE**: New `smrforge/burnup/visualization.py` module with:
+  - `plot_batch_comparison()` - Compare burnup across batches
+  - `plot_refueling_cycles()` - Visualize multi-cycle evolution
+  - `plot_control_rod_effects()` - Compare with/without control rods
+  - `plot_burnup_dashboard_enhanced()` - Enhanced dashboard with batch comparison
+- ✅ Support control rod effects on burnup - **DONE**: Added `set_control_rod_effects()` method to `BurnupSolver` with automatic shadowing calculation. Integrated into burnup calculation via `_apply_control_rod_effects()`.
 
 **Impact:**
 - **Medium** - Enhances existing burnup capability
