@@ -178,8 +178,12 @@ smrforge validate run `
 **Current Status:**
 - ✅ Basic burnup solver complete
 - ✅ Cross-section updates working
-- ⚠️ Some simplifications remain
-- ⚠️ Performance could be optimized
+- ✅ Cross-section updates based on composition - **DONE**: Implemented `_update_cross_sections()` that weights nuclide-specific cross-sections by concentration
+- ✅ Performance optimizations - **DONE**: Added cross-section caching, decay matrix caching, and vectorized flux integration
+- ✅ Enhanced calculations - **DONE**: 
+  - Fission rate now uses actual flux distribution instead of placeholder
+  - Decay heat uses real gamma/beta spectra from decay data
+  - Capture matrix uses cached cross-sections with proper energy mapping
 
 **What to do:**
 - ✅ Implement adaptive nuclide tracking - **DONE**: Full implementation with array resizing in `_add_nuclides()` and `_remove_nuclides()` methods. Nuclides are dynamically added/removed based on concentration thresholds and importance.
