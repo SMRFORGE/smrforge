@@ -236,12 +236,12 @@ smrforge validate run `
 
 | Option | Impact | Effort | Priority | Dependencies | Timeline |
 |--------|--------|--------|----------|--------------|----------|
-| **1. Full TSL Parsing** | High | Medium | ⭐⭐⭐ | None | 2-3 weeks |
-| **2. Decay Heat Enhancement** | Medium-High | Medium | ⭐⭐ | Decay parser | 1-2 weeks |
-| **3. Validation Framework** | Medium | Low-Medium | ⭐⭐ | None | 1-2 weeks |
+| **1. Full TSL Parsing** | High | Medium | ⭐⭐⭐ | None | ✅ Complete |
+| **2. Decay Heat Enhancement** | Medium-High | Medium | ⭐⭐ | Decay parser | ✅ Complete |
+| **3. Validation Framework** | Medium | Low-Medium | ⭐⭐ | None | ✅ Complete |
 | **4. Gamma Transport** | Low-Medium | High | ⭐ | None | ✅ Complete |
-| **5. Enhanced Burnup** | Medium | Medium | ⭐⭐ | Burnup solver | 2-3 weeks |
-| **6. Docs & Testing** | High | Low-Medium | ⭐⭐⭐ | None | 1-2 weeks |
+| **5. Enhanced Burnup** | Medium | Medium | ⭐⭐ | Burnup solver | ✅ Complete |
+| **6. Docs & Testing** | High | Low-Medium | ⭐⭐⭐ | None | ✅ Complete |
 
 ---
 
