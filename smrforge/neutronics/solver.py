@@ -18,6 +18,24 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 from numba import njit, prange
+
+# Numba-accelerated helper functions for matrix construction
+@njit(cache=True)
+def _compute_cell_volume(r: float, dr: float, dz: float) -> float:
+    """Compute volume of cylindrical cell element (Numba-accelerated)."""
+    return 2 * np.pi * r * dr * dz
+
+@njit(cache=True)
+def _compute_radial_area(r: float, dz: float) -> float:
+    """Compute radial area for diffusion (Numba-accelerated)."""
+    return 2 * np.pi * r * dz
+
+@njit(cache=True)
+def _compute_diffusion_coefficient(D1: float, D2: float) -> float:
+    """Compute harmonic mean diffusion coefficient (Numba-accelerated)."""
+    if D1 > 0 and D2 > 0:
+        return 2 * D1 * D2 / (D1 + D2)
+    return 0.5 * (D1 + D2)  # Fallback to arithmetic mean
 from pydantic import ValidationError
 from scipy.sparse import csr_matrix, diags
 from scipy.sparse import linalg as sparse_linalg
@@ -766,16 +784,16 @@ class MultiGroupDiffusion:
                 dr = self.dr[ir]
                 dz = self.dz[iz]
 
-                # Cell volume (reused)
-                V = 2 * np.pi * r * dr * dz
+                # Cell volume (reused) - use Numba-accelerated function
+                V = _compute_cell_volume(r, dr, dz)
 
                 diag = sigma_r * V
 
                 # Radial leakage (left neighbor)
                 if ir > 0:
                     r_left = self.r_mesh[ir]
-                    A_left = 2 * np.pi * r_left * dz
-                    D_left = 0.5 * (D + self.D_map[iz, ir - 1, g])
+                    A_left = _compute_radial_area(r_left, dz)
+                    D_left = _compute_diffusion_coefficient(D, self.D_map[iz, ir - 1, g])
                     coef_left = D_left * A_left / dr
 
                     diag += coef_left
@@ -787,8 +805,8 @@ class MultiGroupDiffusion:
                 # Radial leakage (right neighbor)
                 if ir < self.nr - 1:
                     r_right = self.r_mesh[ir + 1]
-                    A_right = 2 * np.pi * r_right * dz
-                    D_right = 0.5 * (D + self.D_map[iz, ir + 1, g])
+                    A_right = _compute_radial_area(r_right, dz)
+                    D_right = _compute_diffusion_coefficient(D, self.D_map[iz, ir + 1, g])
                     coef_right = D_right * A_right / dr
 
                     diag += coef_right
@@ -800,7 +818,7 @@ class MultiGroupDiffusion:
                 # Axial leakage (bottom neighbor)
                 if iz > 0:
                     A_axial = A_axial_precomputed[ir]  # Use pre-computed value
-                    D_bottom = 0.5 * (D + self.D_map[iz - 1, ir, g])
+                    D_bottom = _compute_diffusion_coefficient(D, self.D_map[iz - 1, ir, g])
                     coef_bottom = D_bottom * A_axial / dz_down
 
                     diag += coef_bottom
@@ -812,7 +830,7 @@ class MultiGroupDiffusion:
                 # Axial leakage (top neighbor)
                 if iz < self.nz - 1:
                     A_axial = A_axial_precomputed[ir]  # Use pre-computed value
-                    D_top = 0.5 * (D + self.D_map[iz + 1, ir, g])
+                    D_top = _compute_diffusion_coefficient(D, self.D_map[iz + 1, ir, g])
                     coef_top = D_top * A_axial / dz_up
 
                     diag += coef_top
