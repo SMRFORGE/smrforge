@@ -1089,6 +1089,275 @@ def data_validate(args):
         sys.exit(1)
 
 
+def data_interpolate(args):
+    """Interpolate cross-sections at different temperatures."""
+    try:
+        from smrforge.core.reactor_core import NuclearDataCache, Nuclide
+        from smrforge.core.temperature_interpolation import (
+            interpolate_cross_section_temperature,
+            InterpolationMethod
+        )
+        from smrforge.convenience_utils import get_nuclide
+        
+        # Parse nuclide
+        nuclide = get_nuclide(args.nuclide)
+        if nuclide is None:
+            _print_error(f"Invalid nuclide: {args.nuclide}")
+            sys.exit(1)
+        
+        # Parse interpolation method
+        method_map = {
+            'linear': InterpolationMethod.LINEAR,
+            'log_log': InterpolationMethod.LOG_LOG,
+            'spline': InterpolationMethod.SPLINE
+        }
+        method = method_map[args.method]
+        
+        # Setup cache
+        cache = NuclearDataCache()
+        if args.endf_dir:
+            cache.local_endf_dir = Path(args.endf_dir)
+        
+        # Get available temperatures
+        available_temps = args.available_temps
+        if available_temps is None:
+            available_temps = np.array([293.6, 600.0, 900.0, 1200.0])
+        else:
+            available_temps = np.array(available_temps)
+        
+        _print_info(f"Interpolating {nuclide.name} {args.reaction} cross-section at {args.temperature:.1f} K")
+        _print_info(f"Using {args.method} interpolation method")
+        
+        # Interpolate
+        energy, xs = interpolate_cross_section_temperature(
+            cache=cache,
+            nuclide=nuclide,
+            reaction=args.reaction,
+            target_temperature=args.temperature,
+            available_temperatures=available_temps,
+            method=method
+        )
+        
+        # Display results
+        if _RICH_AVAILABLE:
+            table = Table(title=f"{nuclide.name} {args.reaction} Cross-Section at {args.temperature:.1f} K")
+            table.add_column("Energy [eV]", style="cyan")
+            table.add_column("Cross-Section [barn]", style="green")
+            
+            # Show sample points
+            n_points = min(20, len(energy))
+            indices = np.linspace(0, len(energy) - 1, n_points, dtype=int)
+            for idx in indices:
+                table.add_row(f"{energy[idx]:.2e}", f"{xs[idx]:.6e}")
+            
+            console.print(table)
+            console.print(f"\n[bold]Total points:[/bold] {len(energy)}")
+            console.print(f"[bold]Energy range:[/bold] {energy[0]:.2e} - {energy[-1]:.2e} eV")
+            console.print(f"[bold]XS range:[/bold] {np.min(xs):.6e} - {np.max(xs):.6e} barn")
+        else:
+            print(f"\n{nuclide.name} {args.reaction} Cross-Section at {args.temperature:.1f} K")
+            print(f"  Total points: {len(energy)}")
+            print(f"  Energy range: {energy[0]:.2e} - {energy[-1]:.2e} eV")
+            print(f"  XS range: {np.min(xs):.6e} - {np.max(xs):.6e} barn")
+        
+        # Save output
+        if args.output:
+            output_path = Path(args.output)
+            if output_path.suffix.lower() == '.csv':
+                import csv
+                with open(output_path, 'w', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(['Energy [eV]', 'Cross-Section [barn]'])
+                    for e, x in zip(energy, xs):
+                        writer.writerow([e, x])
+            else:
+                # JSON format
+                data = {
+                    'nuclide': nuclide.name,
+                    'reaction': args.reaction,
+                    'temperature': args.temperature,
+                    'method': args.method,
+                    'energy': energy.tolist(),
+                    'cross_section': xs.tolist()
+                }
+                with open(output_path, 'w') as f:
+                    json.dump(_to_jsonable(data), f, indent=2)
+            _print_success(f"Results saved to {args.output}")
+        
+        # Plot if requested
+        if args.plot or args.plot_output:
+            try:
+                import matplotlib.pyplot as plt
+                plt.figure(figsize=(10, 6))
+                plt.loglog(energy, xs, 'b-', linewidth=2, label=f'{nuclide.name} {args.reaction}')
+                plt.xlabel('Energy [eV]')
+                plt.ylabel('Cross-Section [barn]')
+                plt.title(f'{nuclide.name} {args.reaction} at {args.temperature:.1f} K ({args.method} interpolation)')
+                plt.grid(True, alpha=0.3)
+                plt.legend()
+                
+                if args.plot_output:
+                    plt.savefig(args.plot_output, dpi=150, bbox_inches='tight')
+                    _print_success(f"Plot saved to {args.plot_output}")
+                else:
+                    plt.show()
+            except ImportError:
+                _print_warning("Matplotlib not available for plotting")
+        
+    except Exception as e:
+        _print_error(f"Failed to interpolate cross-section: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def data_shield(args):
+    """Calculate self-shielded cross-sections."""
+    try:
+        from smrforge.core.reactor_core import NuclearDataCache, Nuclide
+        from smrforge.core.self_shielding_integration import get_cross_section_with_self_shielding
+        from smrforge.convenience_utils import get_nuclide
+        
+        # Parse nuclide
+        nuclide = get_nuclide(args.nuclide)
+        if nuclide is None:
+            _print_error(f"Invalid nuclide: {args.nuclide}")
+            sys.exit(1)
+        
+        # Setup cache
+        cache = NuclearDataCache()
+        if args.endf_dir:
+            cache.local_endf_dir = Path(args.endf_dir)
+        
+        _print_info(f"Calculating self-shielded {nuclide.name} {args.reaction} cross-section")
+        _print_info(f"Method: {args.method}, Temperature: {args.temperature:.1f} K, σ₀: {args.sigma_0:.2f} barn")
+        
+        # Get shielded cross-section
+        energy_shielded, xs_shielded = get_cross_section_with_self_shielding(
+            cache=cache,
+            nuclide=nuclide,
+            reaction=args.reaction,
+            temperature=args.temperature,
+            sigma_0=args.sigma_0,
+            method=args.method,
+            enable_self_shielding=True
+        )
+        
+        # Get unshielded for comparison if requested
+        if args.compare or args.plot:
+            energy_unshielded, xs_unshielded = get_cross_section_with_self_shielding(
+                cache=cache,
+                nuclide=nuclide,
+                reaction=args.reaction,
+                temperature=args.temperature,
+                sigma_0=args.sigma_0,
+                method=args.method,
+                enable_self_shielding=False
+            )
+        
+        # Display results
+        if _RICH_AVAILABLE:
+            table = Table(title=f"{nuclide.name} {args.reaction} Self-Shielded Cross-Section")
+            table.add_column("Energy [eV]", style="cyan")
+            table.add_column("Shielded XS [barn]", style="green")
+            if args.compare:
+                table.add_column("Unshielded XS [barn]", style="yellow")
+                table.add_column("Shielding Factor", style="magenta")
+            
+            # Show sample points
+            n_points = min(20, len(energy_shielded))
+            indices = np.linspace(0, len(energy_shielded) - 1, n_points, dtype=int)
+            for idx in indices:
+                row = [f"{energy_shielded[idx]:.2e}", f"{xs_shielded[idx]:.6e}"]
+                if args.compare:
+                    unshielded_val = np.interp(energy_shielded[idx], energy_unshielded, xs_unshielded)
+                    shielding_factor = xs_shielded[idx] / unshielded_val if unshielded_val > 0 else 1.0
+                    row.append(f"{unshielded_val:.6e}")
+                    row.append(f"{shielding_factor:.4f}")
+                table.add_row(*row)
+            
+            console.print(table)
+            console.print(f"\n[bold]Total points:[/bold] {len(energy_shielded)}")
+            console.print(f"[bold]Energy range:[/bold] {energy_shielded[0]:.2e} - {energy_shielded[-1]:.2e} eV")
+            console.print(f"[bold]Shielded XS range:[/bold] {np.min(xs_shielded):.6e} - {np.max(xs_shielded):.6e} barn")
+            if args.compare:
+                avg_shielding = np.mean(xs_shielded) / np.mean(xs_unshielded) if np.mean(xs_unshielded) > 0 else 1.0
+                console.print(f"[bold]Average shielding factor:[/bold] {avg_shielding:.4f}")
+        else:
+            print(f"\n{nuclide.name} {args.reaction} Self-Shielded Cross-Section")
+            print(f"  Total points: {len(energy_shielded)}")
+            print(f"  Energy range: {energy_shielded[0]:.2e} - {energy_shielded[-1]:.2e} eV")
+            print(f"  Shielded XS range: {np.min(xs_shielded):.6e} - {np.max(xs_shielded):.6e} barn")
+        
+        # Save output
+        if args.output:
+            output_path = Path(args.output)
+            if output_path.suffix.lower() == '.csv':
+                import csv
+                with open(output_path, 'w', newline='') as f:
+                    writer = csv.writer(f)
+                    if args.compare:
+                        writer.writerow(['Energy [eV]', 'Shielded XS [barn]', 'Unshielded XS [barn]', 'Shielding Factor'])
+                        for e, xs_s, xs_u in zip(energy_shielded, xs_shielded, 
+                                                  np.interp(energy_shielded, energy_unshielded, xs_unshielded)):
+                            factor = xs_s / xs_u if xs_u > 0 else 1.0
+                            writer.writerow([e, xs_s, xs_u, factor])
+                    else:
+                        writer.writerow(['Energy [eV]', 'Cross-Section [barn]'])
+                        for e, x in zip(energy_shielded, xs_shielded):
+                            writer.writerow([e, x])
+            else:
+                # JSON format
+                data = {
+                    'nuclide': nuclide.name,
+                    'reaction': args.reaction,
+                    'temperature': args.temperature,
+                    'sigma_0': args.sigma_0,
+                    'method': args.method,
+                    'energy': energy_shielded.tolist(),
+                    'cross_section_shielded': xs_shielded.tolist()
+                }
+                if args.compare:
+                    data['cross_section_unshielded'] = xs_unshielded.tolist()
+                    data['shielding_factors'] = (xs_shielded / xs_unshielded).tolist()
+                with open(output_path, 'w') as f:
+                    json.dump(_to_jsonable(data), f, indent=2)
+            _print_success(f"Results saved to {args.output}")
+        
+        # Plot if requested
+        if args.plot or args.plot_output:
+            try:
+                import matplotlib.pyplot as plt
+                plt.figure(figsize=(10, 6))
+                plt.loglog(energy_shielded, xs_shielded, 'b-', linewidth=2, 
+                          label=f'{nuclide.name} {args.reaction} (shielded)')
+                if args.compare:
+                    plt.loglog(energy_unshielded, xs_unshielded, 'r--', linewidth=2, 
+                              label=f'{nuclide.name} {args.reaction} (unshielded)')
+                plt.xlabel('Energy [eV]')
+                plt.ylabel('Cross-Section [barn]')
+                plt.title(f'{nuclide.name} {args.reaction} Self-Shielding\n'
+                         f'T={args.temperature:.1f} K, σ₀={args.sigma_0:.2f} barn, Method={args.method}')
+                plt.grid(True, alpha=0.3)
+                plt.legend()
+                
+                if args.plot_output:
+                    plt.savefig(args.plot_output, dpi=150, bbox_inches='tight')
+                    _print_success(f"Plot saved to {args.plot_output}")
+                else:
+                    plt.show()
+            except ImportError:
+                _print_warning("Matplotlib not available for plotting")
+        
+    except Exception as e:
+        _print_error(f"Failed to calculate self-shielded cross-section: {e}")
+        if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def burnup_run(args):
     """Run burnup/depletion calculation."""
     try:
@@ -3303,6 +3572,43 @@ Note: All features are also available via Python API:
     validate_data_parser.add_argument('--files', nargs='+', type=Path, help='Specific ENDF files to validate')
     validate_data_parser.add_argument('--output', type=Path, help='Output file for validation report')
     validate_data_parser.set_defaults(func=data_validate)
+    
+    # data interpolate (temperature interpolation)
+    interpolate_parser = data_subparsers.add_parser(
+        'interpolate',
+        help='Interpolate cross-sections at different temperatures'
+    )
+    interpolate_parser.add_argument('--nuclide', type=str, required=True, help='Nuclide (e.g., U235, Pu239)')
+    interpolate_parser.add_argument('--reaction', type=str, required=True, help='Reaction type (fission, capture, total, elastic)')
+    interpolate_parser.add_argument('--temperature', type=float, required=True, help='Target temperature [K]')
+    interpolate_parser.add_argument('--available-temps', nargs='+', type=float, dest='available_temps', 
+                                    help='Available temperatures [K] (default: 293.6, 600.0, 900.0, 1200.0)')
+    interpolate_parser.add_argument('--method', type=str, choices=['linear', 'log_log', 'spline'], 
+                                    default='linear', help='Interpolation method (default: linear)')
+    interpolate_parser.add_argument('--endf-dir', type=Path, dest='endf_dir', help='ENDF directory path')
+    interpolate_parser.add_argument('--output', type=Path, help='Output file (JSON or CSV)')
+    interpolate_parser.add_argument('--plot', action='store_true', help='Plot interpolated cross-section')
+    interpolate_parser.add_argument('--plot-output', type=Path, dest='plot_output', help='Plot output file')
+    interpolate_parser.set_defaults(func=data_interpolate)
+    
+    # data shield (self-shielding)
+    shield_parser = data_subparsers.add_parser(
+        'shield',
+        help='Calculate self-shielded cross-sections'
+    )
+    shield_parser.add_argument('--nuclide', type=str, required=True, help='Nuclide (e.g., U235, U238)')
+    shield_parser.add_argument('--reaction', type=str, required=True, help='Reaction type (fission, capture, total, elastic)')
+    shield_parser.add_argument('--temperature', type=float, required=True, help='Temperature [K]')
+    shield_parser.add_argument('--sigma-0', type=float, dest='sigma_0', default=1.0, 
+                               help='Background cross-section [barns] (default: 1.0)')
+    shield_parser.add_argument('--method', type=str, choices=['bondarenko', 'subgroup', 'equivalence'], 
+                               default='bondarenko', help='Self-shielding method (default: bondarenko)')
+    shield_parser.add_argument('--endf-dir', type=Path, dest='endf_dir', help='ENDF directory path')
+    shield_parser.add_argument('--output', type=Path, help='Output file (JSON or CSV)')
+    shield_parser.add_argument('--plot', action='store_true', help='Plot shielded vs unshielded cross-section')
+    shield_parser.add_argument('--plot-output', type=Path, dest='plot_output', help='Plot output file')
+    shield_parser.add_argument('--compare', action='store_true', help='Compare shielded and unshielded cross-sections')
+    shield_parser.set_defaults(func=data_shield)
     
     # Burnup subcommands
     burnup_parser = subparsers.add_parser(
