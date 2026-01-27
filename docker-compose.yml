@@ -67,6 +67,9 @@ services:
     # CLI dependencies (rich, pyyaml) are already in requirements.txt
     # Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
     # Parameter sweep dependencies (pandas) are already in requirements.txt
+    # Performance optimizations: Numba JIT compilation requires build-essential and python3-dev (already included)
+    # Temperature interpolation: scipy.interpolate.RectBivariateSpline (included in scipy)
+    # Self-shielding: All dependencies included in requirements.txt
     # Test suite (133+ test files, 79.2% coverage) includes:
     #   - Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
     #   - Advanced error handling: file operations, copy failures, validation errors

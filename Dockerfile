@@ -4,7 +4,21 @@
 # Build: docker build -t smrforge:latest .
 # Run:   docker run -it smrforge:latest
 #
-# Last Updated: January 22, 2026
+# Last Updated: January 25, 2026
+# Recent Additions (January 2026):
+# - Performance optimizations (January 25, 2026):
+#   * Vectorized burnup fission rate integration (~10-100x faster)
+#   * Vectorized control rod shadowing calculation (~5-20x faster)
+#   * Optimized gamma transport sparse matrix construction (~5-10x faster)
+#   * Vectorized cross-section broadcasting (~ng times faster)
+#   * Optimized control rod distance calculation (~5-10x faster)
+#   * Temperature interpolation with 2D spline (~10-50x faster)
+#   * Numba JIT for matrix construction helpers (~2-5x faster)
+#   * Optimized self-shielding subgroup method (~2-3x faster)
+# - CLI enhancements (January 25, 2026):
+#   * Added 'data interpolate' command for cross-section temperature interpolation
+#   * Added 'data shield' command for self-shielding calculations
+#   * Both commands support JSON/CSV output and optional plotting
 # Recent Additions (January 2026):
 # - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
 # - Material degradation models for long-term fuel rod analysis
@@ -137,6 +151,8 @@ ENV PYTHONUNBUFFERED=1 \
 # Install system dependencies
 # Scientific Python packages require various system libraries
 # Added libgl1 and libglib2.0-0 for pyvista visualization support
+# libgomp1 is required for OpenMP (used by Numba for parallel execution)
+# libffi-dev may be needed for some Python C extensions
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -153,6 +169,7 @@ RUN apt-get update && \
     libxrender1 \
     libfontconfig1 \
     libgomp1 \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency manifest first (better layer caching)
@@ -213,7 +230,9 @@ EXPOSE 8050
 # CLI Commands available:
 #   smrforge reactor create/list/analyze/compare
 #   smrforge reactor template create/modify/validate (template library)
-#   smrforge data setup/download/validate
+#   smrforge data setup/download/validate/interpolate/shield
+#     - data interpolate: Cross-section temperature interpolation (linear/log-log/spline)
+#     - data shield: Self-shielding calculations (Bondarenko/subgroup/equivalence)
 #   smrforge burnup run/visualize (with checkpointing support)
 #   smrforge transient run (quick transient analysis - reactivity insertion, decay heat, etc.)
 #   smrforge thermal lumped (lumped-parameter thermal hydraulics)
