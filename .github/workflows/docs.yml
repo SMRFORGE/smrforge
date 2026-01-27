@@ -12,6 +12,29 @@ on:
       - 'setup.py'
   workflow_dispatch:  # Allow manual triggering
 
+jobs:
+  check-enabled:
+    name: Check if workflows are enabled
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Check workflows enabled
+        id: check
+        run: |
+          if [ -f .github/workflows-enabled ]; then
+            ENABLED=$(cat .github/workflows-enabled | tr -d '[:space:]')
+            if [ "$ENABLED" = "true" ]; then
+              echo "enabled=true" >> $GITHUB_OUTPUT
+            else
+              echo "enabled=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+          fi
+
 # Set permissions for GitHub Pages
 permissions:
   contents: read
@@ -60,7 +83,8 @@ jobs:
   deploy-docs:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
-    needs: build-docs
+    needs: [check-enabled, build-docs]
+    if: needs.check-enabled.outputs.enabled == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

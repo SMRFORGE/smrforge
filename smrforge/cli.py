@@ -2068,6 +2068,81 @@ def decay_heat_calculate(args):
         sys.exit(1)
 
 
+def github_actions_status(args):
+    """Show GitHub Actions status."""
+    try:
+        workflows_file = Path('.github/workflows-enabled')
+        
+        if workflows_file.exists():
+            with open(workflows_file) as f:
+                enabled = f.read().strip().lower() == 'true'
+        else:
+            enabled = False
+        
+        if _RICH_AVAILABLE:
+            status = "[bold green]ENABLED[/bold green]" if enabled else "[bold red]DISABLED[/bold red]"
+            console.print(f"\nGitHub Actions: {status}")
+            console.print(f"Control file: {workflows_file.absolute()}")
+        else:
+            status = "ENABLED" if enabled else "DISABLED"
+            print(f"\nGitHub Actions: {status}")
+            print(f"Control file: {workflows_file.absolute()}")
+        
+        if args.output:
+            with open(args.output, 'w') as f:
+                json.dump({'enabled': enabled, 'file': str(workflows_file.absolute())}, f, indent=2)
+            _print_success(f"Status saved to {args.output}")
+        
+    except Exception as e:
+        _print_error(f"Failed to check GitHub Actions status: {e}")
+        if getattr(args, 'verbose', False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def github_actions_enable(args):
+    """Enable GitHub Actions."""
+    try:
+        workflows_file = Path('.github/workflows-enabled')
+        workflows_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(workflows_file, 'w') as f:
+            f.write('true\n')
+        
+        _print_success("GitHub Actions enabled")
+        _print_info(f"Control file updated: {workflows_file.absolute()}")
+        _print_info("Workflows will run on next push or pull request")
+        
+    except Exception as e:
+        _print_error(f"Failed to enable GitHub Actions: {e}")
+        if getattr(args, 'verbose', False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def github_actions_disable(args):
+    """Disable GitHub Actions."""
+    try:
+        workflows_file = Path('.github/workflows-enabled')
+        workflows_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(workflows_file, 'w') as f:
+            f.write('false\n')
+        
+        _print_success("GitHub Actions disabled")
+        _print_info(f"Control file updated: {workflows_file.absolute()}")
+        _print_info("Workflows will be skipped on next push or pull request")
+        
+    except Exception as e:
+        _print_error(f"Failed to disable GitHub Actions: {e}")
+        if getattr(args, 'verbose', False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def config_show(args):
     """Show current configuration."""
     try:
@@ -3447,6 +3522,35 @@ Note: All features are also available via Python API:
     config_init_parser.add_argument('--template', type=str, choices=['default', 'production', 'development'], default='default', help='Configuration template')
     config_init_parser.add_argument('--force', action='store_true', help='Overwrite existing configuration file')
     config_init_parser.set_defaults(func=config_init)
+    
+    # GitHub Actions subcommands
+    github_parser = subparsers.add_parser(
+        'github',
+        help='GitHub Actions management'
+    )
+    github_subparsers = github_parser.add_subparsers(dest='github_command', help='GitHub Actions commands')
+    
+    # github actions status
+    github_status_parser = github_subparsers.add_parser(
+        'status',
+        help='Show GitHub Actions status'
+    )
+    github_status_parser.add_argument('--output', type=Path, help='Output file for status (JSON)')
+    github_status_parser.set_defaults(func=github_actions_status)
+    
+    # github actions enable
+    github_enable_parser = github_subparsers.add_parser(
+        'enable',
+        help='Enable GitHub Actions workflows'
+    )
+    github_enable_parser.set_defaults(func=github_actions_enable)
+    
+    # github actions disable
+    github_disable_parser = github_subparsers.add_parser(
+        'disable',
+        help='Disable GitHub Actions workflows'
+    )
+    github_disable_parser.set_defaults(func=github_actions_disable)
     
     # Transient subcommands (NEW)
     transient_parser = subparsers.add_parser(
