@@ -1592,12 +1592,477 @@ def burnup_visualize(args):
             print("  from smrforge.core.reactor_core import Nuclide")
             print("  fig = plot_burnup_composition(inventory, geometry, nuclides)")
         
+        # Enhanced visualization features
+        backend = getattr(args, 'backend', 'plotly')
+        
+        # Batch comparison
+        if getattr(args, 'batch_comparison', False):
+            try:
+                from smrforge.burnup.visualization import plot_batch_comparison
+                
+                # Load batch inventories
+                batch_inventories = {}
+                if getattr(args, 'batch_results', None):
+                    for batch_file in args.batch_results:
+                        if not batch_file.exists():
+                            _print_error(f"Batch results file not found: {batch_file}")
+                            continue
+                        
+                        with open(batch_file) as f:
+                            batch_data = json.load(f)
+                        
+                        # Try to extract inventory from results
+                        # This assumes results contain inventory-like data
+                        if 'inventory' in batch_data:
+                            batch_inventories[len(batch_inventories)] = batch_data['inventory']
+                        elif 'nuclides' in batch_data and 'concentrations' in batch_data:
+                            # Create a simple inventory-like object
+                            class SimpleInventory:
+                                def __init__(self, data):
+                                    self.times = data.get('times', [0])
+                                    self.burnup = data.get('burnup', [0])
+                                    self.nuclides = data.get('nuclides', [])
+                                    self.concentrations = data.get('concentrations', [])
+                            
+                            batch_inventories[len(batch_inventories)] = SimpleInventory(batch_data)
+                
+                if batch_inventories:
+                    fig = plot_batch_comparison(batch_inventories, backend=backend)
+                    
+                    if args.output:
+                        output_path = Path(args.output)
+                        if 'batch' not in str(output_path.name).lower():
+                            stem = output_path.stem
+                            suffix = output_path.suffix
+                            output_path = output_path.parent / f"{stem}_batch_comparison{suffix}"
+                        
+                        if backend == 'plotly':
+                            fig.write_html(str(output_path)) if output_path.suffix == '.html' else fig.write_image(str(output_path))
+                        else:
+                            fig[0].savefig(output_path, format=args.format, dpi=300, bbox_inches='tight')
+                        
+                        _print_success(f"Batch comparison plot saved to {output_path}")
+                    else:
+                        if backend == 'plotly':
+                            fig.show()
+                        else:
+                            import matplotlib.pyplot as plt
+                            plt.show()
+                else:
+                    _print_info("No batch data found. Use --batch-results to specify batch result files.")
+            except ImportError as e:
+                _print_error(f"Failed to import batch comparison visualization: {e}")
+        
+        # Refueling cycles
+        if getattr(args, 'refueling_cycles', False):
+            try:
+                from smrforge.burnup.visualization import plot_refueling_cycles
+                
+                _print_info("Refueling cycle visualization requires cycle inventory data")
+                _print_info("Use Python API for full refueling cycle visualization:")
+                print("  from smrforge.burnup.visualization import plot_refueling_cycles")
+                print("  fig = plot_refueling_cycles(cycle_inventories, backend='plotly')")
+            except ImportError as e:
+                _print_error(f"Failed to import refueling cycle visualization: {e}")
+        
+        # Control rod effects
+        if getattr(args, 'control_rod_effects', False):
+            try:
+                from smrforge.burnup.visualization import plot_control_rod_effects
+                
+                # Load with-rods inventory from main results
+                with_rods_inventory = None
+                if 'inventory' in results_data:
+                    with_rods_inventory = results_data['inventory']
+                elif 'nuclides' in results_data:
+                    class SimpleInventory:
+                        def __init__(self, data):
+                            self.times = data.get('times', [0])
+                            self.burnup = data.get('burnup', [0])
+                            self.nuclides = data.get('nuclides', [])
+                            self.concentrations = data.get('concentrations', [])
+                    with_rods_inventory = SimpleInventory(results_data)
+                
+                # Load without-rods inventory if provided
+                without_rods_inventory = None
+                if getattr(args, 'without_rods_results', None):
+                    without_rods_path = args.without_rods_results
+                    if without_rods_path.exists():
+                        with open(without_rods_path) as f:
+                            without_rods_data = json.load(f)
+                        
+                        if 'inventory' in without_rods_data:
+                            without_rods_inventory = without_rods_data['inventory']
+                        elif 'nuclides' in without_rods_data:
+                            class SimpleInventory:
+                                def __init__(self, data):
+                                    self.times = data.get('times', [0])
+                                    self.burnup = data.get('burnup', [0])
+                                    self.nuclides = data.get('nuclides', [])
+                                    self.concentrations = data.get('concentrations', [])
+                            without_rods_inventory = SimpleInventory(without_rods_data)
+                
+                if with_rods_inventory:
+                    fig = plot_control_rod_effects(
+                        with_rods_inventory,
+                        without_rods_inventory,
+                        backend=backend
+                    )
+                    
+                    if args.output:
+                        output_path = Path(args.output)
+                        if 'control_rod' not in str(output_path.name).lower():
+                            stem = output_path.stem
+                            suffix = output_path.suffix
+                            output_path = output_path.parent / f"{stem}_control_rods{suffix}"
+                        
+                        if backend == 'plotly':
+                            fig.write_html(str(output_path)) if output_path.suffix == '.html' else fig.write_image(str(output_path))
+                        else:
+                            fig[0].savefig(output_path, format=args.format, dpi=300, bbox_inches='tight')
+                        
+                        _print_success(f"Control rod effects plot saved to {output_path}")
+                    else:
+                        if backend == 'plotly':
+                            fig.show()
+                        else:
+                            import matplotlib.pyplot as plt
+                            plt.show()
+                else:
+                    _print_info("No inventory data found in results file for control rod effects visualization")
+            except ImportError as e:
+                _print_error(f"Failed to import control rod effects visualization: {e}")
+        
+        # Enhanced dashboard
+        if getattr(args, 'dashboard', False):
+            try:
+                from smrforge.burnup.visualization import plot_burnup_dashboard_enhanced
+                
+                # Load inventory from results
+                inventory = None
+                if 'inventory' in results_data:
+                    inventory = results_data['inventory']
+                elif 'nuclides' in results_data:
+                    class SimpleInventory:
+                        def __init__(self, data):
+                            self.times = data.get('times', [0])
+                            self.burnup = data.get('burnup', [0])
+                            self.nuclides = data.get('nuclides', [])
+                            self.concentrations = data.get('concentrations', [])
+                    inventory = SimpleInventory(results_data)
+                
+                # Load batch inventories if provided
+                batch_inventories = None
+                if getattr(args, 'batch_results', None):
+                    batch_inventories = {}
+                    for batch_file in args.batch_results:
+                        if batch_file.exists():
+                            with open(batch_file) as f:
+                                batch_data = json.load(f)
+                            if 'inventory' in batch_data or 'nuclides' in batch_data:
+                                if 'inventory' in batch_data:
+                                    batch_inventories[len(batch_inventories)] = batch_data['inventory']
+                                else:
+                                    class SimpleInventory:
+                                        def __init__(self, data):
+                                            self.times = data.get('times', [0])
+                                            self.burnup = data.get('burnup', [0])
+                                            self.nuclides = data.get('nuclides', [])
+                                            self.concentrations = data.get('concentrations', [])
+                                    batch_inventories[len(batch_inventories)] = SimpleInventory(batch_data)
+                
+                if inventory:
+                    fig = plot_burnup_dashboard_enhanced(
+                        inventory,
+                        batch_inventories,
+                        backend=backend
+                    )
+                    
+                    if args.output:
+                        output_path = Path(args.output)
+                        if 'dashboard' not in str(output_path.name).lower():
+                            stem = output_path.stem
+                            suffix = output_path.suffix
+                            output_path = output_path.parent / f"{stem}_dashboard{suffix}"
+                        
+                        if backend == 'plotly':
+                            fig.write_html(str(output_path)) if output_path.suffix == '.html' else fig.write_image(str(output_path))
+                        else:
+                            fig[0].savefig(output_path, format=args.format, dpi=300, bbox_inches='tight')
+                        
+                        _print_success(f"Enhanced dashboard saved to {output_path}")
+                    else:
+                        if backend == 'plotly':
+                            fig.show()
+                        else:
+                            import matplotlib.pyplot as plt
+                            plt.show()
+                else:
+                    _print_info("No inventory data found in results file for dashboard visualization")
+            except ImportError as e:
+                _print_error(f"Failed to import enhanced dashboard visualization: {e}")
+        
     except ImportError as e:
         _print_error(f"Failed to import visualization modules: {e}")
         sys.exit(1)
     except Exception as e:
         _print_error(f"Failed to visualize burnup results: {e}")
         if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def decay_heat_calculate(args):
+    """Calculate decay heat over time."""
+    try:
+        from smrforge.decay_heat import DecayHeatCalculator
+        from smrforge.core.reactor_core import Nuclide, NuclearDataCache
+        import json
+        import numpy as np
+        
+        # Initialize cache
+        cache = None
+        if getattr(args, 'endf_dir', None):
+            cache = NuclearDataCache()
+            cache.set_endf_directory(str(args.endf_dir))
+        
+        calculator = DecayHeatCalculator(cache=cache)
+        
+        # Load nuclide concentrations
+        concentrations = {}
+        
+        if getattr(args, 'inventory', None):
+            # Load from inventory file
+            inventory_path = args.inventory
+            if not inventory_path.exists():
+                _print_error(f"Inventory file not found: {inventory_path}")
+                sys.exit(1)
+            
+            with open(inventory_path) as f:
+                inventory_data = json.load(f)
+            
+            # Extract nuclide concentrations
+            if 'nuclides' in inventory_data and 'concentrations' in inventory_data:
+                nuclide_names = inventory_data['nuclides']
+                conc_values = inventory_data['concentrations']
+                
+                for name, conc in zip(nuclide_names, conc_values):
+                    # Parse nuclide name (e.g., "U235" -> Z=92, A=235)
+                    try:
+                        from smrforge.convenience_utils import get_nuclide
+                        nuclide = get_nuclide(name)
+                        concentrations[nuclide] = float(conc)
+                    except Exception as e:
+                        _print_warning(f"Failed to parse nuclide {name}: {e}")
+            else:
+                _print_error("Inventory file must contain 'nuclides' and 'concentrations' fields")
+                sys.exit(1)
+        
+        elif getattr(args, 'nuclides', None):
+            # Parse from command line arguments
+            for nuclide_spec in args.nuclides:
+                if ':' not in nuclide_spec:
+                    _print_error(f"Invalid nuclide specification: {nuclide_spec}. Use format: U235:1e20")
+                    sys.exit(1)
+                
+                name, conc_str = nuclide_spec.split(':', 1)
+                try:
+                    from smrforge.convenience_utils import get_nuclide
+                    nuclide = get_nuclide(name.strip())
+                    concentrations[nuclide] = float(conc_str.strip())
+                except Exception as e:
+                    _print_error(f"Failed to parse nuclide {name}: {e}")
+                    sys.exit(1)
+        else:
+            _print_error("Must specify --inventory or --nuclides")
+            sys.exit(1)
+        
+        if not concentrations:
+            _print_error("No valid nuclide concentrations found")
+            sys.exit(1)
+        
+        _print_info(f"Calculating decay heat for {len(concentrations)} nuclides...")
+        
+        # Determine time points
+        if getattr(args, 'times', None):
+            times = np.array([float(t) for t in args.times])
+        elif getattr(args, 'time_range', None):
+            start, end, num_steps = args.time_range
+            times = np.linspace(float(start), float(end), int(num_steps))
+        else:
+            # Default: 0 to 1 week with 100 points
+            times = np.linspace(0, 7 * 24 * 3600, 100)
+            _print_info("Using default time range: 0 to 1 week (100 points)")
+        
+        # Calculate decay heat
+        result = calculator.calculate_decay_heat(concentrations, times)
+        
+        # Prepare output data
+        output_data = {
+            'times': times.tolist(),
+            'times_days': (times / (24 * 3600)).tolist(),
+            'total_decay_heat': result.total_decay_heat.tolist(),
+            'gamma_decay_heat': result.gamma_decay_heat.tolist(),
+            'beta_decay_heat': result.beta_decay_heat.tolist(),
+            'nuclide_contributions': {
+                str(nuclide): heat.tolist()
+                for nuclide, heat in result.nuclide_contributions.items()
+            }
+        }
+        
+        # Save results
+        if getattr(args, 'output', None):
+            with open(args.output, 'w') as f:
+                json.dump(_to_jsonable(output_data), f, indent=2)
+            _print_success(f"Decay heat results saved to {args.output}")
+        
+        # Display summary
+        if _RICH_AVAILABLE:
+            table = Table(title="Decay Heat Summary")
+            table.add_column("Time", style="cyan")
+            table.add_column("Total [W]", style="green")
+            table.add_column("Gamma [W]", style="yellow")
+            table.add_column("Beta [W]", style="magenta")
+            
+            # Show key time points
+            key_times = [0, 3600, 86400, 604800]  # 0, 1h, 1d, 1w
+            for t_key in key_times:
+                if t_key <= times[-1]:
+                    idx = np.argmin(np.abs(times - t_key))
+                    time_label = f"{times[idx] / 3600:.1f} h" if times[idx] < 86400 else f"{times[idx] / 86400:.1f} d"
+                    table.add_row(
+                        time_label,
+                        f"{result.total_decay_heat[idx]:.2e}",
+                        f"{result.gamma_decay_heat[idx]:.2e}",
+                        f"{result.beta_decay_heat[idx]:.2e}"
+                    )
+            
+            console.print(table)
+        else:
+            print("\nDecay Heat Summary:")
+            print(f"  Initial (t=0): {result.total_decay_heat[0]:.2e} W")
+            print(f"  After 1 hour: {result.get_decay_heat_at_time(3600):.2e} W")
+            print(f"  After 1 day: {result.get_decay_heat_at_time(86400):.2e} W")
+            print(f"  After 1 week: {result.get_decay_heat_at_time(604800):.2e} W")
+        
+        # Generate plot
+        if getattr(args, 'plot', False) or getattr(args, 'plot_output', None):
+            try:
+                backend = getattr(args, 'backend', 'plotly')
+                
+                if backend == 'plotly':
+                    try:
+                        import plotly.graph_objects as go
+                        from plotly.subplots import make_subplots
+                        
+                        fig = make_subplots(
+                            rows=2, cols=1,
+                            subplot_titles=("Total Decay Heat", "Gamma vs Beta Decay Heat"),
+                            shared_xaxes=True,
+                            vertical_spacing=0.1
+                        )
+                        
+                        times_days = times / (24 * 3600)
+                        
+                        # Total decay heat
+                        fig.add_trace(
+                            go.Scatter(
+                                x=times_days,
+                                y=result.total_decay_heat,
+                                mode='lines',
+                                name='Total',
+                                line=dict(width=2, color='blue')
+                            ),
+                            row=1, col=1
+                        )
+                        
+                        # Gamma and beta
+                        fig.add_trace(
+                            go.Scatter(
+                                x=times_days,
+                                y=result.gamma_decay_heat,
+                                mode='lines',
+                                name='Gamma',
+                                line=dict(width=2, color='red')
+                            ),
+                            row=2, col=1
+                        )
+                        
+                        fig.add_trace(
+                            go.Scatter(
+                                x=times_days,
+                                y=result.beta_decay_heat,
+                                mode='lines',
+                                name='Beta',
+                                line=dict(width=2, color='green')
+                            ),
+                            row=2, col=1
+                        )
+                        
+                        fig.update_xaxes(title_text="Time [days]", row=2, col=1)
+                        fig.update_yaxes(title_text="Decay Heat [W]", row=1, col=1)
+                        fig.update_yaxes(title_text="Decay Heat [W]", row=2, col=1)
+                        fig.update_layout(
+                            title="Decay Heat Over Time",
+                            height=700,
+                            hovermode="x unified"
+                        )
+                        
+                        if getattr(args, 'plot_output', None):
+                            plot_path = args.plot_output
+                            if plot_path.suffix == '.html':
+                                fig.write_html(str(plot_path))
+                            else:
+                                fig.write_image(str(plot_path))
+                            _print_success(f"Plot saved to {plot_path}")
+                        else:
+                            fig.show()
+                    except ImportError:
+                        _print_error("Plotly not available. Install: pip install plotly")
+                else:
+                    import matplotlib.pyplot as plt
+                    
+                    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+                    times_days = times / (24 * 3600)
+                    
+                    # Total decay heat
+                    ax1.plot(times_days, result.total_decay_heat, 'b-', linewidth=2, label='Total')
+                    ax1.set_ylabel('Decay Heat [W]')
+                    ax1.set_title('Total Decay Heat')
+                    ax1.grid(True, alpha=0.3)
+                    ax1.legend()
+                    ax1.set_yscale('log')
+                    
+                    # Gamma and beta
+                    ax2.plot(times_days, result.gamma_decay_heat, 'r-', linewidth=2, label='Gamma')
+                    ax2.plot(times_days, result.beta_decay_heat, 'g-', linewidth=2, label='Beta')
+                    ax2.set_xlabel('Time [days]')
+                    ax2.set_ylabel('Decay Heat [W]')
+                    ax2.set_title('Gamma vs Beta Decay Heat')
+                    ax2.grid(True, alpha=0.3)
+                    ax2.legend()
+                    ax2.set_yscale('log')
+                    
+                    plt.tight_layout()
+                    
+                    if getattr(args, 'plot_output', None):
+                        plot_path = args.plot_output
+                        fig.savefig(plot_path, format=args.format, dpi=300, bbox_inches='tight')
+                        _print_success(f"Plot saved to {plot_path}")
+                        plt.close(fig)
+                    else:
+                        plt.show()
+            except ImportError as e:
+                _print_error(f"Failed to generate plot: {e}")
+                _print_info("Install matplotlib or plotly for plotting support")
+        
+    except ImportError as e:
+        _print_error(f"Failed to import decay heat modules: {e}")
+        sys.exit(1)
+    except Exception as e:
+        _print_error(f"Failed to calculate decay heat: {e}")
+        if getattr(args, 'verbose', False):
             import traceback
             traceback.print_exc()
         sys.exit(1)
@@ -2800,9 +3265,40 @@ Note: All features are also available via Python API:
     burnup_visualize_parser.add_argument('--burnup', action='store_true', help='Plot burnup over time')
     burnup_visualize_parser.add_argument('--keff', action='store_true', help='Plot k-eff evolution')
     burnup_visualize_parser.add_argument('--composition', action='store_true', help='Plot composition changes')
+    burnup_visualize_parser.add_argument('--batch-comparison', action='store_true', help='Compare burnup across multiple fuel batches')
+    burnup_visualize_parser.add_argument('--refueling-cycles', action='store_true', help='Visualize multi-cycle burnup evolution')
+    burnup_visualize_parser.add_argument('--control-rod-effects', action='store_true', help='Compare burnup with/without control rods')
+    burnup_visualize_parser.add_argument('--dashboard', action='store_true', help='Generate enhanced burnup dashboard')
+    burnup_visualize_parser.add_argument('--batch-results', type=Path, nargs='+', help='Additional batch result files for comparison')
+    burnup_visualize_parser.add_argument('--without-rods-results', type=Path, help='Results file without control rods for comparison')
     burnup_visualize_parser.add_argument('--output', type=Path, help='Output file for plot')
     burnup_visualize_parser.add_argument('--format', type=str, choices=['png', 'pdf', 'svg', 'html'], default='png', help='Output format')
+    burnup_visualize_parser.add_argument('--backend', type=str, choices=['plotly', 'matplotlib'], default='plotly', help='Visualization backend')
     burnup_visualize_parser.set_defaults(func=burnup_visualize)
+    
+    # Decay heat subcommands
+    decay_parser = subparsers.add_parser(
+        'decay',
+        help='Decay heat calculations'
+    )
+    decay_subparsers = decay_parser.add_subparsers(dest='decay_command', help='Decay heat commands')
+    
+    # decay calculate
+    decay_calculate_parser = decay_subparsers.add_parser(
+        'calculate',
+        help='Calculate decay heat over time'
+    )
+    decay_calculate_parser.add_argument('--inventory', type=Path, help='Nuclide inventory file (JSON)')
+    decay_calculate_parser.add_argument('--nuclides', nargs='+', help='Nuclide concentrations (format: U235:1e20 Cs137:1e19)')
+    decay_calculate_parser.add_argument('--times', nargs='+', type=float, help='Time points after shutdown [seconds]')
+    decay_calculate_parser.add_argument('--time-range', nargs=3, type=float, metavar=('START', 'END', 'STEPS'), help='Time range: start end num_steps')
+    decay_calculate_parser.add_argument('--output', type=Path, help='Output file for results (JSON)')
+    decay_calculate_parser.add_argument('--plot', action='store_true', help='Generate decay heat plot')
+    decay_calculate_parser.add_argument('--plot-output', type=Path, help='Output file for plot')
+    decay_calculate_parser.add_argument('--format', type=str, choices=['png', 'pdf', 'svg', 'html'], default='png', help='Plot format')
+    decay_calculate_parser.add_argument('--backend', type=str, choices=['plotly', 'matplotlib'], default='plotly', help='Visualization backend')
+    decay_calculate_parser.add_argument('--endf-dir', type=Path, dest='endf_dir', help='ENDF directory for decay data')
+    decay_calculate_parser.set_defaults(func=decay_heat_calculate)
     
     # Validate subcommands
     validate_parser = subparsers.add_parser(
