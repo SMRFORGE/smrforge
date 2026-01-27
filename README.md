@@ -23,6 +23,10 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
   - **Setup required**: Run `python -m smrforge.core.endf_setup` to configure ENDF files
   - **NEW: Advanced Nuclear Data Features** (January 2026):
     - **Resonance self-shielding**: Bondarenko, Subgroup, and Equivalence theory methods
+      - CLI command: `smrforge data shield` for self-shielding calculations
+    - **Temperature interpolation**: Linear, log-log, and spline interpolation methods
+      - CLI command: `smrforge data interpolate` for cross-section temperature interpolation
+      - 2D spline interpolation for ~10-50x faster performance
     - **Fission yield data**: MF=5 parsing for independent and cumulative yields
     - **Delayed neutron data**: MT=455 parsing for transient analysis
     - **Prompt/delayed chi**: Separate prompt and delayed fission spectra
@@ -94,13 +98,23 @@ SMRForge includes **comprehensive performance optimizations**:
 - **Enhanced Memory Pooling** - 5-10% speedup, reduced allocation overhead
 - **Memory-Mapped Files** - Enable datasets larger than RAM
 
+**Latest Optimizations (January 2026) ✅ Complete:**
+- **Vectorized burnup fission rate integration** - ~10-100x faster (eliminates triple nested loops)
+- **Vectorized control rod shadowing** - ~5-20x faster for multiple control rods
+- **Optimized gamma transport sparse matrix construction** - ~5-10x faster for large meshes
+- **Vectorized cross-section broadcasting** - ~ng times faster (where ng = number of energy groups)
+- **Optimized control rod distance calculation** - ~5-10x faster for multiple control rods
+- **Temperature interpolation with 2D spline** - ~10-50x faster when interpolating over many energy points
+- **Numba JIT for matrix construction helpers** - ~2-5x faster for large meshes
+- **Optimized self-shielding subgroup method** - ~2-3x faster for subgroup calculations
+
 **Rust-Powered Dependencies:**
 - **Pydantic 2.0**: Rust core for ultra-fast data validation (5-50x faster than v1)
 - **Polars**: Rust-based DataFrame library (10-100x faster than pandas)
 - **Rich**: Rust terminal library for beautiful, performant console output
 - **uv** (recommended installer): Rust-based package installer (10-100x faster than pip)
 
-**Performance Status:** SMRForge achieves **90-95% of C++ performance** with Numba and can be **faster than OpenMC** for typical problems through better algorithms.
+**Performance Status:** SMRForge achieves **90-95% of C++ performance** with Numba and can be **faster than OpenMC** for typical problems through better algorithms. Recent optimizations (January 2026) have improved performance by **2-100x** in critical computational loops through vectorization and Numba JIT compilation.
 
 ### ✅ Recently Implemented (January 2026)
 - **Control Systems**: ✅ **IMPLEMENTED** - PID controllers, reactor control, load-following, Model Predictive Control (MPC)
@@ -110,12 +124,10 @@ SMRForge includes **comprehensive performance optimizations**:
 - **Fuel Performance**: ✅ **IMPLEMENTED** - Fuel temperature calculations, swelling models, fission gas release
 - **General Optimization**: ✅ **IMPLEMENTED** - Design optimization, loading pattern optimization with genetic algorithms
 - **General I/O Utilities**: ✅ **IMPLEMENTED** - File readers/writers (JSON, YAML, CSV), format converters (Serpent, OpenMC)
-
-### ✅ Recently Implemented (January 2026)
-- **Control Systems**: ✅ **IMPLEMENTED** - PID controllers, reactor control, load-following, Model Predictive Control (MPC)
-- **Economics**: ✅ **IMPLEMENTED** - Capital costs, operating costs, LCOE calculations with SMR-specific factors
-- **Structural Mechanics**: ✅ **IMPLEMENTED** - Fuel rod mechanics with creep models and material degradation
-- **Multi-Physics Coupling**: ✅ **IMPLEMENTED** - Unified coupling framework integrating all physics domains
+- **CLI Enhancements** (January 25, 2026):
+  - ✅ **Data interpolation command** - `smrforge data interpolate` for cross-section temperature interpolation
+  - ✅ **Self-shielding command** - `smrforge data shield` for resonance self-shielding calculations
+  - ✅ **GitHub Actions control** - `smrforge github status/enable/disable` for workflow management
 
 **See `docs/status/feature-status.md` for detailed status of all features.**
 
@@ -253,6 +265,56 @@ Then open your browser to `http://127.0.0.1:8050`
 
 **Note:** All dashboard features remain fully available via CLI and Python API. The dashboard is an optional, user-friendly interface.
 
+### Command-Line Interface (CLI)
+
+SMRForge provides a comprehensive CLI for all operations:
+
+```bash
+# Reactor operations
+smrforge reactor create --preset valar-10
+smrforge reactor analyze --input reactor.json
+smrforge reactor list
+smrforge reactor compare --reactors r1.json r2.json
+
+# Data management
+smrforge data setup                    # Interactive ENDF setup
+smrforge data download --library ENDF-B-VIII.1
+smrforge data validate --endf-dir /path/to/endf
+smrforge data interpolate --nuclide U235 --reaction fission --temperature 900.0
+smrforge data shield --nuclide U238 --reaction capture --temperature 900.0 --sigma-0 10.0
+
+# Burnup calculations
+smrforge burnup run --time-steps 0 30 60 90 365 --output burnup_results.json
+smrforge burnup visualize --input burnup_results.json --dashboard
+
+# Decay heat
+smrforge decay calculate --nuclides U235 Pu239 --times 0 3600 7200 --plot
+
+# Validation
+smrforge validate run --output validation_report.json
+
+# Visualization
+smrforge visualize geometry --input reactor.json
+smrforge visualize flux --input results.json
+
+# GitHub Actions control
+smrforge github status
+smrforge github enable
+smrforge github disable
+
+# Configuration
+smrforge config show
+smrforge config set endf_dir /path/to/endf
+
+# Interactive shell
+smrforge shell
+
+# Workflow automation
+smrforge workflow run workflow.yaml
+```
+
+See [`docs/guides/cli-guide.md`](docs/guides/cli-guide.md) for complete CLI documentation.
+
 **Troubleshooting:** If dashboard won't start, see [Dashboard Troubleshooting Guide](docs/guides/dashboard-troubleshooting.md)
 
 See [Dashboard Guide](docs/guides/dashboard-guide.md) for complete documentation.
@@ -333,10 +395,18 @@ core.build_square_lattice_core(
 )
 
 # Resonance Self-Shielding
-from smrforge.core.reactor_core import get_cross_section_with_self_shielding, Nuclide
+from smrforge.core.self_shielding_integration import get_cross_section_with_self_shielding
+from smrforge.core.reactor_core import Nuclide
 u238 = Nuclide(Z=92, A=238)
 energy, xs = get_cross_section_with_self_shielding(
-    cache, u238, "capture", temperature=900.0, sigma_0=1000.0
+    cache, u238, "capture", temperature=900.0, sigma_0=10.0, method="bondarenko"
+)
+
+# Temperature Interpolation
+from smrforge.core.temperature_interpolation import interpolate_cross_section_temperature, InterpolationMethod
+energy, xs = interpolate_cross_section_temperature(
+    cache, u235, "fission", target_temperature=900.0,
+    method=InterpolationMethod.SPLINE
 )
 
 # Advanced Visualization
@@ -444,7 +514,7 @@ All examples are runnable and include comments explaining each step.
 
 ## Testing
 
-SMRForge has comprehensive test coverage with 76.7% overall coverage (latest verified run) and 75-80%+ on priority modules. All critical modules are well-tested with extensive edge case coverage.
+SMRForge has comprehensive test coverage with **79.2% overall coverage** (January 2026) and 75-80%+ on priority modules. All critical modules are well-tested with extensive edge case coverage.
 
 ### Automated Testing
 
@@ -463,10 +533,11 @@ pytest tests/test_neutronics.py
 ```
 
 **Test Coverage Status:**
-- **Overall Coverage**: 76.7% (up from 35-40%, excellent progress!)
+- **Overall Coverage**: 79.2% (up from 35-40%, excellent progress!)
 - **Priority Modules**: 75-80%+ coverage achieved
 - **All Priority Modules**: Comprehensive test coverage completed
 - **Critical Modules**: All critical modules exceed target coverage (75-80%+)
+- **CLI Coverage**: 71.8% (130+ passing tests covering all major CLI commands)
 - **📌 Coverage Details**: See [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md) for comprehensive coverage status
 
 ### Manual Testing Framework
