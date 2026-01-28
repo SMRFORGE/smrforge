@@ -208,3 +208,31 @@ class TestControlIntegrationExtendedEdgeCases:
         assert isinstance(reactivity, (float, int))
         call_args = mock_load_controller.control_step.call_args[0]
         assert call_args[1] == 1220.0  # Should use temperature
+
+    def test_create_controlled_reactivity_state_power_only_no_temp_update(self, mock_reactor_controller):
+        """Test reactivity when state has only 'power' (no T_fuel/temperature); temp stays initial."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        state = {"power": 0.95e6}  # No temperature or T_fuel
+        reactivity = rho_func(1.0, state)
+        assert isinstance(reactivity, (float, int))
+        call_args = mock_reactor_controller.control_step.call_args[0]
+        assert call_args[0] == 0.95e6
+        assert call_args[1] == 1200.0  # Unchanged from initial
+
+    def test_create_load_following_reactivity_state_power_only_no_temp_update(self, mock_load_controller):
+        """Test load following when state has only 'power'; temperature stays initial."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        state = {"power": 1.1e6}
+        reactivity = rho_func(1.0, state)
+        assert isinstance(reactivity, (float, int))
+        call_args = mock_load_controller.control_step.call_args[0]
+        assert call_args[0] == 1.1e6
+        assert call_args[1] == 1200.0

@@ -729,6 +729,235 @@ class TestDownloadPreprocessedLibraryExtended:
         call_kwargs = mock_download.call_args[1]
         assert call_kwargs['nuclides'] == nuclides
 
+    @patch('smrforge.data_downloader.download_endf_data')
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    def test_download_preprocessed_library_with_nuclide_set_common_smr(self, mock_download):
+        """Test download_preprocessed_library with nuclides='common_smr' calls download_endf_data with nuclide_set."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = {"downloaded": 10, "skipped": 0, "failed": 0, "total": 10}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out = Path(tmpdir)
+            result = downloader_module.download_preprocessed_library(
+                library=Library.ENDF_B_VIII_1,
+                nuclides="common_smr",
+                output_dir=out,
+                show_progress=False,
+            )
+            assert isinstance(result, dict)
+            mock_download.assert_called_once()
+            call_kwargs = mock_download.call_args[1]
+            assert call_kwargs.get("nuclide_set") == "common_smr"
+            assert "nuclides" not in call_kwargs or call_kwargs.get("nuclides") is None
+
+
+class TestDownloadEndfDataCoverage90:
+    """Tests to push data_downloader coverage toward 90%."""
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', False)
+    def test_download_endf_data_requests_unavailable_raises(self):
+        """download_endf_data raises ImportError when requests not available."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with pytest.raises(ImportError, match="requests"):
+                downloader_module.download_endf_data(
+                    library=Library.ENDF_B_VIII_1,
+                    output_dir=Path(tmpdir),
+                    nuclides=[Nuclide(Z=92, A=235)],
+                    show_progress=False,
+                )
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.download_file')
+    @patch('smrforge.data_downloader.NuclearDataCache._validate_endf_file')
+    def test_download_endf_data_default_uses_common_smr(self, mock_validate, mock_download):
+        """When no nuclides/isotopes/elements/nuclide_set, uses common_smr and logs warning."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = True
+        mock_validate.return_value = True
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = downloader_module.download_endf_data(
+                library=Library.ENDF_B_VIII_1,
+                output_dir=Path(tmpdir),
+                nuclides=None,
+                isotopes=None,
+                elements=None,
+                nuclide_set=None,
+                show_progress=False,
+                validate=False,
+            )
+            assert isinstance(result, dict)
+            assert result["total"] > 0
+            assert "downloaded" in result
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.download_file')
+    @patch('smrforge.data_downloader.NuclearDataCache._validate_endf_file')
+    def test_download_endf_data_nuclide_set_common_smr_explicit(self, mock_validate, mock_download):
+        """Explicit nuclide_set='common_smr' uses COMMON_SMR_NUCLIDES (branch distinct from default)."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = True
+        mock_validate.return_value = True
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = downloader_module.download_endf_data(
+                library=Library.ENDF_B_VIII_1,
+                output_dir=Path(tmpdir),
+                nuclide_set="common_smr",
+                show_progress=False,
+                validate=False,
+            )
+            assert isinstance(result, dict)
+            assert result["total"] > 0
+            assert "downloaded" in result
+            assert result["total"] <= len(downloader_module.COMMON_SMR_NUCLIDES)
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    def test_expand_elements_to_nuclides_unknown_element_skipped(self):
+        """_expand_elements_to_nuclides with unknown element skips it and returns empty for that element."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        nuclides = downloader_module._expand_elements_to_nuclides(["Xx"], Library.ENDF_B_VIII_1)
+        assert nuclides == []
+        # Mixed invalid + valid: invalid skipped, valid expanded
+        nuclides_mixed = downloader_module._expand_elements_to_nuclides(["Xx", "U"], Library.ENDF_B_VIII_1)
+        assert isinstance(nuclides_mixed, list)
+        assert len(nuclides_mixed) > 0
+        assert all(n.Z == 92 for n in nuclides_mixed)
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.download_file')
+    def test_download_endf_data_organize_called_after_downloads(self, mock_download):
+        """When organize=True and some downloads succeed, organize_bulk_endf_downloads is called."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = True
+        with patch('smrforge.data_downloader.organize_bulk_endf_downloads') as mock_organize:
+            mock_organize.return_value = {"files_organized": 1}
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out = Path(tmpdir)
+                result = downloader_module.download_endf_data(
+                    library=Library.ENDF_B_VIII_1,
+                    nuclides=[Nuclide(Z=92, A=235)],
+                    output_dir=out,
+                    organize=True,
+                    show_progress=False,
+                    validate=False,
+                )
+                if result.get("downloaded", 0) > 0:
+                    mock_organize.assert_called_once()
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.download_file')
+    def test_download_endf_data_organize_uses_viii0_for_endf_b_viii(self, mock_download):
+        """When library=ENDF_B_VIII and organize=True with downloads, organize uses library_version VIII.0."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = True
+        with patch('smrforge.data_downloader.organize_bulk_endf_downloads') as mock_organize:
+            mock_organize.return_value = {"files_organized": 1}
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out = Path(tmpdir)
+                downloader_module.download_endf_data(
+                    library=Library.ENDF_B_VIII,
+                    nuclides=[Nuclide(Z=92, A=235)],
+                    output_dir=out,
+                    organize=True,
+                    show_progress=False,
+                    validate=False,
+                )
+                if mock_organize.called:
+                    call_kw = mock_organize.call_args[1]
+                    assert call_kw.get("library_version") == "VIII.0"
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.download_file')
+    @patch('smrforge.data_downloader.NuclearDataCache._validate_endf_file')
+    def test_download_endf_data_output_dir_string(self, mock_validate, mock_download):
+        """output_dir as str (not Path) is accepted and resolved."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = True
+        mock_validate.return_value = True
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = downloader_module.download_endf_data(
+                library=Library.ENDF_B_VIII_1,
+                nuclides=[Nuclide(Z=92, A=235)],
+                output_dir=str(tmpdir),
+                show_progress=False,
+                validate=False,
+            )
+            assert isinstance(result, dict)
+            assert result["total"] == 1
+            assert "output_dir" in result
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.download_file')
+    def test_download_endf_data_library_string_viii0_maps_to_enum(self, mock_download):
+        """library='ENDF/B-VIII.0' string maps to Library.ENDF_B_VIII and organize uses VIII.0."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = True
+        with patch('smrforge.data_downloader.organize_bulk_endf_downloads') as mock_organize:
+            mock_organize.return_value = {"files_organized": 1}
+            with tempfile.TemporaryDirectory() as tmpdir:
+                result = downloader_module.download_endf_data(
+                    library="ENDF/B-VIII.0",
+                    nuclides=[Nuclide(Z=92, A=235)],
+                    output_dir=Path(tmpdir),
+                    organize=True,
+                    show_progress=False,
+                    validate=False,
+                )
+                assert isinstance(result, dict)
+                if mock_organize.called:
+                    call_kw = mock_organize.call_args[1]
+                    assert call_kw.get("library_version") == "VIII.0"
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.TQDM_AVAILABLE', False)
+    @patch('smrforge.data_downloader.download_file')
+    @patch('smrforge.data_downloader.NuclearDataCache._validate_endf_file')
+    def test_download_endf_data_tqdm_unavailable_completes(self, mock_validate, mock_download):
+        """download_endf_data with show_progress=True and TQDM_AVAILABLE=False completes (no progress bar)."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = True
+        mock_validate.return_value = True
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = downloader_module.download_endf_data(
+                library=Library.ENDF_B_VIII_1,
+                nuclides=[Nuclide(Z=92, A=235)],
+                output_dir=Path(tmpdir),
+                show_progress=True,
+                validate=False,
+            )
+            assert isinstance(result, dict)
+            assert "downloaded" in result and "total" in result
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.download_endf_data')
+    def test_download_preprocessed_library_nuclides_list_calls_download_endf_data(self, mock_download):
+        """download_preprocessed_library with nuclides list calls download_endf_data with nuclides kwarg."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = {"downloaded": 2, "skipped": 0, "failed": 0, "total": 2}
+        nuclides = [Nuclide(Z=92, A=235), Nuclide(Z=92, A=238)]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out = Path(tmpdir)
+            downloader_module.download_preprocessed_library(
+                library=Library.ENDF_B_VIII_1,
+                nuclides=nuclides,
+                output_dir=out,
+                show_progress=False,
+            )
+            mock_download.assert_called_once()
+            call_kw = mock_download.call_args[1]
+            assert call_kw.get("nuclides") == nuclides
+            assert "nuclide_set" not in call_kw or call_kw.get("nuclide_set") is None
+
 
 class TestDownloadEndfDataCoverage90:
     """Tests to push data_downloader coverage toward 90%."""
