@@ -29,6 +29,14 @@ class SerpentConverter:
         Args:
             reactor: Reactor instance
             output_file: Output file path
+        
+        Raises:
+            OSError: If the output file cannot be written.
+        
+        Example:
+            >>> from pathlib import Path
+            >>> from smrforge.io.converters import SerpentConverter
+            >>> SerpentConverter.export_reactor(reactor, Path("model.inp"))
         """
         # Placeholder implementation
         logger.warning("Serpent export is a placeholder - full implementation pending")
@@ -50,6 +58,15 @@ class SerpentConverter:
         
         Returns:
             Dictionary suitable for create_reactor()
+        
+        Raises:
+            NotImplementedError: Serpent import is not yet implemented.
+            FileNotFoundError: If the input file does not exist.
+        
+        Example:
+            >>> from pathlib import Path
+            >>> from smrforge.io.converters import SerpentConverter
+            >>> # data = SerpentConverter.import_reactor(Path("model.inp"))  # not yet implemented
         """
         logger.warning("Serpent import is a placeholder - full implementation pending")
         raise NotImplementedError("Serpent import not yet implemented")
@@ -70,6 +87,14 @@ class OpenMCConverter:
         Args:
             reactor: Reactor instance
             output_dir: Output directory for geometry.xml and materials.xml
+        
+        Raises:
+            OSError: If the output directory or files cannot be created.
+        
+        Example:
+            >>> from pathlib import Path
+            >>> from smrforge.io.converters import OpenMCConverter
+            >>> OpenMCConverter.export_reactor(reactor, Path("openmc_run"))
         """
         # Placeholder implementation
         logger.warning("OpenMC export is a placeholder - full implementation pending")
@@ -104,6 +129,15 @@ class OpenMCConverter:
         
         Returns:
             Dictionary suitable for create_reactor()
+        
+        Raises:
+            NotImplementedError: OpenMC import is not yet implemented.
+            FileNotFoundError: If geometry_file (or materials_file) does not exist.
+        
+        Example:
+            >>> from pathlib import Path
+            >>> from smrforge.io.converters import OpenMCConverter
+            >>> # data = OpenMCConverter.import_reactor(Path("geometry.xml"))  # not yet implemented
         """
         logger.warning("OpenMC import is a placeholder - full implementation pending")
         raise NotImplementedError("OpenMC import not yet implemented")

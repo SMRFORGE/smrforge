@@ -65,7 +65,7 @@ class TestGenerateMultigroupErrorPaths:
         # Mock get_cross_section to raise ImportError
         mock_cache.get_cross_section = Mock(side_effect=ImportError("Backend not available"))
 
-        # Should skip this reaction and continue
+        # Should skip all reactions and return empty DataFrame
         df = table.generate_multigroup(
             nuclides=[u235],
             reactions=["total", "fission"],
@@ -73,16 +73,10 @@ class TestGenerateMultigroupErrorPaths:
             temperature=900.0,
         )
 
-        # Note: When all reactions fail, arrays are pre-allocated but idx=0,
-        # so DataFrame has rows but they're filled with None/default values
-        # We need to check that no valid data was actually processed
+        # When all reactions fail (idx <= 0), implementation returns empty DataFrame
         assert df is not None
-        # DataFrame will have n_total rows (1 nuclide × 2 reactions × 2 groups = 4)
-        # but nuclide/reaction columns will be None since idx never incremented
-        assert len(df) == 4  # Pre-allocated size
-        # Check that nuclide column is None (indicating no successful processing)
-        nuclide_values = df["nuclide"].drop_nulls().to_list()
-        assert len(nuclide_values) == 0  # No valid nuclide values
+        assert len(df) == 0
+        assert "nuclide" in df.columns and "reaction" in df.columns and "group" in df.columns and "xs" in df.columns
 
     def test_generate_multigroup_file_not_found_error_handling(
         self, temp_cache_dir, mock_cache
@@ -104,12 +98,10 @@ class TestGenerateMultigroupErrorPaths:
             temperature=900.0,
         )
 
-        # DataFrame will have pre-allocated rows but with None/default values
+        # When all reactions fail, implementation returns empty DataFrame
         assert df is not None
-        assert len(df) == 2  # 1 nuclide × 1 reaction × 2 groups = 2 (pre-allocated)
-        # Check that no valid data was processed
-        nuclide_values = df["nuclide"].drop_nulls().to_list()
-        assert len(nuclide_values) == 0
+        assert len(df) == 0
+        assert "nuclide" in df.columns and "reaction" in df.columns
 
     def test_generate_multigroup_value_error_handling(
         self, temp_cache_dir, mock_cache
@@ -129,11 +121,10 @@ class TestGenerateMultigroupErrorPaths:
             temperature=900.0,
         )
 
-        # DataFrame will have pre-allocated rows but with None/default values
+        # When all reactions fail, implementation returns empty DataFrame
         assert df is not None
-        assert len(df) == 2  # 1 nuclide × 1 reaction × 2 groups = 2 (pre-allocated)
-        nuclide_values = df["nuclide"].drop_nulls().to_list()
-        assert len(nuclide_values) == 0
+        assert len(df) == 0
+        assert "nuclide" in df.columns and "xs" in df.columns
 
     def test_generate_multigroup_none_data_handling(
         self, temp_cache_dir, mock_cache
@@ -153,11 +144,9 @@ class TestGenerateMultigroupErrorPaths:
             temperature=900.0,
         )
 
-        # DataFrame will have pre-allocated rows but with None/default values
+        # When all fail (None data), implementation returns empty DataFrame
         assert df is not None
-        assert len(df) == 2  # 1 nuclide × 1 reaction × 2 groups = 2 (pre-allocated)
-        nuclide_values = df["nuclide"].drop_nulls().to_list()
-        assert len(nuclide_values) == 0
+        assert len(df) == 0
 
     def test_generate_multigroup_empty_data_handling(
         self, temp_cache_dir, mock_cache
@@ -177,11 +166,9 @@ class TestGenerateMultigroupErrorPaths:
             temperature=900.0,
         )
 
-        # DataFrame will have pre-allocated rows but with None/default values
+        # When all fail (empty data), implementation returns empty DataFrame
         assert df is not None
-        assert len(df) == 2  # 1 nuclide × 1 reaction × 2 groups = 2 (pre-allocated)
-        nuclide_values = df["nuclide"].drop_nulls().to_list()
-        assert len(nuclide_values) == 0
+        assert len(df) == 0
 
     def test_generate_multigroup_mismatched_array_lengths(
         self, temp_cache_dir, mock_cache
@@ -237,16 +224,11 @@ class TestGenerateMultigroupErrorPaths:
                 temperature=900.0,
             )
 
-            # Should have data for successful reactions
+            # Implementation returns only filled rows (idx), not pre-allocated size
+            # Successful: U235 total(2) + fission(2), U238 total(2) = 6 rows
             assert df is not None
-            assert len(df) > 0
-            # Pre-allocated: 2 nuclides × 2 reactions × 2 groups = 8 rows
-            # Successful: U235: total(2) + fission(2), U238: total(2) = 6 valid rows
-            # Last 2 rows will be None/default (unused pre-allocated space)
-            assert len(df) == 8  # Pre-allocated size
-            # Check that we have 6 valid rows (nuclide not None)
-            valid_rows = df.filter(pl.col("nuclide").is_not_null())
-            assert len(valid_rows) == 6
+            assert len(df) == 6
+            assert df["nuclide"].n_unique() == 2  # U235, U238
 
     def test_generate_multigroup_all_reactions_skipped(
         self, temp_cache_dir, mock_cache
@@ -267,12 +249,9 @@ class TestGenerateMultigroupErrorPaths:
                 temperature=900.0,
             )
 
-            # DataFrame will have pre-allocated rows but with None/default values
+            # When all reactions fail, implementation returns empty DataFrame
             assert df is not None
-            assert len(df) == 6  # 1 nuclide × 3 reactions × 2 groups = 6 (pre-allocated)
-            # Check that no valid data was processed
-            nuclide_values = df["nuclide"].drop_nulls().to_list()
-            assert len(nuclide_values) == 0
+            assert len(df) == 0
 
             # Should log skipped reactions
             mock_logger.info.assert_called()

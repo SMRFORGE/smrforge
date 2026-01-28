@@ -35,12 +35,17 @@ def temp_cache_dir(tmp_path):
 
 @pytest.fixture
 def mock_endf_file_content():
-    """Create minimal valid ENDF file content."""
-    return """ 1.001000+3 1.000000+0          0          0          0          0  1  451     \n
+    """Create minimal valid ENDF file content that passes _validate_endf_file (>=1KB, ENDF marker)."""
+    core = """ 1.001000+3 1.000000+0          0          0          0          0  1  451     \n
  9.223500+4 2.345678+2          0          0          0          0  3  1     \n
  0.000000+0 0.000000+0          0          0          1          2  3  1     \n
  1.000000+5 1.000000+0 1.000000+6 2.000000+0 0.000000+0 0.000000+0  3  1     \n
                                                                     -1  0  0   \n"""
+    # _validate_endf_file requires size >= 1000 and ENDF marker in first 100 bytes
+    blob = "ENDF/B-VIII.0\n" + core
+    while len(blob) < 1000:
+        blob += core
+    return blob
 
 
 @pytest.fixture

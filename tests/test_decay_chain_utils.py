@@ -154,6 +154,14 @@ class TestBuildFissionProductChain:
         # Deeper chain should have more or equal nuclides
         assert len(chain_deep.nuclides) >= len(chain_shallow.nuclides)
 
+    def test_build_fission_product_chain_max_depth_zero(self):
+        """Test build_fission_product_chain with max_depth=0 (only parent, no recursion)."""
+        parent = Nuclide(Z=92, A=235)
+        chain = build_fission_product_chain(parent, max_depth=0)
+        assert isinstance(chain, DecayChain)
+        assert len(chain.nuclides) == 1
+        assert chain.nuclides[0] == parent
+
 
 class TestSolveBatemanEquations:
     """Tests for solve_bateman_equations function."""

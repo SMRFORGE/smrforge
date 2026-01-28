@@ -12,7 +12,7 @@ This document consolidates all roadmap information from multiple sources to prov
 - ⚠️ **Pending Tasks** - What still needs to be done
 - 💡 **Future Features** - Pain point-driven suggestions for reactor development
 
-**Current Status:** SMRForge is **production-ready for alpha** with 79.2% test coverage, comprehensive CLI, and all core functionality implemented. **Phase 1 and Phase 2 features from the consolidated roadmap are now complete** (January 2026), including parameter sweeps, design comparison, checkpointing, templates, and design validation. Remaining work focuses on polish, documentation, and additional workflow enhancements.
+**Current Status:** SMRForge is **production-ready for alpha** with 79.2% test coverage (target: **90%**), comprehensive CLI, and all core functionality implemented. **Phase 1 and Phase 2 features from the consolidated roadmap are now complete** (January 2026), including parameter sweeps, design comparison, checkpointing, templates, and design validation. Path to 90% coverage is documented in [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md#path-to-90-coverage). Remaining work focuses on polish, documentation, and additional workflow enhancements.
 
 ---
 
@@ -44,9 +44,10 @@ This document consolidates all roadmap information from multiple sources to prov
 - ✅ I/O converters framework (Serpent/OpenMC placeholders)
 
 ### Test Coverage
-- ✅ **79.2% overall coverage** (target: 75-80% achieved)
+- ✅ **79.2% overall coverage** (target: **90%** — see [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md))
 - ✅ All priority modules at 75-80%+ coverage
 - ✅ Critical modules exceeding targets (reactor_core.py: 86.5%, endf_parser.py: 97.3%)
+- ✅ Coverage exclusions for advanced modules (hybrid_solver, adaptive_sampling, etc.) to support 90% in-scope target
 
 ---
 
@@ -56,7 +57,7 @@ This document consolidates all roadmap information from multiple sources to prov
 
 #### 1. API Documentation Review (1 week)
 **Status:** ⚠️ Partially Complete  
-**Progress:** Enhanced convenience functions, CLI docstrings improved
+**Progress:** Enhanced convenience functions, CLI docstrings improved. **Raises:** and **Example:** added to `smrforge.io.converters` (SerpentConverter, OpenMCConverter).
 
 **Remaining Work:**
 - Review all public API docstrings for completeness

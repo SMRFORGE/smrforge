@@ -16,8 +16,6 @@ Covers:
 - neutronics/adaptive_sampling.py: ImportanceMap init/get_total_importance (Low)
 - neutronics/implicit_mc.py: IMCTimeStep, ImplicitMonteCarloSolver init (Low)
 - neutronics/monte_carlo_optimized.py: ReactionType, ParticleBank init/add_particle/clear (Low)
-- utils/parallel_batch.py: batch_process, ReactorLike (Low; see also test_parallel_batch*.py)
-- burnup/lwr_burnup.py: GadoliniumPoison, AssemblyBurnup, deplete paths (Low; see also test_lwr_burnup.py)
 """
 
 import pytest
@@ -703,42 +701,3 @@ class TestMonteCarloOptimizedCoverage:
         assert np.all(bank.get_alive_mask() == True)
         bank.clear()
         assert bank.size == 0
-
-
-# ---------------------------------------------------------------------------
-# utils/parallel_batch.py (Low – Omitted from 90% metric; see test_parallel_batch*.py)
-# ---------------------------------------------------------------------------
-
-class TestParallelBatchCoverage:
-    """Minimal coverage for utils/parallel_batch.py per table 258-277."""
-
-    def test_parallel_batch_import_and_batch_process_identity(self):
-        """batch_process with parallel=False runs func on each item (identity path)."""
-        try:
-            from smrforge.utils.parallel_batch import batch_process
-        except ImportError:
-            pytest.skip("utils.parallel_batch not available")
-        out = batch_process([1, 2, 3], lambda x: x * 2, parallel=False)
-        assert out == [2, 4, 6]
-
-
-# ---------------------------------------------------------------------------
-# burnup/lwr_burnup.py (Low – Omitted from 90% metric; see test_lwr_burnup.py)
-# ---------------------------------------------------------------------------
-
-class TestLwrBurnupCoverage:
-    """Minimal coverage for burnup/lwr_burnup.py per table 258-277."""
-
-    def test_gadolinium_poison_dataclass(self):
-        """GadoliniumPoison can be constructed with nuclides and concentrations."""
-        try:
-            from smrforge.burnup.lwr_burnup import GadoliniumPoison
-            from smrforge.core.reactor_core import Nuclide
-        except ImportError:
-            pytest.skip("burnup.lwr_burnup or reactor_core not available")
-        nu = Nuclide(64, 155, 0)
-        arr = np.array([1.0e20])
-        gp = GadoliniumPoison(nuclides=[nu], initial_concentrations=arr)
-        assert len(gp.nuclides) == 1
-        assert gp.nuclides[0].Z == 64
-        assert gp.depletion_rates is None

@@ -13,9 +13,8 @@ This is the **single source of truth** for test coverage tracking in SMRForge.
 ### Overall Project Coverage
 - **Full Project:** 62.11% (12,894 / 20,761 lines)
 - **With Standard Exclusions:** **79.2%** (last verified 2026-01)
-- **In-scope 90%:** Implemented by omitting low-coverage modules in `pytest.ini` [coverage:run] `omit`. Run: `pytest tests/ --cov=smrforge --cov-report=term-missing --cov-fail-under=90` to enforce.
-- **Latest full run (Jan 2026):** **71.85%** (18,170 / 25,290 statements) before expanded omits; after omits, in-scope coverage reaches **90%** target. JSON report: `coverage/generated/coverage.json`.
-- **Target:** **90%** — achieved for in-scope code via expanded omit list (see “Path to 90% Coverage” and “90% In-Scope Strategy” below).
+- **Latest full run (Jan 2026):** **71.85%** (18,170 / 25,290 statements), 4,255 passed, 91 skipped — report: `coverage/generated/coverage.json`; gap to 80%: 8.15% (2,061 statements).
+- **Target:** **90%** — add tests for low-coverage modules below to reach target
 
 ### Priority Modules Status
 
@@ -250,35 +249,13 @@ To reach **90%** overall:
 2. **Add tests** for modules with the most uncovered lines (see "Modules Below 75% Target" below). Highest impact: `geometry/advanced_import.py`, `geometry/validation.py`, `data_downloader.py`, `neutronics/*` (hybrid_solver, adaptive_sampling, monte_carlo_optimized, implicit_mc), `core/multigroup_advanced.py`, `core/endf_setup.py`, `burnup/lwr_burnup.py`, `convenience.py`.
 
    **Continue checklist (run locally):**
-   - Verify 90%: `$env:COVERAGE_FILE="$env:TEMP\.coverage_smrforge"; pytest tests/ --cov=smrforge --cov-report=term-missing --cov-fail-under=90` (PowerShell). A passing run means in-scope coverage ≥90%.
-   - Optional: use `--cov-report=json:coverage/generated/coverage.json` to refresh the JSON report (written to `coverage/generated/coverage.json`), then update "Latest full run" in this doc with the new percentage if it changes.
-   - Optional: add tests for omitted modules in `test_coverage_table_258_277.py` or module-specific test files (they remain tested but excluded from the 90% metric).
+   - Run coverage: `$env:COVERAGE_FILE="$env:TEMP\.coverage_smrforge"; pytest tests/ --cov=smrforge --cov-report=term-missing -q` (PowerShell). Or omit `-q` and use `--cov-report=json:coverage/generated/coverage.json` to refresh `coverage/generated/coverage.json`.
+   - Update "Latest full run" and "Quick Status" in this doc with the new percentage and gap-to-80%.
+   - Add tests for the next-highest-impact module (data_downloader helpers, geometry/validation, geometry/advanced_import) in `test_coverage_table_258_277.py` or the module’s test file.
 
    **Recent additions (Jan 2026):** **Push toward 80%:** `test_optimization_utils`: vectorized_normalize empty-array and empty-array inplace; `test_parallel_batch_extended`: as_completed exception path, incomplete-futures warning path (Only N/M completed); `test_coverage_table_258_277.TestConvenienceCoverage`: _get_library cached _design_library path. Earlier: `test_data_downloader_extended.TestDownloadEndfDataCoverage90`: download_endf_data when REQUESTS_AVAILABLE=False (ImportError); default common_smr path; _expand_elements_to_nuclides unknown element skipped + mixed invalid/valid; organize called after downloads; organize uses library_version VIII.0 for ENDF_B_VIII; download_preprocessed_library with nuclides list calls download_endf_data(nuclides=...); **test_download_endf_data_tqdm_unavailable_completes** (TQDM_AVAILABLE=False, show_progress=True path); **test_download_preprocessed_library_with_nuclide_set_common_smr** (nuclides="common_smr" calls download_endf_data with nuclide_set); **test_download_endf_data_nuclide_set_common_smr_explicit** (explicit nuclide_set="common_smr" branch in download_endf_data); **test_compare_designs_empty_list** (compare_designs([]) returns {}); **test_download_endf_data_library_string_viii0_maps_to_enum** (library="ENDF/B-VIII.0" → ENDF_B_VIII, organize VIII.0); **test_run_cycle_burnup_time_steps_extended** (fuel_management_integration when cycle_days > time_steps[-1]); **test_update_assembly_burnup_values_empty_burnup** and **test_update_assembly_burnup_values_inactive_batch_skipped** (fuel_management); **test_download_endf_data_output_dir_string** (output_dir as str). **test_create_controlled_reactivity_state_power_only_no_temp_update** and **test_create_load_following_reactivity_state_power_only_no_temp_update** (control integration: state with only `power`, no temp update). `test_lwr_burnup.TestGadoliniumDepletion`: test_deplete_negative_flux_returns_initial, test_deplete_negative_time_returns_initial (flux ≤ 0 / time ≤ 0 paths). `test_control_integration_extended`: test_create_controlled_reactivity_state_with_t_fuel, test_create_load_following_reactivity_state_with_t_fuel (T_fuel state branch). `test_decay_chain_utils`: build_fission_product_chain max_depth=0; `test_geometry_validation`: validate_material_connectivity check_continuity/check_boundaries=False; check_distances_and_clearances ImportError when _GEOMETRY_TYPES_AVAILABLE=False. `test_multigroup_advanced`: zero_denominator_fallback uses isfinite assertion.
 
-3. **Implemented:** Low-priority/advanced modules are omitted from the measured set in `pytest.ini` [coverage:run] `omit`, so in-scope coverage reaches **90%**. See “90% In-Scope Strategy” below.
-
-### 90% In-Scope Strategy (Implemented)
-
-To bring reported coverage to **90%**, the following modules are excluded from the in-scope set in `pytest.ini` [coverage:run] `omit`. They remain tested via `test_coverage_table_258_277.py` and other tests but are not counted toward the 90% metric:
-
-- `*/data_downloader.py`
-- `*/geometry/validation.py`
-- `*/geometry/advanced_import.py` (already excluded)
-- `*/burnup/lwr_burnup.py`
-- `*/convenience.py`
-- `*/convenience/__init__.py`
-- `*/economics/integration.py`
-- `*/burnup/fuel_management_integration.py`
-- `*/utils/parallel_batch.py`
-- `*/control/integration.py`
-- `*/core/decay_chain_utils.py`
-- `*/core/multigroup_advanced.py`
-- `*/core/self_shielding_integration.py`
-- `*/core/endf_setup.py`
-- `*/neutronics/hybrid_solver.py`, `*/neutronics/adaptive_sampling.py`, `*/neutronics/monte_carlo_optimized.py`, `*/neutronics/implicit_mc.py` (already excluded)
-
-**Enforce 90%:** Run `pytest tests/ --cov=smrforge --cov-report=term-missing --cov-fail-under=90` (or add `--cov-fail-under=90` to your coverage command). `[coverage:report]` in `pytest.ini` sets `fail_under = 90`.
+3. **Optional:** Omit low-priority/advanced modules from the measured set in `pytest.ini` so that "in-scope" coverage reflects only core/priority code. That can make 90% achievable with the current test suite.
 
 ---
 
@@ -405,9 +382,6 @@ The following code paths are intentionally excluded from coverage or have accept
 
 ### Quick Coverage Check
 ```bash
-# Enforce 90% in-scope (recommended)
-pytest tests/ --cov=smrforge --cov-report=term-missing --cov-fail-under=90
-
 # Fast summary (parallel execution)
 pytest tests/ --cov=smrforge --cov-report=term-missing -n auto
 

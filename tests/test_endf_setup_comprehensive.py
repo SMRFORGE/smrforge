@@ -475,3 +475,24 @@ class TestEndfSetupEdgeCases:
         except ImportError:
             pytest.skip("endf_setup module not available")
 
+    def test_validate_endf_setup_no_valid_files(self, tmp_path):
+        """Test validate_endf_setup when scan returns zero valid files."""
+        try:
+            from smrforge.core.endf_setup import validate_endf_setup
+
+            (tmp_path / "endf_empty").mkdir()
+            with patch('smrforge.core.endf_setup.scan_endf_directory') as mock_scan:
+                mock_scan.return_value = {
+                    'total_files': 0,
+                    'valid_files': 0,
+                    'directory_structure': 'flat',
+                    'library_versions': [],
+                    'nuclides': [],
+                }
+                is_valid, results = validate_endf_setup(tmp_path / "endf_empty")
+                assert is_valid is False
+                assert "No valid ENDF files found" in results["errors"]
+                assert results["valid_files"] == 0
+        except ImportError:
+            pytest.skip("endf_setup module not available")
+

@@ -514,7 +514,7 @@ All examples are runnable and include comments explaining each step.
 
 ## Testing
 
-SMRForge has comprehensive test coverage with **79.2% overall coverage** (January 2026) and 75-80%+ on priority modules. All critical modules are well-tested with extensive edge case coverage.
+SMRForge has comprehensive test coverage with **79.2% overall** (January 2026) and a **90% coverage target**. Priority modules are at 75-80%+; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md) for the path to 90% and module-level details.
 
 ### Automated Testing
 
@@ -533,7 +533,8 @@ pytest tests/test_neutronics.py
 ```
 
 **Test Coverage Status:**
-- **Overall Coverage**: 79.2% (up from 35-40%, excellent progress!)
+- **Overall Coverage**: 79.2% (target: **90%**)
+- **Path to 90%**: Add tests for low-coverage modules; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md#path-to-90-coverage)
 - **Priority Modules**: 75-80%+ coverage achieved
 - **All Priority Modules**: Comprehensive test coverage completed
 - **Critical Modules**: All critical modules exceed target coverage (75-80%+)

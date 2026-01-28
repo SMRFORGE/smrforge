@@ -183,6 +183,12 @@ class TestCompareDesigns:
             for name in presets[:2]:
                 assert name in results
 
+    def test_compare_designs_empty_list(self):
+        """Test compare_designs with empty list returns empty dict."""
+        results = compare_designs([])
+        assert isinstance(results, dict)
+        assert len(results) == 0
+
 
 class TestSimpleReactorAdditional:
     """Additional tests for SimpleReactor methods."""

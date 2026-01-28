@@ -245,6 +245,40 @@ class TestValidationReport:
         assert "Warnings: 1" in summary
         assert "Info: 1" in summary
 
+    def test_validation_report_summary_valid(self):
+        """Test summary string when report is valid (no errors)."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        report = ValidationReport()
+        report.add_warning("W1")
+        report.add_info("I1")
+        summary = report.summary()
+        assert "VALID" in summary
+        assert "Warnings: 1" in summary
+        assert "Info: 1" in summary
+
+    def test_validation_report_summary_with_gaps_and_issues(self):
+        """Test summary includes gaps, connectivity, clearance, assembly, control_rod counts."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        report = ValidationReport()
+        report.gaps.append(
+            Gap(
+                element1_id="A", element2_id="B", distance=40.0, expected_distance=36.0,
+                gap_size=4.0, location=Point3D(0, 0, 0),
+            )
+        )
+        report.connectivity_issues.append("c1")
+        report.clearance_issues.append("cl1")
+        report.assembly_issues.append("a1")
+        report.control_rod_issues.append("cr1")
+        summary = report.summary()
+        assert "Gaps: 1" in summary
+        assert "Connectivity Issues: 1" in summary
+        assert "Clearance Issues: 1" in summary
+        assert "Assembly Issues: 1" in summary
+        assert "Control Rod Issues: 1" in summary
+
 
 class TestValidateGeometryCompleteness:
     """Test validate_geometry_completeness function."""
@@ -337,6 +371,29 @@ class TestValidateGeometryCompleteness:
         report = validate_geometry_completeness(core)
         
         assert any("Unusual packing fraction" in warn for warn in report.warnings)
+
+    def test_validate_pebble_bed_core_packing_zero_or_negative(self):
+        """Test validation with packing fraction <= 0 (invalid)."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        core = PebbleBedCore(name="Zero-PebbleBed")
+        core.core_diameter = 200.0
+        core.core_height = 800.0
+        core.packing_fraction = 0.0
+        report = validate_geometry_completeness(core)
+        assert not report.valid
+        assert any("Invalid packing" in err for err in report.errors)
+
+    def test_validate_pebble_bed_core_unusual_packing_high(self):
+        """Test validation with packing fraction > 0.75 (unusual)."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        core = PebbleBedCore(name="High-PebbleBed")
+        core.core_diameter = 200.0
+        core.core_height = 800.0
+        core.packing_fraction = 0.80
+        report = validate_geometry_completeness(core)
+        assert any("Unusual packing" in warn for warn in report.warnings)
     
     def test_validate_geometry_unavailable(self):
         """Test validation when geometry types unavailable."""
@@ -382,6 +439,20 @@ class TestCheckGapsAndBoundaries:
         gaps = check_gaps_and_boundaries([block])
         
         assert len(gaps) == 0
+
+    def test_check_gaps_far_blocks_skipped(self):
+        """Test that blocks far apart (dist >= expected_dist * 1.5) are not added as gaps."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        block1 = GraphiteBlock(
+            id=1, position=Point3D(0, 0, 0), flat_to_flat=36.0, height=800.0,
+        )
+        block2 = GraphiteBlock(
+            id=2, position=Point3D(200.0, 0, 0), flat_to_flat=36.0, height=800.0,
+        )
+        # expected_dist=36, 1.5*36=54; dist=200 > 54 so no gap added
+        gaps = check_gaps_and_boundaries([block1, block2])
+        assert len(gaps) == 0
     
     def test_check_gaps_unavailable(self):
         """Test gap checking when geometry types unavailable."""
@@ -421,6 +492,17 @@ class TestValidateMaterialConnectivity:
         
         # Should find isolated block warning
         assert any("isolated" in issue.lower() for issue in report.connectivity_issues)
+
+    def test_validate_material_connectivity_checks_disabled(self, simple_prismatic_core):
+        """Test validate_material_connectivity with check_continuity and check_boundaries False."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        report = validate_material_connectivity(
+            simple_prismatic_core, check_continuity=False, check_boundaries=False
+        )
+        assert isinstance(report, ValidationReport)
+        assert report.valid is True
+        assert len(report.connectivity_issues) == 0
     
     def test_validate_connectivity_unavailable(self):
         """Test connectivity validation when geometry types unavailable."""
