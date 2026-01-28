@@ -772,6 +772,46 @@ class TestDownloadEndfDataCoverage90:
             assert "downloaded" in result
 
     @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    def test_get_endf_url_isomer_includes_meta_suffix(self):
+        """_get_endf_url with m>0 (isomer) includes m{N} suffix in filename."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        isomer = Nuclide(Z=92, A=239, m=1)
+        url = downloader_module._get_endf_url(isomer, Library.ENDF_B_VIII_1)
+        assert "m1" in url
+        assert url.endswith("n-092_U_239m1.endf") or "239m1" in url or "_239m1.endf" in url
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    def test_get_download_urls_default_iaea_first(self):
+        """_get_download_urls returns IAEA first when cache is empty or prefers iaea (default branch)."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        nuclide = Nuclide(Z=92, A=235)
+        try:
+            downloader_module._source_cache.pop(Library.ENDF_B_VIII_1.value, None)
+            urls = _get_download_urls(nuclide, Library.ENDF_B_VIII_1)
+            assert len(urls) == 2
+            assert "iaea" in urls[0].lower() or "nds.iaea" in urls[0]
+            assert "nndc.bnl.gov" in urls[1]
+        finally:
+            downloader_module._source_cache.pop(Library.ENDF_B_VIII_1.value, None)
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    def test_get_download_urls_prefers_nndc_when_cached(self):
+        """_get_download_urls returns NNDC first when _source_cache prefers nndc."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        nuclide = Nuclide(Z=92, A=235)
+        try:
+            downloader_module._source_cache[Library.ENDF_B_VIII_1.value] = "nndc"
+            urls = _get_download_urls(nuclide, Library.ENDF_B_VIII_1)
+            assert len(urls) == 2
+            assert "nndc.bnl.gov" in urls[0]
+            assert "iaea" in urls[1].lower() or "nds.iaea" in urls[1]
+        finally:
+            downloader_module._source_cache.pop(Library.ENDF_B_VIII_1.value, None)
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
     def test_expand_elements_to_nuclides_unknown_element_skipped(self):
         """_expand_elements_to_nuclides with unknown element skips it and returns empty for that element."""
         if not DATA_DOWNLOADER_AVAILABLE:
@@ -828,6 +868,27 @@ class TestDownloadEndfDataCoverage90:
                 if mock_organize.called:
                     call_kw = mock_organize.call_args[1]
                     assert call_kw.get("library_version") == "VIII.0"
+
+    @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
+    @patch('smrforge.data_downloader.TQDM_AVAILABLE', False)
+    @patch('smrforge.data_downloader.download_file')
+    @patch('smrforge.data_downloader.NuclearDataCache._validate_endf_file')
+    def test_download_endf_data_tqdm_unavailable_completes(self, mock_validate, mock_download):
+        """download_endf_data with show_progress=True and TQDM_AVAILABLE=False completes (no progress bar)."""
+        if not DATA_DOWNLOADER_AVAILABLE:
+            pytest.skip("Data downloader module not available")
+        mock_download.return_value = True
+        mock_validate.return_value = True
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = downloader_module.download_endf_data(
+                library=Library.ENDF_B_VIII_1,
+                nuclides=[Nuclide(Z=92, A=235)],
+                output_dir=Path(tmpdir),
+                show_progress=True,
+                validate=False,
+            )
+            assert isinstance(result, dict)
+            assert "downloaded" in result and "total" in result
 
     @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
     @patch('smrforge.data_downloader.download_endf_data')
@@ -958,13 +1019,20 @@ class TestHelperFunctionsAdditional:
         # Should not add to cache
         assert Library.ENDF_B_VIII_1.value not in downloader_module._source_cache
         
-        # Test URL with partial match
+        # Test URL with partial match (nndc)
         downloader_module._cache_successful_source(
             "https://www.nndc.bnl.gov/other/path/file.endf",
             Library.ENDF_B_VIII_1
         )
         # Should cache as nndc
         assert downloader_module._source_cache.get(Library.ENDF_B_VIII_1.value) == "nndc"
+
+        # Test URL with iaea.org (covers "iaea" branch)
+        downloader_module._cache_successful_source(
+            "https://www-nds.iaea.org/exfor/endf/endfb8.1/n-092_U_235.endf",
+            Library.ENDF_B_VIII_1
+        )
+        assert downloader_module._source_cache.get(Library.ENDF_B_VIII_1.value) == "iaea"
     
     @patch('smrforge.data_downloader.REQUESTS_AVAILABLE', True)
     @patch('smrforge.data_downloader.requests')
