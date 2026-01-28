@@ -13,6 +13,7 @@ This is the **single source of truth** for test coverage tracking in SMRForge.
 ### Overall Project Coverage
 - **Full Project:** 62.11% (12,894 / 20,761 lines)
 - **With Standard Exclusions:** **79.2%** (last verified 2026-01)
+- **Latest full run (Jan 2026):** **71.85%** (18,170 / 25,290 statements), 4,255 passed, 91 skipped — report: `coverage/generated/coverage.json`; gap to 80%: 8.15% (2,061 statements).
 - **Target:** **90%** — add tests for low-coverage modules below to reach target
 
 ### Priority Modules Status
@@ -245,7 +246,7 @@ To reach **90%** overall:
    pytest tests/ --cov=smrforge --cov-report=term-missing --cov-fail-under=90
    ```
 
-2. **Add tests** for modules with the most uncovered lines (see "Modules Below 75% Target" below). Highest impact: `geometry/advanced_import.py`, `geometry/validation.py`, `data_downloader.py`, `neutronics/*` (hybrid_solver, adaptive_sampling, monte_carlo_optimized, implicit_mc), `core/multigroup_advanced.py`, `core/endf_setup.py`, `burnup/lwr_burnup.py`, `convenience.py`. **Recent additions (Jan 2026):** `test_data_downloader_extended.TestDownloadEndfDataCoverage90`: download_endf_data when REQUESTS_AVAILABLE=False (ImportError); default common_smr path; _expand_elements_to_nuclides unknown element skipped + mixed invalid/valid; organize called after downloads; organize uses library_version VIII.0 for ENDF_B_VIII; download_preprocessed_library with nuclides list calls download_endf_data(nuclides=...); **test_download_endf_data_tqdm_unavailable_completes** (TQDM_AVAILABLE=False, show_progress=True path); **test_download_preprocessed_library_with_nuclide_set_common_smr** (nuclides="common_smr" calls download_endf_data with nuclide_set); **test_download_endf_data_nuclide_set_common_smr_explicit** (explicit nuclide_set="common_smr" branch in download_endf_data); **test_compare_designs_empty_list** (compare_designs([]) returns {}); **test_download_endf_data_library_string_viii0_maps_to_enum** (library="ENDF/B-VIII.0" → ENDF_B_VIII, organize VIII.0); **test_run_cycle_burnup_time_steps_extended** (fuel_management_integration when cycle_days > time_steps[-1]); **test_update_assembly_burnup_values_empty_burnup** and **test_update_assembly_burnup_values_inactive_batch_skipped** (fuel_management); **test_download_endf_data_output_dir_string** (output_dir as str). **test_create_controlled_reactivity_state_power_only_no_temp_update** and **test_create_load_following_reactivity_state_power_only_no_temp_update** (control integration: state with only `power`, no temp update). `test_lwr_burnup.TestGadoliniumDepletion`: test_deplete_negative_flux_returns_initial, test_deplete_negative_time_returns_initial (flux ≤ 0 / time ≤ 0 paths). `test_control_integration_extended`: test_create_controlled_reactivity_state_with_t_fuel, test_create_load_following_reactivity_state_with_t_fuel (T_fuel state branch). `test_decay_chain_utils`: build_fission_product_chain max_depth=0; `test_geometry_validation`: validate_material_connectivity check_continuity/check_boundaries=False; check_distances_and_clearances ImportError when _GEOMETRY_TYPES_AVAILABLE=False. `test_multigroup_advanced`: zero_denominator_fallback uses isfinite assertion.
+2. **Add tests** for modules with the most uncovered lines (see "Modules Below 75% Target" below). Highest impact: `geometry/advanced_import.py`, `geometry/validation.py`, `data_downloader.py`, `neutronics/*` (hybrid_solver, adaptive_sampling, monte_carlo_optimized, implicit_mc), `core/multigroup_advanced.py`, `core/endf_setup.py`, `burnup/lwr_burnup.py`, `convenience.py`. **Recent additions (Jan 2026):** **Push toward 80%:** `test_optimization_utils`: vectorized_normalize empty-array and empty-array inplace; `test_parallel_batch_extended`: as_completed exception path, incomplete-futures warning path (Only N/M completed); `test_coverage_table_258_277.TestConvenienceCoverage`: _get_library cached _design_library path. Earlier: `test_data_downloader_extended.TestDownloadEndfDataCoverage90`: download_endf_data when REQUESTS_AVAILABLE=False (ImportError); default common_smr path; _expand_elements_to_nuclides unknown element skipped + mixed invalid/valid; organize called after downloads; organize uses library_version VIII.0 for ENDF_B_VIII; download_preprocessed_library with nuclides list calls download_endf_data(nuclides=...); **test_download_endf_data_tqdm_unavailable_completes** (TQDM_AVAILABLE=False, show_progress=True path); **test_download_preprocessed_library_with_nuclide_set_common_smr** (nuclides="common_smr" calls download_endf_data with nuclide_set); **test_download_endf_data_nuclide_set_common_smr_explicit** (explicit nuclide_set="common_smr" branch in download_endf_data); **test_compare_designs_empty_list** (compare_designs([]) returns {}); **test_download_endf_data_library_string_viii0_maps_to_enum** (library="ENDF/B-VIII.0" → ENDF_B_VIII, organize VIII.0); **test_run_cycle_burnup_time_steps_extended** (fuel_management_integration when cycle_days > time_steps[-1]); **test_update_assembly_burnup_values_empty_burnup** and **test_update_assembly_burnup_values_inactive_batch_skipped** (fuel_management); **test_download_endf_data_output_dir_string** (output_dir as str). **test_create_controlled_reactivity_state_power_only_no_temp_update** and **test_create_load_following_reactivity_state_power_only_no_temp_update** (control integration: state with only `power`, no temp update). `test_lwr_burnup.TestGadoliniumDepletion`: test_deplete_negative_flux_returns_initial, test_deplete_negative_time_returns_initial (flux ≤ 0 / time ≤ 0 paths). `test_control_integration_extended`: test_create_controlled_reactivity_state_with_t_fuel, test_create_load_following_reactivity_state_with_t_fuel (T_fuel state branch). `test_decay_chain_utils`: build_fission_product_chain max_depth=0; `test_geometry_validation`: validate_material_connectivity check_continuity/check_boundaries=False; check_distances_and_clearances ImportError when _GEOMETRY_TYPES_AVAILABLE=False. `test_multigroup_advanced`: zero_denominator_fallback uses isfinite assertion.
 
 3. **Optional:** Omit low-priority/advanced modules from the measured set in `pytest.ini` so that "in-scope" coverage reflects only core/priority code. That can make 90% achievable with the current test suite.
 
@@ -258,30 +259,32 @@ To reach **90%** overall:
 | Module | Coverage | Missing Lines | Priority | Action |
 |--------|----------|---------------|----------|--------|
 | `utils/logging.py` | **~75%+** ✅ | ~5 | ✅ **IMPROVED** | 27 additional tests added |
-| `economics/integration.py` | 0.00% | 19 | 🟢 Low | Not critical |
-| `data_downloader.py` | 13.08% | 206 | 🟡 Medium | Helper functions tested |
-| `neutronics/hybrid_solver.py` | 15.97% | 121 | 🟢 Low | Advanced feature |
-| `neutronics/adaptive_sampling.py` | 16.28% | 144 | 🟢 Low | Advanced feature |
-| `burnup/fuel_management_integration.py` | 16.46% | 66 | 🟢 Low | Integration code |
-| `neutronics/monte_carlo_optimized.py` | 16.67% | 260 | 🟢 Low | Performance code |
-| `utils/parallel_batch.py` | 17.19% | 53 | 🟢 Low | Covered by tests |
-| `control/integration.py` | 18.75% | 26 | 🟢 Low | Integration code |
-| `core/decay_chain_utils.py` | 19.77% | 69 | 🟢 Low | Utility function |
-| `neutronics/implicit_mc.py` | 21.74% | 72 | 🟢 Low | Advanced feature |
+| `economics/integration.py` | 0.00% | 19 | 🟢 Low | Not critical; **implemented:** `test_coverage_table_258_277.TestEconomicsIntegrationCoverage` (import path) |
+| `data_downloader.py` | 13.08% | 206 | 🟡 Medium | Helper functions tested; **implemented:** `test_coverage_table_258_277.TestDataDownloaderHelperCoverage` |
+| `neutronics/hybrid_solver.py` | 15.97% | 121 | 🟢 Low | Advanced feature; **implemented:** RegionPartition init in `test_coverage_table_258_277.TestNeutronicsAdvancedCoverage` |
+| `neutronics/adaptive_sampling.py` | 16.28% | 144 | 🟢 Low | Advanced feature; **implemented:** ImportanceMap init/get_total_importance in `test_coverage_table_258_277.TestNeutronicsAdvancedCoverage` |
+| `burnup/fuel_management_integration.py` | 16.46% | 66 | 🟢 Low | Integration code; **implemented:** BurnupFuelManagerIntegration init in `test_coverage_table_258_277.TestFuelManagementIntegrationCoverage` |
+| `neutronics/monte_carlo_optimized.py` | 16.67% | 260 | 🟢 Low | Performance code; **implemented:** ReactionType, ParticleBank init/add_particle/clear in `test_coverage_table_258_277.TestMonteCarloOptimizedCoverage` |
+| `utils/parallel_batch.py` | 17.19% | 53 | 🟢 Low | **implemented:** as_completed exception, incomplete-futures warning in `test_parallel_batch_extended` |
+| `control/integration.py` | 18.75% | 26 | 🟢 Low | Integration code (covered by test_control_integration*.py) |
+| `core/decay_chain_utils.py` | 19.77% | 69 | 🟢 Low | Utility function (build_fission_product_chain max_depth=0 in test_decay_chain_utils) |
+| `neutronics/implicit_mc.py` | 21.74% | 72 | 🟢 Low | Advanced feature; **implemented:** IMCTimeStep, ImplicitMonteCarloSolver init in `test_coverage_table_258_277.TestImplicitMcCoverage` |
 | `utils/optimization_utils.py` | 22.22% | 35 | ✅ | Actually 97.8% (see above) |
-| `convenience.py` | 23.44% | 98 | 🟢 Low | Convenience wrapper |
-| `geometry/validation.py` | 30.27% | 205 | 🟡 Medium | Consider improvement |
-| `geometry/advanced_import.py` | 33.65% | 282 | 🟡 Medium | Complex feature |
-| `burnup/lwr_burnup.py` | 34.03% | 95 | 🟢 Low | LWR-specific |
-| `convenience/__init__.py` | 36.51% | 40 | 🟢 Low | Import wrapper |
+| `convenience.py` | 23.44% | 98 | 🟢 Low | Convenience wrapper; **implemented:** `test_coverage_table_258_277.TestConvenienceCoverage` (+ _get_library cached path) |
+| `geometry/validation.py` | 30.27% | 205 | 🟡 Medium | Consider improvement; **implemented:** Gap severity branches, check_distances_and_clearances ImportError in `test_coverage_table_258_277.TestGeometryValidationCoverage` |
+| `geometry/advanced_import.py` | 33.65% | 282 | 🟡 Medium | Complex feature; **implemented:** _is_numeric, CSGSurface, CSGCell, Lattice, GeometryConverter unsupported format in `test_coverage_table_258_277.TestAdvancedImportCoverage` |
+| `burnup/lwr_burnup.py` | 34.03% | 95 | 🟢 Low | LWR-specific (test_deplete_negative_flux/time in test_lwr_burnup) |
+| `convenience/__init__.py` | 36.51% | 40 | 🟢 Low | Import wrapper; **implemented:** _get_library ImportError path in `test_coverage_table_258_277.TestConvenienceInitCoverage` |
 | `validation/regulatory_traceability.py` | **~75%+** ✅ | ~20 | ✅ **IMPROVED** | 31 additional tests added |
 | `validation/standards_parser.py` | **~75%+** ✅ | ~30 | ✅ **IMPROVED** | 31 additional tests added |
 | `utils/units.py` | 45.61% | 31 | ✅ | Actually ~75% (see above) |
-| `core/multigroup_advanced.py` | 50.89% | 110 | 🟢 Low | Advanced feature |
-| `core/self_shielding_integration.py` | 52.05% | 35 | 🟢 Low | Integration code |
-| `core/endf_setup.py` | 52.40% | 99 | 🟢 Low | Setup code |
+| `core/multigroup_advanced.py` | 50.89% | 110 | 🟢 Low | Advanced feature; **implemented:** SPHFactors, SPHMethod init in `test_coverage_table_258_277.TestMultigroupAdvancedCoverage` |
+| `core/self_shielding_integration.py` | 52.05% | 35 | 🟢 Low | Integration code; **implemented:** _RESONANCE_AVAILABLE=False path in `test_coverage_table_258_277.TestSelfShieldingIntegrationCoverage` |
+| `core/endf_setup.py` | 52.40% | 99 | 🟢 Low | Setup code; **implemented:** print_* helpers, validate_endf_setup(nonexistent) in `test_coverage_table_258_277.TestEndfSetupCoverage` |
 
 **Note:** Some modules shown as low coverage may have comprehensive tests but appear low due to exclusions or test configuration differences.
+
+**Implementation (Jan 2026):** Table rows 258–277 are implemented via `tests/test_coverage_table_258_277.py`, adding 30 tests: geometry/advanced_import (_is_numeric, CSGSurface, CSGCell, Lattice, GeometryConverter), geometry/validation (Gap severity, check_distances_and_clearances ImportError, ValidationReport add_error/add_warning/add_info/summary), data_downloader helper coverage, convenience, convenience/__init__ (_get_library ImportError when _PRESETS_AVAILABLE=False), economics.integration import path, burnup/fuel_management_integration (BurnupFuelManagerIntegration init), core/endf_setup (print_* helpers, validate_endf_setup for nonexistent dir), core/self_shielding_integration (_RESONANCE_AVAILABLE=False path), core/multigroup_advanced (SPHFactors, SPHMethod init), neutronics/hybrid_solver (RegionPartition), neutronics/adaptive_sampling (ImportanceMap init/get_total_importance), neutronics/implicit_mc (IMCTimeStep, ImplicitMonteCarloSolver init), neutronics/monte_carlo_optimized (ReactionType, ParticleBank init/add_particle/clear).
 
 ---
 
@@ -313,8 +316,8 @@ The following code paths are intentionally excluded from coverage or have accept
 
 ### Overall Test Count
 - **Total Test Files:** 197+ test files
-- **Total Tests:** 1089+ individual tests
-- **Coverage Tests Added (Jan 2026):** 389+ new tests (includes latest improvements)
+- **Total Tests:** 1100+ individual tests
+- **Coverage Tests Added (Jan 2026):** 424+ new tests (includes test_coverage_table_258_277.py – 31 tests; test_optimization_utils +2; test_parallel_batch_extended +2 for table 258–277 and push toward 80%)
 
 ### Test Distribution
 - **Core Modules:** 150+ tests
@@ -364,6 +367,7 @@ The following code paths are intentionally excluded from coverage or have accept
 - `test_utils_init.py` - 5 tests
 - `test_version.py` - 3 tests
 - `test_help.py` - 31 tests
+- `test_coverage_table_258_277.py` - 30 tests (implements table 258–277: geometry/advanced_import, geometry/validation, data_downloader, convenience, convenience/__init__, economics.integration, burnup/fuel_management_integration, core/endf_setup, core/self_shielding_integration, core/multigroup_advanced, neutronics/hybrid_solver, neutronics/adaptive_sampling, neutronics/implicit_mc, neutronics/monte_carlo_optimized)
 
 ---
 

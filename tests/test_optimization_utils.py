@@ -134,6 +134,23 @@ class TestVectorizedNormalize:
         # Should not crash, result should be finite
         assert np.all(np.isfinite(result))
 
+    def test_vectorized_normalize_empty_array(self):
+        """Test normalization with empty array (size 0)."""
+        arr = np.array([])
+        result = vectorized_normalize(arr)
+        
+        assert result.size == 0
+        assert result is not arr  # copy when not inplace
+        assert result.dtype == arr.dtype
+
+    def test_vectorized_normalize_empty_array_inplace(self):
+        """Test in-place normalization with empty array."""
+        arr = np.array([])
+        result = vectorized_normalize(arr, inplace=True)
+        
+        assert result.size == 0
+        assert result is arr
+
 
 class TestBatchVectorizedOperations:
     """Tests for batch_vectorized_operations function."""

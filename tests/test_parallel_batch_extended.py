@@ -487,3 +487,67 @@ class TestParallelBatchAdditionalEdgeCases:
                         assert mock_logger.error.called
                         # Should log warning about errors
                         assert mock_logger.warning.called
+
+    def test_batch_process_as_completed_exception_path(self):
+        """Test batch_process when as_completed raises (covers exception path)."""
+        def double(x):
+            return x * 2
+
+        items = [1, 2, 3]
+        mock_future = MagicMock()
+        mock_future.result.return_value = 2
+        mock_future.done.return_value = True
+
+        def as_completed_raiser(*args, **kwargs):
+            yield mock_future
+            raise RuntimeError("as_completed failed")
+
+        mock_executor = MagicMock()
+        mock_executor_instance = MagicMock()
+        mock_executor_instance.submit.side_effect = lambda f, item: mock_future
+        mock_executor.return_value.__enter__.return_value = mock_executor_instance
+        mock_executor.return_value.__exit__ = MagicMock(return_value=None)
+
+        with patch("smrforge.utils.parallel_batch.ThreadPoolExecutor", mock_executor):
+            with patch("smrforge.utils.parallel_batch.as_completed", side_effect=as_completed_raiser):
+                with patch.dict("sys.modules", {"rich.progress": None}):
+                    with patch("smrforge.utils.parallel_batch.logger") as mock_logger:
+                        result = batch_process(
+                            items, double, parallel=True, use_threads=True,
+                            show_progress=False, max_workers=2
+                        )
+                        assert mock_logger.warning.called
+                        warn_msg = " ".join(str(c) for c in mock_logger.warning.call_args_list)
+                        assert "as_completed" in warn_msg or "cancelling" in warn_msg.lower()
+
+    def test_batch_process_incomplete_futures_warning_path(self):
+        """Test batch_process when as_completed yields fewer than len(items) (completed_count < len)."""
+        def double(x):
+            return x * 2
+
+        items = [1, 2, 3]
+        mock_f1 = MagicMock()
+        mock_f1.result.return_value = 2
+        mock_f1.done.return_value = True
+
+        def as_completed_one_then_stop(*args, **kwargs):
+            yield mock_f1
+            return
+
+        mock_executor = MagicMock()
+        mock_executor_instance = MagicMock()
+        mock_executor_instance.submit.side_effect = lambda f, item: mock_f1
+        mock_executor.return_value.__enter__.return_value = mock_executor_instance
+        mock_executor.return_value.__exit__ = MagicMock(return_value=None)
+
+        with patch("smrforge.utils.parallel_batch.ThreadPoolExecutor", mock_executor):
+            with patch("smrforge.utils.parallel_batch.as_completed", side_effect=as_completed_one_then_stop):
+                with patch.dict("sys.modules", {"rich.progress": None}):
+                    with patch("smrforge.utils.parallel_batch.logger") as mock_logger:
+                        result = batch_process(
+                            items, double, parallel=True, use_threads=True,
+                            show_progress=False, max_workers=2
+                        )
+                        assert mock_logger.warning.called
+                        calls_str = " ".join(str(c) for c in mock_logger.warning.call_args_list)
+                        assert "Only" in calls_str and "futures completed" in calls_str
