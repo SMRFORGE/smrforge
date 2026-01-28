@@ -3670,15 +3670,15 @@ if __name__ == "__main__":
 # ============================================================================
 
 def get_standard_endf_directory() -> Path:
-    """
+    r"""
     Get the standard directory path for storing bulk ENDF files.
-    
+
     Returns the recommended location for users to store bulk-downloaded ENDF files.
     This directory can be used with NuclearDataCache's local_endf_dir parameter.
-    
+
     Returns:
         Path to standard ENDF storage directory:
-        - Windows: ``%USERPROFILE%\\ENDF-Data``
+        - Windows: ``%USERPROFILE%\ENDF-Data``
         - Unix/Mac: ``~/ENDF-Data``
     
     Example:
