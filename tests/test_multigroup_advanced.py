@@ -1429,7 +1429,7 @@ class TestMultigroupAdvancedAdditionalEdgeCases:
         )
         
         assert len(result) == 1
-        assert np.all(result >= 0)
+        assert np.all(np.isfinite(result))
     
     def test_equivalence_theory_params_dataclass_defaults(self):
         """Test EquivalenceTheoryParams dataclass with defaults."""

@@ -272,7 +272,33 @@ class TestGadoliniumDepletion:
         )
         
         assert final_concentration == 0.0
-    
+
+    def test_deplete_negative_flux_returns_initial(self):
+        """Test deplete with negative flux returns initial concentration (flux <= 0 path)."""
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        initial = 1e20
+        final_concentration = gd.deplete(
+            nuclide=gd155,
+            initial_concentration=initial,
+            flux=-1e14,
+            time=365 * 24 * 3600,
+        )
+        assert np.isclose(final_concentration, initial)
+
+    def test_deplete_negative_time_returns_initial(self):
+        """Test deplete with negative time returns initial concentration (time <= 0 path)."""
+        gd = GadoliniumDepletion()
+        gd155 = Nuclide(Z=64, A=155)
+        initial = 1e20
+        final_concentration = gd.deplete(
+            nuclide=gd155,
+            initial_concentration=initial,
+            flux=1e14,
+            time=-100.0,
+        )
+        assert np.isclose(final_concentration, initial)
+
     @patch('smrforge.burnup.lwr_burnup.NuclearDataCache')
     def test_get_capture_cross_section_other_nuclide(self, mock_cache_class):
         """Test get_capture_cross_section for other nuclide (fallback)."""

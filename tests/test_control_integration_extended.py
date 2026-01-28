@@ -49,6 +49,21 @@ class TestControlIntegrationExtendedEdgeCases:
         # Should use temperature (1250.0)
         call_args = mock_reactor_controller.control_step.call_args[0]
         assert call_args[1] == 1250.0  # temperature parameter
+
+    def test_create_controlled_reactivity_state_with_t_fuel(self, mock_reactor_controller):
+        """Test reactivity function when state has T_fuel (used for temperature)."""
+        rho_func = create_controlled_reactivity(
+            controller=mock_reactor_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        # State with T_fuel (transient solver convention) - should use T_fuel for temperature
+        state = {"power": 1.05e6, "T_fuel": 1280.0}
+        reactivity = rho_func(2.0, state)
+        assert isinstance(reactivity, (float, int))
+        call_args = mock_reactor_controller.control_step.call_args[0]
+        assert call_args[1] == 1280.0  # temperature from T_fuel
+        assert call_args[0] == 1.05e6  # power from state
     
     def test_create_load_following_reactivity_state_with_none_temperature_fallback(self, mock_load_controller):
         """Test load following when state only has temperature (no T_fuel)."""
@@ -66,6 +81,20 @@ class TestControlIntegrationExtendedEdgeCases:
         # Should use temperature (1180.0)
         call_args = mock_load_controller.control_step.call_args[0]
         assert call_args[1] == 1180.0
+
+    def test_create_load_following_reactivity_state_with_t_fuel(self, mock_load_controller):
+        """Test load following when state has T_fuel (used for temperature)."""
+        rho_func = create_load_following_reactivity(
+            load_controller=mock_load_controller,
+            initial_power=1e6,
+            initial_temperature=1200.0,
+        )
+        state = {"power": 0.9e6, "T_fuel": 1150.0}
+        reactivity = rho_func(1.0, state)
+        assert isinstance(reactivity, (float, int))
+        call_args = mock_load_controller.control_step.call_args[0]
+        assert call_args[1] == 1150.0  # temperature from T_fuel
+        assert call_args[0] == 0.9e6   # power from state
     
     def test_create_controlled_reactivity_control_step_exception(self, mock_reactor_controller):
         """Test reactivity function when control_step raises an exception."""
