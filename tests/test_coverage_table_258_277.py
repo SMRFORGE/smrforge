@@ -2,18 +2,22 @@
 Tests implementing COVERAGE_TRACKING.md (lines 258-277) – Modules Below 75% Target.
 
 Covers:
-- data_downloader.py: helper function edge cases (Medium)
+- data_downloader.py: _get_endf_url, _get_nndc_url, _get_download_urls, _cache_successful_source, _expand_elements_to_nuclides (Medium)
+- core/decay_chain_utils.py: build_fission_product_chain max_depth=0 (Low)
 - geometry/validation.py: Gap severity, check_distances_and_clearances ImportError, ValidationReport (Medium)
 - geometry/advanced_import.py: _is_numeric, CSGSurface, CSGCell, Lattice, GeometryConverter (Medium)
 - convenience.py, convenience/__init__.py: wrapper/import paths, _get_library ImportError (Low)
 - economics.integration, burnup/fuel_management_integration: import/init paths (Low)
-- core/endf_setup.py: print_* helpers, validate_endf_setup(nonexistent) (Low)
+- core/endf_setup.py: print_* helpers, validate_endf_setup(nonexistent + None→standard_dir) (Low)
+- control/integration.py: create_controlled_reactivity (Low)
 - core/self_shielding_integration.py: _RESONANCE_AVAILABLE=False path (Low)
 - core/multigroup_advanced.py: SPHFactors, SPHMethod init (Low)
 - neutronics/hybrid_solver.py: RegionPartition (Low)
 - neutronics/adaptive_sampling.py: ImportanceMap init/get_total_importance (Low)
 - neutronics/implicit_mc.py: IMCTimeStep, ImplicitMonteCarloSolver init (Low)
 - neutronics/monte_carlo_optimized.py: ReactionType, ParticleBank init/add_particle/clear (Low)
+- utils/parallel_batch.py: batch_process, ReactorLike (Low; see also test_parallel_batch*.py)
+- burnup/lwr_burnup.py: GadoliniumPoison, AssemblyBurnup, deplete paths (Low; see also test_lwr_burnup.py)
 """
 
 import pytest
@@ -91,6 +95,19 @@ class TestAdvancedImportCoverage:
                 "unknown_format",
                 "json",
             )
+
+    def test_geometry_converter_unsupported_output_format(self):
+        """GeometryConverter.convert_format raises ValueError for unsupported output format."""
+        from smrforge.geometry.advanced_import import GeometryConverter, AdvancedGeometryImporter
+        mock_core = MagicMock()
+        with patch.object(AdvancedGeometryImporter, "from_openmc_full", return_value=mock_core):
+            with pytest.raises(ValueError, match="Unsupported output format"):
+                GeometryConverter.convert_format(
+                    Path("/x.xml"),
+                    Path("/y.out"),
+                    "openmc",
+                    "unknown_output_format",
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +206,97 @@ class TestDataDownloaderHelperCoverage:
         assert r is not None
         assert r.Z == 92 and r.A == 235 and r.m == 0
         assert dd._parse_isotope_string("Xx235") is None
+
+    def test_get_nndc_url_returns_url_for_endf_library(self):
+        """_get_nndc_url returns NNDC URL for ENDF/B-VIII and VIII.1."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        nuclide = dd._parse_isotope_string("U235")
+        assert nuclide is not None
+        url8 = dd._get_nndc_url(nuclide, Library.ENDF_B_VIII)
+        assert "nndc.bnl.gov" in url8
+        assert nuclide.name in url8 or "endf" in url8.lower()
+        url81 = dd._get_nndc_url(nuclide, Library.ENDF_B_VIII_1)
+        assert "nndc.bnl.gov" in url81
+
+    def test_get_download_urls_returns_iaea_first_by_default(self):
+        """_get_download_urls returns [IAEA, NNDC] when cache is empty/default."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        nuclide = dd._parse_isotope_string("U235")
+        assert nuclide is not None
+        urls = dd._get_download_urls(nuclide, Library.ENDF_B_VIII)
+        assert len(urls) == 2
+        assert "iaea" in urls[0].lower() or "nds" in urls[0].lower()
+        assert "nndc.bnl.gov" in urls[1]
+
+    def test_get_download_urls_returns_nndc_first_when_cached(self):
+        """_get_download_urls returns [NNDC, IAEA] when _source_cache prefers nndc."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        nuclide = dd._parse_isotope_string("U235")
+        assert nuclide is not None
+        old = getattr(dd, "_source_cache", {}).copy()
+        try:
+            dd._source_cache[Library.ENDF_B_VIII.value] = "nndc"
+            urls = dd._get_download_urls(nuclide, Library.ENDF_B_VIII)
+            assert len(urls) == 2
+            assert "nndc.bnl.gov" in urls[0]
+        finally:
+            dd._source_cache.clear()
+            dd._source_cache.update(old)
+
+    def test_cache_successful_source_iaea_and_nndc(self):
+        """_cache_successful_source sets iaea or nndc in _source_cache from URL."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        old = getattr(dd, "_source_cache", {}).copy()
+        try:
+            dd._cache_successful_source("https://nds.iaea.org/exfor/endf/endfb8.0/", Library.ENDF_B_VIII)
+            assert dd._source_cache.get(Library.ENDF_B_VIII.value) == "iaea"
+            dd._cache_successful_source("https://www.nndc.bnl.gov/endf/b8.1/endf/U235.endf", Library.ENDF_B_VIII_1)
+            assert dd._source_cache.get(Library.ENDF_B_VIII_1.value) == "nndc"
+        finally:
+            dd._source_cache.clear()
+            dd._source_cache.update(old)
+
+    def test_get_endf_url_returns_iaea_url(self):
+        """_get_endf_url returns IAEA URL for ENDF library."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        nuclide = dd._parse_isotope_string("U235")
+        assert nuclide is not None
+        url = dd._get_endf_url(nuclide, Library.ENDF_B_VIII)
+        assert "iaea" in url.lower()
+        assert nuclide.name in url
+
+    def test_expand_elements_to_nuclides_unknown_element_skipped(self):
+        """_expand_elements_to_nuclides skips unknown element and returns others or []."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        result = dd._expand_elements_to_nuclides(["Xx"], Library.ENDF_B_VIII)
+        assert result == []
+        result_u = dd._expand_elements_to_nuclides(["U"], Library.ENDF_B_VIII)
+        assert len(result_u) > 0
+        assert all(n.Z == 92 for n in result_u)
 
 
 # ---------------------------------------------------------------------------
@@ -292,6 +400,39 @@ class TestValidationReportCoverage:
         assert "Warnings: 1" in s
         assert "Info: 1" in s
 
+    def test_validation_report_summary_valid_branch(self):
+        """ValidationReport.summary() shows VALID when no errors (valid=True)."""
+        try:
+            from smrforge.geometry.validation import ValidationReport
+        except ImportError:
+            pytest.skip("Geometry validation not available")
+        r = ValidationReport()
+        r.add_info("info only")
+        assert r.valid is True
+        s = r.summary()
+        assert "VALID" in s and "INVALID" not in s
+        assert "Info: 1" in s
+
+
+# ---------------------------------------------------------------------------
+# core/decay_chain_utils.py (Low – build_fission_product_chain max_depth=0)
+# ---------------------------------------------------------------------------
+
+class TestDecayChainUtilsCoverage:
+    """Coverage for core/decay_chain_utils.build_fission_product_chain max_depth=0."""
+
+    def test_build_fission_product_chain_max_depth_zero(self):
+        """build_fission_product_chain with max_depth=0 returns chain with only parent."""
+        try:
+            from smrforge.core.decay_chain_utils import build_fission_product_chain
+            from smrforge.core.reactor_core import Nuclide
+        except ImportError:
+            pytest.skip("decay_chain_utils or reactor_core not available")
+        parent = Nuclide(92, 235, 0)
+        chain = build_fission_product_chain(parent, max_depth=0)
+        assert len(chain.nuclides) == 1
+        assert chain.nuclides[0].Z == 92 and chain.nuclides[0].A == 235
+
 
 # ---------------------------------------------------------------------------
 # burnup/fuel_management_integration.py (Low – Integration code)
@@ -345,6 +486,40 @@ class TestEndfSetupCoverage:
         assert results["directory_exists"] is False
         assert "errors" in results
         assert any("does not exist" in str(e) for e in results["errors"])
+
+    def test_validate_endf_setup_none_uses_standard_dir(self):
+        """validate_endf_setup(None) uses get_standard_endf_directory() and validates it."""
+        try:
+            from smrforge.core.endf_setup import validate_endf_setup
+        except ImportError:
+            pytest.skip("endf_setup not available")
+        with patch("smrforge.core.endf_setup.get_standard_endf_directory", return_value=Path("/__nonexistent_std_endf__")):
+            valid, results = validate_endf_setup(None)
+        assert valid is False
+        assert results["directory_exists"] is False
+
+
+# ---------------------------------------------------------------------------
+# control/integration.py (Low – Integration code)
+# ---------------------------------------------------------------------------
+
+class TestControlIntegrationCoverage:
+    """Minimal coverage for control/integration.py."""
+
+    def test_create_controlled_reactivity_returns_callable(self):
+        """create_controlled_reactivity returns a callable that returns reactivity."""
+        try:
+            from smrforge.control.integration import create_controlled_reactivity
+        except ImportError:
+            pytest.skip("control.integration not available")
+        mock_controller = MagicMock()
+        mock_controller.rod_worth = 1e-4
+        mock_controller.control_step.return_value = {"reactivity_change": -0.001}
+        rho = create_controlled_reactivity(mock_controller, 1e6, 1200.0)
+        assert callable(rho)
+        out = rho(0.0, None)
+        assert isinstance(out, (int, float))
+        mock_controller.control_step.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -528,3 +703,42 @@ class TestMonteCarloOptimizedCoverage:
         assert np.all(bank.get_alive_mask() == True)
         bank.clear()
         assert bank.size == 0
+
+
+# ---------------------------------------------------------------------------
+# utils/parallel_batch.py (Low – Omitted from 90% metric; see test_parallel_batch*.py)
+# ---------------------------------------------------------------------------
+
+class TestParallelBatchCoverage:
+    """Minimal coverage for utils/parallel_batch.py per table 258-277."""
+
+    def test_parallel_batch_import_and_batch_process_identity(self):
+        """batch_process with parallel=False runs func on each item (identity path)."""
+        try:
+            from smrforge.utils.parallel_batch import batch_process
+        except ImportError:
+            pytest.skip("utils.parallel_batch not available")
+        out = batch_process([1, 2, 3], lambda x: x * 2, parallel=False)
+        assert out == [2, 4, 6]
+
+
+# ---------------------------------------------------------------------------
+# burnup/lwr_burnup.py (Low – Omitted from 90% metric; see test_lwr_burnup.py)
+# ---------------------------------------------------------------------------
+
+class TestLwrBurnupCoverage:
+    """Minimal coverage for burnup/lwr_burnup.py per table 258-277."""
+
+    def test_gadolinium_poison_dataclass(self):
+        """GadoliniumPoison can be constructed with nuclides and concentrations."""
+        try:
+            from smrforge.burnup.lwr_burnup import GadoliniumPoison
+            from smrforge.core.reactor_core import Nuclide
+        except ImportError:
+            pytest.skip("burnup.lwr_burnup or reactor_core not available")
+        nu = Nuclide(64, 155, 0)
+        arr = np.array([1.0e20])
+        gp = GadoliniumPoison(nuclides=[nu], initial_concentrations=arr)
+        assert len(gp.nuclides) == 1
+        assert gp.nuclides[0].Z == 64
+        assert gp.depletion_rates is None
