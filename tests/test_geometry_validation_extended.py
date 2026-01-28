@@ -895,6 +895,34 @@ class TestValidateGeometryCompletenessExtended:
         assert len(report.warnings) > 0
         assert any("fewer blocks" in warn.lower() for warn in report.warnings)
 
+    def test_validate_prismatic_block_invalid_height(self):
+        """Test validate_geometry_completeness when a block has height <= 0 (covers invalid height branch)."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+
+        core = PrismaticCore(name="Test-Core")
+        core.core_diameter = 200.0
+        core.core_height = 800.0
+        core.n_rings = 1
+        block_ok = GraphiteBlock(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        block_bad_height = GraphiteBlock(
+            id=2,
+            position=Point3D(40.0, 0, 0),
+            flat_to_flat=36.0,
+            height=0.0,  # Invalid
+        )
+        core.blocks = [block_ok, block_bad_height]
+
+        report = validate_geometry_completeness(core)
+
+        assert not report.valid
+        assert any("invalid height" in err.lower() for err in report.errors)
+
 
 class TestCheckGapsAndBoundariesAdditional:
     """Additional edge case tests for check_gaps_and_boundaries."""
@@ -976,6 +1004,32 @@ class TestCheckGapsAndBoundariesAdditional:
         assert len(gaps) > 0
         if gaps:
             assert any(gap.severity == "error" or gap.gap_size < 0 for gap in gaps)
+
+    def test_check_gaps_severity_warning_large_gap(self):
+        """Test check_gaps_and_boundaries sets severity 'warning' when gap_size > max_gap + tolerance."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        # Blocks 50 cm apart: expected_dist=36, gap_size=14 > max_gap+tolerance=5.1
+        block1 = GraphiteBlock(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        block2 = GraphiteBlock(
+            id=2,
+            position=Point3D(50.0, 0, 0),
+            flat_to_flat=36.0,
+            height=800.0,
+        )
+        gaps = check_gaps_and_boundaries(
+            [block1, block2],
+            min_gap=0.0,
+            max_gap=5.0,
+            tolerance=0.1,
+        )
+        assert len(gaps) > 0
+        assert any(gap.severity == "warning" for gap in gaps)
 
 
 class TestValidateMaterialConnectivityAdditional:
@@ -1119,3 +1173,67 @@ class TestComprehensiveValidationAdditional:
         
         assert isinstance(report, ValidationReport)
         assert isinstance(report.gaps, list)
+
+    def test_comprehensive_validation_clearances_only(self, simple_prismatic_core):
+        """Test comprehensive_validation with only check_clearances enabled (coverage for branch)."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        report = comprehensive_validation(
+            simple_prismatic_core,
+            check_gaps=False,
+            check_connectivity=False,
+            check_clearances=True,
+            check_assemblies=False,
+            check_control_rods=False,
+            check_fuel_loading=False,
+        )
+        assert isinstance(report, ValidationReport)
+        assert hasattr(report, "clearance_issues")
+
+    def test_comprehensive_validation_connectivity_only(self, simple_prismatic_core):
+        """Test comprehensive_validation with only check_connectivity enabled (coverage for branch)."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        report = comprehensive_validation(
+            simple_prismatic_core,
+            check_gaps=False,
+            check_connectivity=True,
+            check_clearances=False,
+            check_assemblies=False,
+            check_control_rods=False,
+            check_fuel_loading=False,
+        )
+        assert isinstance(report, ValidationReport)
+        assert hasattr(report, "connectivity_issues")
+
+    def test_comprehensive_validation_assemblies_only(self, simple_prismatic_core):
+        """Test comprehensive_validation with only check_assemblies enabled (coverage for branch)."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        report = comprehensive_validation(
+            simple_prismatic_core,
+            check_gaps=False,
+            check_connectivity=False,
+            check_clearances=False,
+            check_assemblies=True,
+            check_control_rods=False,
+            check_fuel_loading=False,
+        )
+        assert isinstance(report, ValidationReport)
+        assert hasattr(report, "assembly_issues")
+
+    def test_comprehensive_validation_control_rods_only(self, simple_prismatic_core):
+        """Test comprehensive_validation with only check_control_rods enabled (coverage for branch)."""
+        if not GEOMETRY_AVAILABLE:
+            pytest.skip("Geometry module not available")
+        report = comprehensive_validation(
+            simple_prismatic_core,
+            check_gaps=False,
+            check_connectivity=False,
+            check_clearances=False,
+            check_assemblies=False,
+            check_control_rods=True,
+            check_fuel_loading=False,
+        )
+        assert isinstance(report, ValidationReport)
+        assert hasattr(report, "control_rod_issues")
