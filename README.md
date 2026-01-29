@@ -6,6 +6,8 @@
   **Small Modular Reactor Design and Analysis Toolkit**
 </div>
 
+*Last updated: January 2026*
+
 SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis, and optimization with a focus on Small Modular Reactors (SMRs).
 
 ## Features
@@ -52,7 +54,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 - **Validation**: Pydantic-based input validation with physics checks
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
-- **Quality Assurance**: 76.7% test coverage overall (latest verified run), 75-80%+ on priority modules, comprehensive manual testing framework
+- **Quality Assurance**: 79.2% test coverage overall (with standard exclusions), 75–80%+ on priority modules, comprehensive manual testing framework; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md)
 - **NEW: Web Dashboard** (January 2026):
   - Interactive web-based interface
   - Reactor builder with preset support
@@ -611,6 +613,8 @@ isort smrforge/ tests/
 # Type checking
 mypy smrforge/
 ```
+
+**Git on OneDrive (Windows):** If the repo is in a OneDrive-synced folder and you see `Permission denied` when creating `.git/index.lock`, run `.\scripts\setup_git_onedrive.ps1` once and use `.\scripts\git_safe.ps1` for `add` / `commit` / `push`. See [Git and OneDrive](docs/development/git-onedrive.md).
 
 ## License
 
