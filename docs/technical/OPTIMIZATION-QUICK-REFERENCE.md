@@ -63,6 +63,10 @@
 - [Optimization Roadmap](OPTIMIZATION-ROADMAP.md) - Future plans
 - [Status Report](OPTIMIZATION-STATUS-REPORT.md) - Current status
 
+### Memory and performance assessment
+- [Memory and Performance Assessment](../development/memory-and-performance-assessment.md) - How to profile memory (tracemalloc) and CPU (cProfile), where to optimize
+- `scripts/profile_performance.py` - `--function keff|mesh` and `--mode cpu|memory|both`
+
 ---
 
 ## 🎯 How We Overcame OpenMC

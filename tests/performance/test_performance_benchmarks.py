@@ -1,7 +1,7 @@
 """
 Performance benchmarking tests for regression detection.
 
-These tests measure execution time for key operations and ensure
+These tests measure execution time and memory for key operations and ensure
 performance doesn't degrade over time.
 """
 
@@ -12,6 +12,8 @@ import numpy as np
 
 from smrforge.geometry.core_geometry import PrismaticCore
 from smrforge.neutronics.solver import MultiGroupDiffusion
+from smrforge.utils.profiling import run_with_memory_profile
+from smrforge.validation.models import CrossSectionData, SolverOptions
 
 
 class PerformanceBenchmark:
@@ -49,6 +51,14 @@ BASELINE_TIMINGS = {
     "burnup_step": 3.0,                 # Single burnup step
 }
 
+# Baseline peak memory (MiB) - tracemalloc. Update when intentionally changing memory use.
+# Threshold: fail if peak > baseline * BASELINE_MEMORY_MULTIPLIER.
+BASELINE_MEMORY_MB = {
+    "keff_small": 50.0,
+    "mesh_generation": 25.0,
+}
+BASELINE_MEMORY_MULTIPLIER = 1.5
+
 
 @pytest.mark.performance
 class TestKeffCalculationPerformance:
@@ -65,7 +75,6 @@ class TestKeffCalculationPerformance:
         geometry.generate_mesh(n_radial=5, n_axial=3)
         
         # Simple cross-section data (mock)
-        from smrforge.validation.models import CrossSectionData
         # Note: sigma_a must be >= sigma_f for validation to pass
         sigma_f = np.array([[0.0, 0.0, 0.1, 0.2], [0.0, 0.0, 0.0, 0.0]])
         sigma_a = np.maximum(sigma_f, np.ones((2, 4)) * 0.3)  # Absorption >= fission
@@ -178,6 +187,65 @@ class TestGeometryPerformance:
             )
 
 
+@pytest.mark.performance
+class TestMemoryBenchmarks:
+    """Memory benchmarks (tracemalloc). Regression check vs BASELINE_MEMORY_MB."""
+
+    def test_keff_small_memory(self):
+        """Peak memory during small keff run must not exceed baseline * multiplier."""
+        def workload():
+            geometry = PrismaticCore(name="MemBenchCore")
+            geometry.core_height = 100.0
+            geometry.core_diameter = 50.0
+            geometry.generate_mesh(n_radial=5, n_axial=3)
+            sigma_f = np.array([[0.0, 0.0, 0.1, 0.2], [0.0, 0.0, 0.0, 0.0]])
+            sigma_a = np.maximum(sigma_f, np.ones((2, 4)) * 0.3)
+            xs_data = CrossSectionData(
+                n_groups=4,
+                n_materials=2,
+                sigma_t=np.ones((2, 4)),
+                sigma_a=sigma_a,
+                sigma_s=np.ones((2, 4, 4)) * 0.5,
+                sigma_f=sigma_f,
+                nu_sigma_f=np.array([[0.0, 0.0, 0.25, 0.4], [0.0, 0.0, 0.0, 0.0]]),
+                chi=np.array([[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]),
+                D=np.ones((2, 4)),
+            )
+            options = SolverOptions(max_iterations=50, tolerance=1e-5, skip_solution_validation=True)
+            solver = MultiGroupDiffusion(geometry, xs_data, options)
+            solver.solve_steady_state()
+
+        _, report = run_with_memory_profile(workload, top_n=3)
+        peak_mb = report["peak_mb"]
+        baseline = BASELINE_MEMORY_MB.get("keff_small", 50.0)
+        threshold = baseline * BASELINE_MEMORY_MULTIPLIER
+        print(f"\nkeff_small memory: {peak_mb:.2f} MiB (baseline: {baseline:.0f}, threshold: {threshold:.0f})")
+        if peak_mb > threshold:
+            pytest.fail(
+                f"Memory regression: keff_small peak {peak_mb:.2f} MiB "
+                f"exceeds threshold {threshold:.0f} MiB (baseline {baseline:.0f})"
+            )
+
+    def test_mesh_generation_memory(self):
+        """Peak memory during mesh generation must not exceed baseline * multiplier."""
+        def workload():
+            geometry = PrismaticCore(name="MemBenchMesh")
+            geometry.core_height = 200.0
+            geometry.core_diameter = 100.0
+            geometry.generate_mesh(n_radial=10, n_axial=5)
+
+        _, report = run_with_memory_profile(workload, top_n=3)
+        peak_mb = report["peak_mb"]
+        baseline = BASELINE_MEMORY_MB.get("mesh_generation", 25.0)
+        threshold = baseline * BASELINE_MEMORY_MULTIPLIER
+        print(f"\nmesh_generation memory: {peak_mb:.2f} MiB (baseline: {baseline:.0f}, threshold: {threshold:.0f})")
+        if peak_mb > threshold:
+            pytest.fail(
+                f"Memory regression: mesh_generation peak {peak_mb:.2f} MiB "
+                f"exceeds threshold {threshold:.0f} MiB (baseline {baseline:.0f})"
+            )
+
+
 @pytest.fixture
 def performance_report_file(tmp_path):
     """Fixture for performance report file."""
@@ -185,27 +253,4 @@ def performance_report_file(tmp_path):
     return report_file
 
 
-def pytest_configure(config):
-    """Configure pytest for performance tests."""
-    config.addinivalue_line(
-        "markers", "performance: marks tests as performance benchmarks (deselect with '-m \"not performance\"')"
-    )
-
-
-def pytest_collection_modifyitems(config, items):
-    """Skip performance tests if not explicitly requested."""
-    if not config.getoption("--run-performance", default=False):
-        skip_performance = pytest.mark.skip(reason="need --run-performance option to run")
-        for item in items:
-            if "performance" in item.keywords:
-                item.add_marker(skip_performance)
-
-
-def pytest_addoption(parser):
-    """Add command-line option for performance tests."""
-    parser.addoption(
-        "--run-performance",
-        action="store_true",
-        default=False,
-        help="run performance benchmark tests",
-    )
+# --run-performance, "performance" marker, and skip logic live in tests/conftest.py.

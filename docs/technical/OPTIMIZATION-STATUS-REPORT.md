@@ -347,6 +347,7 @@ All optimization work is comprehensively documented:
 - [JIT Optimization Implementation](jit-optimization-implemented.md) - JIT details
 - [Performance Optimization Summary](performance-optimization-summary.md) - Performance metrics
 - [Overcoming OpenMC Performance](overcoming-openmc-performance.md) - Strategy document
+- [Memory and Performance Assessment](../development/memory-and-performance-assessment.md) - How to profile memory and CPU, where to optimize; `scripts/profile_performance.py --mode memory|both`
 
 ---
 

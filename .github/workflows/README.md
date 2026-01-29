@@ -4,6 +4,10 @@ This directory contains CI/CD workflows for SMRForge.
 
 ## Workflows
 
+### `performance.yml` - Performance benchmarks
+
+Runs performance (time + memory) regression tests on a **weekly schedule** and via **workflow_dispatch**. Uses `--run-performance` and `--override-ini`; excluded from default pytest. See [performance-and-benchmarking-assessment](development/performance-and-benchmarking-assessment.md).
+
 ### `ci.yml` - Continuous Integration
 
 This workflow runs on every push and pull request to `main` and `develop` branches.

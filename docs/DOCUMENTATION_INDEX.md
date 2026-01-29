@@ -59,6 +59,8 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[Testing and Coverage](docs/development/testing-and-coverage.md)** - Testing documentation
 - **[Coverage Exclusions](docs/development/coverage-exclusions.md)** - Test coverage exclusions
 - **[Coverage Inventory](docs/development/coverage-inventory.md)** - Coverage inventory
+- **[Memory and Performance Assessment](docs/development/memory-and-performance-assessment.md)** - How to assess memory and CPU, where to optimize
+- **[Performance and Benchmarking Assessment](docs/development/performance-and-benchmarking-assessment.md)** - Plan vs. implementation status, profiling results, benchmark outcomes
 
 ---
 

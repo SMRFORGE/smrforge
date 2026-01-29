@@ -30,3 +30,6 @@ ipykernel>=6.0
 # These are optional - tests use mocks, but having them installed improves coverage
 # plotly>=5.0  # Uncomment if you want to test with real plotly
 # pyvista>=0.40.0  # Uncomment if you want to test with real pyvista
+
+# Optional: line-level memory profiling (see docs/development/memory-and-performance-assessment.md)
+memory_profiler>=0.61

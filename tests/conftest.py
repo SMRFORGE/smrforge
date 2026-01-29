@@ -541,20 +541,37 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
     config.addinivalue_line("markers", "network: marks tests that require network access")
     config.addinivalue_line("markers", "parallel_batch: marks tests that use parallel batch processing (run serially)")
+    config.addinivalue_line(
+        "markers", "performance: marks tests as performance benchmarks (deselect with '-m \"not performance\"'; use --run-performance to run)"
+    )
+
+
+def pytest_addoption(parser):
+    """Add options for performance and other optional test groups."""
+    parser.addoption(
+        "--run-performance",
+        action="store_true",
+        default=False,
+        help="Run performance benchmark tests (otherwise skipped).",
+    )
 
 
 # Ensure parallel_batch tests run serially to avoid resource contention
 def pytest_collection_modifyitems(config, items):
-    """Modify test collection to ensure parallel_batch tests run serially."""
+    """Modify test collection: parallel_batch serialization; skip performance unless --run-performance."""
+    # Skip performance tests unless --run-performance
+    if not config.getoption("--run-performance", False):
+        skip_perf = pytest.mark.skip(reason="need --run-performance to run")
+        for item in items:
+            if item.get_closest_marker("performance"):
+                item.add_marker(skip_perf)
+
     # Add serial marker to parallel_batch tests if pytest-xdist is being used
     try:
         from xdist import is_xdist_worker
         if is_xdist_worker(config):
-            # If using pytest-xdist, ensure parallel_batch tests don't run in parallel
             for item in items:
                 if item.get_closest_marker("parallel_batch"):
-                    # Add a marker that prevents parallel execution
                     item.add_marker(pytest.mark.serial)
     except ImportError:
-        # pytest-xdist not available, skip
         pass
