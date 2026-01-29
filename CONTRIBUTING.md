@@ -72,6 +72,8 @@ Be respectful, inclusive, and collaborative. This is a technical project focused
    pytest tests/  # Run tests to verify
    ```
 
+5. **Git on OneDrive (Windows):** If the repo is in a OneDrive-synced folder and you see `Permission denied` when creating `.git/index.lock`, run `.\scripts\setup_git_onedrive.ps1` once, then use `.\scripts\git_safe.ps1` for `add` / `commit` / `push`. See [Git and OneDrive](docs/development/git-onedrive.md) for details.
+
 ## Code Style
 
 ### Formatting

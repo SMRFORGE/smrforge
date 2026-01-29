@@ -478,6 +478,7 @@ See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`e
 
 **Development:**
 - **[Contributing](CONTRIBUTING.md)** - Development guidelines
+- **[Git and OneDrive (Windows)](docs/development/git-onedrive.md)** - Fix `index.lock` permission denied in OneDrive-synced repos
 - **[Changelog](CHANGELOG.md)** - Version history
 
 ## Examples

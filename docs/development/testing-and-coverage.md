@@ -425,7 +425,9 @@ pytest --cov=smrforge.core.endf_parser --cov-report=term-missing
 On Windows—especially when working inside a OneDrive-synced folder—`pytest-cov` may fail with
 `PermissionError: [WinError 5]` while trying to erase/merge `.coverage.*` files.
 
-Workaround: run coverage directly and write the data file to a non-dot filename (or outside OneDrive):
+**Git lock issues** (e.g. `Permission denied` creating `.git/index.lock`): see [Git and OneDrive](git-onedrive.md). Use `scripts/setup_git_onedrive.ps1` and `scripts/git_safe.ps1` for add/commit/push.
+
+Workaround for **coverage** only: run coverage directly and write the data file to a non-dot filename (or outside OneDrive):
 
 ```bash
 python -m coverage run --rcfile=.coveragerc --data-file=coverage_data_full -m pytest -q -p no:cov
