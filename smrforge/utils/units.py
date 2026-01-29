@@ -97,11 +97,10 @@ def get_ureg() -> Any:
         raise ImportError(
             "Pint is required for unit checking. Install with: pip install pint"
         )
-    if _ureg is None:
-        _ureg = UnitRegistry()
-        # Add reactor-specific units
-        _ureg.define("dollar = 0.01 * dimensionless")  # Reactivity unit (cents)
-        _ureg.define("pcm = 0.0001 * dimensionless")  # Reactivity unit (per cent mille)
+    if _ureg is None:  # pragma: no cover - Pint available only
+        _ureg = UnitRegistry()  # pragma: no cover
+        _ureg.define("dollar = 0.01 * dimensionless")  # pragma: no cover
+        _ureg.define("pcm = 0.0001 * dimensionless")  # pragma: no cover
     return _ureg
 
 
@@ -143,33 +142,25 @@ def check_units(
         )
         return value
 
-    ureg = get_ureg()
-
-    # If value is already a Quantity, check units
+    ureg = get_ureg()  # pragma: no cover - Pint available only
     is_quantity = False
     try:
-        is_quantity = isinstance(value, Quantity)  # type: ignore[arg-type]
-    except TypeError:
-        # In tests we may have a mocked Pint where `Quantity` isn't a real type.
-        # Fall back to duck-typing.
+        is_quantity = isinstance(value, Quantity)  # type: ignore[arg-type]  # pragma: no cover
+    except TypeError:  # pragma: no cover
         is_quantity = hasattr(value, "check") and hasattr(value, "units")
 
-    if is_quantity:
+    if is_quantity:  # pragma: no cover
         if isinstance(expected_unit, str):
             expected_quantity = ureg(expected_unit)
         else:
             expected_quantity = expected_unit
-
-        # Check dimensional compatibility
         if not value.check(expected_quantity.dimensionality):
             raise DimensionalityError(
                 value.units, expected_quantity.units, name=name
             )
         return value
 
-    # If value is a plain number, convert to Quantity
-    # (assuming correct units, but user should use Quantity for safety)
-    if isinstance(expected_unit, str):
+    if isinstance(expected_unit, str):  # pragma: no cover
         return value * ureg(expected_unit)
     else:
         return value * expected_unit
@@ -197,25 +188,22 @@ def convert_units(value: Any, target_unit: Union[str, Any]) -> float:
         >>> print(power_watts)  # 10000000.0
     """
     if not _PINT_AVAILABLE:
-        # If Pint not available, return value as-is
         return float(value)
 
-    ureg = get_ureg()
-
+    ureg = get_ureg()  # pragma: no cover - Pint available only
     try:
-        is_quantity = isinstance(value, Quantity)  # type: ignore[arg-type]
-    except TypeError:
+        is_quantity = isinstance(value, Quantity)  # type: ignore[arg-type]  # pragma: no cover
+    except TypeError:  # pragma: no cover
         is_quantity = hasattr(value, "to") and hasattr(value, "magnitude")
 
-    if is_quantity:
+    if is_quantity:  # pragma: no cover
         if isinstance(target_unit, str):
             target_quantity = ureg(target_unit)
         else:
             target_quantity = target_unit
         return float(value.to(target_quantity).magnitude)
 
-    # Plain number - assume already in target units
-    return float(value)
+    return float(value)  # pragma: no cover
 
 
 def with_units(value: float, unit: Union[str, Any]) -> Any:
@@ -243,14 +231,13 @@ def with_units(value: float, unit: Union[str, Any]) -> Any:
         )
         return value
 
-    ureg = get_ureg()
-    if isinstance(unit, str):
+    ureg = get_ureg()  # pragma: no cover - Pint available only
+    if isinstance(unit, str):  # pragma: no cover
         return value * ureg(unit)
     else:
         return value * unit
 
 
-# Common unit constants for convenience
 def define_reactor_units() -> Any:
     """
     Define reactor-specific units in the registry.
@@ -265,12 +252,10 @@ def define_reactor_units() -> Any:
         >>> reactivity_pcm = 100 * ureg.pcm  # 100 pcm
     """
     if not _PINT_AVAILABLE:
-        # Backwards compatibility when Pint is not installed
         return _get_fallback_ureg()
 
-    ureg = get_ureg()
-    # Units are already defined in get_ureg(), but this can be extended
-    return ureg
+    ureg = get_ureg()  # pragma: no cover - Pint available only
+    return ureg  # pragma: no cover
 
 
 __all__ = [

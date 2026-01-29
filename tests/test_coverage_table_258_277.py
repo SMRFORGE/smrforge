@@ -2,14 +2,14 @@
 Tests implementing COVERAGE_TRACKING.md (lines 258-277) – Modules Below 75% Target.
 
 Covers:
-- data_downloader.py: _get_endf_url, _get_nndc_url, _get_download_urls, _cache_successful_source, _expand_elements_to_nuclides (Medium)
+- data_downloader.py: _get_endf_url (_get_nndc_url fallback for non-ENDF), _get_nndc_url, _get_download_urls, _cache_successful_source, _expand_elements_to_nuclides (unknown-element + mixed valid/invalid); JEFF_33/JENDL_5 URLs (Medium)
 - core/decay_chain_utils.py: build_fission_product_chain max_depth=0 (Low)
 - geometry/validation.py: Gap severity, check_distances_and_clearances ImportError, ValidationReport (Medium)
 - geometry/advanced_import.py: _is_numeric, CSGSurface, CSGCell, Lattice, GeometryConverter (Medium)
 - convenience.py, convenience/__init__.py: wrapper/import paths, _get_library ImportError (Low)
-- economics.integration, burnup/fuel_management_integration: import/init paths (Low)
+- economics.integration (import + estimate_costs_from_spec), burnup/fuel_management_integration: import/init paths (Low)
 - core/endf_setup.py: print_* helpers, validate_endf_setup(nonexistent + None→standard_dir) (Low)
-- control/integration.py: create_controlled_reactivity (Low)
+- control/integration.py: create_controlled_reactivity, create_load_following_reactivity (Low)
 - core/self_shielding_integration.py: _RESONANCE_AVAILABLE=False path (Low)
 - core/multigroup_advanced.py: SPHFactors, SPHMethod init (Low)
 - neutronics/hybrid_solver.py: RegionPartition (Low)
@@ -296,6 +296,46 @@ class TestDataDownloaderHelperCoverage:
         assert len(result_u) > 0
         assert all(n.Z == 92 for n in result_u)
 
+    def test_expand_elements_to_nuclides_mixed_valid_invalid(self):
+        """_expand_elements_to_nuclides skips unknown elements, returns nuclides for valid only."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        mixed = dd._expand_elements_to_nuclides(["U", "Xx", "H"], Library.ENDF_B_VIII)
+        assert len(mixed) > 0
+        zs = {n.Z for n in mixed}
+        assert 92 in zs and 1 in zs
+        assert all(n.Z in (92, 1) for n in mixed)
+
+    def test_get_endf_url_jeff33_jendl5(self):
+        """_get_endf_url returns IAEA URLs for JEFF_33 and JENDL_5."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        nuclide = dd._parse_isotope_string("U235")
+        assert nuclide is not None
+        url_jeff = dd._get_endf_url(nuclide, Library.JEFF_33)
+        assert "iaea" in url_jeff.lower() and "jeff" in url_jeff.lower()
+        url_jendl = dd._get_endf_url(nuclide, Library.JENDL_5)
+        assert "iaea" in url_jendl.lower() and "jendl" in url_jendl.lower()
+
+    def test_get_nndc_url_fallback_to_endf_for_non_endf_library(self):
+        """_get_nndc_url falls back to _get_endf_url for JEFF_33 (non-ENDF)."""
+        try:
+            import smrforge.data_downloader as dd
+            from smrforge.core.reactor_core import Library
+        except ImportError:
+            pytest.skip("Data downloader or reactor_core not available")
+        nuclide = dd._parse_isotope_string("U235")
+        assert nuclide is not None
+        url = dd._get_nndc_url(nuclide, Library.JEFF_33)
+        assert "iaea" in url.lower()
+        assert "jeff" in url.lower() or "nds" in url.lower()
+
 
 # ---------------------------------------------------------------------------
 # convenience.py (Low – Convenience wrapper)
@@ -351,6 +391,45 @@ class TestEconomicsIntegrationCoverage:
             assert hasattr(eco_int, "__name__")
         except ImportError:
             pytest.skip("Economics integration not available")
+
+    def test_estimate_costs_from_spec_returns_breakdown(self):
+        """estimate_costs_from_spec returns dict with capital_costs, operating_costs, lcoe."""
+        try:
+            from smrforge.economics.integration import estimate_costs_from_spec
+            from smrforge.validation.pydantic_layer import (
+                ReactorSpecification,
+                ReactorType,
+                FuelType,
+            )
+        except ImportError:
+            pytest.skip("economics.integration or pydantic_layer not available")
+        spec = ReactorSpecification(
+            name="Test",
+            reactor_type=ReactorType.PRISMATIC,
+            power_thermal=10e6,
+            power_electric=3.5e6,
+            inlet_temperature=823.15,
+            outlet_temperature=1023.15,
+            max_fuel_temperature=1873.15,
+            primary_pressure=7.0e6,
+            core_height=200.0,
+            core_diameter=100.0,
+            reflector_thickness=30.0,
+            fuel_type=FuelType.UCO,
+            enrichment=0.195,
+            heavy_metal_loading=150.0,
+            coolant_flow_rate=8.0,
+            cycle_length=3650,
+            capacity_factor=0.95,
+            target_burnup=150.0,
+            doppler_coefficient=-3.5e-5,
+            shutdown_margin=0.05,
+        )
+        result = estimate_costs_from_spec(spec)
+        assert isinstance(result, dict)
+        assert "capital_costs" in result
+        assert "operating_costs" in result
+        assert "lcoe" in result
 
 
 # ---------------------------------------------------------------------------
@@ -514,6 +593,20 @@ class TestControlIntegrationCoverage:
         mock_controller.rod_worth = 1e-4
         mock_controller.control_step.return_value = {"reactivity_change": -0.001}
         rho = create_controlled_reactivity(mock_controller, 1e6, 1200.0)
+        assert callable(rho)
+        out = rho(0.0, None)
+        assert isinstance(out, (int, float))
+        mock_controller.control_step.assert_called_once()
+
+    def test_create_load_following_reactivity_returns_callable(self):
+        """create_load_following_reactivity returns a callable that returns reactivity."""
+        try:
+            from smrforge.control.integration import create_load_following_reactivity
+        except ImportError:
+            pytest.skip("control.integration not available")
+        mock_controller = MagicMock()
+        mock_controller.control_step.return_value = {"reactivity_change": 0.0005}
+        rho = create_load_following_reactivity(mock_controller, 1e6, 1200.0)
         assert callable(rho)
         out = rho(0.0, None)
         assert isinstance(out, (int, float))

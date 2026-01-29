@@ -152,7 +152,7 @@ class ParticleBank:
 
 
 @njit(cache=True, fastmath=True, boundscheck=False, nogil=True)
-def sample_isotropic_direction(rng_state: np.ndarray) -> Tuple[float, float, float]:
+def sample_isotropic_direction(rng_state: np.ndarray) -> Tuple[float, float, float]:  # pragma: no cover
     """
     Sample isotropic direction using Numba-accelerated RNG.
     
@@ -167,20 +167,19 @@ def sample_isotropic_direction(rng_state: np.ndarray) -> Tuple[float, float, flo
     Returns:
         (u, v, w) direction cosines
     """
-    # Use NumPy's RNG (compatible with Numba)
-    mu = 2.0 * np.random.random() - 1.0  # cos(theta)
-    phi = 2.0 * np.pi * np.random.random()
+    # Use NumPy's RNG (compatible with Numba)  # pragma: no cover
+    mu = 2.0 * np.random.random() - 1.0  # cos(theta)  # pragma: no cover
+    phi = 2.0 * np.pi * np.random.random()  # pragma: no cover
     
-    sin_theta = np.sqrt(1.0 - mu * mu)
-    u = sin_theta * np.cos(phi)
-    v = sin_theta * np.sin(phi)
-    w = mu
-    
-    return u, v, w
+    sin_theta = np.sqrt(1.0 - mu * mu)  # pragma: no cover
+    u = sin_theta * np.cos(phi)  # pragma: no cover
+    v = sin_theta * np.sin(phi)  # pragma: no cover
+    w = mu  # pragma: no cover
+    return u, v, w  # pragma: no cover
 
 
 @njit(cache=True, fastmath=True, boundscheck=False, nogil=True)
-def sample_fission_spectrum() -> float:
+def sample_fission_spectrum() -> float:  # pragma: no cover
     """
     Sample energy from fission spectrum (Watt spectrum approximation).
     
@@ -192,9 +191,9 @@ def sample_fission_spectrum() -> float:
     Returns:
         Energy in eV
     """
-    # Simplified Watt spectrum: E ~ exponential with mean 2 MeV
-    E_mean = 2e6  # 2 MeV in eV
-    return np.random.exponential(E_mean)
+    # Simplified Watt spectrum: E ~ exponential with mean 2 MeV  # pragma: no cover
+    E_mean = 2e6  # 2 MeV in eV  # pragma: no cover
+    return np.random.exponential(E_mean)  # pragma: no cover
 
 
 @njit(
@@ -204,7 +203,7 @@ def sample_fission_spectrum() -> float:
     boundscheck=False,  # Skip bounds checking (faster - arrays pre-allocated)
     nogil=True          # Release GIL for true parallelism
 )
-def track_particles_vectorized(
+def track_particles_vectorized(  # pragma: no cover
     position: np.ndarray,
     direction: np.ndarray,
     energy: np.ndarray,

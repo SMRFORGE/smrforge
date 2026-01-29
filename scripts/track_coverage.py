@@ -15,6 +15,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -314,6 +315,88 @@ def generate_trend_report():
     print("=" * 70)
 
 
+COVERAGE_TRACKING_MD = REPO_ROOT / "COVERAGE_TRACKING.md"
+
+
+def update_coverage_doc(coverage_json_path: Optional[Path] = None) -> bool:
+    """
+    Update COVERAGE_TRACKING.md "Latest full run" and "Quick Status" from coverage JSON.
+
+    Reads coverage/generated/coverage.json (or coverage_current.json fallback, or
+    coverage_json_path if provided), extracts totals, and rewrites the
+    "Latest full run (Jan 2026):" line in COVERAGE_TRACKING.md.
+    """
+    cand = coverage_json_path or COVERAGE_GENERATED_DIR / "coverage.json"
+    if not cand.exists():
+        cand = COVERAGE_GENERATED_DIR / "coverage_current.json"
+    if not cand.exists():
+        print(f"No coverage JSON found at {COVERAGE_GENERATED_DIR / 'coverage.json'} or coverage_current.json.", file=sys.stderr)
+        return False
+
+    data = load_coverage_json(cand)
+    if not data:
+        print("Could not load coverage JSON.", file=sys.stderr)
+        return False
+
+    tot = data.get("totals")
+    if not tot and "files" in data:
+        covered_lines = 0
+        num_statements = 0
+        missing_lines = 0
+        excluded_lines = 0
+        for finfo in data["files"].values():
+            s = finfo.get("summary") if isinstance(finfo, dict) else None
+            if s:
+                covered_lines += s.get("covered_lines", 0)
+                num_statements += s.get("num_statements", 0)
+                missing_lines += s.get("missing_lines", 0)
+                excluded_lines += s.get("excluded_lines", 0)
+        pct = 100.0 * covered_lines / num_statements if num_statements else 0.0
+        tot = {
+            "percent_covered": pct,
+            "covered_lines": covered_lines,
+            "num_statements": num_statements,
+            "missing_lines": missing_lines,
+            "excluded_lines": excluded_lines,
+        }
+    if not tot:
+        print("Coverage JSON missing 'totals' and could not derive from 'files'.", file=sys.stderr)
+        return False
+
+    pct = tot.get("percent_covered", 0)
+    covered = tot.get("covered_lines", 0)
+    total = tot.get("num_statements", 0)
+    missing = tot.get("missing_lines", 0)
+    gap80 = max(0.0, 80.0 - pct)
+    gap90 = max(0.0, 90.0 - pct)
+
+    year = datetime.now().strftime("%Y")
+    new_line = (
+        f"- **Latest full run (Jan {year}):** **{pct:.2f}%** "
+        f"({covered:,} / {total:,} statements) — report: `coverage/generated/coverage.json`; "
+        f"gap to 80%: {gap80:.2f}%; gap to 90%: {gap90:.2f}%."
+    )
+
+    if not COVERAGE_TRACKING_MD.exists():
+        print(f"COVERAGE_TRACKING.md not found at {COVERAGE_TRACKING_MD}.", file=sys.stderr)
+        return False
+
+    text = COVERAGE_TRACKING_MD.read_text(encoding="utf-8")
+    pattern = (
+        r"- \*\*Latest full run \(Jan \d{4}\):\*\* \*\*[\d.]+%\*\* "
+        r"\([\d,]+ / [\d,]+ statements\)[^.\n]*— report: [^;]+; "
+        r"gap to 80%: [\d.]+%[^;]*; gap to 90%: [\d.]+%\."
+    )
+    if not re.search(pattern, text):
+        print("Could not find 'Latest full run' line in COVERAGE_TRACKING.md.", file=sys.stderr)
+        return False
+
+    new_text = re.sub(pattern, new_line, text)
+    COVERAGE_TRACKING_MD.write_text(new_text, encoding="utf-8")
+    print(f"Updated COVERAGE_TRACKING.md: {pct:.2f}% ({covered:,} / {total:,} statements), gap to 90%: {gap90:.2f}%")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Track test coverage over time',
@@ -324,6 +407,7 @@ Examples:
   python scripts/track_coverage.py --report     # Show trend report
   python scripts/track_coverage.py --compare    # Compare with previous
   python scripts/track_coverage.py --summary    # Show current summary
+  python scripts/track_coverage.py --update-doc # Update COVERAGE_TRACKING.md from coverage JSON
         """
     )
     
@@ -347,11 +431,22 @@ Examples:
         action='store_true',
         help='Show summary of current coverage'
     )
+    parser.add_argument(
+        '--update-doc',
+        action='store_true',
+        help='Update COVERAGE_TRACKING.md from coverage/generated/coverage.json (or coverage_current.json)'
+    )
+    parser.add_argument(
+        '--coverage-json',
+        type=Path,
+        default=None,
+        help='Path to coverage JSON (used with --update-doc)'
+    )
     
     args = parser.parse_args()
     
     # If no flags provided, show help
-    if not any([args.generate, args.report, args.compare, args.summary]):
+    if not any([args.generate, args.report, args.compare, args.summary, args.update_doc]):
         parser.print_help()
         return
     
@@ -402,6 +497,11 @@ Examples:
     
     if args.report:
         generate_trend_report()
+
+    if args.update_doc:
+        ok = update_coverage_doc(args.coverage_json)
+        if not ok:
+            sys.exit(1)
 
 
 if __name__ == '__main__':

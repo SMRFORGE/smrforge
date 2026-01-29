@@ -1,6 +1,6 @@
 # SMRForge Coverage Tracking
 
-**Last Updated:** January 2026  
+**Last Updated:** January 28, 2026  
 **Target Coverage:** **90%** for in-scope modules  
 **Overall Project Coverage:** 79.2% → **Target: 90%**
 
@@ -13,8 +13,8 @@ This is the **single source of truth** for test coverage tracking in SMRForge.
 ### Overall Project Coverage
 - **Full Project:** 62.11% (12,894 / 20,761 lines)
 - **With Standard Exclusions:** **79.2%** (last verified 2026-01)
-- **Latest full run (Jan 2026):** **71.85%** (18,170 / 25,290 statements), 4,255 passed, 91 skipped — report: `coverage/generated/coverage.json`; gap to 80%: 8.15% (2,061 statements).
-- **Target:** **90%** — add tests for low-coverage modules below to reach target
+- **Latest full run (Jan 2026):** **71.85%** (18,170 / 25,290 statements) — report: `coverage/generated/coverage.json`; gap to 80%: 8.15%; gap to 90%: 18.15%.
+- **Target:** **90%** — add tests for low-coverage modules below to reach target. Run coverage locally to refresh these numbers (see "Coverage Generation").
 
 ### Priority Modules Status
 
@@ -249,11 +249,11 @@ To reach **90%** overall:
 2. **Add tests** for modules with the most uncovered lines (see "Modules Below 75% Target" below). Highest impact: `geometry/advanced_import.py`, `geometry/validation.py`, `data_downloader.py`, `neutronics/*` (hybrid_solver, adaptive_sampling, monte_carlo_optimized, implicit_mc), `core/multigroup_advanced.py`, `core/endf_setup.py`, `burnup/lwr_burnup.py`, `convenience.py`.
 
    **Continue checklist (run locally):**
-   - Run coverage: `$env:COVERAGE_FILE="$env:TEMP\.coverage_smrforge"; pytest tests/ --cov=smrforge --cov-report=term-missing -q` (PowerShell). Or omit `-q` and use `--cov-report=json:coverage/generated/coverage.json` to refresh `coverage/generated/coverage.json`.
-   - Update "Latest full run" and "Quick Status" in this doc with the new percentage and gap-to-80%.
+   - Run coverage: `$env:COVERAGE_FILE="$env:TEMP\.coverage_smrforge"; pytest tests/ --cov=smrforge --cov-report=term-missing -q` (PowerShell). Or use `scripts/coverage_full.ps1` to write `coverage/generated/coverage.json` and HTML. Ensure `coverage/generated` exists (scripts create it automatically).
+   - Update "Latest full run" and "Quick Status" in this doc: run `python scripts/track_coverage.py --update-doc` (uses `coverage/generated/coverage.json` or `coverage_current.json`). Or edit manually with the new percentage and gap to 90% (or 80%).
    - Add tests for the next-highest-impact module (data_downloader helpers, geometry/validation, geometry/advanced_import) in `test_coverage_table_258_277.py` or the module’s test file.
 
-   **Recent additions (Jan 2026):** **Push toward 80%:** `test_optimization_utils`: vectorized_normalize empty-array and empty-array inplace; `test_parallel_batch_extended`: as_completed exception path, incomplete-futures warning path (Only N/M completed); `test_coverage_table_258_277.TestConvenienceCoverage`: _get_library cached _design_library path. Earlier: `test_data_downloader_extended.TestDownloadEndfDataCoverage90`: download_endf_data when REQUESTS_AVAILABLE=False (ImportError); default common_smr path; _expand_elements_to_nuclides unknown element skipped + mixed invalid/valid; organize called after downloads; organize uses library_version VIII.0 for ENDF_B_VIII; download_preprocessed_library with nuclides list calls download_endf_data(nuclides=...); **test_download_endf_data_tqdm_unavailable_completes** (TQDM_AVAILABLE=False, show_progress=True path); **test_download_preprocessed_library_with_nuclide_set_common_smr** (nuclides="common_smr" calls download_endf_data with nuclide_set); **test_download_endf_data_nuclide_set_common_smr_explicit** (explicit nuclide_set="common_smr" branch in download_endf_data); **test_compare_designs_empty_list** (compare_designs([]) returns {}); **test_download_endf_data_library_string_viii0_maps_to_enum** (library="ENDF/B-VIII.0" → ENDF_B_VIII, organize VIII.0); **test_run_cycle_burnup_time_steps_extended** (fuel_management_integration when cycle_days > time_steps[-1]); **test_update_assembly_burnup_values_empty_burnup** and **test_update_assembly_burnup_values_inactive_batch_skipped** (fuel_management); **test_download_endf_data_output_dir_string** (output_dir as str). **test_create_controlled_reactivity_state_power_only_no_temp_update** and **test_create_load_following_reactivity_state_power_only_no_temp_update** (control integration: state with only `power`, no temp update). `test_lwr_burnup.TestGadoliniumDepletion`: test_deplete_negative_flux_returns_initial, test_deplete_negative_time_returns_initial (flux ≤ 0 / time ≤ 0 paths). `test_control_integration_extended`: test_create_controlled_reactivity_state_with_t_fuel, test_create_load_following_reactivity_state_with_t_fuel (T_fuel state branch). `test_decay_chain_utils`: build_fission_product_chain max_depth=0; `test_geometry_validation`: validate_material_connectivity check_continuity/check_boundaries=False; check_distances_and_clearances ImportError when _GEOMETRY_TYPES_AVAILABLE=False. `test_multigroup_advanced`: zero_denominator_fallback uses isfinite assertion.
+   **Recent additions (Jan 2026):** **Implement all (table 269-291):** `test_coverage_table_258_277`: `test_expand_elements_to_nuclides_mixed_valid_invalid` (data_downloader mixed valid/invalid); 47 tests total. **Table 269-291:** TestControlIntegrationCoverage `test_create_load_following_reactivity_returns_callable`; TestEconomicsIntegrationCoverage `test_estimate_costs_from_spec_returns_breakdown`. **Implement COVERAGE_TRACKING.md:** `test_coverage_table_258_277.TestDataDownloaderHelperCoverage`: `test_get_endf_url_jeff33_jendl5` (_get_endf_url for JEFF_33, JENDL_5), `test_get_nndc_url_fallback_to_endf_for_non_endf_library` (_get_nndc_url fallback to IAEA for non-ENDF). `track_coverage.py --update-doc`: updates "Latest full run" from coverage JSON. **Push toward 80%:** `test_optimization_utils`: vectorized_normalize empty-array and empty-array inplace; `test_parallel_batch_extended`: as_completed exception path, incomplete-futures warning path (Only N/M completed); `test_coverage_table_258_277.TestConvenienceCoverage`: _get_library cached _design_library path. Earlier: `test_data_downloader_extended.TestDownloadEndfDataCoverage90`: download_endf_data when REQUESTS_AVAILABLE=False (ImportError); default common_smr path; _expand_elements_to_nuclides unknown element skipped + mixed invalid/valid; organize called after downloads; organize uses library_version VIII.0 for ENDF_B_VIII; download_preprocessed_library with nuclides list calls download_endf_data(nuclides=...); **test_download_endf_data_tqdm_unavailable_completes** (TQDM_AVAILABLE=False, show_progress=True path); **test_download_preprocessed_library_with_nuclide_set_common_smr** (nuclides="common_smr" calls download_endf_data with nuclide_set); **test_download_endf_data_nuclide_set_common_smr_explicit** (explicit nuclide_set="common_smr" branch in download_endf_data); **test_compare_designs_empty_list** (compare_designs([]) returns {}); **test_download_endf_data_library_string_viii0_maps_to_enum** (library="ENDF/B-VIII.0" → ENDF_B_VIII, organize VIII.0); **test_run_cycle_burnup_time_steps_extended** (fuel_management_integration when cycle_days > time_steps[-1]); **test_update_assembly_burnup_values_empty_burnup** and **test_update_assembly_burnup_values_inactive_batch_skipped** (fuel_management); **test_download_endf_data_output_dir_string** (output_dir as str). **test_create_controlled_reactivity_state_power_only_no_temp_update** and **test_create_load_following_reactivity_state_power_only_no_temp_update** (control integration: state with only `power`, no temp update). `test_lwr_burnup.TestGadoliniumDepletion`: test_deplete_negative_flux_returns_initial, test_deplete_negative_time_returns_initial (flux ≤ 0 / time ≤ 0 paths). `test_control_integration_extended`: test_create_controlled_reactivity_state_with_t_fuel, test_create_load_following_reactivity_state_with_t_fuel (T_fuel state branch). `test_decay_chain_utils`: build_fission_product_chain max_depth=0; `test_geometry_validation`: validate_material_connectivity check_continuity/check_boundaries=False; check_distances_and_clearances ImportError when _GEOMETRY_TYPES_AVAILABLE=False. `test_multigroup_advanced`: zero_denominator_fallback uses isfinite assertion.
 
 3. **Optional:** Omit low-priority/advanced modules from the measured set in `pytest.ini` so that "in-scope" coverage reflects only core/priority code. That can make 90% achievable with the current test suite.
 
@@ -266,32 +266,35 @@ To reach **90%** overall:
 | Module | Coverage | Missing Lines | Priority | Action |
 |--------|----------|---------------|----------|--------|
 | `utils/logging.py` | **~75%+** ✅ | ~5 | ✅ **IMPROVED** | 27 additional tests added |
-| `economics/integration.py` | 0.00% | 19 | 🟢 Low | Not critical; **implemented:** `test_coverage_table_258_277.TestEconomicsIntegrationCoverage` (import path) |
-| `data_downloader.py` | 13.08% | 206 | 🟡 Medium | Helper functions tested; **implemented:** `test_coverage_table_258_277.TestDataDownloaderHelperCoverage` (+ _get_endf_url, _get_nndc_url, _get_download_urls, _cache_successful_source, _expand_elements_to_nuclides unknown-element) |
-| `neutronics/hybrid_solver.py` | 15.97% | 121 | 🟢 Low | Advanced feature; **implemented:** RegionPartition init in `test_coverage_table_258_277.TestNeutronicsAdvancedCoverage` |
-| `neutronics/adaptive_sampling.py` | 16.28% | 144 | 🟢 Low | Advanced feature; **implemented:** ImportanceMap init/get_total_importance in `test_coverage_table_258_277.TestNeutronicsAdvancedCoverage` |
-| `burnup/fuel_management_integration.py` | 16.46% | 66 | 🟢 Low | Integration code; **implemented:** BurnupFuelManagerIntegration init in `test_coverage_table_258_277.TestFuelManagementIntegrationCoverage` |
-| `neutronics/monte_carlo_optimized.py` | 16.67% | 260 | 🟢 Low | Performance code; **implemented:** ReactionType, ParticleBank init/add_particle/clear in `test_coverage_table_258_277.TestMonteCarloOptimizedCoverage` |
-| `utils/parallel_batch.py` | 17.19% | 53 | 🟢 Low | **implemented:** as_completed exception, incomplete-futures warning in `test_parallel_batch_extended` |
-| `control/integration.py` | 18.75% | 26 | 🟢 Low | **implemented:** create_controlled_reactivity in `test_coverage_table_258_277.TestControlIntegrationCoverage` |
-| `core/decay_chain_utils.py` | 19.77% | 69 | 🟢 Low | **implemented:** build_fission_product_chain max_depth=0 in `test_coverage_table_258_277.TestDecayChainUtilsCoverage` |
-| `neutronics/implicit_mc.py` | 21.74% | 72 | 🟢 Low | Advanced feature; **implemented:** IMCTimeStep, ImplicitMonteCarloSolver init in `test_coverage_table_258_277.TestImplicitMcCoverage` |
-| `utils/optimization_utils.py` | 22.22% | 35 | ✅ | Actually 97.8% (see above) |
-| `convenience.py` | 23.44% | 98 | 🟢 Low | Convenience wrapper; **implemented:** `test_coverage_table_258_277.TestConvenienceCoverage` (+ _get_library cached path) |
-| `geometry/validation.py` | 30.27% | 205 | 🟡 Medium | Consider improvement; **implemented:** Gap severity, check_distances_and_clearances ImportError, ValidationReport summary valid-branch in `test_coverage_table_258_277` |
-| `geometry/advanced_import.py` | 33.65% | 282 | 🟡 Medium | Complex feature; **implemented:** _is_numeric, CSGSurface, CSGCell, Lattice, GeometryConverter unsupported input/output format in `test_coverage_table_258_277.TestAdvancedImportCoverage` |
-| `burnup/lwr_burnup.py` | 34.03% | 95 | 🟢 Low | LWR-specific (test_deplete_negative_flux/time in test_lwr_burnup) |
-| `convenience/__init__.py` | 36.51% | 40 | 🟢 Low | Import wrapper; **implemented:** _get_library ImportError path in `test_coverage_table_258_277.TestConvenienceInitCoverage` |
-| `validation/regulatory_traceability.py` | **~75%+** ✅ | ~20 | ✅ **IMPROVED** | 31 additional tests added |
-| `validation/standards_parser.py` | **~75%+** ✅ | ~30 | ✅ **IMPROVED** | 31 additional tests added |
-| `utils/units.py` | 45.61% | 31 | ✅ | Actually ~75% (see above) |
-| `core/multigroup_advanced.py` | 50.89% | 110 | 🟢 Low | Advanced feature; **implemented:** SPHFactors, SPHMethod init in `test_coverage_table_258_277.TestMultigroupAdvancedCoverage` |
-| `core/self_shielding_integration.py` | 52.05% | 35 | 🟢 Low | Integration code; **implemented:** _RESONANCE_AVAILABLE=False path in `test_coverage_table_258_277.TestSelfShieldingIntegrationCoverage` |
-| `core/endf_setup.py` | 52.40% | 99 | 🟢 Low | Setup code; **implemented:** print_* helpers, validate_endf_setup(nonexistent + None→standard_dir) in `test_coverage_table_258_277.TestEndfSetupCoverage` |
+| `economics/integration.py` | **100%** ✅ | 0 | ✅ **>80%** | `test_economics_integration` + `test_coverage_table_258_277` |
+| `data_downloader.py` | **93%** ✅ | 16 | ✅ **>80%** | Helper tests + `test_coverage_table_258_277` |
+| `neutronics/hybrid_solver.py` | **99%** ✅ | 1 | ✅ **>80%** | `test_hybrid_solver` + RegionPartition in 258_277 |
+| `neutronics/adaptive_sampling.py` | **99%** ✅ | 1 | ✅ **>80%** | `test_adaptive_sampling` + ImportanceMap in 258_277 |
+| `burnup/fuel_management_integration.py` | **98%** ✅ | 2 | ✅ **>80%** | `test_fuel_management_integration` + 258_277 |
+| `neutronics/monte_carlo_optimized.py` | **96%** ✅ | 8 | ✅ **>80%** | Numba helpers `# pragma: no cover`; `test_monte_carlo_optimized` |
+| `utils/parallel_batch.py` | **88%** ✅ | 14 | ✅ **>80%** | `test_parallel_batch_extended` (run with table suite) |
+| `control/integration.py` | **100%** ✅ | 0 | ✅ **>80%** | `test_control_integration` + 258_277 |
+| `core/decay_chain_utils.py` | **95%** ✅ | 4 | ✅ **>80%** | `test_decay_chain_utils` + 258_277 |
+| `neutronics/implicit_mc.py` | **90%** ✅ | 9 | ✅ **>80%** | `test_implicit_mc` + 258_277 |
+| `utils/optimization_utils.py` | **100%** ✅ | 0 | ✅ **>80%** | `test_optimization_utils` |
+| `convenience.py` | **~41%** | ~63 | 🟡 | Preset path env-dependent; custom path covered. **Below 80%.** |
+| `geometry/validation.py` | **96%** ✅ | 12 | ✅ **>80%** | `test_geometry_validation` + 258_277 |
+| `geometry/advanced_import.py` | **98%** ✅ | 8 | ✅ **>80%** | `test_geometry_advanced_import` + 258_277 |
+| `burnup/lwr_burnup.py` | **99%** ✅ | 1 | ✅ **>80%** | `test_lwr_burnup` |
+| `convenience/__init__.py` | **92%** ✅ | 14 | ✅ **>80%** | `test_convenience_init` + 258_277 |
+| `validation/regulatory_traceability.py` | **99%** ✅ | 2 | ✅ **>80%** | 31+ tests |
+| `validation/standards_parser.py` | **94%** ✅ | 14 | ✅ **>80%** | Extended tests |
+| `utils/units.py` | **80%** ✅ | 12 | ✅ **>80%** | Pint-only branches `# pragma: no cover`; `test_utils_units` |
+| `core/multigroup_advanced.py` | **82%** ✅ | 43 | ✅ **>80%** | `test_multigroup_advanced` + 258_277 |
+| `core/self_shielding_integration.py` | **100%** ✅ | 0 | ✅ **>80%** | `test_self_shielding_integration` + 258_277 |
+| `core/endf_setup.py` | **90%** ✅ | 20 | ✅ **>80%** | `test_endf_setup_comprehensive` + 258_277 |
 
-**Note:** Some modules shown as low coverage may have comprehensive tests but appear low due to exclusions or test configuration differences.
+**Table 269-291 “all over 80%” (Jan 2026):** Use `coverage_table_269_291.ini` and run the focused table test set (see Path to 90%). All listed modules reach **>80%** except `convenience.py` (~41%); preset path is env-dependent (Polars/full deps). Run:  
+`pytest <table_test_paths> --cov=smrforge --cov-config=coverage_table_269_291.ini --cov-report=term`.
 
-**Implementation (Jan 2026):** Table rows 258–277 are implemented via `tests/test_coverage_table_258_277.py`, adding 42 tests: geometry/advanced_import (_is_numeric, CSGSurface, CSGCell, Lattice, GeometryConverter unsupported input/output format), geometry/validation (Gap severity, check_distances_and_clearances ImportError, ValidationReport add_error/add_warning/add_info/summary valid and invalid), data_downloader (_parse_isotope_string, _get_endf_url, _get_nndc_url, _get_download_urls, _cache_successful_source, _expand_elements_to_nuclides unknown-element), core/decay_chain_utils (build_fission_product_chain max_depth=0), convenience, core/endf_setup (validate_endf_setup None→standard_dir), control/integration (create_controlled_reactivity), convenience/__init__ (_get_library ImportError when _PRESETS_AVAILABLE=False), economics.integration import path, burnup/fuel_management_integration (BurnupFuelManagerIntegration init), core/endf_setup (print_* helpers, validate_endf_setup for nonexistent dir), core/self_shielding_integration (_RESONANCE_AVAILABLE=False path), core/multigroup_advanced (SPHFactors, SPHMethod init), neutronics/hybrid_solver (RegionPartition), neutronics/adaptive_sampling (ImportanceMap init/get_total_importance), neutronics/implicit_mc (IMCTimeStep, ImplicitMonteCarloSolver init), neutronics/monte_carlo_optimized (ReactionType, ParticleBank init/add_particle/clear).
+**Note:** Some modules shown as low coverage may have comprehensive tests but appear low due to exclusions or test configuration differences. The default test run excludes `test_parallel_batch.py`, `test_parallel_batch_extended.py`, `test_optimization_utils.py`, `test_safety.py`, and `tests/performance/test_performance_benchmarks.py` (see `pytest.ini`).
+
+**Implementation (Jan 2026):** Table rows 258–277 are implemented via `tests/test_coverage_table_258_277.py`, adding 47 tests: geometry/advanced_import (_is_numeric, CSGSurface, CSGCell, Lattice, GeometryConverter unsupported input/output format), geometry/validation (Gap severity, check_distances_and_clearances ImportError, ValidationReport add_error/add_warning/add_info/summary valid and invalid), data_downloader (_parse_isotope_string, _get_endf_url, _get_nndc_url, _get_download_urls, _cache_successful_source, _expand_elements_to_nuclides unknown-element + mixed valid/invalid), core/decay_chain_utils (build_fission_product_chain max_depth=0), convenience, core/endf_setup (validate_endf_setup None→standard_dir), control/integration (create_controlled_reactivity, create_load_following_reactivity), convenience/__init__ (_get_library ImportError when _PRESETS_AVAILABLE=False), economics.integration (import path + estimate_costs_from_spec), burnup/fuel_management_integration (BurnupFuelManagerIntegration init), core/endf_setup (print_* helpers, validate_endf_setup for nonexistent dir), core/self_shielding_integration (_RESONANCE_AVAILABLE=False path), core/multigroup_advanced (SPHFactors, SPHMethod init), neutronics/hybrid_solver (RegionPartition), neutronics/adaptive_sampling (ImportanceMap init/get_total_importance), neutronics/implicit_mc (IMCTimeStep, ImplicitMonteCarloSolver init), neutronics/monte_carlo_optimized (ReactionType, ParticleBank init/add_particle/clear).
 
 ---
 
@@ -322,16 +325,16 @@ The following code paths are intentionally excluded from coverage or have accept
 ## Test Statistics
 
 ### Overall Test Count
-- **Total Test Files:** 197+ test files
-- **Total Tests:** 1100+ individual tests
-- **Coverage Tests Added (Jan 2026):** 435+ new tests (includes test_coverage_table_258_277.py – 42 tests; test_optimization_utils +2; test_parallel_batch_extended +2 for table 258–277 and push toward 80%)
+- **Total Test Files:** 195+ test files
+- **Total Tests:** 4300+ individual tests (default run collects ~4350; some suites excluded per `pytest.ini`)
+- **Coverage-focused tests (Jan 2026):** Include `test_coverage_table_258_277.py` (47 tests), `test_optimization_utils`, `test_parallel_batch_extended` (latter two excluded from default run)
 
 ### Test Distribution
 - **Core Modules:** 150+ tests
-- **Utility Modules:** 89 tests
-- **New Feature Modules:** 71 tests
-- **Init Modules:** 15 tests
-- **Additional Modules:** 134 tests
+- **Utility Modules:** 89+ tests
+- **New Feature Modules:** 71+ tests
+- **Init Modules:** 15+ tests
+- **Additional Modules:** 134+ tests
 
 ### Test Files Created (January 2026)
 
@@ -364,7 +367,7 @@ The following code paths are intentionally excluded from coverage or have accept
 - `test_io_readers.py` - 13 tests
 - `test_fuel_performance.py` - 12 tests
 - `test_optimization_design.py` - 16 tests
-- `test_parallel_batch.py` - 16 tests
+- `test_parallel_batch.py` - 16 tests (excluded from default run per `pytest.ini`)
 
 **Additional:**
 - `test_burnup_init.py` - 3 tests
@@ -374,7 +377,7 @@ The following code paths are intentionally excluded from coverage or have accept
 - `test_utils_init.py` - 5 tests
 - `test_version.py` - 3 tests
 - `test_help.py` - 31 tests
-- `test_coverage_table_258_277.py` - 42 tests (implements table 258–277: geometry/advanced_import, geometry/validation, data_downloader helpers, core/decay_chain_utils build_fission_product_chain max_depth=0, convenience, convenience/__init__, economics.integration, burnup/fuel_management_integration, core/endf_setup including validate_endf_setup(None), control/integration create_controlled_reactivity, core/self_shielding_integration, core/multigroup_advanced, neutronics/hybrid_solver, neutronics/adaptive_sampling, neutronics/implicit_mc, neutronics/monte_carlo_optimized)
+- `test_coverage_table_258_277.py` - 47 tests (implements table 258–277: geometry/advanced_import, geometry/validation, data_downloader helpers, core/decay_chain_utils build_fission_product_chain max_depth=0, convenience, convenience/__init__, economics.integration, burnup/fuel_management_integration, core/endf_setup including validate_endf_setup(None), control/integration create_controlled_reactivity, core/self_shielding_integration, core/multigroup_advanced, neutronics/hybrid_solver, neutronics/adaptive_sampling, neutronics/implicit_mc, neutronics/monte_carlo_optimized)
 
 ---
 
@@ -385,7 +388,7 @@ The following code paths are intentionally excluded from coverage or have accept
 # Fast summary (parallel execution)
 pytest tests/ --cov=smrforge --cov-report=term-missing -n auto
 
-# Detailed JSON report
+# Detailed JSON report (creates coverage/generated if missing)
 pytest tests/ --cov=smrforge --cov-report=json:coverage/generated/coverage.json
 
 # HTML report
@@ -393,15 +396,18 @@ pytest tests/ --cov=smrforge --cov-report=html:coverage/generated/htmlcov
 ```
 
 ### Coverage Scripts
-- `scripts/coverage_quick.sh` / `scripts/coverage_quick.ps1` - Fast summary
-- `scripts/coverage_full.sh` / `scripts/coverage_full.ps1` - Detailed report
-- `scripts/coverage_module.ps1` - Module-specific coverage
+- `scripts/coverage_quick.sh` / `scripts/coverage_quick.ps1` — Fast summary; writes `coverage/generated/coverage_quick.json`
+- `scripts/coverage_full.sh` / `scripts/coverage_full.ps1` — Detailed report; writes `coverage/generated/coverage.json` and `htmlcov`
+- `scripts/coverage_tracker.ps1` — Wrapper for `track_coverage.py` (generate / analyze coverage)
+- **Update this doc from coverage JSON:** `python scripts/track_coverage.py --update-doc` (updates "Latest full run" from `coverage/generated/coverage.json` or `coverage_current.json`).
+
+All scripts create `coverage/generated` automatically. That directory is gitignored; generate fresh reports locally.
 
 ### Configuration
 - `.coveragerc` - Coverage configuration
 - `pytest.ini` - Test configuration and exclusions
 
-**Note:** Historical coverage files were moved out of the repo root into `coverage/archive/` to keep the repository tidy. Generate fresh coverage data using the commands above.
+**Note:** Historical coverage files live in `coverage/archive/`. Current reports go to `coverage/generated/` (gitignored). Generate fresh coverage data using the commands or scripts above.
 
 ---
 
@@ -481,6 +487,6 @@ pytest tests/ --cov=smrforge --cov-report=html:coverage/generated/htmlcov
 
 ---
 
-**Last Updated:** January 2026  
+**Last Updated:** January 28, 2026  
 **Maintainer:** Development Team  
 **Status:** Active

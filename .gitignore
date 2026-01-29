@@ -79,6 +79,43 @@ geometry_3d.html
 # Coverage generated artifacts (historical snapshots live in coverage/archive/)
 coverage/generated/
 coverage/tracking/
+coverage_run_*.txt
+coverage_run_*.txt.errors
+coverage_run_output*.txt
+coverage_run_output*.errors*
+coverage_after_dedup.json
+
+# Coverage/session docs and helper scripts (local or one-off)
+COVERAGE_ANALYSIS_IMPLEMENTATION.md
+COVERAGE_FILES_ANALYSIS.md
+COVERAGE_PROGRESS_BAR.md
+COVERAGE_RUN_ACTIVE.md
+COVERAGE_RUN_DIAGNOSIS.md
+COVERAGE_RUN_MONITORING.md
+COVERAGE_RUN_RESTARTED.md
+COVERAGE_RUN_RESULTS.md
+COVERAGE_RUN_STATUS.md
+COVERAGE_RUN_WAITING.md
+COVERAGE_STRATEGY.md
+EXCLUDED_FILES_COORDINATION.md
+EXCLUDED_FILES_FIXES_SUMMARY.md
+TEST_COORDINATION.md
+TEST_HANG_DIAGNOSIS.md
+TEST_HANG_FIXES_APPLIED.md
+TEST_HANG_FIX_SUMMARY.md
+WORK_SESSION_SUMMARY_2026_01_22.md
+check_coverage_progress.ps1
+monitor_coverage.ps1
+scripts/check_old_processes.ps1
+scripts/monitor_coverage_run.ps1
+scripts/run_coverage_analysis.ps1
+scripts/show_coverage_progress.ps1
+
+# IDE / local
+.cursor/
+
+# Local run config (canonical example: examples/inputs/reactor.json)
+reactor.json
 
 # Backup
 backup_*/

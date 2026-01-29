@@ -12,9 +12,11 @@ Write-Host "This may take longer but provides detailed missing line information.
 $CoverageOutDir = "coverage/generated"
 New-Item -ItemType Directory -Force $CoverageOutDir | Out-Null
 
-# Run tests with parallel execution and detailed coverage reporting
+# Use temp dir for coverage data to avoid Windows/OneDrive lock issues (see COVERAGE_TRACKING.md)
+$env:COVERAGE_FILE = Join-Path $env:TEMP ".coverage_smrforge"
+
+# Run tests with detailed coverage reporting (omit -n auto if pytest-xdist not installed)
 pytest $TestPath `
-    -n auto `
     --cov=smrforge `
     --cov-report=term-missing `
     --cov-report=html:$CoverageOutDir/htmlcov `
