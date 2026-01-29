@@ -679,17 +679,16 @@ designer.show()  # Interactive sliders, live updates
 ## 📚 Related Documentation
 
 - **Development Roadmap:** `docs/roadmaps/development-roadmap.md` - Detailed status of all features
-- **Next Features:** `docs/roadmaps/NEXT-FEATURES.md` - Immediate next steps
 - **CLI Enhancement Plan:** `docs/roadmaps/cli-enhancement-plan.md` - CLI feature status
 - **Feature Status:** `docs/status/feature-status.md` - Comprehensive feature tracking
 - **Capability Gaps:** `docs/status/capability-gaps-analysis.md` - Missing capabilities analysis
+
+*Superseded roadmaps (next-steps, next-work-options, NEXT-FEATURES) are in `docs/archive/roadmaps-superseded/`.*
 
 ---
 
 *This consolidated roadmap merges information from:*
 - `docs/roadmaps/development-roadmap.md`
-- `docs/roadmaps/NEXT-FEATURES.md`
-- `docs/roadmaps/next-steps.md`
 - `docs/roadmaps/cli-enhancement-plan.md`
 - `docs/status/smr-focused-gaps-analysis.md`
 - `docs/status/capability-gaps-analysis.md`

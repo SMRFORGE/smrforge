@@ -1,8 +1,8 @@
 # SMRForge Documentation
 
-**Last Updated:** January 19, 2026
+**Last Updated:** January 28, 2026
 
-This directory contains all SMRForge documentation organized by category.
+This directory contains all SMRForge documentation organized by category. See **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** for the full index.
 
 ---
 
@@ -32,10 +32,9 @@ This directory contains all SMRForge documentation organized by category.
 - Coverage information
 
 ### Roadmaps (`roadmaps/`)
-- Development roadmap
-- Next steps
-- Future work options
-- Priority analysis
+- **CONSOLIDATED-ROADMAP** (primary), development roadmap
+- Implementation priority analysis, optimization suggestions
+- Superseded items in `archive/roadmaps-superseded/`
 
 ### Status (`status/`)
 - Feature status

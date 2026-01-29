@@ -474,7 +474,8 @@ See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`e
 - **[API Documentation](https://cmwhalen.github.io/smrforge/)** - Complete API reference
 - **[Feature Status](docs/status/feature-status.md)** - Module status and capabilities
 - **[Performance Optimizations](docs/technical/OPTIMIZATION-STATUS-REPORT.md)** - Performance improvements (Phase 1-3 complete)
-- **[Test Coverage](docs/status/test-coverage-summary.md)** - Test coverage details
+- **[Test Coverage](COVERAGE_TRACKING.md)** - Coverage tracking and path to 90%
+- **[Documentation Index](docs/DOCUMENTATION_INDEX.md)** - Full docs index and archive
 
 **Development:**
 - **[Contributing](CONTRIBUTING.md)** - Development guidelines
@@ -576,11 +577,11 @@ Generated plots/HTML visualizations are written to `testing/results/` to keep th
 See testing documentation:
 - [`testing/README.md`](testing/README.md) - Manual testing guide
 - [`docs/testing/MANUAL_TESTING_CHECKLIST.md`](docs/testing/MANUAL_TESTING_CHECKLIST.md) - Complete testing checklist
-- [`testing/FINAL_TEST_RESULTS.md`](testing/FINAL_TEST_RESULTS.md) - Detailed test results
 - [`COVERAGE_TRACKING.md`](COVERAGE_TRACKING.md) - **Single source of truth for coverage tracking** ⭐
 - [`README_COVERAGE.md`](README_COVERAGE.md) - Quick reference for coverage documentation
 - [`docs/development/coverage-inventory.md`](docs/development/coverage-inventory.md) - Detailed implementation history and roadmap
 - [`docs/development/coverage-exclusions.md`](docs/development/coverage-exclusions.md) - Explanation of intentional exclusions
+- Past session results: [`docs/archive/testing-session/`](docs/archive/testing-session/)
 
 ## Contributing
 

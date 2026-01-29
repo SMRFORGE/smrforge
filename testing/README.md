@@ -7,7 +7,7 @@ This directory contains comprehensive testing materials for manually testing all
 1. **Review the Checklist**: Read `docs/testing/MANUAL_TESTING_CHECKLIST.md` for an overview
 2. **Run Test Scripts**: Use the Python test scripts in this directory (`test_*.py`) - **Primary method**
 3. **Use Jupyter Notebooks** (Optional): Use provided notebooks or create new ones from scripts for interactive testing
-4. **Document Results**: Record your findings using the feedback template (`TEST_RESULTS_TEMPLATE.md`)
+4. **Document Results**: Record your findings (templates and past session results are in `docs/archive/testing-session/`)
 
 ## Available Test Scripts
 

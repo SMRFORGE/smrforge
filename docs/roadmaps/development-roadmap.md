@@ -577,14 +577,13 @@ SMRForge has achieved significant milestones in 2025:
 7. **Pre-processed nuclear data libraries** - Faster first-time access (Phase 2)
 8. **Advanced optimization algorithms** - Genetic algorithms, particle swarm, etc.
 
-**For detailed next steps and priorities, see:** `docs/roadmaps/NEXT-FEATURES.md`
+**For detailed next steps and priorities, see:** `docs/roadmaps/CONSOLIDATED-ROADMAP.md` (superseded items in `docs/archive/roadmaps-superseded/`).
 
 ---
 
 ## 📚 Related Documentation
 
 - **⭐ CONSOLIDATED ROADMAP:** `docs/roadmaps/CONSOLIDATED-ROADMAP.md` - **Unified view of all roadmaps with pain point-driven feature suggestions**
-- **Next Features:** `docs/roadmaps/NEXT-FEATURES.md` - **Priority list of missing features and next implementation targets**
 - **CLI Enhancement Plan:** `docs/roadmaps/cli-enhancement-plan.md` - **Complete CLI implementation guide and status**
 - **ENDF File Types Analysis:** `docs/validation/endf-file-types-analysis.md`
 - **ENDF Documentation:** `docs/technical/endf-documentation.md`

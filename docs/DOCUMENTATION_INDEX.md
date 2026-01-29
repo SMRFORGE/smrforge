@@ -1,21 +1,26 @@
 # SMRForge Documentation Index
 
-**Last Updated:** January 18, 2026  
+**Last Updated:** January 28, 2026  
 **Status:** Consolidated and reorganized - Redundant documents archived
 
 This document provides a comprehensive index of all SMRForge documentation files.
 
-**Note:** Documentation has been consolidated and reorganized. Historical documents have been moved to `archive/`. See [Documentation Consolidation Plan](archive/DOCUMENTATION_CONSOLIDATION_PLAN_2026.md) for details.
+**Note:** Documentation has been consolidated and reorganized. Historical and session-specific documents are in [archive/](archive/README.md). See [Documentation Consolidation Plan](archive/DOCUMENTATION_CONSOLIDATION_PLAN_2026.md) for details.
 
 ---
 
 ## 📚 Core Documentation (Root)
 
 ### Essential Files
-- **[README.md](README.md)** - Main project overview and quick start
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guidelines for contributing
-- **[LICENSE](LICENSE)** - License information
+- **[README.md](../README.md)** - Main project overview and quick start
+- **[CHANGELOG.md](../CHANGELOG.md)** - Version history and changes
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Guidelines for contributing
+- **[LICENSE](../LICENSE)** - License information
+
+### Coverage & PyPI
+- **[COVERAGE_TRACKING.md](../COVERAGE_TRACKING.md)** - **Source of truth** for test coverage tracking and path to 90%
+- **[README_COVERAGE.md](../README_COVERAGE.md)** - Quick reference for coverage docs
+- **[README_PYPI.md](../README_PYPI.md)** / **[PYPI_READINESS_CHECKLIST.md](../PYPI_READINESS_CHECKLIST.md)** - PyPI release notes and checklist
 
 ---
 
@@ -60,11 +65,13 @@ This document provides a comprehensive index of all SMRForge documentation files
 ## 🗺️ Roadmaps (`docs/roadmaps/`)
 
 ### Planning Documents
-- **[Development Roadmap](docs/roadmaps/development-roadmap.md)** - Main development roadmap and priorities
-- **[Next Steps](docs/roadmaps/next-steps.md)** - Immediate next steps and recommendations
-- **[Next Work Options](docs/roadmaps/next-work-options.md)** - Options for future work
-- **[Implementation Priority Analysis](docs/roadmaps/implementation-priority-analysis.md)** - Priority analysis
-- **[Optimization Suggestions](docs/roadmaps/optimization-suggestions.md)** - Optimization suggestions
+- **[CONSOLIDATED-ROADMAP](roadmaps/CONSOLIDATED-ROADMAP.md)** - **Primary** - Unified roadmap (completed, pending, future)
+- **[Development Roadmap](roadmaps/development-roadmap.md)** - Development priorities
+- **[Implementation Priority Analysis](roadmaps/implementation-priority-analysis.md)** - Priority analysis
+- **[Optimization Suggestions](roadmaps/optimization-suggestions.md)** - Optimization suggestions
+- **[CLI Enhancement Plan](roadmaps/cli-enhancement-plan.md)** - CLI improvements
+
+**Archived (superseded by CONSOLIDATED-ROADMAP):** [next-steps](archive/roadmaps-superseded/next-steps.md), [next-work-options](archive/roadmaps-superseded/next-work-options.md), [NEXT-FEATURES](archive/roadmaps-superseded/NEXT-FEATURES.md) → `archive/roadmaps-superseded/`
 
 ---
 
@@ -145,17 +152,22 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 
 ## 📦 Archive (`docs/archive/`)
 
-### Historical Documents
-- **[Phase 1 Completion Report](docs/archive/phase1-completion-report.md)** - Phase 1 completion
-- **[Phase 2 Completion Report](docs/archive/phase2-completion-report.md)** - Phase 2 completion
-- **[Phase 3 Completion Report](docs/archive/phase3-completion-report.md)** - Phase 3 completion
-- **[Documentation Consolidation Summary](docs/archive/documentation-consolidation-summary.md)** - Documentation consolidation history
-- **[Documentation Update 2026-01-01](docs/archive/documentation-update-2026-01-01.md)** - Documentation update summary
-- **[Coverage Improvements 2026-01](docs/archive/coverage-improvements-2026-01.md)** - Test coverage improvements (historical)
-- **[Status High Medium](docs/archive/status-high-medium.md)** - Outdated status report (replaced by next-steps-complete.md)
-- **[Feature Implementation Summary](docs/archive/feature-implementation-summary.md)** - Historical implementation summary
-- **[Visualization Readiness Assessment](docs/archive/visualization-readiness-assessment.md)** - Historical assessment (features now implemented)
-- **[Visualization Advanced Requirements](docs/archive/visualization-advanced-requirements.md)** - Historical requirements (features now implemented)
+See **[archive/README.md](archive/README.md)** for the archive layout and subdirectories.
+
+### Subdirectories (Jan 2026)
+| Directory | Contents |
+|-----------|----------|
+| **[root-session/](archive/root-session/)** | One-off root docs (COVERAGE_RUN_*, TEST_*, EXCLUDED_FILES_*, etc.) |
+| **[testing-session/](archive/testing-session/)** | Manual testing session notes, result templates (from `testing/`) |
+| **[roadmaps-superseded/](archive/roadmaps-superseded/)** | next-steps, next-work-options, NEXT-FEATURES (→ CONSOLIDATED-ROADMAP) |
+| **[technical-superseded/](archive/technical-superseded/)** | Redundant technical/coverage docs (→ OPTIMIZATION-STATUS-REPORT, etc.) |
+
+### Historical Documents (flat archive)
+- **[Phase 1–3 Completion Reports](archive/phase1-completion-report.md)** - Phase completion
+- **[Documentation Consolidation Summary](archive/documentation-consolidation-summary.md)** - Consolidation history
+- **[Coverage Improvements 2026-01](archive/coverage-improvements-2026-01.md)** - Coverage improvements (historical)
+- **[Feature Implementation Summary](archive/feature-implementation-summary.md)** - Historical implementation summary
+- **[Visualization Readiness / Advanced Requirements](archive/visualization-readiness-assessment.md)** - Historical assessments
 
 ---
 
@@ -218,15 +230,15 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 4. Explore [Usage Guide](docs/guides/usage.md)
 
 ### For Developers
-1. Read [CONTRIBUTING.md](CONTRIBUTING.md)
-2. Follow [Code Style Guide](docs/development/code-style.md)
-3. Check [Development Roadmap](docs/roadmaps/development-roadmap.md)
-4. Review [Feature Status](docs/status/feature-status.md)
+1. Read [CONTRIBUTING](../CONTRIBUTING.md)
+2. Follow [Code Style Guide](development/code-style.md)
+3. Check [CONSOLIDATED-ROADMAP](roadmaps/CONSOLIDATED-ROADMAP.md) or [Development Roadmap](roadmaps/development-roadmap.md)
+4. Review [Feature Status](status/feature-status.md)
 
 ### For Contributors
-1. Review [CONTRIBUTING.md](CONTRIBUTING.md)
-2. Check [Release Process](docs/development/release-process.md)
-3. See [CHANGELOG.md](CHANGELOG.md) for recent changes
+1. Review [CONTRIBUTING](../CONTRIBUTING.md)
+2. Check [Release Process](development/release-process.md)
+3. See [CHANGELOG](../CHANGELOG.md) for recent changes
 
 ---
 
@@ -235,5 +247,5 @@ See [Implementation Summaries Index](docs/implementation/README.md) for a comple
 - All dates in documentation use format: **Month Day, Year** (e.g., January 18, 2026)
 - Documents are updated when features are implemented or information changes
 - Historical implementation summaries are kept in `docs/archive/` for reference
-- For the most current status, see [Feature Status](docs/status/feature-status.md) and [Development Roadmap](docs/roadmaps/development-roadmap.md)
+- For the most current status, see [Feature Status](status/feature-status.md) and [CONSOLIDATED-ROADMAP](roadmaps/CONSOLIDATED-ROADMAP.md)
 - Documentation structure follows the consolidation plan in [Documentation Consolidation Plan](archive/DOCUMENTATION_CONSOLIDATION_PLAN_2026.md)
