@@ -1,6 +1,6 @@
 # Docker Usage Guide for SMRForge
 
-**Last Updated:** January 2026
+**Last Updated:** January 28, 2026
 
 This guide explains how to use SMRForge with Docker Desktop, including setup, usage, and troubleshooting.
 
@@ -79,6 +79,7 @@ docker compose exec smrforge-dev bash
 # Inside container, you can:
 # - Edit code (changes reflect immediately via volume mount)
 # - Run tests: pytest tests/
+# - Run performance profiling: python scripts/profile_performance.py --function keff --mode both (see docs/development/memory-and-performance-assessment.md)
 # - Format code: black .
 # - Run type checking: mypy smrforge/
 ```

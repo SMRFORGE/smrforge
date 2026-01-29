@@ -77,10 +77,11 @@ services:
     #   - Async edge cases: partial failures, exception propagation, timeouts, concurrent access
     #   - Manual testing framework: 13 test scripts (test_*.py) in testing/ directory for feature validation
     #   - Optional Jupyter notebooks available for interactive testing (01_CLI_Commands.ipynb)
-    #   - Quick start validation guide: docs/validation/QUICK_START_VALIDATION.md for ENDF validation testing
-    #   - API Style Guide: docs/guides/API_STYLE_GUIDE.md (comprehensive API design guidelines)
-    #   - API Consistency Report: docs/status/API_CONSISTENCY_REPORT.md (detailed API analysis)
-    # Optional: Add mesh conversion and CAD import: pip install meshio trimesh
+#   - Quick start validation guide: docs/validation/QUICK_START_VALIDATION.md for ENDF validation testing
+#   - API Style Guide: docs/guides/API_STYLE_GUIDE.md (comprehensive API design guidelines)
+#   - API Consistency Report: docs/status/API_CONSISTENCY_REPORT.md (detailed API analysis)
+#   - Performance profiling: scripts/profile_performance.py, run_performance_profile.sh; see docs/development/memory-and-performance-assessment.md.
+# Optional: Add mesh conversion and CAD import: pip install meshio trimesh
     # Optional: Add parquet support: pip install pyarrow or fastparquet
     # Image already has dev deps installed; drop into an interactive shell.
     command: ["/bin/bash"]

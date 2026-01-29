@@ -4,8 +4,9 @@
 # Build: docker build -t smrforge:latest .
 # Run:   docker run -it smrforge:latest
 #
-# Last Updated: January 25, 2026
+# Last Updated: January 28, 2026
 # Recent Additions (January 2026):
+# - Memory and performance profiling (January 2026): profile_performance.py (--mode cpu|memory|both, --function keff|mesh|monte_carlo), run_performance_profile.*, update_performance_baselines.py, smrforge.utils.profiling. See docs/development/memory-and-performance-assessment.md.
 # - Performance optimizations (January 25, 2026):
 #   * Vectorized burnup fission rate integration (~10-100x faster)
 #   * Vectorized control rod shadowing calculation (~5-20x faster)

@@ -44,8 +44,11 @@ backup_*/
 
 # Coverage and test artifacts
 .coverage
+.coverage*
 .pytest_cache/
 htmlcov/
+coverage/generated/
+report_*.txt
 *.cover
 
 # ReadTheDocs and build artifacts
