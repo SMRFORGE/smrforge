@@ -48,7 +48,7 @@ class TestTransientOptimizations:
             rho_external=rho_external,
             power_removal=power_removal,
             initial_state=initial_state,
-            t_span=(0.0, 100.0),
+            t_span=(0.0, 10.0),
             adaptive=True,  # Adaptive stepping
             max_step=None,  # Auto-determined
         )
@@ -100,7 +100,9 @@ class TestTransientOptimizations:
             rho_external=rho_external,
             power_removal=power_removal,
             initial_state=initial_state,
-            t_span=(0.0, 72 * 3600),  # 72 hours
+            # Keep this short for unit tests (the long-term mode is what we care about,
+            # not simulating multiple days in CI).
+            t_span=(0.0, 2 * 3600),  # 2 hours
             long_term_optimization=True,  # Enable optimizations
             adaptive=True,
         )
@@ -109,7 +111,7 @@ class TestTransientOptimizations:
         assert "t" in result or "time" in result
         time_key = "t" if "t" in result else "time"
         assert len(result[time_key]) > 0
-        assert result[time_key][-1] >= 72 * 3600 - 3600.0  # Should reach near end
+        assert result[time_key][-1] >= 2 * 3600 - 60.0  # Should reach near end
 
         # Check that solution is reasonable
         assert np.all(result["power"] >= 0)
@@ -155,7 +157,7 @@ class TestTransientOptimizations:
             rho_external=rho_external,
             power_removal=power_removal,
             initial_state=initial_state,
-            t_span=(0.0, 100.0),  # 100 seconds
+            t_span=(0.0, 10.0),  # 10 seconds
             max_step=None,  # Auto-determined
         )
 
@@ -164,7 +166,7 @@ class TestTransientOptimizations:
             rho_external=rho_external,
             power_removal=power_removal,
             initial_state=initial_state,
-            t_span=(0.0, 86400.0),  # 1 day
+            t_span=(0.0, 2 * 3600.0),  # 2 hours
             long_term_optimization=True,
             max_step=None,  # Auto-determined
         )

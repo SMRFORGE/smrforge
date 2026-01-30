@@ -14,6 +14,12 @@ try:
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False
+    dbc = None  # type: ignore[assignment]
+    html = None  # type: ignore[assignment]
+    dcc = None  # type: ignore[assignment]
+    go = None  # type: ignore[assignment]
+    px = None  # type: ignore[assignment]
+    np = None  # type: ignore[assignment]
 
 
 def create_geometry_designer():
@@ -31,7 +37,7 @@ def create_geometry_designer():
         Dash component for geometry design interface.
     """
     if not _DASH_AVAILABLE:
-        return html.Div("Dash not available")
+        return "Dash not available"
     
     return dbc.Container([
         html.H2("Geometry Designer", className="mb-4"),

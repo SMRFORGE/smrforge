@@ -13,6 +13,9 @@ try:
     _DASH_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _DASH_AVAILABLE = False
+    dbc = None  # type: ignore[assignment]
+    html = None  # type: ignore[assignment]
+    dcc = None  # type: ignore[assignment]
 
 
 _DEMO_OPTIONS = [
@@ -43,7 +46,7 @@ _DEMO_OPTIONS = [
 def create_feature_lab():
     """Create the feature lab page."""
     if not _DASH_AVAILABLE:  # pragma: no cover
-        return html.Div("Dash not available")
+        return "Dash not available"
 
     return dbc.Container(
         [

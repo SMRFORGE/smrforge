@@ -4,6 +4,8 @@ Geometry Designer Callbacks
 Interactive callbacks for geometry design interface.
 """
 
+from __future__ import annotations
+
 try:
     from dash import Input, Output, State, html, callback_context
     from dash.exceptions import PreventUpdate

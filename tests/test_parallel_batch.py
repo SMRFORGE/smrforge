@@ -169,12 +169,22 @@ class TestBatchProcess:
         mock_rich_module.TextColumn = MagicMock()
         mock_rich_module.SpinnerColumn = MagicMock()
         
-        # Mock ThreadPoolExecutor to avoid actual parallel execution
+        # Mock ThreadPoolExecutor but return real, completed Future objects so that
+        # concurrent.futures.as_completed() can iterate without timing out.
+        from concurrent.futures import Future
+
         mock_executor = MagicMock()
-        mock_future = MagicMock()
-        mock_future.result.return_value = 4
-        mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
-        mock_executor.return_value.__enter__.return_value.__exit__ = MagicMock(return_value=None)
+        f1 = Future()
+        f1.set_result(2)
+        f2 = Future()
+        f2.set_result(4)
+        futures = [f1, f2]
+
+        def submit_side_effect(fn, arg):
+            return futures.pop(0)
+
+        mock_pool = mock_executor.return_value.__enter__.return_value
+        mock_pool.submit.side_effect = submit_side_effect
         
         with patch.dict(sys.modules, {'rich.progress': mock_rich_module}):
             with patch('smrforge.utils.parallel_batch.ThreadPoolExecutor', mock_executor):
@@ -189,6 +199,7 @@ class TestBatchProcess:
                 )
                 # Should complete without error
                 assert len(result) == 2
+                assert result == [2, 4]
                 # Verify progress bar was used
                 mock_progress_class.assert_called_once()
 

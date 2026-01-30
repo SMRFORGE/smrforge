@@ -134,11 +134,11 @@ def _demo_quick_transient() -> tuple[str, dict]:
     tm = result.get("T_moderator", [])
 
     fig = go.Figure()
-    if t and p:
+    if t is not None and p is not None and len(t) > 0 and len(p) > 0:
         fig.add_trace(go.Scatter(x=t, y=p, mode="lines", name="Power (W)"))
-    if t and tf:
+    if t is not None and tf is not None and len(t) > 0 and len(tf) > 0:
         fig.add_trace(go.Scatter(x=t, y=tf, mode="lines", name="T_fuel (K)", yaxis="y2"))
-    if t and tm:
+    if t is not None and tm is not None and len(t) > 0 and len(tm) > 0:
         fig.add_trace(go.Scatter(x=t, y=tm, mode="lines", name="T_moderator (K)", yaxis="y2"))
     fig.update_layout(
         title="Quick transient (power + temperatures)",
@@ -152,7 +152,7 @@ def _demo_quick_transient() -> tuple[str, dict]:
         [
             "Quick transient demo (point kinetics)",
             f"  points: {len(t)}",
-            f"  peak power (MW): {(max(p)/1e6):.3f}" if p else "  peak power: N/A",
+            f"  peak power (MW): {(max(p)/1e6):.3f}" if p is not None and len(p) > 0 else "  peak power: N/A",
         ]
     )
     return text, fig.to_dict()
@@ -187,9 +187,9 @@ def _demo_lumped_thermal() -> tuple[str, dict]:
     tm = res.get("T_moderator", [])
 
     fig = go.Figure()
-    if t and tf:
+    if t is not None and tf is not None and len(t) > 0 and len(tf) > 0:
         fig.add_trace(go.Scatter(x=t, y=tf, mode="lines", name="T_fuel (K)"))
-    if t and tm:
+    if t is not None and tm is not None and len(t) > 0 and len(tm) > 0:
         fig.add_trace(go.Scatter(x=t, y=tm, mode="lines", name="T_moderator (K)"))
     fig.update_layout(title="Lumped thermal (temperatures)", xaxis_title="Time (s)", yaxis_title="K")
 
@@ -197,7 +197,7 @@ def _demo_lumped_thermal() -> tuple[str, dict]:
         [
             "Lumped thermal demo (0-D)",
             f"  points: {len(t)}",
-            f"  final T_fuel (K): {tf[-1]:.1f}" if tf else "  final T_fuel: N/A",
+            f"  final T_fuel (K): {tf[-1]:.1f}" if tf is not None and len(tf) > 0 else "  final T_fuel: N/A",
         ]
     )
     return text, fig.to_dict()

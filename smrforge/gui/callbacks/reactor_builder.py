@@ -252,13 +252,15 @@ def register_reactor_builder_callbacks(app):
             for field in fields:
                 if field in spec_data:
                     value = spec_data[field]
-                    if value is not None:  # Skip None values
-                        category_rows.append(
-                            html.Tr([
-                                html.Td(html.Strong(field.replace('_', ' ').title())),
-                                html.Td(format_value(field, value))
-                            ])
+                    # Show None as "N/A" for clarity instead of skipping it.
+                    category_rows.append(
+                        html.Tr(
+                            [
+                                html.Td(html.Strong(field.replace("_", " ").title())),
+                                html.Td(format_value(field, value)),
+                            ]
                         )
+                    )
             if category_rows:
                 rows.append(html.Tr([
                     html.Td(html.Strong(category), colSpan=2, style={"backgroundColor": "#f8f9fa", "fontSize": "1.1em"})

@@ -10,6 +10,9 @@ try:
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False
+    dbc = None  # type: ignore[assignment]
+    html = None  # type: ignore[assignment]
+    dcc = None  # type: ignore[assignment]
 
 
 def create_reactor_builder():
@@ -20,7 +23,7 @@ def create_reactor_builder():
         Dash component for reactor building interface.
     """
     if not _DASH_AVAILABLE:
-        return html.Div("Dash not available")
+        return "Dash not available"
     
     return dbc.Container([
         html.H2("Reactor Builder", className="mb-4"),

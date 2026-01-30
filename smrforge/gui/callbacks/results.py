@@ -2,6 +2,8 @@
 Results viewer callbacks.
 """
 
+from __future__ import annotations
+
 try:
     from dash import Input, Output, dcc, State
     from dash.exceptions import PreventUpdate

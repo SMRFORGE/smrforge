@@ -8,6 +8,9 @@ try:
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False
+    dbc = None  # type: ignore[assignment]
+    html = None  # type: ignore[assignment]
+    dcc = None  # type: ignore[assignment]
 
 
 def create_sidebar():
@@ -18,7 +21,7 @@ def create_sidebar():
         Dash component for sidebar navigation.
     """
     if not _DASH_AVAILABLE:
-        return html.Div("Dash not available")
+        return "Dash not available"
     
     return dbc.Nav([
         dbc.NavItem([

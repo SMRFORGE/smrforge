@@ -10,6 +10,9 @@ try:
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False
+    dbc = None  # type: ignore[assignment]
+    html = None  # type: ignore[assignment]
+    dcc = None  # type: ignore[assignment]
 
 
 def create_data_manager():
@@ -20,7 +23,7 @@ def create_data_manager():
         Dash component for data management interface.
     """
     if not _DASH_AVAILABLE:
-        return html.Div("Dash not available")
+        return "Dash not available"
     
     return dbc.Container([
         html.H2("Data Manager", className="mb-4"),
