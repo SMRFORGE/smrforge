@@ -79,6 +79,7 @@ geometry_3d.html
 # Coverage generated artifacts (historical snapshots live in coverage/archive/)
 coverage/generated/
 coverage/tracking/
+report_*.txt
 coverage_run_*.txt
 coverage_run_*.txt.errors
 coverage_run_output*.txt

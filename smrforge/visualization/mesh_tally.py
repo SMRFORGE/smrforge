@@ -40,6 +40,53 @@ from ..utils.logging import get_logger
 logger = get_logger("smrforge.visualization.mesh_tally")
 
 
+def _extract_uncertainty_for_view(
+    mesh_tally: "MeshTally",
+    energy_group: Optional[int],
+    *,
+    mode: str = "relative",
+    eps: float = 1e-30,
+) -> Optional[np.ndarray]:
+    """
+    Extract an uncertainty array matching the plotted data.
+
+    Assumes ``mesh_tally.uncertainty`` is an absolute 1-sigma array with the same
+    shape as ``mesh_tally.data``.
+    """
+    if mesh_tally.uncertainty is None:
+        return None
+
+    unc = np.asarray(mesh_tally.uncertainty)
+    dat = np.asarray(mesh_tally.data)
+    if unc.shape != dat.shape:
+        raise ValueError("mesh_tally.uncertainty must have the same shape as mesh_tally.data")
+
+    if dat.ndim > 3:
+        if energy_group is not None:
+            unc_view = unc[..., energy_group]
+            data_view = dat[..., energy_group]
+        else:
+            # Total: combine independent group uncertainties in quadrature.
+            unc_view = np.sqrt(np.sum(np.square(unc), axis=-1))
+            data_view = np.sum(dat, axis=-1)
+    else:
+        unc_view = unc
+        data_view = dat
+
+    mode = (mode or "relative").lower()
+    if mode in ("absolute", "abs"):
+        return np.asarray(unc_view, dtype=float)
+
+    if mode in ("relative", "rel", "percent", "pct"):
+        denom = np.maximum(np.abs(np.asarray(data_view, dtype=float)), eps)
+        rel = np.asarray(unc_view, dtype=float) / denom
+        if mode in ("percent", "pct"):
+            rel = rel * 100.0
+        return rel
+
+    raise ValueError("uncertainty_mode must be 'relative', 'percent', or 'absolute'")
+
+
 class MeshTally:
     """
     Mesh tally data container for visualization.
@@ -186,20 +233,67 @@ def _plot_mesh_tally_plotly(mesh_tally, geometry, field, energy_group, show_unce
         r_coords, z_coords = mesh_tally.mesh_coords
         r_centers = (r_coords[:-1] + r_coords[1:]) / 2
         z_centers = (z_coords[:-1] + z_coords[1:]) / 2
-        
-        fig = go.Figure(data=go.Heatmap(
-            z=data,
-            x=r_centers,
-            y=z_centers,
-            colorscale="Viridis",
-            colorbar=dict(title=field),
-        ))
-        
-        fig.update_layout(
-            title=title,
-            xaxis_title="Radius (cm)",
-            yaxis_title="Height (cm)",
-        )
+
+        if show_uncertainty and mesh_tally.uncertainty is not None:
+            uncertainty_mode = kwargs.pop("uncertainty_mode", "percent")
+            unc_view = _extract_uncertainty_for_view(
+                mesh_tally, energy_group, mode=str(uncertainty_mode)
+            )
+            unc_title = (
+                "Relative uncertainty (%)"
+                if str(uncertainty_mode).lower() in ("percent", "pct")
+                else ("Relative uncertainty" if str(uncertainty_mode).lower() in ("relative", "rel") else "Uncertainty")
+            )
+
+            fig = make_subplots(
+                rows=1,
+                cols=2,
+                subplot_titles=(title, unc_title),
+                horizontal_spacing=0.12,
+            )
+            fig.add_trace(
+                go.Heatmap(
+                    z=data,
+                    x=r_centers,
+                    y=z_centers,
+                    colorscale="Viridis",
+                    colorbar=dict(title=field),
+                ),
+                row=1,
+                col=1,
+            )
+            fig.add_trace(
+                go.Heatmap(
+                    z=unc_view,
+                    x=r_centers,
+                    y=z_centers,
+                    colorscale="Magma",
+                    colorbar=dict(title=unc_title),
+                ),
+                row=1,
+                col=2,
+            )
+            fig.update_xaxes(title_text="Radius (cm)", row=1, col=1)
+            fig.update_yaxes(title_text="Height (cm)", row=1, col=1)
+            fig.update_xaxes(title_text="Radius (cm)", row=1, col=2)
+            fig.update_yaxes(title_text="Height (cm)", row=1, col=2)
+            fig.update_layout(title=kwargs.pop("suptitle", f"{mesh_tally.name} (value + uncertainty)"))
+        else:
+            fig = go.Figure(
+                data=go.Heatmap(
+                    z=data,
+                    x=r_centers,
+                    y=z_centers,
+                    colorscale="Viridis",
+                    colorbar=dict(title=field),
+                )
+            )
+
+            fig.update_layout(
+                title=title,
+                xaxis_title="Radius (cm)",
+                yaxis_title="Height (cm)",
+            )
     
     else:
         # Cartesian (x, y, z) - create 3D volume or slice
@@ -233,12 +327,7 @@ def _plot_mesh_tally_plotly(mesh_tally, geometry, field, energy_group, show_unce
                 zaxis_title="Z (cm)",
             ),
         )
-    
-    # Add uncertainty if requested
-    if show_uncertainty and mesh_tally.uncertainty is not None:
-        # Add uncertainty visualization as overlay or separate subplot
-        pass
-    
+
     return fig
 
 
@@ -310,18 +399,75 @@ def _plot_mesh_tally_matplotlib(mesh_tally, geometry, field, energy_group, show_
         r_coords, z_coords = mesh_tally.mesh_coords
         r_centers = (r_coords[:-1] + r_coords[1:]) / 2
         z_centers = (z_coords[:-1] + z_coords[1:]) / 2
-        
+
+        if show_uncertainty and mesh_tally.uncertainty is not None:
+            uncertainty_mode = kwargs.pop("uncertainty_mode", "percent")
+            unc_view = _extract_uncertainty_for_view(
+                mesh_tally, energy_group, mode=str(uncertainty_mode)
+            )
+            unc_label = (
+                "Relative uncertainty (%)"
+                if str(uncertainty_mode).lower() in ("percent", "pct")
+                else ("Relative uncertainty" if str(uncertainty_mode).lower() in ("relative", "rel") else "Uncertainty")
+            )
+
+            fig, (ax0, ax1) = plt.subplots(1, 2, figsize=kwargs.get("figsize", (14, 6)), sharey=True)
+            im0 = ax0.contourf(r_centers, z_centers, data, levels=20, cmap="viridis")
+            ax0.set_xlabel("Radius (cm)")
+            ax0.set_ylabel("Height (cm)")
+            ax0.set_title(title)
+            plt.colorbar(im0, ax=ax0, label=field)
+
+            im1 = ax1.contourf(r_centers, z_centers, unc_view, levels=20, cmap="magma")
+            ax1.set_xlabel("Radius (cm)")
+            ax1.set_title(unc_label)
+            plt.colorbar(im1, ax=ax1, label=unc_label)
+            return fig, (ax0, ax1)
+
         fig, ax = plt.subplots(figsize=(8, 10))
         im = ax.contourf(r_centers, z_centers, data, levels=20, cmap="viridis")
         ax.set_xlabel("Radius (cm)")
         ax.set_ylabel("Height (cm)")
         ax.set_title(title)
         plt.colorbar(im, ax=ax, label=field)
-        
+
         return fig, ax
     
     else:
         # 3D - create slice or projection
+        if show_uncertainty and mesh_tally.uncertainty is not None:
+            uncertainty_mode = kwargs.pop("uncertainty_mode", "percent")
+            unc_view = _extract_uncertainty_for_view(
+                mesh_tally, energy_group, mode=str(uncertainty_mode)
+            )
+            unc_label = (
+                "Relative uncertainty (%)"
+                if str(uncertainty_mode).lower() in ("percent", "pct")
+                else ("Relative uncertainty" if str(uncertainty_mode).lower() in ("relative", "rel") else "Uncertainty")
+            )
+
+            fig, (ax0, ax1) = plt.subplots(1, 2, figsize=kwargs.get("figsize", (14, 6)))
+            x_coords, y_coords, z_coords = mesh_tally.mesh_coords
+            x_centers = (x_coords[:-1] + x_coords[1:]) / 2
+            y_centers = (y_coords[:-1] + y_coords[1:]) / 2
+            z_centers = (z_coords[:-1] + z_coords[1:]) / 2
+
+            mid_z = len(z_centers) // 2
+            X, Y = np.meshgrid(x_centers, y_centers, indexing="xy")
+
+            im0 = ax0.contourf(X, Y, data[:, :, mid_z], levels=20, cmap="viridis")
+            ax0.set_title(f"{title} - Slice at z={z_centers[mid_z]:.1f} cm")
+            ax0.set_xlabel("X (cm)")
+            ax0.set_ylabel("Y (cm)")
+            plt.colorbar(im0, ax=ax0, label=field)
+
+            im1 = ax1.contourf(X, Y, unc_view[:, :, mid_z], levels=20, cmap="magma")
+            ax1.set_title(f"{unc_label} - Slice at z={z_centers[mid_z]:.1f} cm")
+            ax1.set_xlabel("X (cm)")
+            ax1.set_ylabel("Y (cm)")
+            plt.colorbar(im1, ax=ax1, label=unc_label)
+            return fig, (ax0, ax1)
+
         fig = plt.figure(figsize=(12, 8))
         ax = fig.add_subplot(111, projection="3d")
         

@@ -170,6 +170,8 @@ def example_mesh_tally_visualization():
     # Create mock flux data [nz, nr, ng]
     nz, nr, ng = 10, 20, 2
     flux = np.random.rand(nz, nr, ng) * 1e14  # Mock flux data
+    # Mock absolute 1-sigma uncertainty (e.g., 5% of value)
+    uncertainty = 0.05 * flux
     
     # Create mesh coordinates
     r_coords = np.linspace(0, core.core_diameter/2, nr + 1)
@@ -183,6 +185,7 @@ def example_mesh_tally_visualization():
         data=flux,
         mesh_coords=(r_coords, z_coords),
         energy_groups=energy_groups,
+        uncertainty=uncertainty,
         geometry_type="cylindrical",
     )
     print(f"   ✓ Created mesh tally: {tally.name}")
@@ -197,6 +200,8 @@ def example_mesh_tally_visualization():
             field="flux",
             energy_group=None,  # Total
             backend="plotly",
+            show_uncertainty=True,
+            uncertainty_mode="percent",
         )
         print("   ✓ Total flux plot created")
     except Exception as e:

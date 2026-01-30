@@ -87,6 +87,8 @@ Writes `report_cpu.txt` and `report_memory.txt` (for `--mode both`).
 | Avoid unnecessary copies | `ensure_contiguous`, `zero_copy_slice`, `smart_array_copy` | `smrforge/utils/optimization_utils.py` |
 | Cache hot data | `NuclearDataCache` in-memory + Zarr | `smrforge/core/reactor_core.py` |
 
+Note: `NuclearDataCache` uses a **bounded in-memory LRU** to avoid unbounded growth when many nuclide/reaction/temperature combinations are requested. Tune with `SMRFORGE_NUCDATA_MEMORY_CACHE_ENTRIES` (set to `0` to disable the in-memory bound).
+
 See [Zero-Copy Audit](../technical/zero-copy-audit.md) for which copies are necessary and how to use the optimization utilities.
 
 ### CPU

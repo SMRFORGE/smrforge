@@ -248,13 +248,12 @@ class MultiGroupDiffusion:
         
         Optimized using NumPy broadcasting for ~10-100x speedup vs nested loops.
         """
-        # Vectorized: create meshgrid using broadcasting
-        r_grid, z_grid = np.meshgrid(self.r_centers, self.z_centers, indexing='xy')
-        
-        # Vectorized condition: fuel (r < core_diameter/2) or reflector
-        mat_map = np.where(r_grid < self.geometry.core_diameter / 2, 0, 1)
-        
-        return mat_map.astype(int)
+        # Memory-efficient vectorized condition:
+        # Material assignment here depends only on radius, so avoid allocating full
+        # (nz, nr) meshgrids for r and z.
+        fuel_mask_1d = self.r_centers < (self.geometry.core_diameter / 2)
+        mat_row = np.where(fuel_mask_1d, 0, 1).astype(int, copy=False)  # [nr]
+        return np.broadcast_to(mat_row, (self.nz, self.nr)).copy()  # [nz, nr]
 
     def _allocate_arrays(self) -> None:
         """Allocate solution arrays."""

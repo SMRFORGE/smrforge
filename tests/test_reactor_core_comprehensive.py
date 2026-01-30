@@ -334,6 +334,33 @@ class TestNuclearDataCacheComprehensive:
         energy_nan = np.array([1e5, np.nan, 1e7])
         with pytest.raises(ValueError):
             cache._save_to_cache("test/key3", energy_nan, xs)
+
+    def test_memory_cache_lru_eviction(self, temp_cache_dir):
+        """In-memory cache should be bounded and evict LRU entries."""
+        cache = NuclearDataCache(
+            cache_dir=temp_cache_dir, local_endf_dir=None, memory_cache_max_entries=3
+        )
+
+        # Populate more than the max size.
+        for i in range(5):
+            cache._memory_cache_put(
+                f"k{i}",
+                (np.array([float(i)]), np.array([float(i)])),
+            )
+
+        assert len(cache._memory_cache) == 3
+        assert list(cache._memory_cache.keys()) == ["k2", "k3", "k4"]
+
+        # Touch k2 so it's MRU, then add one more and ensure k3 is evicted.
+        assert cache._memory_cache_get("k2") is not None
+        cache._memory_cache_put("k5", (np.array([5.0]), np.array([5.0])))
+        assert list(cache._memory_cache.keys()) == ["k4", "k2", "k5"]
+
+        cache.clear_memory_cache()
+        assert len(cache._memory_cache) == 0
+
+        # get_cross_section should not be wrapped by functools.lru_cache (arrays are large).
+        assert not hasattr(NuclearDataCache.get_cross_section, "cache_info")
     
     def test_find_local_decay_file(self, temp_cache_dir):
         """Test finding local decay file."""

@@ -119,24 +119,81 @@ def _create_voxel_grid(geometry, origin, width, resolution: Tuple[int, int, int]
         Dictionary with voxel data
     """
     nx, ny, nz = resolution
-    
-    # Create coordinate arrays
-    x = np.linspace(origin[0], origin[0] + width[0], nx)
-    y = np.linspace(origin[1], origin[1] + width[1], ny)
-    z = np.linspace(origin[2], origin[2] + width[2], nz)
-    
+
+    # Use voxel centers (not edges) for coordinates.
+    dx = width[0] / nx
+    dy = width[1] / ny
+    dz = width[2] / nz
+    x = origin[0] + (np.arange(nx) + 0.5) * dx
+    y = origin[1] + (np.arange(ny) + 0.5) * dy
+    z = origin[2] + (np.arange(nz) + 0.5) * dz
+
     # Initialize voxel arrays
     material_ids = np.zeros((nx, ny, nz), dtype=int)
     cell_ids = np.zeros((nx, ny, nz), dtype=int)
     
-    # Voxelize geometry (simplified - would need proper ray-casting or point-in-polygon)
-    # For now, use a simplified approach based on geometry type
+    # Voxelize geometry (fast approximate).
+    #
+    # This implementation focuses on `PrismaticCore`-style geometries with hex
+    # graphite blocks. It assigns:
+    # - material_ids: coarse material categories (fuel/reflector/control)
+    # - cell_ids: block.id (0 if empty)
+    #
+    # For other geometry types, the arrays remain zero-filled.
     if hasattr(geometry, "blocks"):
-        # Prismatic core - assign materials based on block positions
-        for block in geometry.blocks:
-            # Find voxels within block bounds
-            # Simplified: check if voxel center is within block
-            pass
+        # Material ID mapping for block types.
+        mat_map = {"fuel": 1, "reflector": 2, "control": 3}
+
+        # Helpers for index range clipping.
+        def _idx_range_1d(arr: np.ndarray, lo: float, hi: float) -> Tuple[int, int]:
+            i0 = int(np.searchsorted(arr, lo, side="left"))
+            i1 = int(np.searchsorted(arr, hi, side="right"))
+            return max(0, i0), min(arr.size, i1)
+
+        sqrt3 = float(np.sqrt(3.0))
+
+        for block in getattr(geometry, "blocks", []):
+            # Expect GraphiteBlock-like API.
+            if not (hasattr(block, "position") and hasattr(block, "flat_to_flat") and hasattr(block, "height")):
+                continue
+
+            cx = float(block.position.x)
+            cy = float(block.position.y)
+            cz = float(block.position.z)
+            h = float(block.height)
+
+            # Regular hex circumradius for the vertices() convention used in core_geometry.py.
+            R = float(block.flat_to_flat) / sqrt3
+            if R <= 0 or h <= 0:
+                continue
+
+            # Tight bounding box in xy, and z slab.
+            # For a pointy-top hex (vertex at +x), y extent is +/- (sqrt(3)/2) * R.
+            y_extent = (sqrt3 / 2.0) * R
+            x0, x1 = _idx_range_1d(x, cx - R, cx + R)
+            y0, y1 = _idx_range_1d(y, cy - y_extent, cy + y_extent)
+            z0, z1 = _idx_range_1d(z, cz - 0.5 * h, cz + 0.5 * h)
+            if x0 >= x1 or y0 >= y1 or z0 >= z1:
+                continue
+
+            xs = x[x0:x1] - cx  # [nx_sub]
+            ys = y[y0:y1] - cy  # [ny_sub]
+
+            # Point-in-regular-hex test (pointy-top orientation).
+            # Let q=|x|, r=|y|. Inside iff:
+            #   q <= R and r <= sqrt(3) * min(R - q, R/2)
+            q = np.abs(xs)[:, None]        # [nx_sub, 1]
+            r = np.abs(ys)[None, :]        # [1, ny_sub]
+            inside_xy = (q <= R) & (r <= sqrt3 * np.minimum(R - q, 0.5 * R))
+
+            # Assign into 3D slab.
+            mat_id = int(mat_map.get(getattr(block, "block_type", "fuel"), 0))
+            blk_id = int(getattr(block, "id", 0))
+            sub_m = material_ids[x0:x1, y0:y1, z0:z1]
+            sub_c = cell_ids[x0:x1, y0:y1, z0:z1]
+            mask3 = np.broadcast_to(inside_xy[:, :, None], sub_m.shape)
+            sub_m[mask3] = mat_id
+            sub_c[mask3] = blk_id
     
     return {
         "x": x,

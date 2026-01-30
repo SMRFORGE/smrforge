@@ -16,6 +16,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import os
+from collections import OrderedDict
 
 import asyncio
 import numpy as np
@@ -173,6 +174,7 @@ class NuclearDataCache:
         self,
         cache_dir: Optional[Path] = None,
         local_endf_dir: Optional[Path] | object = _AUTO_LOCAL_ENDF_DIR,
+        memory_cache_max_entries: Optional[int] = 256,
     ):
         """
         Initialize nuclear data cache.
@@ -239,14 +241,28 @@ class NuclearDataCache:
             # Eagerly build index for faster first access
             self._build_local_file_index()
 
-        # In-memory cache for hot data
-        self._memory_cache: Dict = {}
-        
+        # In-memory cache for hot data.
+        #
+        # IMPORTANT: Keep this bounded. Cross section arrays can be large; an
+        # unbounded dict (or an @lru_cache wrapping get_cross_section) can look
+        # like a memory leak in long sessions.
+        env_max = os.getenv("SMRFORGE_NUCDATA_MEMORY_CACHE_ENTRIES")
+        if env_max is not None:
+            try:
+                memory_cache_max_entries = int(env_max)
+            except ValueError:
+                # Ignore invalid env var and keep provided/default value
+                pass
+        if memory_cache_max_entries is not None and memory_cache_max_entries <= 0:
+            memory_cache_max_entries = None
+        self._memory_cache_max_entries: Optional[int] = memory_cache_max_entries
+        self._memory_cache: "OrderedDict[str, Tuple[np.ndarray, np.ndarray]]" = OrderedDict()
+
         # Parser instance (lazy initialization, reused across calls for performance)
         # Prefers C++ parser if available (2-5x faster than Python parser)
         self._parser: Optional[Any] = None
         self._parser_type: Optional[str] = None  # Track parser type for logging
-        
+
         # File metadata cache (for performance - avoids redundant file I/O)
         # Maps file path -> (mtime, file_size, available_mts)
         self._file_metadata_cache: Dict[Path, Tuple[float, int, Optional[set]]] = {}
@@ -256,6 +272,28 @@ class NuclearDataCache:
 
         self.store = LocalStore(str(self.cache_dir))
         self.root = zarr.open(self.store, mode="a")
+
+    def _memory_cache_get(self, key: str) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        """LRU get for in-memory cache (moves key to most-recently-used)."""
+        try:
+            value = self._memory_cache[key]
+        except KeyError:
+            return None
+        self._memory_cache.move_to_end(key, last=True)
+        return value
+
+    def _memory_cache_put(self, key: str, value: Tuple[np.ndarray, np.ndarray]) -> None:
+        """LRU put for in-memory cache (evicts least-recently-used if bounded)."""
+        self._memory_cache[key] = value
+        self._memory_cache.move_to_end(key, last=True)
+        if self._memory_cache_max_entries is None:
+            return
+        while len(self._memory_cache) > self._memory_cache_max_entries:
+            self._memory_cache.popitem(last=False)
+
+    def clear_memory_cache(self) -> None:
+        """Clear in-memory cache to release array memory."""
+        self._memory_cache.clear()
 
     @staticmethod
     def _load_config_dir() -> Optional[Path]:
@@ -293,7 +331,6 @@ class NuclearDataCache:
         
         return None
 
-    @lru_cache(maxsize=1024)
     def get_cross_section(
         self,
         nuclide: Nuclide,
@@ -335,16 +372,17 @@ class NuclearDataCache:
         key = f"{library.value}/{nuclide.name}/{reaction}/{temperature:.1f}K"
 
         # Check memory cache first
-        if key in self._memory_cache:
+        cached = self._memory_cache_get(key)
+        if cached is not None:
             log_cache_operation("hit", key, logger)
-            return self._memory_cache[key]
+            return cached
 
         # Check zarr cache
         try:
             group = self.root[key]
             energy = group["energy"][:]
             xs = group["xs"][:]
-            self._memory_cache[key] = (energy, xs)
+            self._memory_cache_put(key, (energy, xs))
             log_cache_operation("hit", key, logger)
             return energy, xs
         except KeyError:
@@ -755,7 +793,7 @@ class NuclearDataCache:
         
         # Always update memory cache (even if zarr failed)
         # This ensures data is available for the current session
-        self._memory_cache[key] = (energy, xs)
+        self._memory_cache_put(key, (energy, xs))
 
     async def get_cross_section_async(
         self,
@@ -794,16 +832,17 @@ class NuclearDataCache:
         key = f"{library.value}/{nuclide.name}/{reaction}/{temperature:.1f}K"
 
         # Check memory cache first (fast, no async needed)
-        if key in self._memory_cache:
+        cached = self._memory_cache_get(key)
+        if cached is not None:
             log_cache_operation("hit", key, logger)
-            return self._memory_cache[key]
+            return cached
 
         # Check zarr cache (synchronous, but fast)
         try:
             group = self.root[key]
             energy = group["energy"][:]
             xs = group["xs"][:]
-            self._memory_cache[key] = (energy, xs)
+            self._memory_cache_put(key, (energy, xs))
             log_cache_operation("hit", key, logger)
             return energy, xs
         except KeyError:
