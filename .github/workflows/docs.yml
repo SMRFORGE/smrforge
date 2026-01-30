@@ -1,15 +1,6 @@
 name: Build and Deploy Documentation
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'docs/**'
-      - 'smrforge/**'
-      - 'README.md'
-      - 'pyproject.toml'
-      - 'setup.py'
   workflow_dispatch:  # Allow manual triggering
 
 jobs:

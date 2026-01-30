@@ -4,17 +4,7 @@
 name: Security Audit
 
 on:
-  schedule:
-    # Run weekly on Monday at 09:00 UTC
-    - cron: '0 9 * * 1'
   workflow_dispatch:  # Allow manual triggering
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'requirements*.txt'
-      - 'setup.py'
-      - 'pyproject.toml'
-      - 'smrforge/**'
 
 jobs:
   check-enabled:
