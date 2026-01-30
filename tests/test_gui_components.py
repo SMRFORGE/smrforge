@@ -64,6 +64,7 @@ def test_gui_components_happy_and_no_dash_paths():
     assert dm.create_data_manager() == "Dash not available"
     assert fl.create_feature_lab() == "Dash not available"
     assert gd.create_geometry_designer() == "Dash not available"
+    assert gd._create_material_palette() == "Dash not available"
     assert rb.create_reactor_builder() == "Dash not available"
     assert rv.create_results_viewer() == "Dash not available"
     assert sb.create_sidebar() == "Dash not available"

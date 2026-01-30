@@ -1,5 +1,6 @@
 import builtins
 import importlib
+import sys
 
 import pytest
 
@@ -18,8 +19,9 @@ def _reload_with_forced_importerror(module, *, name_predicate):
 
 
 def test_core_init_importerror_branches_and_getattr():
-    import smrforge.core as core
-
+    # Be robust to other tests manipulating sys.modules.
+    core = importlib.import_module("smrforge.core")
+    sys.modules["smrforge.core"] = core
     core = importlib.reload(core)
 
     # Force each optional import to fail at least once to cover the except blocks.

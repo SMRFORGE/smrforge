@@ -256,7 +256,7 @@ def create_geometry_designer():
 def _create_material_palette():
     """Create material palette visualization."""
     if not _DASH_AVAILABLE:
-        return html.Div()
+        return "Dash not available"
     
     materials = [
         {"name": "Fuel", "value": "fuel", "color": "#FF6B6B"},

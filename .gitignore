@@ -85,6 +85,7 @@ coverage_run_*.txt.errors
 coverage_run_output*.txt
 coverage_run_output*.errors*
 coverage_after_dedup.json
+coverage-full.json
 
 # Coverage/session helper scripts (local or one-off; session .md files archived in docs/archive/root-session/)
 check_coverage_progress.ps1

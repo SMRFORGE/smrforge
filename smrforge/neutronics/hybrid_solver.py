@@ -249,7 +249,11 @@ class HybridSolver:
         
         # Enhance with flux gradient analysis
         # Compute flux gradient (spatial derivatives)
-        if flux.shape[2] > 0:  # Multi-group flux
+        #
+        # Flux can be:
+        # - [nz, nr, ng] multi-group flux from diffusion solver
+        # - [nz, nr] total flux (already summed)
+        if flux.ndim == 3:
             # Use total flux (sum over groups)
             flux_total = np.sum(flux, axis=2)
         else:

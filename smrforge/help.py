@@ -945,8 +945,6 @@ def _format_docstring(doc: str) -> str:
         if line.strip().startswith("```"):
             in_code_block = not in_code_block
             formatted.append(line)
-        elif in_code_block:
-            formatted.append(line)
         elif line.strip().startswith(">>>"):
             # Python examples - ensure they're in code blocks
             if not in_code_block:
@@ -958,6 +956,8 @@ def _format_docstring(doc: str) -> str:
             formatted.append("```")
             formatted.append(line)
             in_code_block = False
+        elif in_code_block:
+            formatted.append(line)
         else:
             formatted.append(line)
     
