@@ -136,25 +136,27 @@ class MeshTally:
     
     def get_total(self) -> np.ndarray:
         """Get total (sum over all energy groups)."""
-        if self.data.ndim > 3:
+        # Treat the last axis as energy groups when data dims match mesh dims + 1.
+        # Examples:
+        # - cartesian: mesh_coords=(x,y,z) -> data can be (nx,ny,nz) or (nx,ny,nz,ng)
+        # - cylindrical: mesh_coords=(r,z) -> data can be (nr,nz) or (nr,nz,ng)
+        if self.data.ndim == len(self.mesh_coords) + 1:
             return np.sum(self.data, axis=-1)
         return self.data
     
     def get_group(self, group: int) -> np.ndarray:
         """Get data for specific energy group."""
-        if self.data.ndim > 3:
+        if self.data.ndim == len(self.mesh_coords) + 1:
             return self.data[..., group]
-        elif group == 0:
+        if group == 0:
             return self.data
-        else:
-            raise IndexError(f"Energy group {group} out of range")
+        raise IndexError(f"Energy group {group} out of range")
     
     def get_energy_spectrum(self, position: Tuple[int, ...]) -> np.ndarray:
         """Get energy spectrum at specific position."""
-        if self.data.ndim > 3:
-            return self.data[position]
-        else:
-            return np.array([self.data[position]])  # Single group
+        if self.data.ndim == len(self.mesh_coords) + 1:
+            return np.asarray(self.data[position], dtype=float).reshape(-1)
+        return np.asarray([self.data[position]], dtype=float).reshape(-1)  # Single group
 
 
 def plot_mesh_tally(

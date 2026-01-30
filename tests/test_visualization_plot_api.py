@@ -60,7 +60,7 @@ def test_plot_slice_axis_position_and_output_save(monkeypatch):
         return "slice-fig"
 
     adv.plot_slice = fake_plot_slice  # type: ignore[attr-defined]
-    sys.modules["smrforge.visualization.advanced"] = adv
+    monkeypatch.setitem(sys.modules, "smrforge.visualization.advanced", adv)
 
     p = api.Plot(
         plot_type="slice",
@@ -112,7 +112,7 @@ def test_plot_voxel_importerror_and_success(monkeypatch):
     # Inject stub voxel_plots module
     vox = ModuleType("smrforge.visualization.voxel_plots")
     vox.plot_voxel = lambda *args, **kwargs: "vox-fig"  # type: ignore[attr-defined]
-    sys.modules["smrforge.visualization.voxel_plots"] = vox
+    monkeypatch.setitem(sys.modules, "smrforge.visualization.voxel_plots", vox)
 
     fig = api.Plot(plot_type="voxel").plot(geometry=object(), data=np.array([1.0]), field_name="f")
     assert fig == "vox-fig"
@@ -123,7 +123,7 @@ def test_plot_ray_trace(monkeypatch):
 
     adv = ModuleType("smrforge.visualization.advanced")
     adv.plot_ray_traced_geometry = lambda *args, **kwargs: "ray-fig"  # type: ignore[attr-defined]
-    sys.modules["smrforge.visualization.advanced"] = adv
+    monkeypatch.setitem(sys.modules, "smrforge.visualization.advanced", adv)
 
     fig = api.Plot(plot_type="ray_trace").plot(geometry=object())
     assert fig == "ray-fig"
@@ -136,12 +136,12 @@ def test_plot_unstructured_paths_and_save_figure(monkeypatch):
     m3d = ModuleType("smrforge.visualization.mesh_3d")
     m3d.plot_mesh3d_plotly = lambda mesh, **kwargs: ("plotly3d", mesh, kwargs)  # type: ignore[attr-defined]
     m3d.plot_mesh3d_pyvista = lambda mesh, **kwargs: ("pv3d", mesh, kwargs)  # type: ignore[attr-defined]
-    sys.modules["smrforge.visualization.mesh_3d"] = m3d
+    monkeypatch.setitem(sys.modules, "smrforge.visualization.mesh_3d", m3d)
 
     # Stub mesh_extraction module
     mex = ModuleType("smrforge.geometry.mesh_extraction")
     mex.extract_core_volume_mesh = lambda geometry: DummyMesh()  # type: ignore[attr-defined]
-    sys.modules["smrforge.geometry.mesh_extraction"] = mex
+    monkeypatch.setitem(sys.modules, "smrforge.geometry.mesh_extraction", mex)
 
     # Treat DummyMesh as Mesh3D for this test
     monkeypatch.setattr(api, "Mesh3D", DummyMesh)

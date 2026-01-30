@@ -373,7 +373,7 @@ def _plot_spatial_plotly(tally_data, positions, field_name, **kwargs):
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required")
     
-    if positions.ndim == 2:
+    if positions.ndim == 2 and positions.shape[1] == 3:
         # 3D scatter plot
         x, y, z = positions[:, 0], positions[:, 1], positions[:, 2]
         

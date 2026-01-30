@@ -1072,12 +1072,25 @@ def _create_dashboard_plotly(plots, layout, **kwargs):
     n_plots = len(plots)
     ncols = kwargs.get("ncols", 2)
     nrows = (n_plots + ncols - 1) // ncols
+
+    # Build subplot specs per cell to avoid referencing an undefined loop var.
+    # If a plot dict requests 3D, use a 3D subplot type for that cell.
+    specs = []
+    for r in range(nrows):
+        row_specs = []
+        for c in range(ncols):
+            idx = r * ncols + c
+            if idx < n_plots and str(plots[idx].get("type", "")).lower() in ("3d", "scatter3d"):
+                row_specs.append({"type": "scatter3d"})
+            else:
+                row_specs.append({"type": "xy"})
+        specs.append(row_specs)
     
     fig = make_subplots(
         rows=nrows,
         cols=ncols,
         subplot_titles=[p.get("title", f"Plot {i+1}") for i, p in enumerate(plots)],
-        specs=[[{"type": "scatter3d" if p.get("type") == "3d" else "xy"} for _ in range(ncols)] for _ in range(nrows)],
+        specs=specs,
     )
     
     # Add each plot
