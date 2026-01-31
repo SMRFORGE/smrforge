@@ -593,7 +593,7 @@ def collapse_with_adjoint_weighting(
         if coarse_importance[g_coarse] > 0:
             # Calculate weighted average
             numerator = 0.0
-            denominator = 0.0
+            denominator = coarse_importance[g_coarse]
             
             for g_fine in range(n_fine):
                 E_low = fine_group_structure[g_fine]
@@ -626,56 +626,8 @@ def collapse_with_adjoint_weighting(
                     dE = abs(E_high - E_low)  # Always positive
                     importance = fine_importance[g_fine]
                     numerator += fine_cross_sections[g_fine] * importance * dE
-                    denominator += importance * dE
             
-            if denominator > 0:
-                coarse_xs[g_coarse] = numerator / denominator
-            else:
-                # Fallback to flux-weighted
-                if coarse_flux[g_coarse] > 0:
-                    numerator_flux = 0.0
-                    for g_fine in range(n_fine):
-                        E_low = fine_group_structure[g_fine]
-                        E_high = fine_group_structure[g_fine + 1]
-                        E_center = (E_low + E_high) / 2
-                        
-                        g_coarse_check = 0
-                        for c in range(n_coarse):
-                            if coarse_group_structure[c] <= E_center < coarse_group_structure[c + 1]:
-                                g_coarse_check = c
-                                break
-                        if E_center >= coarse_group_structure[-1]:
-                            g_coarse_check = n_coarse - 1
-                        elif E_center < coarse_group_structure[0]:
-                            g_coarse_check = 0
-                        
-                        if g_coarse_check == g_coarse:
-                            dE = abs(E_high - E_low)  # Always positive
-                            numerator_flux += fine_cross_sections[g_fine] * fine_flux[g_fine] * dE
-                    coarse_xs[g_coarse] = numerator_flux / coarse_flux[g_coarse]
-                else:
-                    # Uniform collapse
-                    count = 0
-                    for g_fine in range(n_fine):
-                        E_low = fine_group_structure[g_fine]
-                        E_high = fine_group_structure[g_fine + 1]
-                        E_center = (E_low + E_high) / 2
-                        
-                        g_coarse_check = 0
-                        for c in range(n_coarse):
-                            if coarse_group_structure[c] <= E_center < coarse_group_structure[c + 1]:
-                                g_coarse_check = c
-                                break
-                        if E_center >= coarse_group_structure[-1]:
-                            g_coarse_check = n_coarse - 1
-                        elif E_center < coarse_group_structure[0]:
-                            g_coarse_check = 0
-                        
-                        if g_coarse_check == g_coarse:
-                            coarse_xs[g_coarse] += fine_cross_sections[g_fine]
-                            count += 1
-                    if count > 0:
-                        coarse_xs[g_coarse] /= count
+            coarse_xs[g_coarse] = numerator / denominator
         else:
             # No importance in this group, use flux-weighted
             if coarse_flux[g_coarse] > 0:

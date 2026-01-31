@@ -1800,3 +1800,111 @@ class TestMultigroupAdvanced70Percent:
         
         # Should be 0.3 (tight lattice) when <= 1.2
         assert dancoff == 0.3
+
+
+@pytest.mark.skipif(
+    not _MULTIGROUP_ADVANCED_AVAILABLE,
+    reason="Advanced multi-group processing not available",
+)
+def test_multigroup_advanced_type_checking_import_branch(monkeypatch):
+    """Cover TYPE_CHECKING import branch by re-importing with TYPE_CHECKING=True."""
+    import importlib
+    import sys
+    import typing
+
+    orig = typing.TYPE_CHECKING
+    typing.TYPE_CHECKING = True
+    try:
+        sys.modules.pop("smrforge.core.multigroup_advanced", None)
+        importlib.import_module("smrforge.core.multigroup_advanced")
+    finally:
+        typing.TYPE_CHECKING = orig
+        sys.modules.pop("smrforge.core.multigroup_advanced", None)
+        importlib.import_module("smrforge.core.multigroup_advanced")
+
+
+@pytest.mark.skipif(
+    not _MULTIGROUP_ADVANCED_AVAILABLE,
+    reason="Advanced multi-group processing not available",
+)
+def test_sph_method_calculate_sph_factors_branch_coverage(monkeypatch):
+    """Cover calculate_sph_factors branches without ENDF files."""
+    import smrforge.core.multigroup_advanced as mga
+    import smrforge.core.reactor_core as rc
+
+    class _DummyCache:
+        def get_cross_section(self, nuclide, reaction, temperature):
+            # Dummy continuous-energy arrays (not used by fake collapse)
+            return np.array([1.0, 0.1]), np.array([1.0, 2.0])
+
+    class _DummyNuclide:
+        name = "X"
+
+    fine_group_structure = np.array([2.0, 1.0, 0.5])  # 2 fine groups
+    coarse_group_structure = np.array([2.0, 1.0, 0.0])  # 2 coarse groups
+    fine_flux = np.array([1.0, 1.0])
+
+    def fake_collapse(energy, xs, group_structure, weighting_flux=None):
+        if len(group_structure) == len(fine_group_structure):
+            return np.array([2.0, 2.0])  # fine_xs
+        return np.array([2.0, 2.0])  # coarse_xs
+
+    monkeypatch.setattr(rc.CrossSectionTable, "_collapse_to_multigroup", staticmethod(fake_collapse))
+
+    sph = mga.SPHMethod()
+    monkeypatch.setattr(
+        sph,
+        "_map_fine_to_coarse",
+        lambda fine, coarse, g: (np.array([0, 1], dtype=int) if g == 0 else np.array([], dtype=int)),
+    )
+
+    factors = sph.calculate_sph_factors(
+        nuclide=_DummyNuclide(),
+        reaction="capture",
+        fine_group_structure=fine_group_structure,
+        coarse_group_structure=coarse_group_structure,
+        fine_flux=fine_flux,
+        temperature=900.0,
+        cache=_DummyCache(),
+    )
+
+    assert factors.sph_factors.shape == (2,)
+    assert factors.sph_factors[1] == pytest.approx(1.0)  # empty mapping branch
+    assert factors.sph_factors[0] > 0.0
+
+
+@pytest.mark.skipif(
+    not _MULTIGROUP_ADVANCED_AVAILABLE,
+    reason="Advanced multi-group processing not available",
+)
+def test_collapse_with_adjoint_weighting_edge_case_group_mapping():
+    """Cover descending/ascending edge-case mapping branches in collapse_with_adjoint_weighting."""
+    from smrforge.core.multigroup_advanced import collapse_with_adjoint_weighting
+
+    fine_group_structure = np.array([0.8, 0.4, 0.2])
+    fine_xs = np.array([1.0, 2.0])
+    fine_flux = np.array([1.0, 1.0])
+    fine_adjoint = np.array([1.0, 1.0])
+
+    # Descending coarse structure; E_center < last triggers descending edge case.
+    coarse_desc = np.array([10.0, 5.0, 1.0])
+    out_desc = collapse_with_adjoint_weighting(
+        fine_group_structure, coarse_desc, fine_xs, fine_flux, fine_adjoint
+    )
+    assert out_desc.shape == (2,)
+    assert np.all(np.isfinite(out_desc))
+
+    # Ascending coarse structure; E_center < first triggers ascending edge case.
+    coarse_asc = np.array([1.0, 5.0, 10.0])
+    out_asc = collapse_with_adjoint_weighting(
+        fine_group_structure, coarse_asc, fine_xs, fine_flux, fine_adjoint
+    )
+    assert out_asc.shape == (2,)
+    assert np.all(np.isfinite(out_asc))
+
+    # No-importance (adjoint=0) path + E_center < coarse_group_structure[0] edge case
+    fine_adjoint_zero = np.zeros_like(fine_adjoint)
+    out_no_imp = collapse_with_adjoint_weighting(
+        fine_group_structure, coarse_asc, fine_xs, fine_flux, fine_adjoint_zero
+    )
+    assert out_no_imp.shape == (2,)

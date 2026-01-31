@@ -5,6 +5,8 @@ Provides functions to create animations of time-dependent reactor data including
 flux distributions, power distributions, temperature profiles, and control rod movements.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -134,12 +136,10 @@ def animate_transient_matplotlib(
 
     def update(frame):
         """Update function for animation."""
+        nonlocal im
         time_idx = frame % len(times)
         t = times[time_idx]
         data = data_func(t)
-
-        # Update image data
-        im.set_array(data)
 
         # Update geometry if provided
         if geometry_func is not None:
@@ -153,6 +153,9 @@ def animate_transient_matplotlib(
                 interpolation="bilinear",
                 cmap=kwargs.get("cmap", "viridis"),
             )
+        else:
+            # Update image data
+            im.set_array(data)
 
         # Update title
         ax.set_title(f"{field_name.title()} Distribution - t = {times[time_idx]:.2f} s")

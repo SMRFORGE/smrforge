@@ -141,13 +141,12 @@ class CrossSectionTemperatureInterpolator:
         temp_low = temp_idx - 1
         temp_high = temp_idx
 
-        if temp_low == temp_high:
+        dt = self.temperatures[temp_high] - self.temperatures[temp_low]
+        if abs(dt) < 1e-12:
             return self.cross_sections[temp_low, :]
 
         # Linear interpolation
-        temp_frac = (temperature - self.temperatures[temp_low]) / (
-            self.temperatures[temp_high] - self.temperatures[temp_low]
-        )
+        temp_frac = (temperature - self.temperatures[temp_low]) / dt
 
         xs_low = self.cross_sections[temp_low, :]
         xs_high = self.cross_sections[temp_high, :]
@@ -163,7 +162,8 @@ class CrossSectionTemperatureInterpolator:
         temp_low = temp_idx - 1
         temp_high = temp_idx
 
-        if temp_low == temp_high:
+        dt = self.temperatures[temp_high] - self.temperatures[temp_low]
+        if abs(dt) < 1e-12:
             return self.cross_sections[temp_low, :]
 
         # Log-log interpolation: log(xs) = a + b * log(T)
@@ -306,6 +306,7 @@ def interpolate_cross_section_temperature(
     # Get cross-sections at multiple temperatures
     energies_list = []
     cross_sections_list = []
+    temps_used_list = []
 
     for temp in available_temperatures:
         try:
@@ -318,6 +319,7 @@ def interpolate_cross_section_temperature(
 
             energies_list.append(energy)
             cross_sections_list.append(xs)
+            temps_used_list.append(float(temp))
         except Exception as e:
             logger.warning(
                 f"Could not get cross-section at {temp:.1f} K: {e}, skipping"
@@ -349,9 +351,7 @@ def interpolate_cross_section_temperature(
 
     # Stack cross-sections
     cross_sections = np.array(cross_sections_list)
-    temps_used = np.array(
-        [available_temperatures[i] for i in range(len(cross_sections_list))]
-    )
+    temps_used = np.asarray(temps_used_list, dtype=float)
 
     # Create interpolator
     interpolator = CrossSectionTemperatureInterpolator(

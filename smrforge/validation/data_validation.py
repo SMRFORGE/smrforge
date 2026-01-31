@@ -260,8 +260,12 @@ class PhysicalValidator:
                 ValidationLevel.ERROR, "enrichment", "Above 100%", value=enrichment
             )
 
-        # Check fuel type limits
-        if fuel_type == "LEU" and enrichment > 0.20:
+        # Normalize fuel type (accept enums or strings).
+        ft = getattr(fuel_type, "value", fuel_type)
+        ft = str(ft).strip().upper()
+
+        # Check enrichment-class limits (LEU/HALEU/HEU).
+        if ft == "LEU" and enrichment > 0.20:
             result.add_issue(
                 ValidationLevel.ERROR,
                 "enrichment",
@@ -270,16 +274,26 @@ class PhysicalValidator:
                 expected="<= 0.20",
             )
 
-        elif fuel_type == "HALEU" and enrichment > 0.20:
-            if enrichment > 0.20 and enrichment <= 0.05:
+        elif ft == "HALEU":
+            # HALEU is typically 5–20% U-235 enrichment.
+            if enrichment < 0.05:
                 result.add_issue(
                     ValidationLevel.WARNING,
                     "enrichment",
-                    "In HALEU range (>20%, <5%)",
+                    "Below HALEU threshold",
                     value=enrichment,
+                    expected=">= 0.05",
+                )
+            elif enrichment > 0.20:
+                result.add_issue(
+                    ValidationLevel.ERROR,
+                    "enrichment",
+                    "Exceeds HALEU limit (20%)",
+                    value=enrichment,
+                    expected="<= 0.20",
                 )
 
-        elif fuel_type == "HEU" and enrichment < 0.20:
+        elif ft == "HEU" and enrichment < 0.20:
             result.add_issue(
                 ValidationLevel.WARNING,
                 "enrichment",

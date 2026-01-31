@@ -4,6 +4,7 @@ Tests for data_validation module.
 
 import numpy as np
 import pytest
+from types import SimpleNamespace
 
 from smrforge.validation.data_validation import (
     ConsistencyValidator,
@@ -67,6 +68,25 @@ class TestValidationResult:
         assert summary["error"] == 1
         assert summary["critical"] == 0
 
+    def test_print_report_no_issues(self, capsys):
+        """Cover print_report happy path."""
+        result = ValidationResult(valid=True)
+        result.print_report()
+        captured = capsys.readouterr()
+        assert "validations passed" in (captured.out + captured.err).lower()
+
+    def test_print_report_with_errors_and_warnings(self, capsys):
+        """Cover print_report sections for critical issues and warnings."""
+        result = ValidationResult(valid=True)
+        result.add_issue(ValidationLevel.ERROR, "p", "bad", value=1, expected=2)
+        result.add_issue(ValidationLevel.WARNING, "q", "warn", value=3, expected=4)
+        result.print_report()
+        captured = capsys.readouterr()
+        text = (captured.out + captured.err).lower()
+        assert "validation summary" in text
+        assert "critical issues" in text
+        assert "warnings" in text
+
 
 class TestValidationIssue:
     """Test ValidationIssue class."""
@@ -119,6 +139,13 @@ class TestPhysicalValidator:
         result = PhysicalValidator.validate_temperature(5000.0, "temp")
         assert result.has_errors()
 
+    def test_validate_temperature_rejects_non_numeric_and_nan(self):
+        result = PhysicalValidator.validate_temperature("hot", "temp")  # type: ignore[arg-type]
+        assert result.has_errors()
+
+        result2 = PhysicalValidator.validate_temperature(float("nan"), "temp")
+        assert result2.has_errors()
+
     def test_validate_pressure_valid(self):
         """Test pressure validation with valid value."""
         result = PhysicalValidator.validate_pressure(7e6, "pressure")
@@ -136,6 +163,12 @@ class TestPhysicalValidator:
         assert len(result.issues) > 0
         assert any(issue.level == ValidationLevel.WARNING for issue in result.issues)
 
+    def test_validate_pressure_rejects_non_numeric_and_inf(self):
+        result = PhysicalValidator.validate_pressure("p", "pressure")  # type: ignore[arg-type]
+        assert result.has_errors()
+        result2 = PhysicalValidator.validate_pressure(float("inf"), "pressure")
+        assert result2.has_errors()
+
     def test_validate_enrichment_valid(self):
         """Test enrichment validation with valid value."""
         from smrforge.validation.models import FuelType
@@ -150,6 +183,29 @@ class TestPhysicalValidator:
         result = PhysicalValidator.validate_enrichment(1.5, FuelType.UCO)
         assert result.has_errors()
 
+    def test_validate_enrichment_class_limits(self):
+        # LEU limit (20%) is enforced as error.
+        result = PhysicalValidator.validate_enrichment(0.25, "LEU")
+        assert result.has_errors()
+
+        # HALEU below 5% is a warning (classification mismatch).
+        result2 = PhysicalValidator.validate_enrichment(0.03, "HALEU")
+        assert any(i.level == ValidationLevel.WARNING for i in result2.issues)
+
+        # HALEU above 20% is an error.
+        result3 = PhysicalValidator.validate_enrichment(0.25, "HALEU")
+        assert result3.has_errors()
+
+        # HEU below 20% is a warning.
+        result4 = PhysicalValidator.validate_enrichment(0.19, "HEU")
+        assert any(i.level == ValidationLevel.WARNING for i in result4.issues)
+
+    def test_validate_enrichment_rejects_non_numeric_and_negative(self):
+        r = PhysicalValidator.validate_enrichment("e")  # type: ignore[arg-type]
+        assert r.has_errors()
+        r2 = PhysicalValidator.validate_enrichment(-0.01, "LEU")
+        assert r2.has_errors()
+
     def test_validate_power_valid(self):
         """Test power validation with valid value."""
         result = PhysicalValidator.validate_power(10e6, "SMR")
@@ -159,6 +215,39 @@ class TestPhysicalValidator:
         """Test power validation with negative value."""
         result = PhysicalValidator.validate_power(-1e6, "SMR")
         assert result.has_errors()
+
+    def test_validate_power_rejects_non_numeric_and_type_specific_warning(self):
+        result = PhysicalValidator.validate_power("p", "SMR")  # type: ignore[arg-type]
+        assert result.has_errors()
+        result2 = PhysicalValidator.validate_power(20e6, "micro")
+        assert any(i.level == ValidationLevel.WARNING for i in result2.issues)
+
+        # Very high power warning and SMR range warning.
+        result3 = PhysicalValidator.validate_power(2e9, "SMR")
+        assert any(i.level == ValidationLevel.WARNING for i in result3.issues)
+        result4 = PhysicalValidator.validate_power(400e6, "SMR")
+        assert any(i.level == ValidationLevel.WARNING for i in result4.issues)
+
+    def test_validate_k_eff_branches(self):
+        # Non-numeric
+        r = PhysicalValidator.validate_k_eff("k")  # type: ignore[arg-type]
+        assert r.has_errors()
+
+        # Too supercritical
+        r2 = PhysicalValidator.validate_k_eff(2.0)
+        assert any(i.level == ValidationLevel.WARNING for i in r2.issues)
+
+        # Unphysical
+        r3 = PhysicalValidator.validate_k_eff(4.0)
+        assert r3.has_errors()
+
+        # Below critical with margin
+        r4 = PhysicalValidator.validate_k_eff(0.95, margin=0.02)
+        assert any(i.level == ValidationLevel.WARNING for i in r4.issues)
+
+        # Above critical with margin (info)
+        r5 = PhysicalValidator.validate_k_eff(1.05, margin=0.02)
+        assert any(i.level == ValidationLevel.INFO for i in r5.issues)
 
 
 class TestGeometryValidator:
@@ -176,6 +265,23 @@ class TestGeometryValidator:
 
         result2 = GeometryValidator.validate_dimensions(100.0, -50.0)
         assert result2.has_errors()
+
+    def test_validate_dimensions_extremes_and_aspect_ratio(self):
+        # Very small height/diameter -> warnings
+        r = GeometryValidator.validate_dimensions(0.5, 0.5, min_size=1.0, max_size=2000.0)
+        assert any(i.level == ValidationLevel.WARNING for i in r.issues)
+
+        # Very large -> warnings
+        r2 = GeometryValidator.validate_dimensions(3000.0, 3000.0, min_size=1.0, max_size=2000.0)
+        assert any(i.level == ValidationLevel.WARNING for i in r2.issues)
+
+        # Flat core aspect ratio warning
+        r3 = GeometryValidator.validate_dimensions(10.0, 100.0)
+        assert any(i.parameter == "aspect_ratio" for i in r3.issues)
+
+        # Tall core aspect ratio warning
+        r4 = GeometryValidator.validate_dimensions(600.0, 100.0)
+        assert any(i.parameter == "aspect_ratio" for i in r4.issues)
 
     def test_validate_mesh_valid(self):
         """Test mesh validation with valid mesh sizes."""
@@ -226,6 +332,26 @@ class TestNeutronicsValidator:
         result = NeutronicsValidator.validate_flux(flux, 10e6)
         assert isinstance(result, ValidationResult)
 
+    def test_validate_cross_sections_invalid_branches(self):
+        xs = SimpleNamespace(
+            sigma_t=np.array([[1.0, -1.0]]),
+            sigma_a=np.array([[2.0, 0.5]]),  # absorption > total (non-physical)
+            sigma_f=np.array([[0.6, -0.1]]),  # fission > absorption and negative
+            D=np.array([[0.0, 11.0]]),  # non-positive + very large
+            chi=np.array([[0.2, 0.2]]),  # not normalized
+        )
+        r = NeutronicsValidator.validate_cross_sections(xs)
+        assert r.has_errors()
+        assert any(i.level == ValidationLevel.WARNING for i in r.issues)
+
+    def test_validate_flux_invalid_branches(self):
+        flux = np.ones((2, 2, 1))
+        flux[0, 0, 0] = -1.0
+        flux[0, 1, 0] = np.nan
+        flux[1, 0, 0] = np.inf
+        r = NeutronicsValidator.validate_flux(flux, 10e6)
+        assert r.has_errors()
+
 
 class TestThermalValidator:
     """Test ThermalValidator class."""
@@ -248,6 +374,18 @@ class TestThermalValidator:
         result2 = ThermalValidator.validate_reynolds_number(-100.0)
         assert result2.has_errors()
 
+    def test_validate_heat_transfer_regime_warnings(self):
+        r = ThermalValidator.validate_heat_transfer(h=2000.0, regime="laminar")
+        assert any(i.level == ValidationLevel.WARNING for i in r.issues)
+        r2 = ThermalValidator.validate_heat_transfer(h=10.0, regime="turbulent")
+        assert any(i.level == ValidationLevel.WARNING for i in r2.issues)
+
+    def test_validate_reynolds_number_high_and_transitional(self):
+        r = ThermalValidator.validate_reynolds_number(2e7)
+        assert any(i.level == ValidationLevel.WARNING for i in r.issues)
+        r2 = ThermalValidator.validate_reynolds_number(3000.0)
+        assert any(i.level == ValidationLevel.INFO for i in r2.issues)
+
 
 class TestConsistencyValidator:
     """Test ConsistencyValidator class."""
@@ -259,13 +397,19 @@ class TestConsistencyValidator:
         )
         assert result.valid is True
 
-    def test_validate_material_conservation_invalid(self):
-        """Test material conservation validation with non-conserved values."""
-        result = ConsistencyValidator.validate_material_conservation(
-            mass_in=100.0, mass_out=50.0, mass_accumulated=10.0
+    def test_validate_energy_balance_error_and_warning(self):
+        # Error case
+        r = ConsistencyValidator.validate_energy_balance(100.0, 50.0, tolerance=0.05)
+        assert r.has_errors()
+        # Warning case (> tolerance/2 but <= tolerance)
+        r2 = ConsistencyValidator.validate_energy_balance(100.0, 97.0, tolerance=0.05)
+        assert any(i.level == ValidationLevel.WARNING for i in r2.issues)
+
+    def test_validate_material_conservation_error(self):
+        r = ConsistencyValidator.validate_material_conservation(
+            mass_in=100.0, mass_out=90.0, mass_accumulated=5.0, tolerance=1e-6
         )
-        # Should have errors (mass not conserved: 100 != 50 + 10)
-        assert result.has_errors()
+        assert r.has_errors()
 
 
 class TestDataValidator:
@@ -311,6 +455,42 @@ class TestDataValidator:
         # Should be valid (Pydantic already validated)
         assert isinstance(result, ValidationResult)
 
+    def test_validate_reactor_spec_inlet_ge_outlet_adds_error(self):
+        """Cover reactor spec consistency check (inlet >= outlet)."""
+        validator = DataValidator()
+        spec = SimpleNamespace(
+            inlet_temperature=600.0,
+            outlet_temperature=500.0,
+            primary_pressure=7.0e6,
+            enrichment=0.045,
+            fuel_type="LEU",
+            power_thermal=400e6,
+            reactor_type=SimpleNamespace(value="SMR"),
+            core_height=10.0,
+            core_diameter=100.0,
+        )
+        result = validator.validate_reactor_spec(spec)
+        assert result.has_errors()
+
+    def test_validate_solver_inputs_branches(self):
+        """Cover validate_solver_inputs warnings (mesh, cross sections, options)."""
+        validator = DataValidator()
+        geometry = SimpleNamespace(radial_mesh=np.arange(3), axial_mesh=np.arange(3))
+        xs_data = SimpleNamespace(
+            sigma_t=np.array([[1.0, 1.0]]),
+            sigma_a=np.array([[0.1, 0.1]]),
+            sigma_f=np.array([[0.0, 0.0]]),
+            D=np.array([[1.0, 1.0]]),
+            chi=np.array([[0.5, 0.5]]),
+        )
+        options = SimpleNamespace(tolerance=1e-12, max_iterations=5)
+        result = validator.validate_solver_inputs(geometry, xs_data, options)
+        assert any(i.level == ValidationLevel.WARNING for i in result.issues)
+
+        options2 = SimpleNamespace(tolerance=1e-2, max_iterations=50)
+        result2 = validator.validate_solver_inputs(geometry, xs_data, options2)
+        assert any(i.parameter == "tolerance" for i in result2.issues)
+
     def test_validate_solution_valid(self):
         """Test validate_solution with valid solution."""
         validator = DataValidator()
@@ -322,4 +502,31 @@ class TestDataValidator:
 
         result = validator.validate_solution(k_eff, flux, power, power_target)
         assert isinstance(result, ValidationResult)
+
+
+def test_validate_k_eff_additional_branches():
+    # k_eff <= 0 error
+    r = PhysicalValidator.validate_k_eff(0.0)
+    assert r.has_errors()
+    # k_eff < 0.9 warning
+    r2 = PhysicalValidator.validate_k_eff(0.8)
+    assert any(i.level == ValidationLevel.WARNING for i in r2.issues)
+
+
+def test_validate_cross_sections_additional_branches():
+    xs = SimpleNamespace(
+        sigma_t=np.array([[1.0, 1.0]]),
+        sigma_a=np.array([[-0.1, 0.5]]),  # negative absorption
+        sigma_f=np.array([[0.6, 0.6]]),   # fission > absorption for second group
+        D=np.array([[1.0, 1.0]]),
+        chi=np.array([[0.5, 0.5]]),
+    )
+    r = NeutronicsValidator.validate_cross_sections(xs)
+    assert r.has_errors()
+
+
+def test_validate_flux_high_flux_warning():
+    flux = np.ones((1, 1, 1)) * 1e17
+    r = NeutronicsValidator.validate_flux(flux, 10e6)
+    assert any(i.level == ValidationLevel.WARNING for i in r.issues)
 

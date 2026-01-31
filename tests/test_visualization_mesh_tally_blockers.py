@@ -1,5 +1,8 @@
 import numpy as np
 import pytest
+import builtins
+import importlib
+import sys
 
 
 class _DummyTrace:
@@ -169,6 +172,31 @@ def test_meshtally_get_total_and_group_branches():
     assert m3.get_group(0).shape == (2, 2)
     assert m3.get_group(1).shape == (2, 2)
 
+    # Single-group data: group 0 returns data; group >0 raises.
+    m_single = mt.MeshTally(
+        name="t",
+        tally_type="flux",
+        data=np.ones((2, 2)),
+        mesh_coords=(np.arange(3), np.arange(3)),
+        geometry_type="cylindrical",
+    )
+    assert np.array_equal(m_single.get_group(0), m_single.data)
+    with pytest.raises(IndexError):
+        m_single.get_group(1)
+
+    spec = m_single.get_energy_spectrum((0, 0))
+    assert spec.shape == (1,)
+
+    m_mg = mt.MeshTally(
+        name="t",
+        tally_type="flux",
+        data=np.arange(2 * 2 * 3, dtype=float).reshape(2, 2, 3),
+        mesh_coords=(np.arange(3), np.arange(3)),
+        geometry_type="cylindrical",
+    )
+    spec2 = m_mg.get_energy_spectrum((0, 0))
+    assert spec2.shape == (3,)
+
 
 def test_plot_mesh_tally_backend_errors():
     import smrforge.visualization.mesh_tally as mt
@@ -183,6 +211,42 @@ def test_plot_mesh_tally_backend_errors():
 
     with pytest.raises(ValueError, match="Unknown backend"):
         mt.plot_mesh_tally(mesh, geometry=object(), backend="nope")
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(mt, "_PLOTLY_AVAILABLE", False)
+    with pytest.raises(ImportError):
+        mt.plot_mesh_tally(mesh, geometry=object(), backend="plotly")
+    monkeypatch.undo()
+
+
+def test_plot_mesh_tally_matplotlib_requires_matplotlib(monkeypatch):
+    import smrforge.visualization.mesh_tally as mt
+
+    mesh = mt.MeshTally(
+        name="t",
+        tally_type="flux",
+        data=np.ones((2, 2)),
+        mesh_coords=(np.arange(3), np.arange(3)),
+        geometry_type="cylindrical",
+    )
+    monkeypatch.setattr(mt, "_MATPLOTLIB_AVAILABLE", False)
+    with pytest.raises(ImportError):
+        mt.plot_mesh_tally(mesh, geometry=object(), backend="matplotlib")
+
+
+def test_plot_mesh_tally_pyvista_requires_pyvista(monkeypatch):
+    import smrforge.visualization.mesh_tally as mt
+
+    mesh = mt.MeshTally(
+        name="t",
+        tally_type="flux",
+        data=np.ones((2, 2)),
+        mesh_coords=(np.arange(3), np.arange(3)),
+        geometry_type="cylindrical",
+    )
+    monkeypatch.setattr(mt, "_PYVISTA_AVAILABLE", False)
+    with pytest.raises(ImportError):
+        mt.plot_mesh_tally(mesh, geometry=object(), backend="pyvista")
 
 
 def test_plot_mesh_tally_plotly_cylindrical_with_uncertainty(monkeypatch):
@@ -208,6 +272,27 @@ def test_plot_mesh_tally_plotly_cylindrical_with_uncertainty(monkeypatch):
     fig = mt.plot_mesh_tally(mesh, geometry=object(), backend="plotly", show_uncertainty=True)
     assert isinstance(fig, _DummyFigure)
     assert len(fig.data) >= 2
+
+
+def test_plot_mesh_tally_plotly_cylindrical_no_uncertainty(monkeypatch):
+    import smrforge.visualization.mesh_tally as mt
+
+    monkeypatch.setattr(mt, "_PLOTLY_AVAILABLE", True)
+    monkeypatch.setattr(mt, "go", _DummyGo)
+
+    r = np.array([0.0, 1.0, 2.0])
+    z = np.array([0.0, 10.0, 20.0])
+    data = np.arange(4, dtype=float).reshape(2, 2)
+
+    mesh = mt.MeshTally(
+        name="flux",
+        tally_type="flux",
+        data=data,
+        mesh_coords=(r, z),
+        geometry_type="cylindrical",
+    )
+    fig = mt.plot_mesh_tally(mesh, geometry=object(), backend="plotly", show_uncertainty=False)
+    assert isinstance(fig, _DummyFigure)
 
 
 def test_plot_mesh_tally_plotly_cartesian_volume(monkeypatch):
@@ -242,6 +327,81 @@ def test_plot_mesh_tally_plotly_cartesian_volume(monkeypatch):
     assert np.allclose(trace.kwargs["x"], [0.5] * 4 + [1.5] * 4)
     assert np.allclose(trace.kwargs["y"], [0.5, 0.5, 1.5, 1.5] * 2)
     assert np.allclose(trace.kwargs["z"], [0.5, 1.5] * 4)
+
+
+def test_plot_mesh_tally_plotly_cartesian_group_title(monkeypatch):
+    import smrforge.visualization.mesh_tally as mt
+
+    monkeypatch.setattr(mt, "_PLOTLY_AVAILABLE", True)
+    monkeypatch.setattr(mt, "go", _DummyGo)
+
+    x = np.array([0.0, 1.0, 2.0])
+    y = np.array([0.0, 1.0, 2.0])
+    z = np.array([0.0, 1.0, 2.0])
+    data = np.ones((2, 2, 2, 3))
+
+    mesh = mt.MeshTally(
+        name="flux",
+        tally_type="flux",
+        data=data,
+        mesh_coords=(x, y, z),
+        geometry_type="cartesian",
+    )
+    fig = mt.plot_mesh_tally(mesh, geometry=object(), backend="plotly", energy_group=1)
+    assert isinstance(fig, _DummyFigure)
+
+
+def test_plot_mesh_tally_matplotlib_cylindrical_no_uncertainty(monkeypatch):
+    import smrforge.visualization.mesh_tally as mt
+
+    monkeypatch.setattr(mt, "_MATPLOTLIB_AVAILABLE", True)
+    plt = _DummyPlt()
+    monkeypatch.setattr(mt, "plt", plt)
+
+    r = np.array([0.0, 1.0, 2.0])
+    z = np.array([0.0, 10.0, 20.0])
+    data = np.arange(4, dtype=float).reshape(2, 2)
+
+    mesh_c = mt.MeshTally(
+        name="flux",
+        tally_type="flux",
+        data=data,
+        mesh_coords=(r, z),
+        geometry_type="cylindrical",
+    )
+    fig_ax = mt.plot_mesh_tally(mesh_c, geometry=object(), backend="matplotlib", show_uncertainty=False)
+    assert isinstance(fig_ax, tuple)
+
+
+def test_plot_mesh_tally_matplotlib_cartesian_with_uncertainty(monkeypatch):
+    import smrforge.visualization.mesh_tally as mt
+
+    monkeypatch.setattr(mt, "_MATPLOTLIB_AVAILABLE", True)
+    plt = _DummyPlt()
+    monkeypatch.setattr(mt, "plt", plt)
+
+    x = np.array([0.0, 1.0, 2.0])
+    y = np.array([0.0, 1.0, 2.0])
+    z = np.array([0.0, 1.0, 2.0])
+    data = np.ones((2, 2, 2))
+    unc = np.ones_like(data) * 0.1
+
+    mesh_xyz = mt.MeshTally(
+        name="flux",
+        tally_type="flux",
+        data=data,
+        uncertainty=unc,
+        mesh_coords=(x, y, z),
+        geometry_type="cartesian",
+    )
+    fig_axes = mt.plot_mesh_tally(
+        mesh_xyz,
+        geometry=object(),
+        backend="matplotlib",
+        show_uncertainty=True,
+        uncertainty_mode="relative",
+    )
+    assert isinstance(fig_axes, tuple)
 
 
 def test_plot_mesh_tally_matplotlib_cylindrical_and_cartesian(monkeypatch):
@@ -282,6 +442,18 @@ def test_plot_mesh_tally_matplotlib_cylindrical_and_cartesian(monkeypatch):
     fig_axes2 = mt.plot_mesh_tally(mesh_xyz, geometry=object(), backend="matplotlib", show_uncertainty=False)
     assert isinstance(fig_axes2, tuple)
 
+    # energy_group path for 2D multi-group
+    data_mg = np.arange(2 * 2 * 3, dtype=float).reshape(2, 2, 3)
+    mesh_mg = mt.MeshTally(
+        name="flux",
+        tally_type="flux",
+        data=data_mg,
+        mesh_coords=(r, z),
+        geometry_type="cylindrical",
+    )
+    fig_axes3 = mt.plot_mesh_tally(mesh_mg, geometry=object(), backend="matplotlib", energy_group=1, show_uncertainty=False)
+    assert isinstance(fig_axes3, tuple)
+
 
 def test_plot_mesh_tally_pyvista(monkeypatch):
     import smrforge.visualization.mesh_tally as mt
@@ -303,6 +475,33 @@ def test_plot_mesh_tally_pyvista(monkeypatch):
     plotter = mt.plot_mesh_tally(mesh_c, geometry=object(), backend="pyvista")
     assert isinstance(plotter, _DummyPv.Plotter)
     assert plotter.show_axes_called is True
+
+    # Cartesian pyvista path
+    x = np.array([0.0, 1.0, 2.0])
+    y = np.array([0.0, 1.0, 2.0])
+    z2 = np.array([0.0, 1.0, 2.0])
+    data3 = np.arange(8, dtype=float).reshape(2, 2, 2)
+    mesh_xyz = mt.MeshTally(
+        name="flux",
+        tally_type="flux",
+        data=data3,
+        mesh_coords=(x, y, z2),
+        geometry_type="cartesian",
+    )
+    plotter2 = mt.plot_mesh_tally(mesh_xyz, geometry=object(), backend="pyvista")
+    assert isinstance(plotter2, _DummyPv.Plotter)
+
+    # energy_group path (data.ndim == len(mesh_coords) + 1)
+    data_mg = np.arange(2 * 2 * 3, dtype=float).reshape(2, 2, 3)
+    mesh_mg = mt.MeshTally(
+        name="flux",
+        tally_type="flux",
+        data=data_mg,
+        mesh_coords=(r, z),
+        geometry_type="cylindrical",
+    )
+    plotter3 = mt.plot_mesh_tally(mesh_mg, geometry=object(), backend="pyvista", energy_group=1)
+    assert isinstance(plotter3, _DummyPv.Plotter)
 
 
 def test_plot_multi_group_mesh_tally_paths(monkeypatch):
@@ -348,4 +547,46 @@ def test_plot_multi_group_mesh_tally_paths(monkeypatch):
     out = mt.plot_multi_group_mesh_tally(mesh_mg, geometry=object(), backend="matplotlib")
     assert out == [0, 1, 2, 3]
     assert calls == [0, 1, 2, 3]
+
+
+def test_mesh_tally_import_fallbacks(monkeypatch):
+    """Cover import-time fallbacks for optional plotting deps."""
+    real_import = builtins.__import__
+
+    def _reload_with_blocked(prefix: str):
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == prefix or name.startswith(prefix + "."):
+                raise ImportError(f"blocked import: {prefix}")
+            return real_import(name, globals, locals, fromlist, level)
+
+        with monkeypatch.context() as mp:
+            mp.setattr(builtins, "__import__", fake_import)
+            sys.modules.pop("smrforge.visualization.mesh_tally", None)
+            sys.modules.pop(prefix, None)
+            return importlib.import_module("smrforge.visualization.mesh_tally")
+
+    mod = _reload_with_blocked("matplotlib")
+    assert mod._MATPLOTLIB_AVAILABLE is False
+    mod = _reload_with_blocked("plotly")
+    assert mod._PLOTLY_AVAILABLE is False
+    mod = _reload_with_blocked("pyvista")
+    assert mod._PYVISTA_AVAILABLE is False
+
+    import smrforge.visualization.mesh_tally as mt
+    importlib.reload(mt)
+
+
+def test_plot_multi_group_mesh_tally_plotly_requires_plotly(monkeypatch):
+    import smrforge.visualization.mesh_tally as mt
+
+    mesh_mg = mt.MeshTally(
+        name="t",
+        tally_type="flux",
+        data=np.ones((2, 2, 4)),
+        mesh_coords=(np.arange(3), np.arange(3)),
+        geometry_type="cylindrical",
+    )
+    monkeypatch.setattr(mt, "_PLOTLY_AVAILABLE", False)
+    with pytest.raises(ImportError):
+        mt.plot_multi_group_mesh_tally(mesh_mg, geometry=object(), backend="plotly")
 
