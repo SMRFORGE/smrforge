@@ -118,6 +118,124 @@ class TestUnitsModule:
         except ImportError:
             pytest.skip("Pint not available")
 
+    def test_fallback_registry_quantity_methods(self):
+        """
+        Cover the Pint-less fallback registry code paths:
+        - `_FallbackQuantity.to` / `.check`
+        - `_FallbackUnit.__rmul__` exception fallback (non-numeric)
+        """
+        import smrforge.utils.units as u
+
+        ureg = u._get_fallback_ureg()
+
+        q = 2 * ureg.dollar
+        assert q.magnitude == 2.0
+        assert q.to("anything") is q
+        assert q.check("anything") is True
+
+        # Non-numeric multiplication should fall back to magnitude=0.0
+        q2 = "x" * ureg.pcm
+        assert q2.magnitude == 0.0
+
+    def test_units_module_pint_available_paths_via_fake_pint(self):
+        """
+        Cover Pint-available branches even when Pint isn't installed by injecting
+        a tiny fake `pint` module and reloading `smrforge.utils.units`.
+        """
+        import importlib
+        import sys
+        from types import ModuleType
+
+        import smrforge.utils.units as units
+
+        # Create a minimal fake Pint implementation.
+        pint = ModuleType("pint")
+        pint_errors = ModuleType("pint.errors")
+
+        class FakeDimensionalityError(Exception):
+            pass
+
+        class FakeQuantity:
+            def __init__(self, magnitude: float, unit: "FakeUnit"):
+                self.magnitude = float(magnitude)
+                self.units = unit
+
+            def to(self, _target_quantity: object):
+                return self
+
+            def check(self, _dimensionality: object) -> bool:
+                return True
+
+        class FakeUnit:
+            def __init__(self, name: str):
+                self.name = name
+                self.dimensionality = f"dim:{name}"
+                self.units = self
+
+            def __rmul__(self, other: object):
+                return FakeQuantity(float(other), self)
+
+        class FakeUnitRegistry:
+            def __init__(self):
+                self.defined = []
+
+            def define(self, spec: str):
+                self.defined.append(spec)
+
+            def __call__(self, unit_name: str):
+                return FakeUnit(str(unit_name))
+
+        pint.UnitRegistry = FakeUnitRegistry  # type: ignore[attr-defined]
+        pint.Quantity = FakeQuantity  # type: ignore[attr-defined]
+        pint_errors.DimensionalityError = FakeDimensionalityError  # type: ignore[attr-defined]
+
+        # Reload units with fake pint present, then restore.
+        orig_pint = sys.modules.get("pint")
+        orig_pint_errors = sys.modules.get("pint.errors")
+        try:
+            sys.modules["pint"] = pint
+            sys.modules["pint.errors"] = pint_errors
+
+            importlib.reload(units)
+            assert units._PINT_AVAILABLE is True
+
+            ureg = units.get_ureg()
+            assert ureg is units.get_ureg()  # singleton
+
+            # Quantity path (is_quantity=True)
+            q = 5.0 * ureg("kelvin")
+            out_q = units.check_units(q, "kelvin", name="temp")
+            assert out_q is q
+
+            # Plain number with string expected_unit
+            out_num = units.check_units(10.0, "megawatt", name="power")
+            assert hasattr(out_num, "magnitude")
+
+            # Plain number with unit object expected_unit (else branch)
+            unit_obj = ureg("watt")
+            out_num2 = units.check_units(3.0, unit_obj, name="p")
+            assert hasattr(out_num2, "magnitude")
+
+            # convert_units quantity path
+            assert units.convert_units(q, "kelvin") == 5.0
+
+            # with_units else branch
+            w = units.with_units(7.0, unit_obj)
+            assert getattr(w, "magnitude", None) == 7.0
+        finally:
+            # Restore original pint modules (or remove our fakes), then reload units back.
+            if orig_pint is None:
+                sys.modules.pop("pint", None)
+            else:
+                sys.modules["pint"] = orig_pint
+
+            if orig_pint_errors is None:
+                sys.modules.pop("pint.errors", None)
+            else:
+                sys.modules["pint.errors"] = orig_pint_errors
+
+            importlib.reload(units)
+
 
 class TestUnitsEdgeCases:
     """Edge case tests for units.py to improve coverage to 60%+."""

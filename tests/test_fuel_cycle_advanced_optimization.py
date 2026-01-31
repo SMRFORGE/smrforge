@@ -179,6 +179,34 @@ class TestGeneticAlgorithm:
         
         assert selected.shape == (10, 1)
         assert len(selected) == 10
+
+    def test_selection_dispatch_roulette_and_rank(self):
+        """Cover _selection dispatch branches for roulette and rank."""
+
+        def objective(x):
+            return np.sum(x**2)
+
+        bounds = [(-1.0, 1.0)]
+        population = np.random.uniform(-1.0, 1.0, (10, 1))
+        fitness = np.array([objective(ind) for ind in population])
+
+        ga_r = GeneticAlgorithm(
+            objective=objective,
+            bounds=bounds,
+            population_size=10,
+            selection_method="roulette",
+        )
+        sel_r = ga_r._selection(population, fitness)
+        assert sel_r.shape == (10, 1)
+
+        ga_k = GeneticAlgorithm(
+            objective=objective,
+            bounds=bounds,
+            population_size=10,
+            selection_method="rank",
+        )
+        sel_k = ga_k._selection(population, fitness)
+        assert sel_k.shape == (10, 1)
     
     def test_crossover(self):
         """Test crossover method."""
@@ -197,6 +225,23 @@ class TestGeneticAlgorithm:
         # Check bounds
         assert np.all(offspring[:, 0] >= -1.0) and np.all(offspring[:, 0] <= 1.0)
         assert np.all(offspring[:, 1] >= -2.0) and np.all(offspring[:, 1] <= 2.0)
+
+    def test_crossover_handles_odd_parent_count(self):
+        """Cover odd-parent crossover branch (last parent carries through)."""
+
+        def objective(x):
+            return np.sum(x**2)
+
+        bounds = [(-1.0, 1.0), (-2.0, 2.0)]
+        ga = GeneticAlgorithm(
+            objective=objective,
+            bounds=bounds,
+            population_size=5,
+            crossover_rate=0.0,  # force "no crossover" path
+        )
+        parents = np.random.uniform(-1.0, 1.0, (5, 2))
+        offspring = ga._crossover(parents)
+        assert offspring.shape == (5, 2)
     
     def test_mutation(self):
         """Test mutation method."""

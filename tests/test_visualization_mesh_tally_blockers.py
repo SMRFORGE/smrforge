@@ -231,6 +231,17 @@ def test_plot_mesh_tally_plotly_cartesian_volume(monkeypatch):
     fig = mt.plot_mesh_tally(mesh, geometry=object(), backend="plotly")
     assert isinstance(fig, _DummyFigure)
     assert len(fig.data) >= 1
+    trace = fig.data[0]
+    assert isinstance(trace, _DummyTrace)
+    assert len(trace.kwargs["x"]) == 8
+    assert len(trace.kwargs["y"]) == 8
+    assert len(trace.kwargs["z"]) == 8
+    assert len(trace.kwargs["value"]) == 8
+
+    # Validate ordering matches meshgrid(..., indexing="ij").flatten()
+    assert np.allclose(trace.kwargs["x"], [0.5] * 4 + [1.5] * 4)
+    assert np.allclose(trace.kwargs["y"], [0.5, 0.5, 1.5, 1.5] * 2)
+    assert np.allclose(trace.kwargs["z"], [0.5, 1.5] * 4)
 
 
 def test_plot_mesh_tally_matplotlib_cylindrical_and_cartesian(monkeypatch):

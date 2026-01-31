@@ -244,6 +244,36 @@ class TestDesignLibrary:
         # All designs should be valid (they're validated on construction)
         assert all_valid is True
 
+    def test_design_library_compare_designs_handles_none_values(self):
+        """Cover compare_designs 'N/A' formatting path."""
+        library = DesignLibrary()
+
+        base = library.get_design("valar-10")
+        # Create a validated spec with missing electric power to force None in the table.
+        no_elec = base.model_copy(update={"power_electric": None})
+        library.designs["valar-10-noelec"] = no_elec
+
+        # Should not raise; output is printed via rich.
+        library.compare_designs(["valar-10-noelec"])
+
+    def test_design_library_validate_all_designs_handles_validation_exceptions(self, monkeypatch):
+        """Cover validate_all_designs exception path."""
+        import smrforge.presets.htgr as htgr_mod
+
+        library = htgr_mod.DesignLibrary()
+        real_validate = htgr_mod.ReactorSpecification.model_validate
+
+        calls = {"n": 0}
+
+        def _raise_once(*args, **kwargs):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise ValueError("boom")
+            return real_validate(*args, **kwargs)
+
+        monkeypatch.setattr(htgr_mod.ReactorSpecification, "model_validate", staticmethod(_raise_once))
+        assert library.validate_all_designs() is False
+
     def test_design_library_compare_designs(self, capsys):
         """Test compare_designs method."""
         library = DesignLibrary()
@@ -264,4 +294,32 @@ class TestDesignLibrary:
 
         # Just verify it doesn't raise an exception
         assert True
+
+
+def test_htgr_module_import_when_lwr_presets_unavailable(monkeypatch):
+    """Cover the import-time fallback for optional LWR presets."""
+    import builtins
+    import importlib
+    import sys
+
+    real_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        # Be permissive: relative imports can vary in how they call __import__.
+        if "smr_lwr" in name:
+            raise Exception("LWR presets unavailable (test)")
+        return real_import(name, globals, locals, fromlist, level)
+
+    with monkeypatch.context() as mp:
+        mp.setattr(builtins, "__import__", fake_import)
+        sys.modules.pop("smrforge.presets.htgr", None)
+        sys.modules.pop("smrforge.presets.smr_lwr", None)
+        mod = importlib.import_module("smrforge.presets.htgr")
+        assert mod._LWR_PRESETS_AVAILABLE is False
+        lib = mod.DesignLibrary()
+        assert "nuscale-77mwe" not in lib.designs
+
+    import smrforge.presets.htgr as htgr_mod
+
+    importlib.reload(htgr_mod)
 

@@ -226,6 +226,12 @@ class TestHeliumCoolant:
         rho2 = helium.density(500.0, P=5.0e6)
         assert rho2 < rho  # Lower pressure should give lower density
 
+    def test_helium_coolant_density_func_callable(self):
+        """Cover HeliumCoolant._initialize_properties rho_corr."""
+        helium = HeliumCoolant()
+        rho = helium.density_func(500.0, P=7.0e6)
+        assert rho == pytest.approx(7.0e6 / (2077.0 * 500.0))
+
     def test_helium_coolant_dynamic_viscosity(self):
         """Test HeliumCoolant dynamic_viscosity calculation."""
         helium = HeliumCoolant()
@@ -535,7 +541,8 @@ class TestFastFunctions:
         """Test graphite_conductivity_fast function."""
         T_array = np.linspace(300, 2000, 100)
 
-        k_array = graphite_conductivity_fast(T_array, grade=0)
+        func = graphite_conductivity_fast.py_func if hasattr(graphite_conductivity_fast, "py_func") else graphite_conductivity_fast
+        k_array = func(T_array, grade=0)
 
         assert isinstance(k_array, np.ndarray)
         assert len(k_array) == len(T_array)
@@ -544,21 +551,22 @@ class TestFastFunctions:
     def test_graphite_conductivity_fast_all_grades(self):
         """Test graphite_conductivity_fast for all grades (coverage for lines 611-627)."""
         T_array = np.linspace(300, 2000, 100)
+        func = graphite_conductivity_fast.py_func if hasattr(graphite_conductivity_fast, "py_func") else graphite_conductivity_fast
 
         # Test grade 0 (IG-110)
-        k_ig110 = graphite_conductivity_fast(T_array, grade=0)
+        k_ig110 = func(T_array, grade=0)
         assert isinstance(k_ig110, np.ndarray)
         assert len(k_ig110) == len(T_array)
         assert np.all(k_ig110 > 0)
 
         # Test grade 1 (H-451) - has conditional branch for T < 600
-        k_h451 = graphite_conductivity_fast(T_array, grade=1)
+        k_h451 = func(T_array, grade=1)
         assert isinstance(k_h451, np.ndarray)
         assert len(k_h451) == len(T_array)
         assert np.all(k_h451 > 0)
 
         # Test grade 2 (NBG-18)
-        k_nbg18 = graphite_conductivity_fast(T_array, grade=2)
+        k_nbg18 = func(T_array, grade=2)
         assert isinstance(k_nbg18, np.ndarray)
         assert len(k_nbg18) == len(T_array)
         assert np.all(k_nbg18 > 0)
@@ -571,7 +579,8 @@ class TestFastFunctions:
         """Test helium_properties_fast function."""
         T_array = np.linspace(300, 2000, 100)
 
-        rho, mu, k = helium_properties_fast(T_array, P=7.0e6)
+        func = helium_properties_fast.py_func if hasattr(helium_properties_fast, "py_func") else helium_properties_fast
+        rho, mu, k = func(T_array, P=7.0e6)
 
         assert isinstance(rho, np.ndarray)
         assert isinstance(mu, np.ndarray)

@@ -233,6 +233,254 @@ class TestChannelThermalHydraulics:
         except ImportError:
             pytest.skip("ChannelThermalHydraulics not available")
 
+    def test_validate_inputs_rejects_nonpositive_flow_area_and_perimeter(self):
+        """Cover validation branches for flow area and heated perimeter."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            inlet_conditions = {
+                "temperature": 823.15,
+                "pressure": 7.0e6,
+                "mass_flow_rate": 0.1,
+            }
+
+            geom_bad_area = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=0.0,
+                heated_perimeter=np.pi * 1.0,
+            )
+            with pytest.raises(ValueError, match="flow_area must be > 0"):
+                ChannelThermalHydraulics(geometry=geom_bad_area, inlet_conditions=inlet_conditions)
+
+            geom_bad_perim = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=0.0,
+            )
+            with pytest.raises(ValueError, match="heated_perimeter must be > 0"):
+                ChannelThermalHydraulics(geometry=geom_bad_perim, inlet_conditions=inlet_conditions)
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_set_power_profile_converts_list_input(self):
+        """Cover set_power_profile list->ndarray conversion."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+            th = ChannelThermalHydraulics(geometry=geometry, inlet_conditions=inlet)
+
+            th.set_power_profile([100.0] * len(th.z))
+            assert np.allclose(th.q_linear, 100.0)
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_solve_steady_state_converts_t_fuel_list_input(self):
+        """Cover solve_steady_state list->ndarray conversion for T_fuel."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+            th = ChannelThermalHydraulics(geometry=geometry, inlet_conditions=inlet)
+            th.set_power_profile(np.ones(len(th.z)) * 100.0)
+
+            # T_fuel passed as list should be accepted (and converted internally).
+            result = th.solve_steady_state(T_fuel=[1200.0] * len(th.z))
+            assert "T_wall" in result
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_solve_steady_state_raises_on_nonphysical_temperature(self):
+        """Cover post-solve non-physical temperature guard."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+            th = ChannelThermalHydraulics(geometry=geometry, inlet_conditions=inlet)
+
+            # Force a degenerate state that skips marching but triggers the final check.
+            th.nz = 0
+            th.z = np.array([0.0])
+            th.T_coolant = np.array([-1.0])
+            th.P_coolant = np.array([7.0e6])
+            th.T_wall = np.array([0.0])
+            th.q_linear = np.array([0.0])
+
+            with pytest.raises(RuntimeError, match="non-physical temperatures"):
+                th.solve_steady_state()
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_solve_steady_state_raises_on_nonphysical_pressure(self):
+        """Cover post-solve non-physical pressure guard."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+            th = ChannelThermalHydraulics(geometry=geometry, inlet_conditions=inlet)
+
+            th.nz = 0
+            th.z = np.array([0.0])
+            th.T_coolant = np.array([823.15])
+            th.P_coolant = np.array([-1.0])
+            th.T_wall = np.array([0.0])
+            th.q_linear = np.array([0.0])
+
+            with pytest.raises(RuntimeError, match="non-physical pressures"):
+                th.solve_steady_state()
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_validate_inputs_requires_geometry_type_and_dict(self):
+        """Cover geometry/inlet_conditions type validation."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            inlet = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+
+            with pytest.raises(ValueError, match="geometry must be ChannelGeometry"):
+                ChannelThermalHydraulics(geometry=object(), inlet_conditions=inlet)
+
+            geom = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            with pytest.raises(ValueError, match="inlet_conditions must be dict"):
+                ChannelThermalHydraulics(geometry=geom, inlet_conditions=["not", "a", "dict"])
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_validate_inputs_rejects_nonpositive_length_and_inlet_values(self):
+        """Cover input validation for non-physical geometry and inlet conditions."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            inlet_ok = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+            geom_bad_len = ChannelGeometry(
+                length=0.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            with pytest.raises(ValueError, match="length must be > 0"):
+                ChannelThermalHydraulics(geometry=geom_bad_len, inlet_conditions=inlet_ok)
+
+            geom_ok = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            with pytest.raises(ValueError, match="missing required key"):
+                ChannelThermalHydraulics(geometry=geom_ok, inlet_conditions={"temperature": 1.0})
+            with pytest.raises(ValueError, match="temperature.*must be > 0"):
+                ChannelThermalHydraulics(
+                    geometry=geom_ok,
+                    inlet_conditions={"temperature": 0.0, "pressure": 7.0e6, "mass_flow_rate": 0.1},
+                )
+            with pytest.raises(ValueError, match="pressure.*must be > 0"):
+                ChannelThermalHydraulics(
+                    geometry=geom_ok,
+                    inlet_conditions={"temperature": 823.15, "pressure": 0.0, "mass_flow_rate": 0.1},
+                )
+            with pytest.raises(ValueError, match="mass_flow_rate.*must be > 0"):
+                ChannelThermalHydraulics(
+                    geometry=geom_ok,
+                    inlet_conditions={"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.0},
+                )
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_set_power_profile_length_mismatch_raises(self):
+        """Cover set_power_profile length mismatch error."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+            th = ChannelThermalHydraulics(geometry=geometry, inlet_conditions=inlet)
+
+            with pytest.raises(ValueError, match="power_profile length"):
+                th.set_power_profile(np.ones(len(th.z) - 1))
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_set_power_profile_clamps_negative_values(self):
+        """Cover negative power_profile clamp."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+            th = ChannelThermalHydraulics(geometry=geometry, inlet_conditions=inlet)
+
+            power_profile = np.ones(len(th.z)) * 100.0
+            power_profile[0] = -10.0
+            th.set_power_profile(power_profile)
+            assert np.all(th.q_linear >= 0.0)
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
+    def test_solve_steady_state_rejects_t_fuel_bad_inputs(self):
+        """Cover T_fuel validation errors."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=400.0,
+                diameter=1.0,
+                flow_area=np.pi * (0.5) ** 2,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {"temperature": 823.15, "pressure": 7.0e6, "mass_flow_rate": 0.1}
+            th = ChannelThermalHydraulics(geometry=geometry, inlet_conditions=inlet)
+            th.set_power_profile(np.ones(len(th.z)) * 100.0)
+
+            with pytest.raises(ValueError, match="T_fuel length"):
+                th.solve_steady_state(T_fuel=np.ones(len(th.z) - 1))
+            with pytest.raises(ValueError, match="T_fuel must be > 0"):
+                th.solve_steady_state(T_fuel=np.ones(len(th.z)) * -1.0)
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
+
 
 class TestFluidProperties:
     """Test FluidProperties class."""
@@ -343,6 +591,18 @@ class TestFuelRodThermal:
         except ImportError:
             pytest.skip("FuelRodThermal not available")
 
+    def test_fuel_rod_thermal_creation_rejects_invalid_inputs(self):
+        """Cover FuelRodThermal __init__ validation errors."""
+        try:
+            from smrforge.thermal.hydraulics import FuelRodThermal
+
+            with pytest.raises(ValueError, match="radius must be > 0"):
+                FuelRodThermal(radius=0.0, n_nodes=10)
+            with pytest.raises(ValueError, match="n_nodes must be > 0"):
+                FuelRodThermal(radius=0.5, n_nodes=0)
+        except ImportError:
+            pytest.skip("FuelRodThermal not available")
+
     def test_solve_steady_conduction(self):
         """Test solving steady-state conduction."""
         try:
@@ -363,6 +623,21 @@ class TestFuelRodThermal:
             # Temperature should decrease monotonically from center
             for i in range(len(T) - 1):
                 assert T[i] >= T[i + 1]
+        except ImportError:
+            pytest.skip("FuelRodThermal not available")
+
+    def test_solve_steady_conduction_rejects_invalid_inputs(self):
+        """Cover solve_steady_conduction validation errors."""
+        try:
+            from smrforge.thermal.hydraulics import FuelRodThermal
+
+            rod = FuelRodThermal(radius=0.5, n_nodes=10)
+            with pytest.raises(ValueError, match="q_vol must be >= 0"):
+                rod.solve_steady_conduction(q_vol=-1.0, k_fuel=0.2, T_surface=1000.0)
+            with pytest.raises(ValueError, match="k_fuel must be > 0"):
+                rod.solve_steady_conduction(q_vol=1.0, k_fuel=0.0, T_surface=1000.0)
+            with pytest.raises(ValueError, match="T_surface must be > 0"):
+                rod.solve_steady_conduction(q_vol=1.0, k_fuel=0.2, T_surface=0.0)
         except ImportError:
             pytest.skip("FuelRodThermal not available")
 
@@ -418,6 +693,22 @@ class TestPorousMediaFlow:
         except ImportError:
             pytest.skip("PorousMediaFlow not available")
 
+    def test_porous_media_flow_creation_rejects_invalid_inputs(self):
+        """Cover PorousMediaFlow __init__ validation errors."""
+        try:
+            from smrforge.thermal.hydraulics import PorousMediaFlow
+
+            with pytest.raises(ValueError, match="bed_height must be > 0"):
+                PorousMediaFlow(0.0, 300.0, 6.0, 0.39)
+            with pytest.raises(ValueError, match="bed_diameter must be > 0"):
+                PorousMediaFlow(1100.0, 0.0, 6.0, 0.39)
+            with pytest.raises(ValueError, match="pebble_diameter must be > 0"):
+                PorousMediaFlow(1100.0, 300.0, 0.0, 0.39)
+            with pytest.raises(ValueError, match="porosity must be in"):
+                PorousMediaFlow(1100.0, 300.0, 6.0, 1.0)
+        except ImportError:
+            pytest.skip("PorousMediaFlow not available")
+
     def test_solve_flow(self):
         """Test solving flow through porous bed."""
         try:
@@ -448,6 +739,99 @@ class TestPorousMediaFlow:
             assert result["T_coolant"][-1] > result["T_coolant"][0]
             # Pressure should decrease along bed
             assert result["P_coolant"][-1] < result["P_coolant"][0]
+        except ImportError:
+            pytest.skip("PorousMediaFlow not available")
+
+    def test_solve_flow_rejects_invalid_inputs_and_length_mismatch(self):
+        """Cover solve_flow validation errors."""
+        try:
+            from smrforge.thermal.hydraulics import PorousMediaFlow
+
+            bed = PorousMediaFlow(
+                bed_height=1100.0,
+                bed_diameter=300.0,
+                pebble_diameter=6.0,
+                porosity=0.39,
+            )
+
+            q_ok = np.ones(bed.nz + 1) * 5.0
+            with pytest.raises(ValueError, match="mdot must be > 0"):
+                bed.solve_flow(mdot=0.0, T_in=573.0, P_in=7.0e6, q_vol_profile=q_ok)
+            with pytest.raises(ValueError, match="T_in must be > 0"):
+                bed.solve_flow(mdot=50.0, T_in=0.0, P_in=7.0e6, q_vol_profile=q_ok)
+            with pytest.raises(ValueError, match="P_in must be > 0"):
+                bed.solve_flow(mdot=50.0, T_in=573.0, P_in=0.0, q_vol_profile=q_ok)
+            with pytest.raises(ValueError, match="q_vol_profile length"):
+                bed.solve_flow(mdot=50.0, T_in=573.0, P_in=7.0e6, q_vol_profile=np.ones(bed.nz))
+        except ImportError:
+            pytest.skip("PorousMediaFlow not available")
+
+    def test_solve_flow_converts_profile_and_clamps_negative(self):
+        """Cover q_vol_profile conversion and negative clamp."""
+        try:
+            from smrforge.thermal.hydraulics import PorousMediaFlow
+
+            bed = PorousMediaFlow(
+                bed_height=1100.0,
+                bed_diameter=300.0,
+                pebble_diameter=6.0,
+                porosity=0.39,
+            )
+
+            # Pass as list (conversion) with a negative entry (clamp).
+            q_vol_profile = [5.0] * (bed.nz + 1)
+            q_vol_profile[0] = -1.0
+
+            result = bed.solve_flow(
+                mdot=50.0,
+                T_in=573.0,
+                P_in=7.0e6,
+                q_vol_profile=q_vol_profile,
+            )
+            assert result["T_coolant"][0] > 0
+            assert result["P_coolant"][0] > 0
+        except ImportError:
+            pytest.skip("PorousMediaFlow not available")
+
+    def test_solve_flow_raises_on_nonphysical_temperature(self, monkeypatch):
+        """Cover porous media non-physical temperature guard."""
+        try:
+            import smrforge.thermal.hydraulics as hyd
+
+            bed = hyd.PorousMediaFlow(
+                bed_height=1100.0,
+                bed_diameter=300.0,
+                pebble_diameter=6.0,
+                porosity=0.39,
+            )
+
+            # Force temperature to decrease (cp < 0) so it can cross <= 0.
+            monkeypatch.setattr(hyd.FluidProperties, "specific_heat", lambda self: -1.0)
+
+            q_vol_profile = np.ones(bed.nz + 1) * 1.0e6  # large positive heat gen
+            with pytest.raises(RuntimeError, match="non-physical temperatures"):
+                bed.solve_flow(mdot=50.0, T_in=10.0, P_in=7.0e6, q_vol_profile=q_vol_profile)
+        except ImportError:
+            pytest.skip("PorousMediaFlow not available")
+
+    def test_solve_flow_raises_on_nonphysical_pressure(self, monkeypatch):
+        """Cover porous media non-physical pressure guard."""
+        try:
+            import smrforge.thermal.hydraulics as hyd
+
+            bed = hyd.PorousMediaFlow(
+                bed_height=1100.0,
+                bed_diameter=300.0,
+                pebble_diameter=6.0,
+                porosity=0.39,
+            )
+
+            # Force huge pressure gradient so pressure becomes <= 0.
+            monkeypatch.setattr(bed, "_ergun_pressure_drop", lambda v_s, rho, mu: 1.0e20)
+
+            q_vol_profile = np.ones(bed.nz + 1) * 5.0
+            with pytest.raises(RuntimeError, match="non-physical pressures"):
+                bed.solve_flow(mdot=50.0, T_in=573.0, P_in=1.0, q_vol_profile=q_vol_profile)
         except ImportError:
             pytest.skip("PorousMediaFlow not available")
 
@@ -537,9 +921,65 @@ class TestConjugateHeatTransfer:
         except ImportError:
             pytest.skip("ConjugateHeatTransfer not available")
 
+    def test_solve_coupled_under_relaxation_updates_temperature(self):
+        """Cover under-relaxation update step."""
+        try:
+            from smrforge.thermal.hydraulics import ConjugateHeatTransfer
+
+            class MockNeutronics:
+                def __init__(self):
+                    self.flux = np.ones((2, 2, 1))
+
+                def solve_steady_state(self):
+                    return 1.0, self.flux
+
+                def compute_power_distribution(self, power):
+                    return np.ones((2, 2))
+
+            class MockThermal:
+                def __init__(self):
+                    self.calls = 0
+
+                def solve_with_power(self, power):
+                    self.calls += 1
+                    # First call: force a change from initial 1200K.
+                    if self.calls == 1:
+                        return np.full_like(power, 1000.0)
+                    # Second call: match the relaxed value (0.5*1000 + 0.5*1200 = 1100).
+                    return np.full_like(power, 1100.0)
+
+            coupled = ConjugateHeatTransfer(MockNeutronics(), MockThermal())
+            result = coupled.solve_coupled(max_iterations=5, tolerance=1e-9)
+            assert np.allclose(result["T_fuel"], 1100.0)
+        except ImportError:
+            pytest.skip("ConjugateHeatTransfer not available")
+
 
 class TestHeatTransferCoefficient:
     """Test _heat_transfer_coefficient method for different regimes."""
+
+    def test_heat_transfer_coefficient_laminar(self):
+        """Test _heat_transfer_coefficient in laminar regime."""
+        try:
+            from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+
+            geometry = ChannelGeometry(
+                length=100.0,
+                diameter=1.0,
+                flow_area=np.pi * 0.25,
+                heated_perimeter=np.pi * 1.0,
+            )
+            inlet = {"temperature": 600.0, "pressure": 7e6, "mass_flow_rate": 0.01}
+            channel = ChannelThermalHydraulics(geometry, inlet)
+
+            Re = 1000.0  # Laminar
+            Pr = 0.7
+            k = 0.5
+            h = channel._heat_transfer_coefficient(Re, Pr, k)
+            assert h > 0
+            assert np.isfinite(h)
+        except ImportError:
+            pytest.skip("ChannelThermalHydraulics not available")
 
     def test_heat_transfer_coefficient_transitional(self):
         """Test _heat_transfer_coefficient in transitional regime."""
@@ -621,7 +1061,8 @@ class TestTridiagonalSolver:
             # Right-hand side
             d = np.array([4.0, 6.0, 7.0])
 
-            x = solve_tridiagonal_fast(a, b, c, d)
+            func = solve_tridiagonal_fast.py_func if hasattr(solve_tridiagonal_fast, "py_func") else solve_tridiagonal_fast
+            x = func(a, b, c, d)
 
             # Check solution: b[i]*x[i] + a[i]*x[i-1] + c[i]*x[i+1] = d[i]
             assert len(x) == 3

@@ -212,47 +212,40 @@ def _plot_voxel_plotly(voxel_grid, color_by, data, field_name, colors, backgroun
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required for voxel plots")
     
-    x, y, z = np.meshgrid(
-        voxel_grid["x"],
-        voxel_grid["y"],
-        voxel_grid["z"],
-        indexing="ij",
-    )
-    
     material_ids = voxel_grid["material_ids"]
-    
-    # Create colors based on color_by
-    if color_by == "material":
-        if colors:
-            color_map = colors
-        else:
-            # Default material colors
-            unique_materials = np.unique(material_ids)
-            # Convert numpy scalars to Python ints for dictionary keys
-            color_map = {int(mat): f"hsl({i*360/len(unique_materials)}, 70%, 50%)" 
-                        for i, mat in enumerate(unique_materials)}
-        
-        # Convert material_ids to integers and create color array
-        # Use numpy operations to avoid list comprehension with numpy arrays
-        material_ids_int = material_ids.astype(int)
-        colors_array = np.empty_like(material_ids, dtype=object)
-        
-        # Fill color array using vectorized operations where possible
-        for mat_id in np.unique(material_ids_int):
-            mask = material_ids_int == mat_id
-            colors_array[mask] = color_map.get(int(mat_id), "gray")
+    cell_ids = voxel_grid.get("cell_ids")
+
+    # Avoid allocating large 3D temporary arrays from meshgrid; construct
+    # flattened coordinate arrays directly (same ordering as meshgrid(..., indexing="ij").flatten()).
+    x_coords = np.asarray(voxel_grid["x"])
+    y_coords = np.asarray(voxel_grid["y"])
+    z_coords = np.asarray(voxel_grid["z"])
+    nx, ny, nz = len(x_coords), len(y_coords), len(z_coords)
+    x_flat = np.repeat(x_coords, ny * nz)
+    y_flat = np.tile(np.repeat(y_coords, nz), nx)
+    z_flat = np.tile(z_coords, nx * ny)
+
+    # Choose scalar field to visualize.
+    if data is not None:
+        values = np.asarray(data)
+        value_title = field_name or "data"
+    elif color_by == "cell" and cell_ids is not None:
+        values = np.asarray(cell_ids)
+        value_title = "cell"
     else:
-        colors_array = material_ids  # Use material IDs as colors
+        values = np.asarray(material_ids)
+        value_title = "material"
     
     fig = go.Figure(data=go.Volume(
-        x=x.flatten(),
-        y=y.flatten(),
-        z=z.flatten(),
-        value=material_ids.flatten(),
-        isomin=material_ids.min(),
-        isomax=material_ids.max(),
+        x=x_flat,
+        y=y_flat,
+        z=z_flat,
+        value=values.ravel(order="C"),
+        isomin=values.min(),
+        isomax=values.max(),
         opacity=0.3,
         surface_count=10,
+        colorbar=dict(title=value_title),
     ))
     
     fig.update_layout(

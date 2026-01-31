@@ -80,6 +80,47 @@ class TestSMRMeshOptimizer:
         assert mesh["axial_mesh"][0] == pytest.approx(0.0)
         assert mesh["axial_mesh"][-1] == pytest.approx(365.76)
 
+    def test_generate_smr_mesh_no_refinement_returns_base_meshes(self):
+        """Cover no-refinement paths (return base meshes)."""
+        optimizer = SMRMeshOptimizer()
+
+        params = SMRMeshParams(
+            base_resolution=5,
+            core_boundary_refinement=1.0,  # disables boundary refinement points
+            assembly_boundary_refinement=1.0,
+            fuel_pin_refinement=1.0,
+        )
+
+        mesh = optimizer.generate_smr_mesh(
+            core_diameter=200.0,
+            core_height=365.76,
+            params=params,
+        )
+
+        assert np.allclose(mesh["radial_mesh"], np.linspace(0.0, 100.0, 5))
+        assert np.allclose(mesh["axial_mesh"], np.linspace(0.0, 365.76, 5))
+        assert mesh["x_mesh"] is None
+        assert mesh["y_mesh"] is None
+        assert mesh["z_mesh"] is None
+
+    def test_generate_smr_mesh_xy_no_refinement_when_positions_outside_core(self):
+        """Cover xy-mesh branches where x_refine/y_refine remain empty."""
+        optimizer = SMRMeshOptimizer()
+        params = SMRMeshParams(base_resolution=7, core_boundary_refinement=1.0)
+
+        # Non-empty positions triggers XY mesh generation, but abs(x/y) >= r_max prevents refinement.
+        assembly_positions = [(101.0, 101.0)]
+        mesh = optimizer.generate_smr_mesh(
+            core_diameter=200.0,
+            core_height=365.76,
+            assembly_positions=assembly_positions,
+            params=params,
+        )
+
+        r_max = 100.0
+        assert np.allclose(mesh["x_mesh"], np.linspace(-r_max, r_max, 7))
+        assert np.allclose(mesh["y_mesh"], np.linspace(-r_max, r_max, 7))
+
     def test_generate_smr_mesh_with_assemblies(self):
         """Test mesh generation with assembly positions."""
         optimizer = SMRMeshOptimizer()
@@ -166,6 +207,14 @@ class TestSMRMeshOptimizer:
         # Should remove points that create cells smaller than min_cell_size
         cell_sizes = np.diff(filtered_mesh)
         assert np.all(cell_sizes >= params.min_cell_size)
+
+    def test_enforce_cell_sizes_mesh_with_single_point_returns_unchanged(self):
+        """Cover short-mesh early return."""
+        optimizer = SMRMeshOptimizer()
+        params = SMRMeshParams()
+        mesh = np.array([0.0])
+        out = optimizer._enforce_cell_sizes(mesh, params)
+        assert np.array_equal(out, mesh)
 
     def test_estimate_mesh_quality(self):
         """Test mesh quality estimation."""

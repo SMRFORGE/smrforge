@@ -568,6 +568,51 @@ class TestValidatedSolverMethods:
             # If validation fails due to missing methods on geometry/options, that's expected
             pytest.skip("solve_with_validation requires full geometry interface")
 
+    def test_validated_solver_solve_with_validation_raises_on_validation_errors(self, monkeypatch):
+        """Ensure solve_with_validation raises when validate_solution reports errors."""
+        from unittest.mock import Mock
+        from smrforge.validation.models import CrossSectionData
+
+        class MockValidatedSolver(ValidatedSolver):
+            def __init__(self, geometry, xs_data, options):
+                ValidatedClass.__init__(self)
+                self.geometry = geometry
+                self.xs_data = xs_data
+                self.options = options
+                self.validator = DataValidator()
+                self.disable_validation()  # disable during init
+
+            def _solve_internal(self):
+                return 1.05, np.array([1.0, 2.0, 3.0])
+
+            def _compute_power(self, flux):
+                return np.array([10.0, 20.0, 30.0])
+
+        xs_data = CrossSectionData(
+            n_groups=2,
+            n_materials=1,
+            sigma_t=np.array([[0.5, 0.8]]),
+            sigma_a=np.array([[0.1, 0.2]]),
+            sigma_f=np.array([[0.05, 0.15]]),
+            nu_sigma_f=np.array([[0.125, 0.375]]),
+            sigma_s=np.array([[[0.39, 0.01], [0.0, 0.58]]]),
+            chi=np.array([[1.0, 0.0]]),
+            D=np.array([[1.5, 0.4]]),
+        )
+        geometry = Mock()
+        # solve_with_validation reads options.power_target, so provide it explicitly.
+        options = type("Opt", (), {"power_target": 1.0})()
+
+        solver = MockValidatedSolver(geometry, xs_data, options)
+        solver.enable_validation()
+
+        bad = ValidationResult(valid=False)
+        bad.add_issue(ValidationLevel.ERROR, "solution", "forced failure")
+        monkeypatch.setattr(solver.validator, "validate_solution", lambda *a, **k: bad)
+
+        with pytest.raises(ValueError, match="Solution validation failed"):
+            solver.solve_with_validation()
+
 
 class TestValidateArrayEdgeCases:
     """Test validate_array function with edge cases."""

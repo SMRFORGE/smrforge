@@ -587,3 +587,31 @@ class TestCollapseWithAdjointForSensitivityAdditional:
         assert coarse_xs.shape == (4,)
         assert coarse_adj.shape == (4,)
         assert np.all(coarse_adj >= 0)  # Adjoint should be non-negative
+
+    @patch('smrforge.core.multigroup_advanced.collapse_with_adjoint_weighting')
+    def test_collapse_with_adjoint_for_sensitivity_overlap_math(self, mock_collapse):
+        """Cover the overlap/dE accumulation lines in decay_chain_utils."""
+        fine_group_structure = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
+        coarse_group_structure = np.array([0.0, 2.0, 4.0])
+
+        fine_xs = np.ones(4)
+        fine_flux = np.ones(4)
+        fine_adjoint = np.array([10.0, 20.0, 30.0, 40.0])
+
+        mock_collapse.return_value = np.array([0.8, 0.9])
+
+        coarse_xs, coarse_adj = collapse_with_adjoint_for_sensitivity(
+            fine_group_structure,
+            coarse_group_structure,
+            fine_xs,
+            fine_flux,
+            fine_adjoint,
+        )
+
+        assert coarse_xs.shape == (2,)
+        assert coarse_adj.shape == (2,)
+        # Expected weighted averages per coarse group:
+        # [0,2]: (10*1 + 20*1)/2 = 15
+        # [2,4]: (30*1 + 40*1)/2 = 35
+        assert coarse_adj[0] == pytest.approx(15.0)
+        assert coarse_adj[1] == pytest.approx(35.0)

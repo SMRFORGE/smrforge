@@ -220,6 +220,17 @@ class TestLoadingPatternOptimizer:
         assert result.f_opt >= 0.0
         assert result.x_opt.shape == core_layout.shape
 
+    def test_optimize_loading_pattern_unknown_method_raises(self):
+        """Cover unknown-method error path."""
+        core_layout = np.array([[1, 1], [1, 1]])
+
+        def objective(pattern):
+            return np.sum(pattern)
+
+        optimizer = LoadingPatternOptimizer(core_layout, n_fuel_types=2, objective=objective)
+        with pytest.raises(ValueError, match="Unknown method"):
+            optimizer.optimize(method="nope", max_iterations=1)
+
     def test_loading_pattern_selection(self):
         """Test selection for loading patterns."""
         core_layout = np.array([[1, 1], [1, 1]])
@@ -263,6 +274,28 @@ class TestLoadingPatternOptimizer:
         
         assert len(offspring) >= len(parents)
 
+    def test_loading_pattern_crossover_handles_odd_parent_count(self):
+        """Cover odd-parent fallback in crossover."""
+        core_layout = np.array([[1, 1], [1, 1]])
+
+        def objective(pattern):
+            return np.sum(pattern)
+
+        optimizer = LoadingPatternOptimizer(core_layout, n_fuel_types=2, objective=objective)
+
+        parents = np.array(
+            [
+                [[1, 1], [1, 1]],
+                [[2, 2], [2, 2]],
+                [[1, 2], [2, 1]],
+            ]
+        )
+
+        offspring = optimizer._crossover(parents)
+        assert offspring.shape[1:] == parents.shape[1:]
+        # Last parent should be forwarded unchanged when count is odd.
+        assert np.array_equal(offspring[-1], parents[-1])
+
     def test_loading_pattern_mutation(self):
         """Test swap mutation for loading patterns."""
         core_layout = np.array([[1, 1], [1, 1]])
@@ -280,3 +313,31 @@ class TestLoadingPatternOptimizer:
         
         assert len(mutated) == len(offspring)
         assert mutated.shape == offspring.shape
+
+
+def test_design_module_import_without_scipy(monkeypatch):
+    """
+    Cover the ImportError fallback at module import time.
+    (We reload the module with a fake ImportError for scipy.)
+    """
+    import builtins
+    import importlib
+    import sys
+
+    real_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "scipy" or name.startswith("scipy."):
+            raise ImportError("scipy not available (test)")
+        return real_import(name, globals, locals, fromlist, level)
+
+    with monkeypatch.context() as mp:
+        mp.setattr(builtins, "__import__", fake_import)
+        sys.modules.pop("smrforge.optimization.design", None)
+        mod = importlib.import_module("smrforge.optimization.design")
+        assert mod._SCIPY_AVAILABLE is False
+
+    # Restore the normal module state for other tests.
+    import smrforge.optimization.design as design_mod
+
+    importlib.reload(design_mod)

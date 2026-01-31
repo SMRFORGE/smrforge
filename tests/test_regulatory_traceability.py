@@ -590,6 +590,19 @@ class TestSafetyMarginReport:
         assert "PASS" in text
         assert "FAIL" in text
 
+    def test_format_margin_falls_back_to_str_on_typeerror(self):
+        """Cover _format_margin exception path (TypeError/ValueError)."""
+        report = SafetyMarginReport(calculation_id="fmt_001", timestamp=datetime.now())
+
+        class Weird:
+            def __float__(self):
+                raise TypeError("no float")
+
+            def __str__(self):
+                return "WEIRD"
+
+        assert report._format_margin(Weird()) == "WEIRD"
+
 
 class TestCreateAuditTrail:
     """Tests for create_audit_trail convenience function."""

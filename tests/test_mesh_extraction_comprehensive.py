@@ -224,6 +224,40 @@ class TestPebbleMeshExtraction:
         # Just verify mesh is created successfully
         assert mesh.n_vertices > 0
 
+    def test_extract_pebble_mesh_sets_cell_materials_when_cells_present(self, monkeypatch):
+        """Cover branch that sets `cell_materials` when mesh has cells."""
+        from smrforge.geometry.core_geometry import Pebble, Point3D, MaterialRegion
+        import smrforge.geometry.mesh_extraction as mex
+
+        class DummyMesh:
+            def __init__(self):
+                self.cells = np.ones((2, 4), dtype=int)
+                self.n_cells = 2
+                self.cell_materials = None
+
+        monkeypatch.setattr(mex, "extract_sphere_mesh", lambda *a, **k: DummyMesh())
+
+        pebble = Pebble(
+            id=1,
+            position=Point3D(x=0, y=0, z=0),
+            radius=3.0,
+            material_region=MaterialRegion(
+                material_id="pebble_fuel", composition={}, temperature=1200.0, density=10.0
+            ),
+        )
+        mesh = mex.extract_pebble_mesh(pebble)
+        assert mesh.cell_materials is not None
+        assert mesh.cell_materials.tolist() == ["pebble_fuel", "pebble_fuel"]
+
+        pebble2 = Pebble(
+            id=2,
+            position=Point3D(x=0, y=0, z=0),
+            radius=3.0,
+            material_region=None,
+        )
+        mesh2 = mex.extract_pebble_mesh(pebble2)
+        assert mesh2.cell_materials.tolist() == ["pebble", "pebble"]
+
 
 class TestCoreMeshExtraction:
     """Test core mesh extraction."""
@@ -288,6 +322,39 @@ class TestCoreMeshExtraction:
         
         mesh = extract_core_volume_mesh(mock_prismatic_core, include_channels=True)
         assert mesh is not None
+
+    def test_extract_core_volume_mesh_with_coolant_channels(self, mock_prismatic_core, monkeypatch):
+        """Cover coolant channel loop inside extract_core_volume_mesh."""
+        from smrforge.geometry.core_geometry import CoolantChannel, Point3D
+        import smrforge.geometry.mesh_extraction as mex
+
+        if not mock_prismatic_core.blocks:
+            pytest.skip("No blocks in mock core")
+
+        mock_prismatic_core.blocks[0].coolant_channels.append(
+            CoolantChannel(
+                id=99,
+                position=Point3D(x=0, y=0, z=0),
+                radius=2.0,
+                height=80.0,
+                flow_area=12.57,
+            )
+        )
+
+        called = {"n": 0}
+
+        def _fake_extract_coolant(channel):
+            called["n"] += 1
+            # Return a tiny dummy mesh object
+            dm = type("M", (), {"vertices": np.zeros((1, 3)), "faces": None, "cells": None, "n_vertices": 1})()
+            return dm
+
+        monkeypatch.setattr(mex, "extract_coolant_channel_mesh", _fake_extract_coolant)
+        monkeypatch.setattr(mex, "combine_meshes", lambda meshes: meshes[0])
+
+        mesh = mex.extract_core_volume_mesh(mock_prismatic_core, include_channels=True)
+        assert mesh is not None
+        assert called["n"] == 1
 
     def test_extract_core_volume_mesh_with_material_filter(self, mock_prismatic_core):
         """Test extracting volume mesh with material filter."""

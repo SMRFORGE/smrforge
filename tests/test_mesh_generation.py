@@ -208,6 +208,47 @@ class TestAdvancedMeshGenerator:
         assert np.array_equal(new_vertices, vertices)
         assert np.array_equal(new_triangles, triangles)
 
+    def test_refine_mesh_midpoint_cache_and_mixed_refine_flags(self):
+        """
+        Hit two tricky branches:
+        - re-using an already-created midpoint for a shared edge
+        - keeping (not refining) some triangles while refining others
+        """
+        generator = AdvancedMeshGenerator()
+
+        # Two adjacent squares split into 4 triangles.
+        vertices = np.array(
+            [
+                [0.0, 0.0],  # 0
+                [1.0, 0.0],  # 1
+                [0.0, 1.0],  # 2
+                [1.0, 1.0],  # 3
+                [2.0, 0.0],  # 4
+                [2.0, 1.0],  # 5
+            ]
+        )
+        triangles = np.array(
+            [
+                [0, 1, 2],  # left square tri A (refine)
+                [1, 3, 2],  # left square tri B (refine) shares edge (1,2)
+                [1, 4, 3],  # right square tri A (keep)
+                [4, 5, 3],  # right square tri B (keep)
+            ]
+        )
+
+        # With 4 values, median = (1 + 10) / 2 = 5.5 => threshold = 8.25.
+        # This refines exactly the two 10.0 triangles and keeps the 1.0 triangles.
+        criteria = np.array([10.0, 10.0, 1.0, 1.0])
+
+        new_vertices, new_triangles = generator.refine_mesh(vertices, triangles, criteria)
+
+        # Two refined triangles each create 3 midpoints, but they share one edge midpoint.
+        assert len(new_vertices) == len(vertices) + 5
+        assert len(new_triangles) == 10  # 2 kept + 2 refined * 4
+
+        # Ensure at least one kept triangle is present unchanged.
+        assert any(np.all(t == np.array([1, 4, 3])) for t in new_triangles)
+
     def test_refine_mesh_criteria_length_mismatch(self):
         """Test that criteria length mismatch raises ValueError."""
         generator = AdvancedMeshGenerator()

@@ -302,18 +302,22 @@ def _plot_mesh_tally_plotly(mesh_tally, geometry, field, energy_group, show_unce
         x_coords, y_coords, z_coords = mesh_tally.mesh_coords
         
         # For 3D, create volume plot
-        x, y, z = np.meshgrid(
-            (x_coords[:-1] + x_coords[1:]) / 2,
-            (y_coords[:-1] + y_coords[1:]) / 2,
-            (z_coords[:-1] + z_coords[1:]) / 2,
-            indexing="ij",
-        )
+        # Avoid allocating large 3D temporary arrays from meshgrid; construct
+        # flattened coordinate arrays directly (same ordering as meshgrid(..., indexing="ij").flatten()).
+        x_centers = (x_coords[:-1] + x_coords[1:]) / 2
+        y_centers = (y_coords[:-1] + y_coords[1:]) / 2
+        z_centers = (z_coords[:-1] + z_coords[1:]) / 2
+
+        nx, ny, nz = len(x_centers), len(y_centers), len(z_centers)
+        x_flat = np.repeat(x_centers, ny * nz)
+        y_flat = np.tile(np.repeat(y_centers, nz), nx)
+        z_flat = np.tile(z_centers, nx * ny)
         
         fig = go.Figure(data=go.Volume(
-            x=x.flatten(),
-            y=y.flatten(),
-            z=z.flatten(),
-            value=data.flatten(),
+            x=x_flat,
+            y=y_flat,
+            z=z_flat,
+            value=np.asarray(data).ravel(order="C"),
             isomin=data.min(),
             isomax=data.max(),
             opacity=0.3,
