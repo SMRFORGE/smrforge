@@ -238,28 +238,16 @@ class ENDFPhotonParser:
                         mf_val = int(mf_str)
                         mt_val = int(mt_str)
                     else:
-                        # Try parsing from last 8 characters (MAT+MF+MT format like "10023501")
-                        # Format: MAT (3 digits) + MF (2 digits) + MT (3 digits) = 8 digits
-                        if len(line) >= 75:
-                            end_str = line[67:75].strip() if len(line) >= 75 else ""
-                            if end_str.isdigit() and len(end_str) >= 8:
-                                # Extract: MAT (100) + MF (23) + MT (501)
-                                mf_val = int(end_str[3:5])  # Positions 3-4 (0-indexed)
-                                mt_val = int(end_str[5:8])  # Positions 5-7
-                            else:
-                                # Fallback: try parsing from line end
-                                line_end = line[66:].strip()
-                                parts = line_end.split()
-                                if len(parts) >= 3:
-                                    # Last part might be "10023501" format
-                                    last_part = parts[-1]
-                                    if last_part.isdigit() and len(last_part) >= 8:
-                                        mf_val = int(last_part[3:5])
-                                        mt_val = int(last_part[5:8])
-                                    else:
-                                        continue
-                                else:
-                                    continue
+                        # Fallback: try parsing from line end. Some files use a trailing
+                        # MAT+MF+MT numeric token like "10023501" (8 digits).
+                        line_end = line[66:].strip()
+                        parts = line_end.split()
+                        token = parts[-1] if parts else ""
+                        if token.isdigit() and len(token) >= 8:
+                            mf_val = int(token[3:5])
+                            mt_val = int(token[5:8])
+                        else:
+                            continue
                     
                     if mf_val == 23 and mt_val == mt:
                         section_start = i

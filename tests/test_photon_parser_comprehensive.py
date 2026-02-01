@@ -242,13 +242,14 @@ class TestENDFPhotonParserComprehensive:
         """Test exception handling during file read."""
         parser = ENDFPhotonParser()
         
-        filepath = tmp_path / "readonly.endf"
+        filepath = tmp_path / "p-001_H_001.endf"
         filepath.write_text("test")
         
         # Mock open to raise exception
         with patch('builtins.open', side_effect=Exception("Read error")):
-            result = parser.parse_file(filepath)
-            assert result is None
+            with pytest.warns(UserWarning, match=r"Failed to parse photon data"):
+                result = parser.parse_file(filepath)
+                assert result is None
     
     def test_parse_filename_invalid_z(self):
         """Test parsing filename with invalid Z."""
@@ -427,4 +428,173 @@ class TestENDFPhotonParserComprehensive:
         # Missing sections should be zeros
         assert np.all(result.sigma_compton == 0) or result.sigma_compton is not None
         assert np.all(result.sigma_pair == 0) or result.sigma_pair is not None
+
+    def test_parse_filename_value_error_branch_via_mocked_match(self):
+        """Cover _parse_filename() ValueError branch (int conversion failure)."""
+        parser = ENDFPhotonParser()
+
+        class _Match:
+            def groups(self):
+                return ("not-an-int", "h")
+
+        with patch("smrforge.core.photon_parser.re.match", return_value=_Match()):
+            assert parser._parse_filename("p-001_H_001.endf") is None
+
+    def test_parse_mt_section_last_part_digits_fallback_and_short_header_line(self):
+        """Cover line_end last-part parsing + header_count short-line branch."""
+        parser = ENDFPhotonParser()
+
+        # This header line makes mf_str/mt_str non-digit, but line_end contains 3 tokens
+        # and the last token is MAT+MF+MT (8 digits) => last_part fallback.
+        header = (" " * 66 + "foo bar 10023501").ljust(80) + "\n"
+        short_header = "short\n"  # len < 22 => header_count path
+        data = (" 1.0000E-02" + " 1.0000E+00").ljust(80) + "\n"
+        end = (" " * 66 + "-1  0  0").ljust(80) + "\n"
+
+        result = parser._parse_mt_section([header, short_header, data, end], 501)
+        assert result is not None
+        e, xs = result
+        assert len(e) == len(xs) and len(e) > 0
+
+    def test_parse_mt_section_text_header_marker_path_and_parse_exceptions(self):
+        """Cover the text-header marker detection and inner parse exception handling."""
+        parser = ENDFPhotonParser()
+
+        # First line: triggers last_part parsing but MT does not match (502),
+        # then triggers the text-header marker logic (23 in 66:72 and 501 in 72:80).
+        marker = ("X".ljust(66) + "23    501 " + "10023502").ljust(80) + "\n"
+
+        # Data line with one invalid pair to hit the (ValueError, OverflowError) pass.
+        good = (" 1.0000E-02" + " 1.0000E+00").ljust(80) + "\n"
+        bad = (" not_a_num " + " 1.000000+0").ljust(80) + "\n"
+        end = (" " * 66 + "-1  0  0").ljust(80) + "\n"
+
+        result = parser._parse_mt_section([marker, good, bad, end], 501)
+        assert result is not None
+
+    def test_parse_mt_section_try_block_exception_is_caught(self):
+        """Cover the (ValueError, IndexError, AttributeError) except: continue branch."""
+        parser = ENDFPhotonParser()
+
+        class _WeirdLine:
+            def __len__(self):
+                return 80
+
+            def __getitem__(self, key):
+                # Keep the pre-try `line[66:].strip()` safe, but break inside the try block.
+                if isinstance(key, slice) and key.start == 66:
+                    return " " * 20
+                return 123
+
+        assert parser._parse_mt_section([_WeirdLine()], 501) is None
+
+    def test_parse_file_invalid_filename_returns_none(self, tmp_path):
+        """Cover parse_file() path where filename doesn't match patterns."""
+        parser = ENDFPhotonParser()
+        filepath = tmp_path / "not-a-photon-file.endf"
+        filepath.write_text("anything\n")
+        assert parser.parse_file(filepath) is None
+
+    def test_parse_mt_section_skips_text_header_lines(self):
+        """Cover the text-header 'continue' branch (MF/MT header text)."""
+        parser = ENDFPhotonParser()
+
+        # First line: triggers text-header detection and is skipped due to "MF/MT" marker.
+        skipped = ("MF/MT".ljust(66) + "23    501 " + "10023502").ljust(80) + "\n"
+
+        # Then provide a valid section header + data so parsing succeeds.
+        header = (" " * 70 + "23" + "501").ljust(80) + "\n"
+        data = (" 1.0000E-02" + " 1.0000E+00").ljust(80) + "\n"
+        end = (" " * 66 + "-1  0  0").ljust(80) + "\n"
+
+        result = parser._parse_mt_section([skipped, header, data, end], 501)
+        assert result is not None
+
+    def test_parse_mt_section_text_header_marker_try_except_branch(self):
+        """Cover the text-header marker try/except branch (ValueError -> continue)."""
+        parser = ENDFPhotonParser()
+
+        class _Slice66:
+            def strip(self):
+                # Used by earlier fallback parsing in the first try block.
+                return "23    501 10023502"
+
+            def split(self):
+                # Used by the later text-header marker logic.
+                raise ValueError("split failed")
+
+            def __contains__(self, item):
+                return item in self.strip()
+
+        class _HeaderLine:
+            def __len__(self):
+                return 80
+
+            def strip(self):
+                return "X"
+
+            def __contains__(self, item):
+                return False
+
+            def __getitem__(self, key):
+                if isinstance(key, slice) and key.start == 66 and key.stop is None:
+                    return _Slice66()
+                if isinstance(key, slice) and key.start == 66 and key.stop == 72:
+                    return "23    "
+                if isinstance(key, slice) and key.start == 72 and key.stop == 80:
+                    return "501     "
+                if isinstance(key, slice) and key.start == 70 and key.stop == 72:
+                    return "  "
+                if isinstance(key, slice) and key.start == 72 and key.stop == 75:
+                    return "501"
+                if isinstance(key, slice) and key.start == 67 and key.stop == 75:
+                    return "3    501"
+                if isinstance(key, slice):
+                    return " " * (key.stop - key.start)  # type: ignore[operator]
+                return " "
+
+        header = (" " * 70 + "23" + "501").ljust(80) + "\n"
+        data = (" 1.0000E-02" + " 1.0000E+00").ljust(80) + "\n"
+        end = (" " * 66 + "-1  0  0").ljust(80) + "\n"
+
+        result = parser._parse_mt_section([_HeaderLine(), header, data, end], 501)
+        assert result is not None
+
+    def test_parse_mt_section_outer_parse_exception_branch(self):
+        """Cover the outer (ValueError, IndexError) data-parse exception handler."""
+        parser = ENDFPhotonParser()
+
+        header = (" " * 70 + "23" + "501").ljust(80) + "\n"
+        good = (" 1.0000E-02" + " 1.0000E+00").ljust(80) + "\n"
+
+        class _BadDataLine:
+            def __len__(self):
+                return 80
+
+            def strip(self):
+                return ""
+
+            def __contains__(self, item):
+                return False
+
+            def __getitem__(self, key):
+                if isinstance(key, slice) and key.start == 70 and key.stop == 72:
+                    return "  "
+                if isinstance(key, slice) and key.start == 72 and key.stop == 75:
+                    return "   "
+                # Trigger the OUTER try/except in the pair parsing loop
+                if isinstance(key, slice) and key.start in (0, 11, 22, 33, 44, 55):
+                    raise IndexError("boom")
+                return " " * (key.stop - key.start)  # type: ignore[operator]
+
+        end = (" " * 66 + "-1  0  0").ljust(80) + "\n"
+
+        result = parser._parse_mt_section([header, good, _BadDataLine(), end], 501)
+        assert result is not None
+
+    def test_parse_mt_section_returns_none_when_no_data_after_header(self):
+        """Cover the final return None when no valid data are parsed."""
+        parser = ENDFPhotonParser()
+        header = (" " * 70 + "23" + "501").ljust(80) + "\n"
+        assert parser._parse_mt_section([header], 501) is None
 

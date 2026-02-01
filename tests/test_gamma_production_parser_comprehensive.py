@@ -243,13 +243,14 @@ class TestENDFGammaProductionParserComprehensive:
         """Test exception handling during file read."""
         parser = ENDFGammaProductionParser()
         
-        filepath = tmp_path / "readonly.endf"
+        filepath = tmp_path / "gammas-092_U_235.endf"
         filepath.write_text("test")
         
         # Mock open to raise exception
         with patch('builtins.open', side_effect=Exception("Read error")):
-            result = parser.parse_file(filepath)
-            assert result is None
+            with pytest.warns(UserWarning, match=r"Failed to parse gamma production data"):
+                result = parser.parse_file(filepath)
+                assert result is None
     
     def test_parse_filename_multiple_patterns(self):
         """Test parsing filename with multiple pattern attempts."""
@@ -461,4 +462,79 @@ class TestENDFGammaProductionParserComprehensive:
         # Delayed should return yield
         delayed_yield = gamma_data.get_total_gamma_yield("fission", prompt=False)
         assert delayed_yield == 0.5
+
+    def test_parse_filename_keyerror_is_handled(self):
+        """Force the (ValueError, KeyError) filename parsing continue branch."""
+        parser = ENDFGammaProductionParser()
+
+        with patch("smrforge.core.gamma_production_parser.Nuclide", side_effect=KeyError("boom")):
+            assert parser._parse_filename("gammas-092_U_235.endf") is None
+
+    def test_parse_mf12_context_extraction_and_unknown_mt(self):
+        """Hit MF/MT context extraction and default mt->reaction mapping."""
+        parser = ENDFGammaProductionParser()
+
+        def _line_with_mf12_mt_in_context(mt_token: str) -> str:
+            chars = [" "] * 80
+            # Put "12" into the 66:78 window but keep 70:72 blank.
+            chars[68:70] = list("12")
+            # Keep 72:75 blank so MT must be extracted from context.
+            if mt_token:
+                chars[75:75 + len(mt_token)] = list(mt_token)
+            return "".join(chars) + "\n"
+
+        header_unknown_mt = _line_with_mf12_mt_in_context("999")
+        # One valid data line (energy/intensity pair in ENDF scientific notation) and an end marker.
+        data = (" 1.000000+0" + " 2.000000+0").ljust(80) + "\n"
+        end = (" " * 66 + "-1").ljust(80) + "\n"
+
+        # Also include a line where MT token is non-numeric to hit the ValueError branch.
+        header_bad_mt = _line_with_mf12_mt_in_context("XX")
+
+        lines = [header_unknown_mt, data, end, header_bad_mt]
+        spectra = parser._parse_mf12(lines)
+
+        assert "mt999" in spectra
+        assert spectra["mt999"].prompt is True
+        assert spectra["mt999"].total_yield > 0.0
+
+    def test_parse_mf13_14_invalid_mt_is_skipped(self):
+        """Hit the ValueError branch when MT cannot be parsed for MF=13/14."""
+        parser = ENDFGammaProductionParser()
+
+        # MF=13 with non-integer MT field.
+        line = (" " * 70 + "13" + "XX " + " " * 5).ljust(80) + "\n"
+        assert parser._parse_mf13_14([line]) == {}
+
+    def test_parse_gamma_spectrum_section_header_parse_error_and_end_marker(self):
+        """Cover header detection ValueError path and '-1' end-marker break."""
+        parser = ENDFGammaProductionParser()
+
+        header = (" " * 70 + "12" + " 18").ljust(80) + "\n"
+        control = ((" 0.000000+0" + " 0.000000+0").ljust(70) + "12" + " 18").ljust(80) + "\n"
+        # This looks like a new header line but has non-numeric ZA field -> triggers ValueError in float().
+        bad_header_like = ("not_a_num".ljust(70) + "12" + " 18").ljust(80) + "\n"
+        end = (" " * 66 + "-1").ljust(80) + "\n"
+
+        assert parser._parse_gamma_spectrum_section([header, control, bad_header_like, end], 0, 18) is None
+
+    def test_parse_file_invalid_filename_returns_none(self, tmp_path):
+        """Cover parse_file() path where filename doesn't match nuclide patterns."""
+        parser = ENDFGammaProductionParser()
+        filepath = tmp_path / "not-a-gamma-file.endf"
+        filepath.write_text("anything\n")
+        assert parser.parse_file(filepath) is None
+
+    def test_parse_mf13_14_success_and_unknown_mt_mapping(self):
+        """Cover delayed-spectrum success path and default mt->reaction mapping."""
+        parser = ENDFGammaProductionParser()
+
+        header = (" " * 70 + "13" + "999").ljust(80) + "\n"
+        data = (" 1.000000+0" + " 3.000000+0").ljust(70) + "13" + "999" + " " * 5 + "\n"
+        end = (" " * 66 + "-1").ljust(80) + "\n"
+
+        spectra = parser._parse_mf13_14([header, data, end])
+        assert "mt999" in spectra
+        assert spectra["mt999"].prompt is False
+        assert spectra["mt999"].total_yield > 0.0
 
