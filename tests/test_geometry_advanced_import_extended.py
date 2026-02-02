@@ -428,6 +428,26 @@ class TestParseMCNPSurfacesExtended:
         # May or may not include surface depending on implementation
         assert isinstance(surfaces, dict)
 
+    def test_parse_mcnp_surfaces_valueerror_continue(self):
+        """Cover lines 685-686: ValueError in try block -> except continue."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        import smrforge.geometry.advanced_import as adv
+
+        content = "1 PX bad"
+        orig_is_numeric = adv._is_numeric
+
+        def bad_is_numeric(s):
+            if s == "bad":
+                return True  # Pass filter, then float("bad") raises
+            return orig_is_numeric(s)
+
+        with patch.object(adv, "_is_numeric", side_effect=bad_is_numeric):
+            surfaces = AdvancedGeometryImporter._parse_mcnp_surfaces(content)
+        assert isinstance(surfaces, dict)
+        # Line not parsed due to ValueError; surfaces may be empty or partial
+        assert 1 not in surfaces or surfaces[1].get("params") != ["bad"]
+
 
 class TestParseMCNPCellsExtended:
     """Extended tests for _parse_mcnp_cells edge cases."""
@@ -474,6 +494,17 @@ class TestParseMCNPCellsExtended:
         assert 1 in cells
         # Region includes all parts after material, so includes density and region
         assert "-1" in cells[1]["region"]
+
+    def test_parse_mcnp_cells_valueerror_continue(self):
+        """Cover lines 716-717: ValueError in try block -> except continue."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+        content = """
+1.5 2 -10.0 -1 2 -3
+"""
+        cells = AdvancedGeometryImporter._parse_mcnp_cells(content)
+        assert isinstance(cells, dict)
+        assert 1 not in cells  # int("1.5") raises, line skipped
 
 
 class TestIsNumericExtended:
