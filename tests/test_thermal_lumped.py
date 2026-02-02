@@ -4,6 +4,7 @@ Tests for lumped-parameter thermal-hydraulics.
 
 import numpy as np
 import pytest
+from unittest.mock import patch
 
 
 class TestThermalLump:
@@ -160,6 +161,230 @@ class TestLumpedThermalHydraulics:
                 lumps={"fuel": fuel},
                 resistances=[resistance],
             )
+
+    def test_solver_lumps_not_dict(self):
+        """Cover line 186: lumps must be dict."""
+        from smrforge.thermal.lumped import LumpedThermalHydraulics
+
+        with pytest.raises(ValueError, match="lumps must be dict"):
+            LumpedThermalHydraulics(lumps=[("a", 1)], resistances=[])
+
+    def test_solver_resistance_lump1_unknown(self):
+        """Cover lines 191-194: resistance references unknown lump1_name."""
+        from smrforge.thermal.lumped import (
+            LumpedThermalHydraulics,
+            ThermalLump,
+            ThermalResistance,
+        )
+
+        fuel = ThermalLump(
+            name="fuel",
+            capacitance=1e8,
+            temperature=1200.0,
+            heat_source=lambda t: 1e6,
+        )
+        resistance = ThermalResistance(
+            name="r1",
+            resistance=1e-6,
+            lump1_name="nonexistent",
+            lump2_name="fuel",
+        )
+        with pytest.raises(ValueError, match="unknown lump: nonexistent"):
+            LumpedThermalHydraulics(
+                lumps={"fuel": fuel},
+                resistances=[resistance],
+            )
+
+    def test_solver_ambient_temperature_invalid(self):
+        """Cover lines 200-203: ambient_temperature must be > 0."""
+        from smrforge.thermal.lumped import (
+            LumpedThermalHydraulics,
+            ThermalLump,
+            ThermalResistance,
+        )
+
+        fuel = ThermalLump(
+            name="fuel",
+            capacitance=1e8,
+            temperature=1200.0,
+            heat_source=lambda t: 1e6,
+        )
+        res = ThermalResistance(
+            name="r1",
+            resistance=1e-6,
+            lump1_name="fuel",
+            lump2_name="fuel",
+        )
+        with pytest.raises(ValueError, match="ambient_temperature must be > 0"):
+            LumpedThermalHydraulics(
+                lumps={"fuel": fuel},
+                resistances=[res],
+                ambient_temperature=0.0,
+            )
+
+    def test_solve_transient_t_span_invalid_length(self):
+        """Cover line 261: t_span must be tuple of length 2."""
+        from smrforge.thermal.lumped import (
+            LumpedThermalHydraulics,
+            ThermalLump,
+            ThermalResistance,
+        )
+
+        fuel = ThermalLump(
+            name="fuel",
+            capacitance=1e8,
+            temperature=1200.0,
+            heat_source=lambda t: 1e6,
+        )
+        res = ThermalResistance(
+            name="r1",
+            resistance=1e-6,
+            lump1_name="fuel",
+            lump2_name="fuel",
+        )
+        solver = LumpedThermalHydraulics(
+            lumps={"fuel": fuel},
+            resistances=[res],
+        )
+        with pytest.raises(ValueError, match="t_span must be tuple of length 2"):
+            solver.solve_transient(t_span=(0.0,), max_step=1.0, adaptive=False)
+
+    def test_solve_transient_t_span_reversed(self):
+        """Cover line 263: t_span[1] must be > t_span[0]."""
+        from smrforge.thermal.lumped import (
+            LumpedThermalHydraulics,
+            ThermalLump,
+            ThermalResistance,
+        )
+
+        fuel = ThermalLump(
+            name="fuel",
+            capacitance=1e8,
+            temperature=1200.0,
+            heat_source=lambda t: 1e6,
+        )
+        res = ThermalResistance(
+            name="r1",
+            resistance=1e-6,
+            lump1_name="fuel",
+            lump2_name="fuel",
+        )
+        solver = LumpedThermalHydraulics(
+            lumps={"fuel": fuel},
+            resistances=[res],
+        )
+        with pytest.raises(ValueError, match="t_span\\[1\\] must be >"):
+            solver.solve_transient(
+                t_span=(10.0, 5.0),
+                max_step=1.0,
+                adaptive=False,
+            )
+
+    def test_solve_transient_max_step_none(self):
+        """Cover line 268: max_step defaults when None."""
+        from smrforge.thermal.lumped import (
+            LumpedThermalHydraulics,
+            ThermalLump,
+            ThermalResistance,
+        )
+
+        fuel = ThermalLump(
+            name="fuel",
+            capacitance=1e8,
+            temperature=1200.0,
+            heat_source=lambda t: 1e6,
+        )
+        res = ThermalResistance(
+            name="r1",
+            resistance=1e-6,
+            lump1_name="fuel",
+            lump2_name="fuel",
+        )
+        solver = LumpedThermalHydraulics(
+            lumps={"fuel": fuel},
+            resistances=[res],
+        )
+        result = solver.solve_transient(
+            t_span=(0.0, 100.0),
+            max_step=None,
+            adaptive=False,
+        )
+        assert "time" in result
+        assert len(result["time"]) > 0
+
+    def test_solve_transient_ode_solver_fails_success_false(self):
+        """Cover lines 346-348: RuntimeError when sol.success is False."""
+        from smrforge.thermal.lumped import (
+            LumpedThermalHydraulics,
+            ThermalLump,
+            ThermalResistance,
+        )
+
+        fuel = ThermalLump(
+            name="fuel",
+            capacitance=1e8,
+            temperature=1200.0,
+            heat_source=lambda t: 1e6,
+        )
+        res = ThermalResistance(
+            name="r1",
+            resistance=1e-6,
+            lump1_name="fuel",
+            lump2_name="fuel",
+        )
+        solver = LumpedThermalHydraulics(
+            lumps={"fuel": fuel},
+            resistances=[res],
+        )
+        mock_result = type("MockResult", (), {})()
+        mock_result.success = False
+        mock_result.message = "test failure"
+
+        with patch(
+            "smrforge.thermal.lumped.solve_ivp",
+            return_value=mock_result,
+        ):
+            with pytest.raises(RuntimeError, match="ODE solver failed"):
+                solver.solve_transient(
+                    t_span=(0.0, 10.0),
+                    max_step=1.0,
+                    adaptive=True,
+                )
+
+    def test_solve_transient_ode_solver_raises(self):
+        """Cover lines 350-351: RuntimeError when solve_ivp raises."""
+        from smrforge.thermal.lumped import (
+            LumpedThermalHydraulics,
+            ThermalLump,
+            ThermalResistance,
+        )
+
+        fuel = ThermalLump(
+            name="fuel",
+            capacitance=1e8,
+            temperature=1200.0,
+            heat_source=lambda t: 1e6,
+        )
+        res = ThermalResistance(
+            name="r1",
+            resistance=1e-6,
+            lump1_name="fuel",
+            lump2_name="fuel",
+        )
+        solver = LumpedThermalHydraulics(
+            lumps={"fuel": fuel},
+            resistances=[res],
+        )
+        with patch(
+            "smrforge.thermal.lumped.solve_ivp",
+            side_effect=ValueError("bad ode"),
+        ):
+            with pytest.raises(RuntimeError, match="ODE solver failed"):
+                solver.solve_transient(
+                    t_span=(0.0, 10.0),
+                    max_step=1.0,
+                    adaptive=True,
+                )
 
     def test_solve_transient(self):
         """Test solving transient."""
