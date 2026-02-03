@@ -236,6 +236,19 @@ class TestParameterSweep:
         template = sweep._get_reactor_template()
         
         assert template == {"name": "valar-10"}
+
+    def test_get_reactor_template_nonexistent_path(self):
+        """Test getting reactor template when path does not exist (falls back to preset)."""
+        config = SweepConfig(
+            parameters={"enrichment": [0.10]},
+            analysis_types=["keff"],
+            reactor_template="/nonexistent/path/to/template.json"
+        )
+
+        sweep = ParameterSweep(config)
+        template = sweep._get_reactor_template()
+
+        assert template == {"name": "/nonexistent/path/to/template.json"}
     
     def test_get_reactor_template_none(self):
         """Test getting reactor template when None."""
@@ -308,6 +321,24 @@ class TestParameterSweep:
         assert "k_eff" in result
         assert result["k_eff"] == 1.05
         mock_reactor.solve.assert_called_once()
+
+    @patch('smrforge.convenience.create_reactor', create=True)
+    def test_run_single_case_burnup(self, mock_create_reactor):
+        """Test running single case with burnup analysis (placeholder path)."""
+        mock_reactor = Mock()
+        mock_create_reactor.return_value = mock_reactor
+
+        config = SweepConfig(
+            parameters={"enrichment": [0.10]},
+            analysis_types=["burnup"],
+            reactor_template={"preset": "valar-10"}
+        )
+
+        sweep = ParameterSweep(config)
+        result = sweep._run_single_case({"enrichment": 0.15})
+
+        assert "burnup" in result
+        assert result["burnup"] is None
     
     @patch('smrforge.convenience.create_reactor', create=True)
     def test_run_sequential(self, mock_create_reactor, tmp_path):
@@ -352,6 +383,30 @@ class TestParameterSweep:
         assert len(result.results) == 3
         assert len(result.failed_cases) == 0
         assert mock_create_reactor.call_count == 3
+
+    @patch('smrforge.convenience.create_reactor', create=True)
+    def test_run_parallel_with_save_intermediate(self, mock_create_reactor, tmp_path):
+        """Test parallel sweep with save_intermediate (10+ cases to trigger)."""
+        mock_reactor = Mock()
+        mock_reactor.solve_keff.return_value = 1.05
+        mock_create_reactor.return_value = mock_reactor
+
+        config = SweepConfig(
+            parameters={"enrichment": [0.10 + i * 0.01 for i in range(12)]},
+            analysis_types=["keff"],
+            output_dir=tmp_path / "sweep_output",
+            parallel=True,
+            max_workers=2,
+            save_intermediate=True
+        )
+
+        sweep = ParameterSweep(config)
+        result = sweep.run()
+
+        assert len(result.results) == 12
+        # Check intermediate file was saved (at i=10)
+        intermediate = tmp_path / "sweep_output" / "sweep_intermediate_10.json"
+        assert intermediate.exists()
     
     @patch('smrforge.convenience.create_reactor', create=True)
     def test_run_with_failures(self, mock_create_reactor, tmp_path):
@@ -394,6 +449,25 @@ class TestParameterSweep:
         assert stats["k_eff"]["min"] == 1.00
         assert stats["k_eff"]["max"] == 1.10
         assert stats["k_eff"]["std"] > 0
+
+    def test_calculate_summary_stats_with_correlations(self):
+        """Test summary stats including parameter-result correlations."""
+        config = SweepConfig(
+            parameters={"enrichment": [0.10, 0.20, 0.30]},
+            analysis_types=["keff"]
+        )
+
+        results = [
+            {"parameters": {"enrichment": 0.10}, "enrichment": 0.10, "k_eff": 1.00},
+            {"parameters": {"enrichment": 0.20}, "enrichment": 0.20, "k_eff": 1.05},
+            {"parameters": {"enrichment": 0.30}, "enrichment": 0.30, "k_eff": 1.10},
+        ]
+
+        sweep = ParameterSweep(config)
+        stats = sweep._calculate_summary_stats(results)
+
+        assert "k_eff" in stats
+        assert "correlations" in stats
     
     def test_save_intermediate(self, tmp_path):
         """Test intermediate result saving."""

@@ -40,6 +40,7 @@ setup(
         "matplotlib>=3.4.0",
         "pydantic>=2.0.0",
         "pydantic-settings>=2.0.0",
+        "pint>=0.20.0",
         "pandas>=1.3.0",
         "h5py>=3.0.0",
         "scikit-learn>=1.0.0",

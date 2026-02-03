@@ -4,8 +4,9 @@
 # Build: docker build -f Dockerfile.dev -t smrforge:dev .
 # Or use: docker compose up smrforge-dev
 #
-# Last Updated: January 28, 2026
+# Last Updated: January 29, 2026
 # Recent Additions (January 2026):
+# - Pint mandatory: pint>=0.20.0 now in setup.py install_requires (required for unit checking)
 # - Memory and performance profiling: profile_performance.py, run_performance_profile.*, update_performance_baselines.py, smrforge.utils.profiling. See docs/development/memory-and-performance-assessment.md.
 # - Creep models (primary, secondary, tertiary, irradiation-enhanced) for fuel rod materials
 # - Material degradation models for long-term fuel rod analysis

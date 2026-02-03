@@ -11,7 +11,9 @@ Tests cover:
 """
 
 import pytest
+import json
 import numpy as np
+from pathlib import Path
 from unittest.mock import Mock, MagicMock
 
 from smrforge.validation.constraints import (
@@ -146,6 +148,23 @@ class TestConstraintSet:
         # Check values
         assert constraint_set.constraints["shutdown_margin"]["limit"] == 0.005
         assert constraint_set.constraints["power_peak_factor"]["limit"] == 1.5
+
+    def test_save_and_load(self, tmp_path):
+        """Test saving and loading constraint set."""
+        constraint_set = ConstraintSet.get_regulatory_limits()
+        file_path = tmp_path / "constraints.json"
+        
+        constraint_set.save(file_path)
+        assert file_path.exists()
+        with open(file_path) as f:
+            data = json.load(f)
+        assert data["name"] == "regulatory_limits"
+        assert "constraints" in data
+        
+        loaded = ConstraintSet.load(file_path)
+        assert loaded.name == constraint_set.name
+        assert loaded.constraints == constraint_set.constraints
+        assert loaded.description == constraint_set.description
 
 
 class TestDesignValidator:
@@ -347,4 +366,83 @@ class TestDesignValidator:
         result = validator.validate(mock_reactor, analysis_results)
         
         # Should pass (unknown constraint skipped)
+        assert result.passed is True
+
+    def test_validate_value_from_reactor_spec(self):
+        """Test validation when value comes from reactor.spec."""
+        mock_reactor = Mock()
+        mock_reactor.spec = Mock()
+        mock_reactor.spec.max_burnup = 45.0
+        analysis_results = {"k_eff": 1.05}
+
+        constraint_set = ConstraintSet.get_regulatory_limits()
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(mock_reactor, analysis_results)
+
+        # max_burnup from spec = 45.0 < 50.0 limit, should pass
+        assert result.passed is True
+
+    def test_validate_min_constraint_warning_severity(self):
+        """Test min constraint from reactor.spec with value just below limit (warning)."""
+        mock_reactor = Mock()
+        mock_reactor.spec = Mock()
+        # limit=10.0, value=9.5: 9.5 >= 9.0 (limit*0.9) so severity=warning
+        mock_reactor.spec.min_margin = 9.5
+        analysis_results = {"k_eff": 1.05}
+
+        constraint_set = ConstraintSet(name="test")
+        constraint_set.add_constraint("min_margin", 10.0, "min", "", "Minimum margin")
+
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(mock_reactor, analysis_results)
+
+        assert result.passed is True
+        assert len(result.warnings) >= 1
+
+    def test_validate_min_constraint_error_severity(self):
+        """Test min constraint from reactor.spec with value far below limit (error)."""
+        mock_reactor = Mock()
+        mock_reactor.spec = Mock()
+        # limit=10.0, value=5.0: 5.0 < 9.0 so severity=error
+        mock_reactor.spec.min_margin = 5.0
+        analysis_results = {"k_eff": 1.05}
+
+        constraint_set = ConstraintSet(name="test")
+        constraint_set.add_constraint("min_margin", 10.0, "min", "", "Minimum margin")
+
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(mock_reactor, analysis_results)
+
+        assert result.passed is False
+        assert len(result.violations) >= 1
+
+    def test_validate_min_k_eff_max_type(self):
+        """Test min_k_eff with max type (k_eff should not exceed limit)."""
+        mock_reactor = Mock()
+        # constraint_type "max" for min_k_eff: violation when value > limit
+        analysis_results = {"k_eff": 1.15}
+
+        constraint_set = ConstraintSet(name="test")
+        constraint_set.add_constraint("min_k_eff", 1.10, "max", "", "Max k-eff")
+
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(mock_reactor, analysis_results)
+
+        # k_eff=1.15 > 1.10, so violation
+        assert result.passed is False
+
+    def test_validate_unknown_constraint_type_skipped(self):
+        """Test constraint with unknown type is skipped."""
+        mock_reactor = Mock()
+        mock_reactor.spec = Mock()
+        mock_reactor.spec.some_metric = 50.0
+        analysis_results = {"k_eff": 1.05}
+
+        constraint_set = ConstraintSet(name="test")
+        constraint_set.add_constraint("some_metric", 100.0, "unknown_type", "", "Unknown type")
+
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(mock_reactor, analysis_results)
+
+        # Unknown type should skip (continue), no violation added
         assert result.passed is True
