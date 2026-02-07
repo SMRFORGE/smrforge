@@ -1,7 +1,7 @@
 """
 Complete coverage tests for generate_multigroup and generate_multigroup_async.
 
-This test suite fills remaining coverage gaps identified in coverage-inventory.md:
+This test suite fills remaining coverage gaps identified in COVERAGE_TRACKING.md:
 
 1. generate_multigroup (lines 2366-2504):
    - Exception handling (ImportError, FileNotFoundError, ValueError) - line 2449

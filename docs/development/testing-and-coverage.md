@@ -1,16 +1,14 @@
 # Testing and Coverage Guide
 
-**Last Updated:** January 18, 2026 (Utility module test coverage added)  
-**Current Overall Coverage**: **76.7%** (up from 64.4%, excellent progress!)  
-**Target Coverage**: 75-80% for all modules  
-**Progress**: All priority modules (9 high + 5 medium) now exceed target coverage (75-80%+)  
-**Gap to 80%**: ~83 statements (0.8% increase needed) - **Very close to target!**  
-**Recent Addition**: 89 new tests for utility modules (January 18, 2026)
+**Last Updated:** January 29, 2026  
+**Current Overall Coverage**: **~89.7%** (12,948 / 14,284 statements with standard exclusions)  
+**Target Coverage**: 90% for in-scope modules  
+**Progress**: Most priority modules exceed 75-80%; overall target 90% nearly reached  
+**Recent Addition**: Parameter sweep and constraints coverage tests (January 29, 2026)
 
 **See Also:**
-- [Comprehensive Coverage Inventory](../status/comprehensive-coverage-inventory.md) - Full module-by-module breakdown
-- [Coverage Completion Plan](../status/coverage-completion-plan.md) - Plan to reach 80% target
-- [Test Coverage Summary](../status/test-coverage-summary.md) - Detailed coverage metrics
+- [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md) - **Source of truth** for coverage status and targets
+- [Test Coverage Complete Summary](../status/test-coverage-complete-summary.md) - Consolidated coverage summary
 
 This document consolidates information about test coverage, external data dependencies, and strategies for improving coverage.
 
@@ -29,12 +27,10 @@ This document consolidates information about test coverage, external data depend
 ## Current Coverage Status
 
 ### Overall Coverage
-- **Current**: **78.3%** overall (up from 64.4%, excellent progress!)
-- **Previous**: 64.4% (8,653 statements, 3,078 missing)
-- **Current**: 78.3% (10,340 statements, 2,240 missing)
-- **Target**: 75-80% for all modules
-- **Gap to 80%**: ~175 statements (1.7% increase needed) - **Very close to target!**
-- **Improvement**: +13.9 percentage points overall
+- **Current**: **~89.7%** overall (12,948 / 14,284 statements, Jan 29 run)
+- **Target**: 90% for in-scope modules
+- **Gap to 90%**: ~0.3% (parameter_sweep, constraints tests added Jan 29)
+- **Source of truth**: [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md)
 
 ### Module Coverage Summary
 
@@ -109,7 +105,7 @@ This document consolidates information about test coverage, external data depend
 - ✅ **`CrossSectionTable.generate_multigroup`** (lines ~2426-2550): ✅ **COMPLETE** - Comprehensive tests in `test_generate_multigroup_complete_coverage.py` (11 tests covering all error paths and edge cases)
 - ✅ **`CrossSectionTable._collapse_to_multigroup`** (lines ~2700-2760): ✅ **COMPLETE** - Edge cases covered in comprehensive tests
 
-**Note**: Line numbers have shifted due to code additions, but all functionality listed above is comprehensively tested. See `docs/development/coverage-inventory.md` for detailed coverage breakdown.
+**Note**: Line numbers have shifted due to code additions, but all functionality listed above is comprehensively tested. See [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md) for detailed coverage breakdown.
 
 ---
 
@@ -139,7 +135,7 @@ This document consolidates information about test coverage, external data depend
 - ✅ **`_mt_to_reaction_name` method** (lines 335-356): ✅ **COMPLETE** - Comprehensive testing in `test_endf_parser_remaining.py` (20+ tests covering all known MT number mappings, unknown MT numbers, edge cases)
 - ✅ **`ENDFCompatibility.__getitem__` ReactionWrapper creation** (lines 383-392): ✅ **COMPLETE** - Tested in `test_endf_compatibility_wrappers.py` (comprehensive tests covering ReactionWrapper creation, extended interface, energy/cross_section attributes, xs dictionary structure)
 
-**Note**: All functionality listed above is comprehensively tested. See `docs/development/coverage-inventory.md` for detailed coverage breakdown. Current `endf_parser.py` coverage: **97.3%** (exceeds 75-80% target).
+**Note**: All functionality listed above is comprehensively tested. See [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md) for detailed coverage breakdown. Current `endf_parser.py` coverage: **97.3%** (exceeds 75-80% target).
 
 ---
 

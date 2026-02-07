@@ -20,3 +20,6 @@ Outdated, superseded, or session-specific documents are kept here for reference.
 ## Root archive (no subdir)
 
 Older implementation summaries, setup guides, and consolidation plans remain in `docs/archive/` (this folder). Newly archived material uses the subdirs above.
+
+**Recently archived (Jan 29, 2026):**
+- `coverage-inventory-archived-2026-01-29.md` - Former `docs/development/coverage-inventory.md`; superseded by [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md)

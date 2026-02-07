@@ -6,7 +6,7 @@
   **Small Modular Reactor Design and Analysis Toolkit**
 </div>
 
-*Last updated: January 2026*
+*Last updated: January 29, 2026*
 
 SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis, and optimization with a focus on Small Modular Reactors (SMRs).
 
@@ -54,7 +54,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 - **Validation**: Pydantic-based input validation with physics checks
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
-- **Quality Assurance**: 79.2% test coverage overall (with standard exclusions), 75–80%+ on priority modules, comprehensive manual testing framework; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md)
+- **Quality Assurance**: ~90% test coverage overall (with standard exclusions), 75–80%+ on priority modules, comprehensive manual testing framework; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md)
 - **NEW: Web Dashboard** (January 2026):
   - Interactive web-based interface
   - Reactor builder with preset support
@@ -581,7 +581,6 @@ See testing documentation:
 - [`docs/testing/MANUAL_TESTING_CHECKLIST.md`](docs/testing/MANUAL_TESTING_CHECKLIST.md) - Complete testing checklist
 - [`COVERAGE_TRACKING.md`](COVERAGE_TRACKING.md) - **Single source of truth for coverage tracking** ⭐
 - [`README_COVERAGE.md`](README_COVERAGE.md) - Quick reference for coverage documentation
-- [`docs/development/coverage-inventory.md`](docs/development/coverage-inventory.md) - Detailed implementation history and roadmap
 - [`docs/development/coverage-exclusions.md`](docs/development/coverage-exclusions.md) - Explanation of intentional exclusions
 - Past session results: [`docs/archive/testing-session/`](docs/archive/testing-session/)
 

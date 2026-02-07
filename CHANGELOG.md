@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated:** January 18, 2026
+**Last Updated:** January 29, 2026
 
 All notable changes to SMRForge will be documented in this file.
 
@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added (January 29, 2026)
+- Pint mandatory dependency: `pint>=0.20.0` added to `setup.py` install_requires
+- Parameter sweep coverage tests: burnup analysis path, preset path fallback, parallel save intermediate, correlations
+- Constraints coverage tests: save/load, value from reactor spec, min/max severity paths, unknown type skip
+
+### Changed (January 29, 2026)
+- Documentation: Updated README, COVERAGE_TRACKING, DOCUMENTATION_INDEX, docker guide with current info
+- Archived `docs/development/coverage-inventory.md` → `docs/archive/coverage-inventory-archived-2026-01-29.md` (superseded by COVERAGE_TRACKING.md)
+- Coverage status: ~89.7% overall (target 90%), testing-and-coverage.md updated with COVERAGE_TRACKING as source of truth
 
 ### Added
 - **Visualization Module** (`smrforge.visualization.geometry`)

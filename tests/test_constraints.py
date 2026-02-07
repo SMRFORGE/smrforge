@@ -446,3 +446,35 @@ class TestDesignValidator:
 
         # Unknown type should skip (continue), no violation added
         assert result.passed is True
+
+    def test_validate_spec_missing_constraint_attribute_skipped(self):
+        """Test constraint not in metrics and not on reactor.spec is skipped (continue)."""
+        mock_reactor = Mock()
+        # spec without the constraint attribute so we hit the continue path
+        mock_reactor.spec = type("Spec", (), {})()
+        analysis_results = {"k_eff": 1.05}
+
+        constraint_set = ConstraintSet(name="test")
+        constraint_set.add_constraint("missing_attr", 100.0, "max", "", "Not on spec")
+
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(mock_reactor, analysis_results)
+
+        assert result.passed is True
+        assert "missing_attr" not in result.metrics
+
+    def test_validate_max_constraint_no_violation_severity_none(self):
+        """Test max constraint when value <= limit sets severity None (no violation)."""
+        mock_reactor = Mock()
+        mock_reactor.spec = Mock()
+        mock_reactor.spec.some_metric = 50.0
+        analysis_results = {"k_eff": 1.05}
+
+        constraint_set = ConstraintSet(name="test")
+        constraint_set.add_constraint("some_metric", 100.0, "max", "", "Max 100")
+
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(mock_reactor, analysis_results)
+
+        assert result.passed is True
+        assert not result.violations

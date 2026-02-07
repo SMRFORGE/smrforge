@@ -31,6 +31,9 @@ ipykernel>=6.0
 # plotly>=5.0  # Uncomment if you want to test with real plotly
 # pyvista>=0.40.0  # Uncomment if you want to test with real pyvista
 
+# Required for units tests (also in requirements.txt; explicit here for dev)
+pint>=0.20.0
+
 # Optional deps that unblock skipped tests / optional features
 seaborn
 SALib

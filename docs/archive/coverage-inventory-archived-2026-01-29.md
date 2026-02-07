@@ -1,3 +1,10 @@
+# Coverage Completion Inventory (ARCHIVED January 29, 2026)
+
+> **⚠️ ARCHIVED:** This document is superseded by [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md).  
+> Kept for historical implementation details only. Do not use for current status.
+
+---
+
 # Coverage Completion Inventory: reactor_core.py, endf_parser.py, uncertainty/uq.py, and new feature modules
 
 **⚠️ NOTE: For current coverage status, see [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md)** - This document contains detailed implementation history and roadmap.  

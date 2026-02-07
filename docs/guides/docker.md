@@ -1,6 +1,6 @@
 # Docker Usage Guide for SMRForge
 
-**Last Updated:** January 28, 2026
+**Last Updated:** January 29, 2026
 
 This guide explains how to use SMRForge with Docker Desktop, including setup, usage, and troubleshooting.
 
@@ -91,6 +91,7 @@ The Docker images already include **core + dashboard/visualization** dependencie
 - `plotly`, `dash`, `dash-bootstrap-components`
 - `matplotlib`
 - `pyvista`
+- `pint` (mandatory: unit checking and dimensional analysis)
 
 SMRForge also supports **optional** features via pip extras (installed inside the container).
 

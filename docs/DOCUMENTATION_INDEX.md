@@ -1,6 +1,6 @@
 # SMRForge Documentation Index
 
-**Last Updated:** January 28, 2026  
+**Last Updated:** January 29, 2026  
 **Status:** Consolidated and reorganized - Redundant documents archived
 
 This document provides a comprehensive index of all SMRForge documentation files.
@@ -58,7 +58,6 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[Release Process](docs/development/release-process.md)** - Release procedures
 - **[Testing and Coverage](docs/development/testing-and-coverage.md)** - Testing documentation
 - **[Coverage Exclusions](docs/development/coverage-exclusions.md)** - Test coverage exclusions
-- **[Coverage Inventory](docs/development/coverage-inventory.md)** - Coverage inventory
 - **[Memory and Performance Assessment](docs/development/memory-and-performance-assessment.md)** - How to assess memory and CPU, where to optimize
 - **[Performance and Benchmarking Assessment](docs/development/performance-and-benchmarking-assessment.md)** - Plan vs. implementation status, profiling results, benchmark outcomes
 
@@ -168,6 +167,7 @@ See **[archive/README.md](archive/README.md)** for the archive layout and subdir
 - **[Phase 1–3 Completion Reports](archive/phase1-completion-report.md)** - Phase completion
 - **[Documentation Consolidation Summary](archive/documentation-consolidation-summary.md)** - Consolidation history
 - **[Coverage Improvements 2026-01](archive/coverage-improvements-2026-01.md)** - Coverage improvements (historical)
+- **[Coverage Inventory (archived Jan 2026)](archive/coverage-inventory-archived-2026-01-29.md)** - Superseded by COVERAGE_TRACKING.md
 - **[Feature Implementation Summary](archive/feature-implementation-summary.md)** - Historical implementation summary
 - **[Visualization Readiness / Advanced Requirements](archive/visualization-readiness-assessment.md)** - Historical assessments
 

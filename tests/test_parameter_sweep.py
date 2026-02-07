@@ -428,6 +428,16 @@ class TestParameterSweep:
         assert len(result.results) == 2  # 2 successes
         assert len(result.failed_cases) == 1  # 1 failure
     
+    def test_calculate_summary_stats_empty_results(self):
+        """Test summary statistics with no results returns empty dict."""
+        config = SweepConfig(
+            parameters={"x": [1]},
+            analysis_types=["keff"]
+        )
+        sweep = ParameterSweep(config)
+        stats = sweep._calculate_summary_stats([])
+        assert stats == {}
+
     def test_calculate_summary_stats(self, tmp_path):
         """Test summary statistics calculation."""
         config = SweepConfig(
@@ -449,6 +459,8 @@ class TestParameterSweep:
         assert stats["k_eff"]["min"] == 1.00
         assert stats["k_eff"]["max"] == 1.10
         assert stats["k_eff"]["std"] > 0
+        assert "median" in stats["k_eff"]
+        assert stats["k_eff"]["median"] == pytest.approx(1.05)
 
     def test_calculate_summary_stats_with_correlations(self):
         """Test summary stats including parameter-result correlations."""
@@ -468,6 +480,12 @@ class TestParameterSweep:
 
         assert "k_eff" in stats
         assert "correlations" in stats
+        assert "enrichment" in stats
+        assert stats["k_eff"]["mean"] == pytest.approx(1.05)
+        assert stats["k_eff"]["median"] == pytest.approx(1.05)
+        assert stats["k_eff"]["std"] >= 0
+        assert stats["k_eff"]["min"] == 1.0
+        assert stats["k_eff"]["max"] == 1.1
     
     def test_save_intermediate(self, tmp_path):
         """Test intermediate result saving."""

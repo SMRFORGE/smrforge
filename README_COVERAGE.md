@@ -10,7 +10,7 @@ The following documents contain historical information and detailed implementati
 
 - **`coverage/archive/docs/`** - Archived historical coverage notes (kept for context)
 - **`coverage/archive/docs/COVERAGE_SURVEY_REPORT.md`** - Historical survey report (deprecated, see COVERAGE_TRACKING.md)
-- **`docs/development/coverage-inventory.md`** - Detailed implementation history and roadmap
+- **`docs/archive/coverage-inventory-archived-2026-01-29.md`** - Archived; see COVERAGE_TRACKING.md for current status
 - **`docs/development/coverage-exclusions.md`** - Explanation of intentional exclusions
 - **`docs/archive/coverage-improvements-2026-01.md`** - Historical improvements log
 
@@ -39,13 +39,13 @@ pytest tests/ --cov=smrforge --cov-report=json:coverage/generated/coverage.json
 
 3. **View Coverage Status:**
    - See `COVERAGE_TRACKING.md` for current status
-   - See `docs/development/coverage-inventory.md` for detailed history
+   - See `COVERAGE_TRACKING.md` for detailed history
    - On Windows/OneDrive, see `docs/development/testing-and-coverage.md` for a coverage workaround that avoids `pytest-cov` file-lock issues.
 
 ## Coverage Targets
 
 - **Priority Modules:** 75-80% coverage
-- **Overall Project:** 74.36% with standard exclusions ✅ **TARGET MET**
+- **Overall Project:** ~89.7% with standard exclusions (Jan 29 run) — **Target: 90%**
 - **Core Modules:** 80-97% coverage ✅ **TARGET EXCEEDED**
 
 For more details, see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md).

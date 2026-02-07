@@ -40,7 +40,7 @@ setup(
         "matplotlib>=3.4.0",
         "pydantic>=2.0.0",
         "pydantic-settings>=2.0.0",
-        "pint>=0.20.0",
+        "pint>=0.20.0",  # Required for unit checking (smrforge.utils.units)
         "pandas>=1.3.0",
         "h5py>=3.0.0",
         "scikit-learn>=1.0.0",

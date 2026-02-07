@@ -155,8 +155,9 @@ def check_units(
         else:
             expected_quantity = expected_unit
         if not value.check(expected_quantity.dimensionality):
+            extra = f" (variable: {name})" if name else ""
             raise DimensionalityError(
-                value.units, expected_quantity.units, name=name
+                value.units, expected_quantity.units, extra_msg=extra
             )
         return value
 
