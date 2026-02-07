@@ -216,6 +216,20 @@ try:
 except ImportError:
     _OPTIMIZATION_PLOTS_AVAILABLE = False
 
+try:
+    from smrforge.visualization.design_study_plots import (
+        plot_sensitivity_ranking,
+        plot_sobol_workflow,
+        plot_pareto_with_knee,
+        plot_safety_margins,
+        plot_scenario_comparison,
+        plot_atlas_designs,
+    )
+
+    _DESIGN_STUDY_PLOTS_AVAILABLE = True
+except ImportError:
+    _DESIGN_STUDY_PLOTS_AVAILABLE = False
+
 __all__ = []
 
 if _GEOMETRY_VIS_AVAILABLE:
@@ -380,5 +394,17 @@ if _OPTIMIZATION_PLOTS_AVAILABLE:
     __all__.extend(
         [
             "plot_optimization_trace",
+        ]
+    )
+
+if _DESIGN_STUDY_PLOTS_AVAILABLE:
+    __all__.extend(
+        [
+            "plot_sensitivity_ranking",
+            "plot_sobol_workflow",
+            "plot_pareto_with_knee",
+            "plot_safety_margins",
+            "plot_scenario_comparison",
+            "plot_atlas_designs",
         ]
     )

@@ -75,6 +75,26 @@ def _to_jsonable(obj: Any) -> Any:
     return obj
 
 
+def _save_workflow_plot(fig: Any, path: Path) -> None:
+    """Save workflow plot (Plotly figure or matplotlib (fig, ax)) to path."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(fig, tuple) and len(fig) == 2:
+        fig, ax = fig
+        fmt = path.suffix.lower().lstrip(".")
+        fig.savefig(str(path), format=fmt or "png", dpi=150, bbox_inches="tight")
+    elif hasattr(fig, "write_html"):
+        if path.suffix.lower() == ".html":
+            fig.write_html(str(path))
+        else:
+            try:
+                fig.write_image(str(path))
+            except Exception:
+                fig.write_html(str(path.with_suffix(".html")))
+    else:
+        raise ValueError("Unsupported figure type for save")
+
+
 def _print_success(message: str):
     """Print success message with styling if rich is available."""
     if _RICH_AVAILABLE:
@@ -3446,6 +3466,15 @@ def workflow_pareto(args):
             _print_success(f"Pareto set ({len(pareto_results)} points) + summary saved to {out}")
         else:
             print(json.dumps(pareto_results, indent=2))
+        plot_path = getattr(args, "plot", None)
+        if plot_path and len(x) > 0:
+            from smrforge.workflows.pareto_report import pareto_knee_point
+            from smrforge.visualization.design_study_plots import plot_pareto_with_knee
+            x_p, y_p = x[mask], y[mask]
+            knee_idx = pareto_knee_point(x_p, y_p, maximize_x=True, maximize_y=True) if len(x_p) > 0 else None
+            fig = plot_pareto_with_knee(x, y, mask, knee_index=knee_idx, metric_x=mx, metric_y=my, backend="plotly")
+            _save_workflow_plot(fig, Path(plot_path))
+            _print_success(f"Pareto plot saved to {plot_path}")
     except Exception as e:
         _print_error(f"Pareto failed: {e}")
         if getattr(args, "verbose", False):
@@ -3678,6 +3707,12 @@ def workflow_design_study(args):
             json.dump(report.to_dict(), f, indent=2)
         if getattr(args, "html", False):
             _write_design_study_html(out_dir, point, report)
+        plot_path = getattr(args, "plot", None)
+        if plot_path and report.margins:
+            from smrforge.visualization.design_study_plots import plot_safety_margins
+            fig = plot_safety_margins(report, backend="plotly")
+            _save_workflow_plot(fig, Path(plot_path))
+            _print_success(f"Safety margins plot saved to {plot_path}")
         _print_success(f"Design study written to {out_dir}")
         if _RICH_AVAILABLE:
             console.print(f"  design_point.json  – steady-state metrics")
@@ -3757,6 +3792,12 @@ def workflow_sensitivity(args):
         else:
             for r in rankings:
                 print(f"  {r.rank}. {r.parameter}: effect={r.effect:.4f}")
+        plot_path = getattr(args, "plot", None)
+        if plot_path and rankings:
+            from smrforge.visualization.design_study_plots import plot_sensitivity_ranking
+            fig = plot_sensitivity_ranking(rankings, backend="plotly")
+            _save_workflow_plot(fig, Path(plot_path))
+            _print_success(f"Sensitivity plot saved to {plot_path}")
     except Exception as e:
         _print_error(f"Sensitivity failed: {e}")
         if getattr(args, "verbose", False):
@@ -3796,6 +3837,12 @@ def workflow_sobol(args):
         else:
             for label, si in sobol_dict.items():
                 print(f"{label}: S1={si.get('S1', [])}, ST={si.get('ST', [])}")
+        plot_path = getattr(args, "plot", None)
+        if plot_path and sobol_dict:
+            from smrforge.visualization.design_study_plots import plot_sobol_workflow
+            fig = plot_sobol_workflow(sobol_dict, output_key="Y0", backend="plotly")
+            _save_workflow_plot(fig, Path(plot_path))
+            _print_success(f"Sobol plot saved to {plot_path}")
     except Exception as e:
         _print_error(f"Sobol failed: {e}")
         if getattr(args, "verbose", False):
@@ -3828,6 +3875,12 @@ def workflow_scenario(args):
         with open(out_json, "w", encoding="utf-8") as f:
             json.dump({k: {"passed": v.passed, "violations": v.violations, "metrics": v.metrics} for k, v in results.items()}, f, indent=2)
         _print_success(f"Scenario comparison written to {report_path} and {out_json}")
+        plot_path = getattr(args, "plot", None)
+        if plot_path and results:
+            from smrforge.visualization.design_study_plots import plot_scenario_comparison
+            fig = plot_scenario_comparison(results, backend="plotly")
+            _save_workflow_plot(fig, Path(plot_path))
+            _print_success(f"Scenario plot saved to {plot_path}")
     except Exception as e:
         _print_error(f"Scenario design failed: {e}")
         if getattr(args, "verbose", False):
@@ -3847,6 +3900,12 @@ def workflow_atlas(args):
         entries = build_atlas(out_dir, presets=presets)
         passed = sum(1 for e in entries if e.passed)
         _print_success(f"Atlas built: {len(entries)} designs, {passed} passed. Index: {out_dir / 'atlas_index.json'}")
+        plot_path = getattr(args, "plot", None)
+        if plot_path and entries:
+            from smrforge.visualization.design_study_plots import plot_atlas_designs
+            fig = plot_atlas_designs(entries, x_metric="power_mw", y_metric="k_eff", backend="plotly")
+            _save_workflow_plot(fig, Path(plot_path))
+            _print_success(f"Atlas plot saved to {plot_path}")
     except Exception as e:
         _print_error(f"Atlas failed: {e}")
         if getattr(args, "verbose", False):
@@ -4447,6 +4506,7 @@ Note: All features are also available via Python API:
     pareto_parser.add_argument('--metric-x', type=str, default='k_eff')
     pareto_parser.add_argument('--metric-y', type=str, help='Second metric (default: first other numeric)')
     pareto_parser.add_argument('--output', type=Path, help='Save Pareto set JSON')
+    pareto_parser.add_argument('--plot', type=Path, help='Save Pareto front plot with knee point (HTML or PNG)')
     pareto_parser.set_defaults(func=workflow_pareto)
 
     # workflow optimize
@@ -4475,6 +4535,7 @@ Note: All features are also available via Python API:
     ds_parser.add_argument('--constraints', type=Path, help='Constraint set JSON')
     ds_parser.add_argument('--output-dir', type=Path, default=Path('design_study_output'))
     ds_parser.add_argument('--html', action='store_true', help='Also write design_study_report.html')
+    ds_parser.add_argument('--plot', type=Path, help='Save safety margins bar chart (HTML or PNG)')
     ds_parser.set_defaults(func=workflow_design_study)
 
     # workflow variant
@@ -4490,6 +4551,7 @@ Note: All features are also available via Python API:
     sens_parser.add_argument('--params', nargs='+', help='Parameter names (default: from results)')
     sens_parser.add_argument('--metric', type=str, default='k_eff')
     sens_parser.add_argument('--output', type=Path, help='Save ranking JSON')
+    sens_parser.add_argument('--plot', type=Path, help='Save sensitivity bar chart (HTML or PNG)')
     sens_parser.set_defaults(func=workflow_sensitivity)
 
     # workflow sobol
@@ -4498,6 +4560,7 @@ Note: All features are also available via Python API:
     sobol_parser.add_argument('--params', nargs='+', help='Parameter names (default: from results)')
     sobol_parser.add_argument('--metric', type=str, default='k_eff')
     sobol_parser.add_argument('--output', type=Path, help='Save Sobol JSON')
+    sobol_parser.add_argument('--plot', type=Path, help='Save Sobol indices chart (HTML or PNG)')
     sobol_parser.set_defaults(func=workflow_sobol)
 
     # workflow scenario
@@ -4505,12 +4568,14 @@ Note: All features are also available via Python API:
     scenario_parser.add_argument('--reactor', type=str, required=True, help='Reactor file or preset')
     scenario_parser.add_argument('--scenarios', nargs='+', required=True, help='name:path_or_preset (e.g. baseload:regulatory_limits)')
     scenario_parser.add_argument('--output-dir', type=Path, help='Output directory')
+    scenario_parser.add_argument('--plot', type=Path, help='Save scenario comparison chart (HTML or PNG)')
     scenario_parser.set_defaults(func=workflow_scenario)
 
     # workflow atlas
     atlas_parser = workflow_subparsers.add_parser('atlas', help='Build design space atlas (catalog of presets)')
     atlas_parser.add_argument('--output-dir', type=Path, default=Path('atlas_output'))
     atlas_parser.add_argument('--presets', nargs='+', help='Preset names (default: all from list_presets)')
+    atlas_parser.add_argument('--plot', type=Path, help='Save atlas scatter (power vs k_eff, colored by pass) (HTML or PNG)')
     atlas_parser.set_defaults(func=workflow_atlas)
 
     # workflow surrogate
