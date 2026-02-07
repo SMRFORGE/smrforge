@@ -1,0 +1,55 @@
+# Mark and optionally close stale issues and PRs. Runs on schedule and can be disabled via CLI.
+
+name: Stale
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-enabled:
+    name: Check if workflows are enabled
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python (for workflow check)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Check workflows enabled (global + feature stale)
+        id: check
+        run: python3 scripts/github_workflow_check.py stale
+
+  stale:
+    name: Mark stale issues and PRs
+    runs-on: ubuntu-latest
+    needs: check-enabled
+    if: needs.check-enabled.outputs.enabled == 'true'
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Stale
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it has not had
+            recent activity. It will be closed in 30 days if no further activity occurs.
+          close-issue-message: >
+            This issue was closed because it had no activity for 60 days.
+          stale-pr-message: >
+            This pull request has been automatically marked as stale because it has not had
+            recent activity. It will be closed in 30 days if no further activity occurs.
+          close-pr-message: >
+            This pull request was closed because it had no activity for 60 days.
+          days-before-issue-stale: 60
+          days-before-issue-close: 90
+          days-before-pr-stale: 45
+          days-before-pr-close: 60
+          exempt-issue-labels: pinned,security
+          exempt-pr-labels: pinned,work-in-progress
+          remove-stale-when-updated: true

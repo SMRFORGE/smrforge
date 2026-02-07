@@ -4,7 +4,13 @@
 name: Security Audit
 
 on:
-  workflow_dispatch:  # Allow manual triggering
+  schedule:
+    - cron: '0 5 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check-enabled:
@@ -15,19 +21,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Check workflows enabled
+      - name: Set up Python (for workflow check)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Check workflows enabled (global + feature security)
         id: check
-        run: |
-          if [ -f .github/workflows-enabled ]; then
-            ENABLED=$(cat .github/workflows-enabled | tr -d '[:space:]')
-            if [ "$ENABLED" = "true" ]; then
-              echo "enabled=true" >> $GITHUB_OUTPUT
-            else
-              echo "enabled=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "enabled=false" >> $GITHUB_OUTPUT
-          fi
+        run: python3 scripts/github_workflow_check.py security
   security-audit:
     name: Automated Security Audit
     runs-on: ubuntu-latest
