@@ -224,7 +224,7 @@ smrforge reactor create --preset valar-10 --verbose
 | `validate` | Validation/testing | `run`, `design` |
 | `visualize` | Visualization | `geometry`, `flux` |
 | `config` | Configuration | `show`, `set`, `init` |
-| `workflow` | Workflow automation | `run` |
+| `workflow` | Workflow automation | `run`, `design-point`, `safety-report`, `doe`, `pareto`, `optimize`, `uq`, `design-study`, `variant`, `sensitivity`, `sobol`, `scenario`, `atlas`, `surrogate`, `requirements-to-constraints`, `batch-keff` |
 | `sweep` | Parameter sweeps | None |
 
 ---
@@ -841,6 +841,106 @@ steps:
 
 ---
 
+## Workflow Subcommands
+
+These subcommands support design-of-experiments, safety margins, sensitivity analysis, scenario-based design, and design-space atlas. Use `--plot <file>` where listed to save HTML or PNG charts.
+
+### Design point and safety report
+
+```bash
+# Steady-state design point summary (k_eff, power, etc.)
+smrforge workflow design-point --reactor reactor.json --output design_point.json
+smrforge workflow design-point --reactor valar-10 --output design_point.json
+
+# Coupled safety margin report vs constraints
+smrforge workflow safety-report --reactor reactor.json --output safety_report.json
+smrforge workflow safety-report --reactor valar-10 --constraints constraints.json --output safety_report.json
+```
+
+### Design of Experiments (DoE)
+
+```bash
+# LHS (default), factorial, sobol, or random
+smrforge workflow doe --method lhs --factors power:5:15 enrichment:0.15:0.25 --samples 20 --output doe_samples.json
+smrforge workflow doe --method factorial --factors A:1,2,3 B:10,20 --output doe_factorial.json
+```
+
+### Pareto front and optimization
+
+```bash
+# Pareto front from sweep results (with optional knee and plot)
+smrforge workflow pareto --sweep-results sweep_results.json --metric-x k_eff --metric-y power_thermal_mw --output pareto.json --plot pareto.png
+
+# Design optimization (differential_evolution or other)
+smrforge workflow optimize --reactor base.json --params power:5:20 enrichment:0.15:0.25 --objective min_neg_keff --max-iter 50 --output opt.json
+```
+
+### Uncertainty quantification
+
+```bash
+smrforge workflow uq --reactor base.json --params power:10:normal:0.5 enrichment:0.2:uniform --samples 100 --seed 42 --output uq_summary.json
+```
+
+### Design study (design point + safety report + optional report/plot)
+
+```bash
+smrforge workflow design-study --reactor valar-10 --constraints constraints.json --output-dir design_study_output --html --plot margins.png
+```
+
+### Save variant
+
+```bash
+smrforge workflow variant --reactor reactor.json --name my_variant --output-dir variants/
+```
+
+### Sensitivity (OAT and Sobol from sweep results)
+
+```bash
+# One-at-a-time sensitivity ranking
+smrforge workflow sensitivity --sweep-results sweep_results.json --metric k_eff --output sensitivity.json --plot sensitivity.png
+
+# Sobol indices
+smrforge workflow sobol --sweep-results sweep_results.json --metric k_eff --output sobol.json --plot sobol.png
+```
+
+### Scenario-based design
+
+```bash
+# Multiple missions/scenarios (name:path_or_preset)
+smrforge workflow scenario --reactor valar-10 --scenarios baseload:regulatory_limits peak:peak_limits --output-dir scenario_output --plot scenario_comparison.html
+```
+
+### Design-space atlas
+
+```bash
+# Build atlas (catalog of presets); optional --presets list
+smrforge workflow atlas --output-dir atlas_output --plot atlas_scatter.html
+smrforge workflow atlas --presets valar-10 gt-mhr htr-pm --output-dir atlas_output --plot atlas.png
+```
+
+### Surrogate model
+
+```bash
+smrforge workflow surrogate --sweep-results sweep_results.json --params power enrichment --metric k_eff --method rbf --output surrogate.pkl
+```
+
+### Requirements to constraints
+
+```bash
+# Parse requirements YAML/JSON to ConstraintSet JSON
+smrforge workflow requirements-to-constraints --requirements requirements.yaml --name from_requirements --output constraints.json
+```
+
+### Batch k-eff
+
+```bash
+# Run k-eff only on multiple reactor files (parallel by default)
+smrforge workflow batch-keff configs/*.json --output batch_keff.json
+smrforge workflow batch-keff reactor1.json reactor2.json --no-parallel --output results.json
+```
+
+---
+
 ## Interactive Shell
 
 ### Launch Interactive Shell
@@ -1200,6 +1300,18 @@ smrforge config set --key <key> --value <value>
 
 # Workflow
 smrforge workflow run <workflow.yaml>
+smrforge workflow design-point --reactor <file|preset> [--output out.json]
+smrforge workflow safety-report --reactor <file|preset> [--constraints c.json] [--output out.json]
+smrforge workflow design-study --reactor <file|preset> [--output-dir dir] [--plot file] [--html]
+smrforge workflow doe --method lhs|factorial|sobol|random --factors name:low:high ... [--samples N] [--output out.json]
+smrforge workflow pareto --sweep-results sweep.json [--metric-x k_eff] [--plot file] [--output out.json]
+smrforge workflow sensitivity --sweep-results sweep.json [--metric k_eff] [--plot file] [--output out.json]
+smrforge workflow sobol --sweep-results sweep.json [--metric k_eff] [--plot file] [--output out.json]
+smrforge workflow scenario --reactor <file|preset> --scenarios name:path ... [--output-dir dir] [--plot file]
+smrforge workflow atlas [--presets ...] [--output-dir dir] [--plot file]
+smrforge workflow surrogate --sweep-results sweep.json --params p1 p2 [--metric k_eff] [--output out.pkl]
+smrforge workflow requirements-to-constraints --requirements req.yaml --output constraints.json
+smrforge workflow batch-keff <reactor_files...> [--output out.json]
 
 # Dashboard
 smrforge serve --host <host> --port <port>

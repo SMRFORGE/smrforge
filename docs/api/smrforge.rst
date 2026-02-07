@@ -28,6 +28,7 @@ Subpackages
    smrforge.utils
    smrforge.validation
    smrforge.visualization
+   smrforge.workflows
 
 Submodules
 ----------

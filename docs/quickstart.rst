@@ -164,6 +164,31 @@ Track nuclide concentrations for burnup:
    tracker.update_nuclide(u235, atom_density=0.0004)
    tracker.burnup = 10.0  # MWd/kgU
 
+Design study and safety margins
+-------------------------------
+
+Get a design-point summary and a safety margin report (see :ref:`api_reference` for workflows and validation):
+
+.. code-block:: python
+
+   import smrforge as smr
+   from smrforge.validation.safety_report import safety_margin_report
+
+   reactor = smr.create_reactor("valar-10")
+   point = smr.get_design_point(reactor)
+   print(point)  # k_eff, power_thermal_mw, etc.
+
+   # Optional: safety margin report vs constraints
+   report = safety_margin_report(reactor, constraint_set=None)
+   print(report.to_text())
+
+From the command line:
+
+.. code-block:: bash
+
+   smrforge workflow design-point --reactor valar-10 --output design_point.json
+   smrforge workflow design-study --reactor valar-10 --output-dir design_study_output --plot margins.png
+
 Advanced Features
 -----------------
 

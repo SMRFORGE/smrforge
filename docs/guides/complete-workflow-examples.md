@@ -1,6 +1,6 @@
 # Complete SMRForge Workflow Examples
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026
 
 Comprehensive end-to-end examples demonstrating the full power of SMRForge for SMR design and analysis.
 
@@ -16,12 +16,98 @@ Comprehensive end-to-end examples demonstrating the full power of SMRForge for S
 
 ## Table of Contents
 
-1. [Complete NuScale SMR Analysis](#complete-nuscale-smr-analysis)
-2. [End-to-End Fuel Cycle Analysis](#end-to-end-fuel-cycle-analysis)
-3. [Integrated Safety and Burnup Analysis](#integrated-safety-and-burnup-analysis)
-4. [Multi-Reactor Comparison](#multi-reactor-comparison)
-5. [Advanced Visualization Workflow](#advanced-visualization-workflow)
-6. [Production-Ready Analysis Pipeline](#production-ready-analysis-pipeline)
+1. [Design study and workflow API](#design-study-and-workflow-api)
+2. [Complete NuScale SMR Analysis](#complete-nuscale-smr-analysis)
+3. [End-to-End Fuel Cycle Analysis](#end-to-end-fuel-cycle-analysis)
+4. [Integrated Safety and Burnup Analysis](#integrated-safety-and-burnup-analysis)
+5. [Multi-Reactor Comparison](#multi-reactor-comparison)
+6. [Advanced Visualization Workflow](#advanced-visualization-workflow)
+7. [Production-Ready Analysis Pipeline](#production-ready-analysis-pipeline)
+
+---
+
+## Design study and workflow API
+
+Short Python and CLI examples for design point, safety margins, scenario-based design, and design-space atlas. See the [CLI Guide — Workflow subcommands](cli-guide.md#workflow-subcommands) for full option lists.
+
+### Design point (Python)
+
+```python
+import smrforge as smr
+
+reactor = smr.create_reactor("valar-10")
+point = smr.get_design_point(reactor)
+# point["k_eff"], point["power_thermal_mw"], etc.
+print(point)
+```
+
+**CLI equivalent:**
+
+```bash
+smrforge workflow design-point --reactor valar-10 --output design_point.json
+```
+
+### Safety margin report (Python)
+
+```python
+import smrforge as smr
+from smrforge.validation.safety_report import safety_margin_report
+from smrforge.validation.constraint_builder import constraint_set_from_design_and_report
+
+reactor = smr.create_reactor("valar-10")
+# Optional: load or build ConstraintSet
+constraint_set = constraint_set_from_design_and_report(reactor, margin_report=None)
+report = safety_margin_report(reactor, constraint_set=constraint_set)
+# report.margins, report.summary, report.to_text()
+print(report.to_text())
+```
+
+**CLI equivalent:**
+
+```bash
+smrforge workflow safety-report --reactor valar-10 --constraints constraints.json --output safety_report.json
+smrforge workflow design-study --reactor valar-10 --output-dir design_study_output --html --plot margins.png
+```
+
+### Scenario-based design (Python)
+
+```python
+import smrforge as smr
+from smrforge.workflows.scenario_design import run_scenario_design, scenario_comparison_report
+
+reactor = smr.create_reactor("valar-10")
+scenarios = {
+    "baseload": "path/to/constraints_baseload.json",  # or preset name
+    "peak": "path/to/constraints_peak.json",
+}
+results = run_scenario_design(reactor, scenarios)
+# results[name] -> ScenarioResult (design_point, margin_report, ...)
+report_text = scenario_comparison_report(results)
+```
+
+**CLI equivalent:**
+
+```bash
+smrforge workflow scenario --reactor valar-10 --scenarios baseload:constraints_baseload.json peak:constraints_peak.json --output-dir scenario_output --plot scenario_comparison.html
+```
+
+### Design-space atlas (Python)
+
+```python
+from smrforge.workflows.atlas import build_atlas, filter_atlas
+
+# Catalog all presets (or pass presets=[...])
+entries = build_atlas("atlas_output", presets=None)
+# entries: list of AtlasEntry (preset, design_point, margin_report, pass/fail)
+filtered = filter_atlas(entries, pass_only=True)
+```
+
+**CLI equivalent:**
+
+```bash
+smrforge workflow atlas --output-dir atlas_output --plot atlas_scatter.html
+smrforge workflow atlas --presets valar-10 gt-mhr htr-pm --output-dir atlas_output --plot atlas.png
+```
 
 ---
 

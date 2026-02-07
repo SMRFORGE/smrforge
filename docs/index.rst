@@ -54,12 +54,12 @@ Quick Start
 
    import smrforge as smr
 
-   # Create a reactor
-   reactor = smr.Reactor(name="SMR-160")
+   # Create a reactor from preset
+   reactor = smr.create_reactor("valar-10")
 
    # Run neutronics analysis
-   solver = smr.neutronics.NeutronicsSolver(reactor)
-   k_eff = solver.solve_eigenvalue()
+   k_eff = reactor.solve_keff()
+   print(f"k_eff: {k_eff:.6f}")
 
 Features
 --------

@@ -1,7 +1,7 @@
 # SMRForge Documentation Index
 
-**Last Updated:** January 29, 2026  
-**Status:** Consolidated and reorganized - Redundant documents archived
+**Last Updated:** February 2026  
+**Status:** Consolidated and reorganized — API reference and workflow docs updated
 
 This document provides a comprehensive index of all SMRForge documentation files.
 
@@ -24,46 +24,48 @@ This document provides a comprehensive index of all SMRForge documentation files
 
 ---
 
-## 📖 User Guides (`docs/guides/`)
+## 📖 User Guides (`guides/`)
 
 ### Getting Started
-- **[Installation Guide](docs/guides/installation.md)** - Installation instructions for all platforms
-- **[Tutorial](docs/guides/tutorial.md)** - Step-by-step tutorial for beginners
-- **[Usage Guide](docs/guides/usage.md)** - Usage guide with examples
+- **[Installation Guide](guides/installation.md)** - Installation instructions for all platforms
+- **[Tutorial](guides/tutorial.md)** - Step-by-step tutorial for beginners
+- **[Usage Guide](guides/usage.md)** - Usage guide with examples
 
 ### Additional Guides
-- **[Docker Guide](docs/guides/docker.md)** - Docker usage and troubleshooting
-- **[Help System](docs/guides/help-system.md)** - Interactive help system documentation
+- **[CLI Guide](guides/cli-guide.md)** - Command-line reference including workflow subcommands
+- **[Complete Workflow Examples](guides/complete-workflow-examples.md)** - End-to-end Python and design-study examples
+- **[Docker Guide](guides/docker.md)** - Docker usage and troubleshooting
+- **[Help System](guides/help-system.md)** - Interactive help system documentation
 
 ---
 
-## 🔧 Technical Documentation (`docs/technical/`)
+## 🔧 Technical Documentation (`technical/`)
 
 ### Nuclear Data
-- **[ENDF Documentation](docs/technical/endf-documentation.md)** - Complete ENDF file usage guide
-- **[Nuclear Data Backends](docs/technical/nuclear-data-backends.md)** - Nuclear data backend alternatives
-- **[ENDF Codebase Improvements](docs/technical/endf-codebase-improvements.md)** - ENDF-related codebase improvements
-- **[ENDF Improvements Implemented](docs/technical/endf-improvements-implemented.md)** - Implemented ENDF improvements
+- **[ENDF Documentation](technical/endf-documentation.md)** - Complete ENDF file usage guide
+- **[Nuclear Data Backends](technical/nuclear-data-backends.md)** - Nuclear data backend alternatives
+- **[ENDF Codebase Improvements](technical/endf-codebase-improvements.md)** - ENDF-related codebase improvements
+- **[ENDF Improvements Implemented](technical/endf-improvements-implemented.md)** - Implemented ENDF improvements
 
 ### System Documentation
-- **[Logging Usage](docs/technical/logging-usage.md)** - Logging system usage
-- **[Coupling Reduction](docs/technical/coupling-reduction.md)** - Architecture and coupling reduction notes
+- **[Logging Usage](technical/logging-usage.md)** - Logging system usage
+- **[Coupling Reduction](technical/coupling-reduction.md)** - Architecture and coupling reduction notes
 
 ---
 
-## 💻 Development Documentation (`docs/development/`)
+## 💻 Development Documentation (`development/`)
 
 ### Development Guidelines
-- **[Code Style Guide](docs/development/code-style.md)** - Code formatting and style guide
-- **[Release Process](docs/development/release-process.md)** - Release procedures
-- **[Testing and Coverage](docs/development/testing-and-coverage.md)** - Testing documentation
-- **[Coverage Exclusions](docs/development/coverage-exclusions.md)** - Test coverage exclusions
-- **[Memory and Performance Assessment](docs/development/memory-and-performance-assessment.md)** - How to assess memory and CPU, where to optimize
-- **[Performance and Benchmarking Assessment](docs/development/performance-and-benchmarking-assessment.md)** - Plan vs. implementation status, profiling results, benchmark outcomes
+- **[Code Style Guide](development/code-style.md)** - Code formatting and style guide
+- **[Release Process](development/release-process.md)** - Release procedures
+- **[Testing and Coverage](development/testing-and-coverage.md)** - Testing documentation
+- **[Coverage Exclusions](development/coverage-exclusions.md)** - Test coverage exclusions
+- **[Memory and Performance Assessment](development/memory-and-performance-assessment.md)** - How to assess memory and CPU, where to optimize
+- **[Performance and Benchmarking Assessment](development/performance-and-benchmarking-assessment.md)** - Plan vs. implementation status, profiling results, benchmark outcomes
 
 ---
 
-## 🗺️ Roadmaps (`docs/roadmaps/`)
+## 🗺️ Roadmaps (`roadmaps/`)
 
 ### Planning Documents
 - **[CONSOLIDATED-ROADMAP](roadmaps/CONSOLIDATED-ROADMAP.md)** - **Primary** - Unified roadmap (completed, pending, future)
@@ -76,27 +78,27 @@ This document provides a comprehensive index of all SMRForge documentation files
 
 ---
 
-## 📊 Status Documents (`docs/status/`)
+## 📊 Status Documents (`status/`)
 
 ### Consolidated Summaries (CURRENT)
-- **[Data Import: Complete Summary](docs/status/data-import-complete-summary.md)** - **CURRENT** - Complete data import implementation summary (consolidates improvement, implementation, and optimization summaries)
-- **[SMR Implementation: Complete Summary](docs/status/smr-implementation-complete-summary.md)** - **CURRENT** - Complete SMR implementation summary (consolidates all SMR summaries)
-- **[Test Coverage: Complete Summary](docs/status/test-coverage-complete-summary.md)** - **CURRENT** - Complete test coverage summary (consolidates coverage summary, inventory, and plan)
-- **[Capability Gaps Analysis](docs/status/capability-gaps-analysis.md)** - **CURRENT** - Comprehensive capability gaps analysis (consolidates all gap analyses)
+- **[Data Import: Complete Summary](status/data-import-complete-summary.md)** - **CURRENT** - Complete data import implementation summary (consolidates improvement, implementation, and optimization summaries)
+- **[SMR Implementation: Complete Summary](status/smr-implementation-complete-summary.md)** - **CURRENT** - Complete SMR implementation summary (consolidates all SMR summaries)
+- **[Test Coverage: Complete Summary](status/test-coverage-complete-summary.md)** - **CURRENT** - Complete test coverage summary (consolidates coverage summary, inventory, and plan)
+- **[Capability Gaps Analysis](status/capability-gaps-analysis.md)** - **CURRENT** - Comprehensive capability gaps analysis (consolidates all gap analyses)
 
 ### Status Reports
 - **[Feature Status](status/feature-status.md)** - Implementation status of all features
 - **[Production Readiness Status](status/production-readiness-status.md)** - Production readiness assessment
 - **[SMRForge Fact Sheet](status/smrforge-fact-sheet.md)** - Comprehensive feature overview
 - **[Codebase Consistency Report](status/codebase-consistency-report.md)** - Codebase consistency analysis
-- **[Pain Points Assessment](status/pain-points-assessment.md)** - **NEW** - Gap analysis and pain points (moved from root)
+- **[Pain Points Assessment](status/pain-points-assessment.md)** - Gap analysis and pain points (moved from root)
 
 ### Detailed Analysis Documents
-- **[Data Import Comparison and Plan](docs/status/data-import-comparison-and-improvement-plan.md)** - Detailed OpenMC vs SMRForge comparison
-- **[SMR-Focused Gaps Analysis](docs/status/smr-focused-gaps-analysis.md)** - Detailed SMR capability analysis
-- **[OpenMC Visualization Gaps Analysis](docs/status/openmc-visualization-gaps-analysis.md)** - Detailed visualization comparison
-- **[OpenMC Visualization Implementation Summary](docs/status/openmc-visualization-implementation-summary.md)** - Visualization implementation details
-- **[GUI/UX Strategy Analysis](docs/status/gui-ux-strategy-analysis.md)** - GUI/UX strategy and recommendations
+- **[Data Import Comparison and Plan](status/data-import-comparison-and-improvement-plan.md)** - Detailed OpenMC vs SMRForge comparison
+- **[SMR-Focused Gaps Analysis](status/smr-focused-gaps-analysis.md)** - Detailed SMR capability analysis
+- **[OpenMC Visualization Gaps Analysis](status/openmc-visualization-gaps-analysis.md)** - Detailed visualization comparison
+- **[OpenMC Visualization Implementation Summary](status/openmc-visualization-implementation-summary.md)** - Visualization implementation details
+- **[GUI/UX Strategy Analysis](status/gui-ux-strategy-analysis.md)** - GUI/UX strategy and recommendations
 
 ### Archived Summaries (Consolidated)
 - ~~`data-import-improvement-summary.md`~~ → Consolidated into `data-import-complete-summary.md`
@@ -114,40 +116,49 @@ This document provides a comprehensive index of all SMRForge documentation files
 
 ---
 
-## 🚀 Implementation Summaries (`docs/implementation/`)
+## 🔀 Workflows and Design Study
 
-### Recent Implementations
-- **[Help System](docs/implementation/help-system.md)** - Help system implementation
-- **[Optimization](docs/implementation/optimization.md)** - Performance optimizations
-- **[Convenience Methods](docs/implementation/convenience-methods.md)** - Convenience functions
-- **[Visualization](docs/implementation/visualization.md)** - 3D visualization implementation
-- **[Mesh 3D](docs/implementation/mesh-3d.md)** - 3D mesh support
-- **[Photon Gamma Integration](docs/implementation/photon-gamma-integration.md)** - Photon and gamma transport
-- **[Thermal Scattering](docs/implementation/thermal-scattering.md)** - Thermal scattering laws
-- **[Burnup Solver](docs/implementation/burnup-solver.md)** - Burnup solver implementation
-- **[Fission Yields Decay](docs/implementation/fission-yields-decay.md)** - Fission yields and decay data
+Design-of-experiments, parameter sweeps, sensitivity (OAT and Sobol), safety margins, scenario-based design, and design-space atlas. See the **API Reference** (Sphinx) for `smrforge.workflows`, `smrforge.validation.safety_report`, and `smrforge.visualization.design_study_plots`.
 
-### Complete Summaries
-- **[Next Steps Complete](docs/implementation/next-steps-complete.md)** - **CURRENT** - Comprehensive summary of all recent implementations (January 2026)
-- **[Complete Summary](docs/implementation/complete-summary.md)** - Photon/gamma integration summary (historical)
-- **[Options 1 2 4 6](docs/implementation/options-1-2-4-6.md)** - Options 1, 2, 4, 6 summary
-
-See [Implementation Summaries Index](docs/implementation/README.md) for a complete list.
+- **[CLI Guide → Workflow subcommands](guides/cli-guide.md#workflow-subcommands)** - `workflow design-point`, `safety-report`, `doe`, `pareto`, `sensitivity`, `sobol`, `design-study`, `scenario`, `atlas`, `surrogate`, `requirements-to-constraints`
+- **[Complete Workflow Examples → Design study and workflow API](guides/complete-workflow-examples.md#design-study-and-workflow-api)** - Python examples: `get_design_point`, `safety_margin_report`, `run_scenario_design`, `build_atlas`
 
 ---
 
-## ✅ Validation Documents (`docs/validation/`)
+## 🚀 Implementation Summaries (`implementation/`)
 
-- **[Validation Summary](docs/validation/validation-summary.md)** - Validation framework summary
-- **[ENDF Workflow Validation](docs/validation/endf-workflow-validation.md)** - ENDF workflow validation
-- **[ENDF File Types Analysis](docs/validation/endf-file-types-analysis.md)** - Analysis of ENDF-B-VIII.1 file types
+### Recent Implementations
+- **[Help System](implementation/help-system.md)** - Help system implementation
+- **[Optimization](implementation/optimization.md)** - Performance optimizations
+- **[Convenience Methods](implementation/convenience-methods.md)** - Convenience functions
+- **[Visualization](implementation/visualization.md)** - 3D visualization implementation
+- **[Mesh 3D](implementation/mesh-3d.md)** - 3D mesh support
+- **[Photon Gamma Integration](implementation/photon-gamma-integration.md)** - Photon and gamma transport
+- **[Thermal Scattering](implementation/thermal-scattering.md)** - Thermal scattering laws
+- **[Burnup Solver](implementation/burnup-solver.md)** - Burnup solver implementation
+- **[Fission Yields Decay](implementation/fission-yields-decay.md)** - Fission yields and decay data
+
+### Complete Summaries
+- **[Next Steps Complete](implementation/next-steps-complete.md)** - **CURRENT** - Comprehensive summary of all recent implementations (January 2026)
+- **[Complete Summary](implementation/complete-summary.md)** - Photon/gamma integration summary (historical)
+- **[Options 1 2 4 6](implementation/options-1-2-4-6.md)** - Options 1, 2, 4, 6 summary
+
+See [Implementation Summaries Index](implementation/README.md) for a complete list.
+
+---
+
+## ✅ Validation Documents (`validation/`)
+
+- **[Validation Summary](validation/validation-summary.md)** - Validation framework summary
+- **[ENDF Workflow Validation](validation/endf-workflow-validation.md)** - ENDF workflow validation
+- **[ENDF File Types Analysis](validation/endf-file-types-analysis.md)** - Analysis of ENDF-B-VIII.1 file types
 
 ---
 
 ## 📐 Visualization Documents
 
-- **[Visualization Implementation](docs/implementation/visualization.md)** - **CURRENT** - Visualization implementation summary
-  - Historical assessments archived in `docs/archive/`
+- **[Visualization Implementation](implementation/visualization.md)** - **CURRENT** - Visualization implementation summary
+  - Historical assessments archived in `archive/`
 
 ---
 
@@ -176,7 +187,7 @@ See **[archive/README.md](archive/README.md)** for the archive layout and subdir
 ## 📝 Documentation Management
 
 - **[Documentation Consolidation Plan](archive/DOCUMENTATION_CONSOLIDATION_PLAN_2026.md)** - Consolidation plan (January 2026)
-- **[Documentation README](README.md)** - Documentation directory overview
+- **[Documentation README](README.md)** - Documentation directory overview (in `docs/`)
 
 ---
 
@@ -193,12 +204,13 @@ See **[archive/README.md](archive/README.md)** for the archive layout and subdir
 
 ---
 
-## 🔗 External Documentation
+## 🔗 API Reference and Sphinx
 
-### Sphinx Documentation
-- Located in `docs/` directory (Sphinx structure)
-- Generated API reference
-- See `docs/README.md` for generation instructions
+### API Reference (Sphinx)
+- **Single entry point:** Build Sphinx from `docs/`; the **API Reference** page lists all modules.
+- **Core:** `smrforge.core`, `smrforge.neutronics`, `smrforge.thermal`, `smrforge.geometry`, `smrforge.visualization`, `smrforge.validation`, `smrforge.presets`, `smrforge.convenience`
+- **Workflows and design study:** `smrforge.workflows`, `smrforge.validation.constraints`, `smrforge.validation.safety_report`, `smrforge.validation.constraint_builder`, `smrforge.validation.requirements_parser`, `smrforge.visualization.design_study_plots`
+- See `README.md` in `docs/` for build instructions (`sphinx-build -b html . _build/html`).
 
 ### Online Resources
 - ReadTheDocs: [smrforge.readthedocs.io](https://smrforge.readthedocs.io)
@@ -226,16 +238,17 @@ See **[archive/README.md](archive/README.md)** for the archive layout and subdir
 ## 🎯 Quick Reference
 
 ### For New Users
-1. Start with [README.md](README.md)
-2. Follow [Installation Guide](docs/guides/installation.md)
-3. Read [Tutorial](docs/guides/tutorial.md)
-4. Explore [Usage Guide](docs/guides/usage.md)
+1. Start with [README](../README.md)
+2. Follow [Installation Guide](guides/installation.md)
+3. Read [Tutorial](guides/tutorial.md)
+4. Explore [Usage Guide](guides/usage.md) and [CLI Guide](guides/cli-guide.md)
 
 ### For Developers
 1. Read [CONTRIBUTING](../CONTRIBUTING.md)
 2. Follow [Code Style Guide](development/code-style.md)
 3. Check [CONSOLIDATED-ROADMAP](roadmaps/CONSOLIDATED-ROADMAP.md) or [Development Roadmap](roadmaps/development-roadmap.md)
 4. Review [Feature Status](status/feature-status.md)
+5. Use Sphinx **API Reference** (see above) for module-level docs
 
 ### For Contributors
 1. Review [CONTRIBUTING](../CONTRIBUTING.md)

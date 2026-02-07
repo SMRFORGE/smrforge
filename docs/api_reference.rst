@@ -1,7 +1,8 @@
 API Reference
 ==============
 
-This page provides detailed API documentation for SMRForge.
+This page provides detailed API documentation for SMRForge. Use the **Module index**
+(:ref:`modindex`) and **Search** for quick lookup.
 
 .. toctree::
    :maxdepth: 2
@@ -26,6 +27,22 @@ Core Functionality
    api/smrforge.validation
    api/smrforge.presets
    api/smrforge.convenience
+
+Workflows and Design Study
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Parameter sweeps, design of experiments, sensitivity analysis, safety margins,
+scenario-based design, and design-space atlas:
+
+.. toctree::
+   :maxdepth: 2
+
+   api/smrforge.workflows
+   api/smrforge.validation.constraints
+   api/smrforge.validation.safety_report
+   api/smrforge.validation.constraint_builder
+   api/smrforge.validation.requirements_parser
+   api/smrforge.visualization.design_study_plots
 
 Utilities and Additional Modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
