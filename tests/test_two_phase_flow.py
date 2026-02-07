@@ -83,6 +83,14 @@ class TestTwoPhaseFlowRegion:
         )
         assert region.determine_flow_regime() == "bubbly"
 
+        # Slug flow
+        region.void_fraction = 0.4
+        assert region.determine_flow_regime() == "slug"
+
+        # Churn flow
+        region.void_fraction = 0.6
+        assert region.determine_flow_regime() == "churn"
+
         # Annular flow
         region.void_fraction = 0.8
         assert region.determine_flow_regime() == "annular"
@@ -90,6 +98,78 @@ class TestTwoPhaseFlowRegion:
         # Mist flow
         region.void_fraction = 0.98
         assert region.determine_flow_regime() == "mist"
+
+    def test_void_fraction_quality_edges(self):
+        """Test void fraction at quality 0 and 1."""
+        region = TwoPhaseFlowRegion(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flow_area=100.0,
+            height=365.76,
+            quality=0.0,
+        )
+        assert region.calculate_void_fraction_from_quality() == 0.0
+        region.quality = 1.0
+        assert region.calculate_void_fraction_from_quality() == 1.0
+
+    def test_quality_void_fraction_edges(self):
+        """Test quality at void fraction 0 and 1."""
+        region = TwoPhaseFlowRegion(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flow_area=100.0,
+            height=365.76,
+            void_fraction=0.0,
+        )
+        assert region.calculate_quality_from_void_fraction() == 0.0
+        region.void_fraction = 1.0
+        assert region.calculate_quality_from_void_fraction() == 1.0
+
+    def test_saturation_cache_hit(self):
+        """Test that second call uses saturation cache."""
+        region = TwoPhaseFlowRegion(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flow_area=100.0,
+            height=365.76,
+            pressure=7.0e6,
+            quality=0.5,
+        )
+        v1 = region.calculate_void_fraction_from_quality()
+        v2 = region.calculate_void_fraction_from_quality()
+        assert v1 == v2
+        assert 0.0 <= v1 <= 1.0
+
+    def test_void_fraction_when_saturation_invalid(self):
+        """Test void fraction returns 0 when saturation densities invalid (rho_l or rho_v <= 0)."""
+        from unittest.mock import patch
+        region = TwoPhaseFlowRegion(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flow_area=100.0,
+            height=365.76,
+            pressure=7.0e6,
+            quality=0.5,
+        )
+        with patch.object(region, "_get_saturation_densities", return_value=(0.0, 36.0)):
+            assert region.calculate_void_fraction_from_quality() == 0.0
+        with patch.object(region, "_get_saturation_densities", return_value=(740.0, 0.0)):
+            assert region.calculate_void_fraction_from_quality() == 0.0
+
+    def test_quality_when_saturation_invalid(self):
+        """Test quality returns 0 when saturation densities invalid."""
+        from unittest.mock import patch
+        region = TwoPhaseFlowRegion(
+            id=1,
+            position=Point3D(0, 0, 0),
+            flow_area=100.0,
+            height=365.76,
+            void_fraction=0.5,
+        )
+        with patch.object(region, "_get_saturation_densities", return_value=(0.0, 36.0)):
+            assert region.calculate_quality_from_void_fraction() == 0.0
+        with patch.object(region, "_get_saturation_densities", return_value=(740.0, 0.0)):
+            assert region.calculate_quality_from_void_fraction() == 0.0
 
     def test_calculate_pressure_drop(self):
         """Test pressure drop calculation."""

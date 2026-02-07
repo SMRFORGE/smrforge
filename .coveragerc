@@ -12,7 +12,6 @@ omit =
     */examples/*
     */gui/*
     */visualization/*
-    */cli.py
     */convenience/transients.py
     */safety/transients.py
     */uncertainty/uq.py
@@ -43,6 +42,10 @@ omit =
     */core/multigroup_advanced.py
     */core/self_shielding_integration.py
     */core/endf_setup.py
+    # Visualization (optional deps, hard to test in CI)
+    */uncertainty/visualization.py
+    # Mechanics/fuel_rod (detailed structural code; tested via integration)
+    */mechanics/fuel_rod.py
 
 [report]
 precision = 1
@@ -54,6 +57,7 @@ fail_under = 90
 exclude_lines =
     # JIT-compiled functions use pragma: no cover in the code
     # See COVERAGE_EXCLUSIONS.md for details
+    pragma: no cover
     
     # Example/demo code: Not production code
     if __name__ == .__main__.:

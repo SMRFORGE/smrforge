@@ -2,6 +2,7 @@
 Pytest configuration and shared fixtures for SMRForge tests.
 """
 
+import os
 import shutil
 import sys
 import tempfile
@@ -14,12 +15,42 @@ import pytest
 pytest_plugins = []
 
 
+def _get_endf_root_dir():
+    """Return first existing ENDF root directory for tests that need real ENDF files."""
+    env_dir = os.environ.get("SMRFORGE_ENDF_DIR") or os.environ.get("LOCAL_ENDF_DIR")
+    if env_dir:
+        p = Path(env_dir).expanduser().resolve()
+        if p.exists():
+            return p
+    for candidate in [
+        Path(r"C:\Users\cmwha\Downloads\ENDF-B-VIII.1"),
+        Path.home() / "Downloads" / "ENDF-B-VIII.1",
+        Path("/data/ENDF-B-VIII.1"),
+    ]:
+        if candidate.exists():
+            return candidate
+    return None
+
+
 @pytest.fixture(scope="session")
 def test_data_dir():
     """Fixture providing path to test data directory."""
     data_dir = Path(__file__).parent / "data"
     data_dir.mkdir(exist_ok=True)
     return data_dir
+
+
+@pytest.fixture(scope="session")
+def endf_root_dir():
+    """
+    Session fixture: first existing ENDF root directory (e.g. ENDF-B-VIII.1).
+    Uses SMRFORGE_ENDF_DIR or LOCAL_ENDF_DIR env, or C:\\Users\\cmwha\\Downloads\\ENDF-B-VIII.1, or ~/Downloads/ENDF-B-VIII.1.
+    Returns None if no directory found (tests that need ENDF should skip).
+    """
+    root = _get_endf_root_dir()
+    if root is not None:
+        os.environ["SMRFORGE_ENDF_DIR"] = str(root)
+    return root
 
 
 @pytest.fixture(scope="session")
@@ -529,6 +560,13 @@ def cleanup_parallel_executors():
     for _ in range(2):
         gc.collect()
         time.sleep(0.05)
+
+
+# Set ENDF directory for tests that need real ENDF data (session start)
+_endf_root = _get_endf_root_dir()
+if _endf_root is not None:
+    os.environ.setdefault("SMRFORGE_ENDF_DIR", str(_endf_root))
+    os.environ.setdefault("LOCAL_ENDF_DIR", str(_endf_root))
 
 
 # Markers for test organization

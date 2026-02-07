@@ -33,17 +33,18 @@ from smrforge.gamma_transport import GammaTransportSolver, GammaTransportOptions
 
 @pytest.fixture
 def cache_with_endf():
-    """Create cache with ENDF directory if available."""
-    env_dir = os.environ.get("LOCAL_ENDF_DIR")
-    if env_dir:
-        endf_dir = Path(env_dir)
-        if endf_dir.exists():
-            cache = NuclearDataCache(local_endf_dir=endf_dir)
-            return cache
+    """Create cache with ENDF directory if available (uses SMRFORGE_ENDF_DIR, LOCAL_ENDF_DIR, or known paths)."""
+    for env_name in ("SMRFORGE_ENDF_DIR", "LOCAL_ENDF_DIR"):
+        env_dir = os.environ.get(env_name)
+        if env_dir:
+            endf_dir = Path(env_dir).expanduser().resolve()
+            if endf_dir.exists():
+                cache = NuclearDataCache(local_endf_dir=endf_dir)
+                return cache
 
     possible_dirs = [
         Path.home() / "Downloads" / "ENDF-B-VIII.1",
-        Path("C:/Users/cmwha/Downloads/ENDF-B-VIII.1"),
+        Path(r"C:/Users/cmwha/Downloads/ENDF-B-VIII.1"),
     ]
     
     for endf_dir in possible_dirs:

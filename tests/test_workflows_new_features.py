@@ -57,6 +57,32 @@ class TestParetoReport:
         assert idx is not None
         assert 0 <= idx < 3
 
+    def test_pareto_knee_point_empty_or_mismatch(self):
+        import numpy as np
+        assert pareto_knee_point(np.array([]), np.array([])) is None
+        assert pareto_knee_point(np.array([1.0]), np.array([1.0, 2.0])) is None
+
+    def test_pareto_knee_point_constant_x(self):
+        import numpy as np
+        x = np.array([5.0, 5.0, 5.0])
+        y = np.array([1.0, 2.0, 3.0])
+        idx = pareto_knee_point(x, y, maximize_x=True, maximize_y=True)
+        assert idx is not None
+
+    def test_pareto_knee_point_minimize_x(self):
+        import numpy as np
+        x = np.array([3.0, 2.0, 1.0])
+        y = np.array([1.0, 2.0, 3.0])
+        idx = pareto_knee_point(x, y, maximize_x=False, maximize_y=True)
+        assert idx is not None
+
+    def test_pareto_knee_point_constant_y(self):
+        import numpy as np
+        x = np.array([1.0, 2.0, 3.0])
+        y = np.array([2.0, 2.0, 2.0])
+        idx = pareto_knee_point(x, y, maximize_x=True, maximize_y=True)
+        assert idx is not None
+
     def test_pareto_summary_report(self):
         points = [
             {"parameters": {"p": 1}, "k_eff": 1.0, "cost": 100},
@@ -65,6 +91,46 @@ class TestParetoReport:
         report = pareto_summary_report(points, "k_eff", "cost", maximize_x=True, maximize_y=False)
         assert report["n_pareto"] == 2
         assert "trade_off_summary" in report
+
+    def test_pareto_summary_report_empty(self):
+        report = pareto_summary_report([], "k_eff", "cost")
+        assert report["n_pareto"] == 0
+        assert report["knee_point"] is None
+        assert "No Pareto points" in report["trade_off_summary"]
+
+    def test_pareto_summary_report_with_nan_metric(self):
+        points = [
+            {"parameters": {"p": 1}, "k_eff": 1.0, "cost": 100},
+            {"parameters": {"p": 2}, "k_eff": "bad", "cost": 120},
+        ]
+        report = pareto_summary_report(points, "k_eff", "cost", maximize_x=True, maximize_y=False)
+        assert report["n_pareto"] == 2
+        assert "extremes" in report
+        assert "best_x" in report["extremes"]
+        assert "best_y" in report["extremes"]
+
+    def test_pareto_summary_report_get_v_returns_nan(self):
+        """Cover get_v when value is not float-able (TypeError/ValueError -> np.nan)."""
+        points = [
+            {"k_eff": [1, 2], "cost": 100},  # list not float-able
+            {"k_eff": 1.1, "cost": 120},
+        ]
+        report = pareto_summary_report(points, "k_eff", "cost")
+        assert report["n_pareto"] == 2
+        assert "trade_off_summary" in report
+
+    def test_pareto_summary_report_explicit_knee_and_range(self):
+        points = [
+            {"k_eff": 1.0, "cost": 150},
+            {"k_eff": 1.05, "cost": 120},
+            {"k_eff": 1.1, "cost": 100},
+        ]
+        report = pareto_summary_report(
+            points, "k_eff", "cost", knee_index=1, maximize_x=True, maximize_y=False
+        )
+        assert report["n_pareto"] == 3
+        assert report["knee_point"] == points[1]
+        assert "range" in report["trade_off_summary"].lower()
 
 
 class TestAuditLog:

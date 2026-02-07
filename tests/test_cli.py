@@ -2694,6 +2694,77 @@ class TestValidateRun:
                     cli_module.validate_run(args)
                     assert mock_run.called
 
+    def test_validate_run_run_validation_script_path(self, tmp_path):
+        """Test validate_run when run_validation.py exists (full command-build and subprocess path)."""
+        scripts_dir = tmp_path / "scripts"
+        scripts_dir.mkdir()
+        (scripts_dir / "run_validation.py").write_text("# mock script")
+        # Make Path(__file__).parent.parent resolve to tmp_path so script_path exists
+        fake_file = tmp_path / "smrforge" / "cli.py"
+        fake_file.parent.mkdir(parents=True, exist_ok=True)
+        args = Mock(
+            endf_dir=str(tmp_path / "endf"),
+            tests=None,
+            benchmarks=None,
+            output=None,
+            verbose=False,
+        )
+        with patch.object(cli_module, "__file__", str(fake_file)):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = Mock(returncode=0, stdout=b"", stderr=b"")
+                with patch("smrforge.cli.sys.exit"):
+                    cli_module.validate_run(args)
+                assert mock_run.called
+                call_args = mock_run.call_args[0][0]
+                assert "python" in call_args
+                assert "run_validation.py" in str(call_args)
+                assert "--endf-dir" in call_args
+
+    def test_validate_run_run_validation_with_output_and_benchmarks(self, tmp_path):
+        """Test validate_run run_validation path with output and benchmarks."""
+        scripts_dir = tmp_path / "scripts"
+        scripts_dir.mkdir()
+        (scripts_dir / "run_validation.py").write_text("# mock")
+        fake_file = tmp_path / "smrforge" / "cli.py"
+        fake_file.parent.mkdir(parents=True, exist_ok=True)
+        out_file = tmp_path / "report.txt"
+        args = Mock(
+            endf_dir=None,
+            tests=None,
+            benchmarks=str(tmp_path / "benchmarks.json"),
+            output=str(out_file),
+            verbose=False,
+        )
+        with patch.object(cli_module, "__file__", str(fake_file)):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = Mock(returncode=0, stdout=b"", stderr=b"")
+                with patch("smrforge.cli.sys.exit"):
+                    cli_module.validate_run(args)
+                call_args = mock_run.call_args[0][0]
+                assert "--output" in call_args
+                assert "--benchmarks" in call_args
+
+    def test_validate_run_run_validation_failed_returncode(self, tmp_path):
+        """Test validate_run when run_validation script returns non-zero."""
+        scripts_dir = tmp_path / "scripts"
+        scripts_dir.mkdir()
+        (scripts_dir / "run_validation.py").write_text("# mock")
+        fake_file = tmp_path / "smrforge" / "cli.py"
+        fake_file.parent.mkdir(parents=True, exist_ok=True)
+        args = Mock(
+            endf_dir=None,
+            tests=None,
+            benchmarks=None,
+            output=None,
+            verbose=False,
+        )
+        with patch.object(cli_module, "__file__", str(fake_file)):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = Mock(returncode=1, stdout=b"", stderr=b"err")
+                with patch("smrforge.cli.sys.exit") as mock_exit:
+                    cli_module.validate_run(args)
+                    mock_exit.assert_called_once_with(1)
+
 
 class TestVisualizeGeometry:
     """Test visualize_geometry command."""
@@ -3826,3 +3897,212 @@ class TestWorkflowCLI:
                 cli_module.workflow_requirements_to_constraints(args)
         mock_cs.save.assert_called_once()
         assert mock_cs.save.call_args[0][0] == out or str(mock_cs.save.call_args[0][0]) == str(out)
+
+
+class TestBatchKeffAndWorkflowHandlers:
+    """More workflow and batch CLI handlers for CLI coverage."""
+
+    def test_batch_keff_run_no_reactors(self):
+        args = Mock(reactors=[], no_parallel=False, no_progress=False, output=None, verbose=False)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.batch_keff_run(args)
+
+    def test_batch_keff_run_success_mocked(self, tmp_path):
+        r1 = tmp_path / "r1.json"
+        r1.write_text('{"name": "valar-10"}')
+        args = Mock(
+            reactors=[str(r1)],
+            no_parallel=True,
+            no_progress=True,
+            workers=None,
+            output=tmp_path / "out.json",
+            verbose=False,
+        )
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._print_info"):
+                with patch("smrforge.cli._print_success"):
+                    with patch("smrforge.convenience.create_reactor", return_value=Mock()):
+                        with patch(
+                            "smrforge.utils.parallel_batch.batch_solve_keff",
+                            return_value=[1.0],
+                        ):
+                            cli_module.batch_keff_run(args)
+        assert (tmp_path / "out.json").exists()
+
+    def test_workflow_variant_success(self, tmp_path):
+        args = Mock(reactor="valar-10", name="v1", output_dir=tmp_path, verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._load_reactor_from_args", return_value=Mock()):
+                with patch("smrforge.convenience.save_variant", return_value=tmp_path / "v1.json"):
+                    cli_module.workflow_variant(args)
+
+    def test_workflow_sensitivity_success(self, tmp_path):
+        sweep = tmp_path / "sweep.json"
+        sweep.write_text(json.dumps({"results": [{"k_eff": 1.0, "p1": 1, "p2": 2}]}))
+        out = tmp_path / "rank.json"
+        args = Mock(sweep_results=sweep, params=["p1", "p2"], metric="k_eff", output=out, plot=None, verbose=False)
+        mock_rank = Mock(parameter="p1", effect=0.5, rank=1)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.workflows.sensitivity.one_at_a_time_from_sweep", return_value=[mock_rank]):
+                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    cli_module.workflow_sensitivity(args)
+        assert out.exists()
+
+    def test_workflow_sensitivity_no_file(self):
+        args = Mock(sweep_results=Path("/nonexistent.json"), params=[], metric="k_eff", output=None, plot=None, verbose=False)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.workflow_sensitivity(args)
+
+    def test_workflow_sobol_success(self, tmp_path):
+        sweep = tmp_path / "sweep.json"
+        sweep.write_text(json.dumps({"results": [{"k_eff": 1.0, "p1": 1, "p2": 2}]}))
+        out = tmp_path / "sobol.json"
+        args = Mock(sweep_results=sweep, params=["p1", "p2"], metric="k_eff", output=out, plot=None, verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            with patch(
+                "smrforge.workflows.sobol_indices.sobol_indices_from_sweep_results",
+                return_value={"S1": [0.1, 0.2], "ST": [0.2, 0.3]},
+            ):
+                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    cli_module.workflow_sobol(args)
+        assert out.exists()
+
+    def test_workflow_sobol_no_file(self):
+        args = Mock(sweep_results=Path("/nonexistent.json"), params=[], metric="k_eff", output=None, plot=None, verbose=False)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.workflow_sobol(args)
+
+    def test_workflow_atlas_success(self, tmp_path):
+        args = Mock(output_dir=tmp_path, presets=None, plot=None, verbose=False)
+        mock_entry = Mock(passed=True)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.workflows.atlas.build_atlas", return_value=[mock_entry]):
+                cli_module.workflow_atlas(args)
+
+    def test_workflow_surrogate_success(self, tmp_path):
+        sweep = tmp_path / "sweep.json"
+        sweep.write_text(json.dumps({"results": [{"k_eff": 1.0, "p1": 1}]}))
+        out = tmp_path / "surrogate.pkl"
+        args = Mock(sweep_results=sweep, params=["p1"], metric="k_eff", method="rbf", output=out, verbose=False)
+        mock_sur = Mock(n_samples=1)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.workflows.surrogate.surrogate_from_sweep_results", return_value=mock_sur):
+                cli_module.workflow_surrogate(args)
+        assert out.exists()
+
+    def test_data_shield_success_mocked(self, tmp_path):
+        from smrforge.core.reactor_core import Nuclide
+        u235 = Nuclide(Z=92, A=235)
+        energy = np.linspace(1e-5, 10, 20)
+        xs = np.ones(20) * 2.0
+        args = Mock(
+            nuclide="U235",
+            reaction="fission",
+            temperature=600.0,
+            sigma_0=1.0,
+            method="bondarenko",
+            endf_dir=None,
+            output=tmp_path / "shield.json",
+            plot=False,
+            plot_output=None,
+            compare=False,
+        )
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.convenience_utils.get_nuclide", return_value=u235):
+                with patch("smrforge.core.reactor_core.NuclearDataCache", Mock()):
+                    with patch(
+                        "smrforge.core.self_shielding_integration.get_cross_section_with_self_shielding",
+                        return_value=(energy, xs),
+                    ):
+                        with patch("smrforge.cli._RICH_AVAILABLE", False):
+                            cli_module.data_shield(args)
+        assert (tmp_path / "shield.json").exists()
+
+    def test_workflow_design_study_success(self, tmp_path):
+        args = Mock(
+            reactor="valar-10",
+            output_dir=tmp_path,
+            constraints=None,
+            html=False,
+            plot=None,
+            verbose=False,
+        )
+        point = {"k_eff": 1.0, "power_thermal_mw": 50.0}
+        report = Mock()
+        report.to_dict.return_value = {"passed": True, "margins": []}
+        report.passed = True
+        report.margins = []
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._load_reactor_from_args", return_value=Mock()):
+                with patch("smrforge.convenience.get_design_point", return_value=point):
+                    with patch("smrforge.validation.safety_report.safety_margin_report", return_value=report):
+                        cli_module.workflow_design_study(args)
+        assert (tmp_path / "design_point.json").exists()
+        assert (tmp_path / "safety_report.json").exists()
+
+    def test_workflow_optimize_no_reactor(self):
+        args = Mock(reactor=None, params=[], output=None, verbose=False)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.workflow_optimize(args)
+
+    def test_workflow_optimize_success_mocked(self, tmp_path):
+        reactor_file = tmp_path / "base.json"
+        reactor_file.write_text(json.dumps({"name": "test", "enrichment": 0.05}))
+        out = tmp_path / "opt.json"
+        args = Mock(
+            reactor=str(reactor_file),
+            params=["enrichment:0.04:0.06"],
+            objective="min_neg_keff",
+            constraints=None,
+            method="differential_evolution",
+            max_iter=2,
+            output=out,
+            verbose=False,
+        )
+        mock_result = Mock(f_opt=-1.05, success=True, x_opt=np.array([0.05]))
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.convenience.create_reactor", return_value=Mock()):
+                with patch("smrforge.convenience.get_design_point", return_value={"k_eff": 1.0}):
+                    with patch("smrforge.optimization.design.DesignOptimizer") as MockOpt:
+                        MockOpt.return_value.optimize.return_value = mock_result
+                        cli_module.workflow_optimize(args)
+        assert out.exists()
+
+    def test_workflow_uq_no_reactor(self):
+        args = Mock(reactor=None, params=[], samples=10, output=None, verbose=False)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.workflow_uq(args)
+
+    def test_workflow_uq_success_mocked(self, tmp_path):
+        reactor_file = tmp_path / "base.json"
+        reactor_file.write_text(json.dumps({"name": "test"}))
+        out = tmp_path / "uq.json"
+        args = Mock(
+            reactor=str(reactor_file),
+            params=["p1:100:normal:10"],
+            samples=5,
+            seed=42,
+            output=out,
+            verbose=False,
+        )
+        mock_results = Mock()
+        mock_results.summary_dict = {"mean": {"k_eff": 1.0}, "std": {"k_eff": 0.01}}
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.convenience.create_reactor", return_value=Mock()):
+                with patch("smrforge.convenience.get_design_point", return_value={"k_eff": 1.0}):
+                    with patch("smrforge.uncertainty.uq.UncertainParameter"):
+                        with patch("smrforge.uncertainty.uq.UncertaintyPropagation") as MockUQ:
+                            MockUQ.return_value.propagate.return_value = mock_results
+                            with patch("smrforge.cli._RICH_AVAILABLE", False):
+                                cli_module.workflow_uq(args)
+        assert out.exists()

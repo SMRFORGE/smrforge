@@ -3,9 +3,10 @@ Validation tests using real ENDF files.
 
 These tests validate that parsers work correctly with actual ENDF files
 from the ENDF-B-VIII.1 library. These tests require ENDF files to be
-available in the local_endf_dir.
+available (set SMRFORGE_ENDF_DIR or use a known path like C:\\Users\\cmwha\\Downloads\\ENDF-B-VIII.1).
 """
 
+import os
 import pytest
 from pathlib import Path
 
@@ -19,21 +20,25 @@ from smrforge.core.decay_parser import ENDFDecayParser
 
 @pytest.fixture
 def cache_with_endf():
-    """Create cache with ENDF directory if available."""
-    # Try to find ENDF directory
-    # Common locations: Downloads, or user-specified
+    """Create cache with ENDF directory if available (SMRFORGE_ENDF_DIR, LOCAL_ENDF_DIR, or known paths)."""
+    for env_name in ("SMRFORGE_ENDF_DIR", "LOCAL_ENDF_DIR"):
+        env_dir = os.environ.get(env_name)
+        if env_dir:
+            endf_dir = Path(env_dir).expanduser().resolve()
+            if endf_dir.exists():
+                cache = NuclearDataCache(local_endf_dir=endf_dir)
+                return cache
+
     possible_dirs = [
         Path.home() / "Downloads" / "ENDF-B-VIII.1",
-        Path("C:/Users/cmwha/Downloads/ENDF-B-VIII.1"),
+        Path(r"C:/Users/cmwha/Downloads/ENDF-B-VIII.1"),
     ]
-    
     for endf_dir in possible_dirs:
         if endf_dir.exists():
             cache = NuclearDataCache(local_endf_dir=endf_dir)
             return cache
-    
-    # If no ENDF directory found, skip tests
-    pytest.skip("ENDF-B-VIII.1 directory not found. Set local_endf_dir to run validation tests.")
+
+    pytest.skip("ENDF-B-VIII.1 directory not found. Set SMRFORGE_ENDF_DIR to run validation tests.")
 
 
 class TestTSLValidation:

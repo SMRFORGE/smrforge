@@ -1,6 +1,12 @@
 {
   "ci": true,
+  "ci-quick": true,
   "docs": true,
   "performance": false,
-  "security": true
+  "security": true,
+  "release": true,
+  "nightly": true,
+  "docker": true,
+  "dependabot": true,
+  "stale": true
 }
