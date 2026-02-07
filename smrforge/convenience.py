@@ -279,6 +279,71 @@ def analyze_preset(design_name: str) -> Dict:
     return reactor.solve()  # pragma: no cover
 
 
+def get_design_point(reactor: "SimpleReactor") -> Dict[str, float]:
+    """
+    Steady-state design point summary for a reactor.
+
+    Runs neutronics (and available power distribution) and returns a single
+    dict of key metrics for reporting, optimization objectives, or constraints.
+
+    Args:
+        reactor: Reactor instance (e.g. from create_reactor).
+
+    Returns:
+        Dict with at least: power_thermal_mw, k_eff; and when available:
+        max_power_density, mean_power_density, power_peak_factor, flux_max, flux_mean.
+
+    Example:
+        >>> reactor = smr.create_reactor("valar-10")
+        >>> pt = smr.get_design_point(reactor)
+        >>> print(f"k-eff={pt['k_eff']:.4f}, power_MW={pt['power_thermal_mw']:.2f}")
+    """
+    results = reactor.solve()
+    point: Dict[str, float] = {
+        "power_thermal_mw": results.get("power_thermal_mw", getattr(reactor.spec, "power_thermal", 0) / 1e6),
+        "k_eff": float(results.get("k_eff", 0.0)),
+    }
+    if "power_distribution" in results:
+        p = results["power_distribution"]
+        if hasattr(p, "__len__") and len(p) > 0:
+            arr = np.asarray(p).flatten()
+            point["max_power_density"] = float(np.max(arr))
+            point["mean_power_density"] = float(np.mean(arr))
+            if np.mean(arr) > 0:
+                point["power_peak_factor"] = float(np.max(arr) / np.mean(arr))
+    if "flux" in results:
+        f = results["flux"]
+        if hasattr(f, "__len__") and len(f) > 0:
+            arr = np.asarray(f).flatten()
+            point["flux_max"] = float(np.max(arr))
+            point["flux_mean"] = float(np.mean(arr))
+    return point
+
+
+def save_variant(reactor: "SimpleReactor", variant_name: str, output_dir: Optional[Union[str, Path]] = None) -> Path:
+    """
+    Save a reactor design as a named variant (for design branching/tracking).
+
+    Args:
+        reactor: Reactor instance to save.
+        variant_name: Name for this variant (e.g. "v1", "aggressive").
+        output_dir: Directory to write into (default: current directory).
+
+    Returns:
+        Path to the saved JSON file.
+
+    Example:
+        >>> reactor = smr.create_reactor("valar-10")
+        >>> smr.save_variant(reactor, "baseline", output_dir="variants")
+    """
+    output_dir = Path(output_dir or ".")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in variant_name)
+    path = output_dir / f"design_{safe_name}.json"
+    reactor.save(path)
+    return path
+
+
 def compare_designs(design_names: List[str]) -> Dict[str, Dict]:
     """
     Compare multiple designs side-by-side.

@@ -9,9 +9,10 @@ This module provides optimization algorithms for:
 
 import numpy as np
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ..utils.logging import get_logger
+from ..validation.constraints import ConstraintSet, DesignValidator
 
 logger = get_logger("smrforge.optimization.design")
 
@@ -76,7 +77,47 @@ class DesignOptimizer:
         self.bounds = np.array(bounds)
         self.method = method
         self.n_params = len(bounds)
-    
+
+    @staticmethod
+    def with_constraint_penalty(
+        objective: Callable[[np.ndarray], float],
+        reactor_from_x: Callable[[np.ndarray], Any],
+        constraint_set: Optional[ConstraintSet] = None,
+        penalty_scale: float = 1e6,
+    ) -> Callable[[np.ndarray], float]:
+        """
+        Wrap an objective so that constraint violations add a penalty.
+
+        Args:
+            objective: Base objective f(x) -> float to minimize.
+            reactor_from_x: Maps parameter vector x to a reactor instance (with .solve() and .spec).
+            constraint_set: Constraint set (default: regulatory limits).
+            penalty_scale: Scale factor for violation penalty.
+
+        Returns:
+            New objective g(x) = objective(x) + penalty for design constraint violations.
+        """
+        if constraint_set is None:
+            constraint_set = ConstraintSet.get_regulatory_limits()
+        validator = DesignValidator(constraint_set)
+
+        def wrapped(x: np.ndarray) -> float:
+            try:
+                reactor = reactor_from_x(x)
+                results = reactor.solve()
+            except Exception as e:
+                logger.debug(f"reactor_from_x or solve failed: {e}")
+                return objective(x) + penalty_scale * 1e3
+            validation = validator.validate(reactor, results)
+            penalty = 0.0
+            for v in validation.violations:
+                penalty += penalty_scale * (abs(v.value - v.limit) + 1.0)
+            for w in validation.warnings:
+                penalty += penalty_scale * 0.1 * (abs(w.value - w.limit) + 1.0)
+            return objective(x) + penalty
+
+        return wrapped
+
     def optimize(
         self,
         max_iterations: int = 100,

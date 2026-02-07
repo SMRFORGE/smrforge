@@ -225,6 +225,44 @@ def compare_designs(design_names: List[str]) -> Dict[str, Dict]:
     return results
 
 
+def get_design_point(reactor: "SimpleReactor") -> Dict[str, float]:
+    """Steady-state design point summary (power_thermal_mw, k_eff, power densities, etc.)."""
+    results = reactor.solve()
+    point: Dict[str, float] = {
+        "power_thermal_mw": results.get("power_thermal_mw", getattr(reactor.spec, "power_thermal", 0) / 1e6),
+        "k_eff": float(results.get("k_eff", 0.0)),
+    }
+    if "power_distribution" in results:
+        p = results["power_distribution"]
+        if hasattr(p, "__len__") and len(p) > 0:
+            arr = np.asarray(p).flatten()
+            point["max_power_density"] = float(np.max(arr))
+            point["mean_power_density"] = float(np.mean(arr))
+            if np.mean(arr) > 0:
+                point["power_peak_factor"] = float(np.max(arr) / np.mean(arr))
+    if "flux" in results:
+        f = results["flux"]
+        if hasattr(f, "__len__") and len(f) > 0:
+            arr = np.asarray(f).flatten()
+            point["flux_max"] = float(np.max(arr))
+            point["flux_mean"] = float(np.mean(arr))
+    return point
+
+
+def save_variant(
+    reactor: "SimpleReactor",
+    variant_name: str,
+    output_dir: Optional[Union[str, Path]] = None,
+) -> Path:
+    """Save a reactor design as a named variant (for design branching/tracking)."""
+    output_dir = Path(output_dir or ".")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in variant_name)
+    path = output_dir / f"design_{safe_name}.json"
+    reactor.save(path)
+    return path
+
+
 # When this module is reloaded (tests exercise this), class objects are recreated.
 # Some tests keep earlier `SimpleReactor` references and still expect `isinstance`
 # checks to succeed after reload. Make the reloaded class a subclass of the prior
@@ -426,6 +464,8 @@ __all__ = [
     "create_reactor",
     "analyze_preset",
     "compare_designs",
+    "get_design_point",
+    "save_variant",
     "quick_keff",
     "SimpleReactor",
 ]

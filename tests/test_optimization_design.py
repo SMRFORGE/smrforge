@@ -10,6 +10,7 @@ from smrforge.optimization.design import (
     LoadingPatternOptimizer,
     OptimizationResult,
 )
+from smrforge.validation.constraints import ConstraintSet
 
 
 class TestOptimizationResult:
@@ -164,6 +165,31 @@ class TestDesignOptimizer:
         # Values should be within bounds
         assert np.all(mutated >= bounds[0][0])
         assert np.all(mutated <= bounds[0][1])
+
+    def test_with_constraint_penalty(self):
+        """Test constraint penalty wrapper: feasible point returns objective, infeasible adds penalty."""
+        def objective(x):
+            return float(x[0] ** 2 + x[1] ** 2)
+
+        good_reactor = type("R", (), {})()
+        good_reactor.solve = lambda: {"k_eff": 1.05, "power_thermal_mw": 10.0}
+        good_reactor.spec = None
+
+        bad_reactor = type("R", (), {})()
+        bad_reactor.solve = lambda: {"k_eff": 0.95, "power_thermal_mw": 10.0}
+        bad_reactor.spec = None
+
+        cs = ConstraintSet.get_regulatory_limits()
+        reactor_from_x = lambda x: good_reactor if x[0] >= 0 else bad_reactor
+        wrapped = DesignOptimizer.with_constraint_penalty(
+            objective, reactor_from_x, constraint_set=cs, penalty_scale=1e3
+        )
+        x_ok = np.array([1.0, 0.0])
+        x_bad = np.array([-1.0, 0.0])
+        f_ok = wrapped(x_ok)
+        f_bad = wrapped(x_bad)
+        assert f_ok == pytest.approx(1.0)
+        assert f_bad >= 1.0 + 1e3
 
 
 class TestLoadingPatternOptimizer:

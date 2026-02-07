@@ -3440,3 +3440,29 @@ class TestAdditionalCLIPaths:
                 # May be called multiple times due to error handling
                 assert mock_exit.called
                 assert any(call[0][0] == 1 for call in mock_exit.call_args_list)
+
+
+class TestDesignStudyHtmlReport:
+    """Test design study HTML report generation."""
+
+    def test_write_design_study_html(self, tmp_path):
+        """_write_design_study_html writes design_study_report.html with design point and margins."""
+        design_point = {"power_thermal_mw": 50.0, "k_eff": 1.02}
+        report_dict = {
+            "passed": True,
+            "margins": [
+                {"name": "min_k_eff", "value": 1.02, "limit": 1.0, "unit": "", "within_limit": True},
+            ],
+            "violations": [],
+        }
+        report = Mock()
+        report.to_dict.return_value = report_dict
+        cli_module._write_design_study_html(tmp_path, design_point, report)
+        html_path = tmp_path / "design_study_report.html"
+        assert html_path.exists()
+        text = html_path.read_text(encoding="utf-8")
+        assert "Design Study Report" in text
+        assert "Safety Margins" in text
+        assert "50.0" in text
+        assert "1.02" in text
+        assert "PASS" in text

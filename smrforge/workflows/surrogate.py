@@ -1,0 +1,135 @@
+"""
+Surrogate models for fast evaluation of reactor outputs.
+
+Fit a simple model (RBF, linear, or GP) to (X, y) from DoE/UQ runs;
+evaluate new designs in milliseconds without re-running physics.
+"""
+
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import numpy as np
+
+from ..utils.logging import get_logger
+
+logger = get_logger("smrforge.workflows.surrogate")
+
+try:
+    from scipy.interpolate import RBFInterpolator
+    _RBF_AVAILABLE = True
+except ImportError:
+    _RBF_AVAILABLE = False
+
+
+@dataclass
+class SurrogateModel:
+    """Fitted surrogate: predict(x) and metadata."""
+    method: str  # "rbf" | "linear"
+    param_names: List[str]
+    output_name: str
+    n_samples: int
+    predict: Callable[[np.ndarray], np.ndarray]
+
+
+def fit_surrogate(
+    X: np.ndarray,
+    y: np.ndarray,
+    param_names: Optional[List[str]] = None,
+    output_name: str = "output",
+    method: str = "rbf",
+) -> SurrogateModel:
+    """
+    Fit a surrogate model to (X, y).
+
+    Args:
+        X: (n_samples, n_params) training inputs.
+        y: (n_samples,) training outputs.
+        param_names: Parameter names (for metadata).
+        output_name: Output label.
+        method: "rbf" (default) or "linear".
+
+    Returns:
+        SurrogateModel with .predict(X_new) returning (n_new,) array.
+    """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float).ravel()
+    n_params = X.shape[1]
+    param_names = param_names or [f"x{i}" for i in range(n_params)]
+    logger.debug("Fitting surrogate: method=%s, n_samples=%s, n_params=%s", method, X.shape[0], n_params)
+
+    if method == "linear":
+        # y = X @ coef + intercept
+        ones = np.ones((X.shape[0], 1))
+        X_aug = np.hstack([ones, X])
+        coef, residuals, rank, s = np.linalg.lstsq(X_aug, y, rcond=None)
+        def predict(Xnew):
+            Xnew = np.asarray(Xnew, dtype=float)
+            if Xnew.ndim == 1:
+                Xnew = Xnew.reshape(1, -1)
+            ones_new = np.ones((Xnew.shape[0], 1))
+            Xnew_aug = np.hstack([ones_new, Xnew])
+            return (Xnew_aug @ coef).ravel()
+        return SurrogateModel(
+            method="linear",
+            param_names=param_names,
+            output_name=output_name,
+            n_samples=X.shape[0],
+            predict=predict,
+        )
+    if method == "rbf":
+        if not _RBF_AVAILABLE:
+            raise ImportError("scipy.interpolate.RBFInterpolator required for method='rbf'")
+        rbf = RBFInterpolator(X, y)
+        def predict(Xnew):
+            Xnew = np.asarray(Xnew, dtype=float)
+            if Xnew.ndim == 1:
+                Xnew = Xnew.reshape(1, -1)
+            return rbf(Xnew).ravel()
+        return SurrogateModel(
+            method="rbf",
+            param_names=param_names,
+            output_name=output_name,
+            n_samples=X.shape[0],
+            predict=predict,
+        )
+    raise ValueError(f"method must be 'rbf' or 'linear', got {method}")
+
+
+def surrogate_from_sweep_results(
+    results: List[Dict[str, Any]],
+    param_names: List[str],
+    output_metric: str = "k_eff",
+    method: str = "rbf",
+) -> SurrogateModel:
+    """
+    Build a surrogate from a list of sweep result dicts.
+
+    Args:
+        results: List of {"parameters": {name: val, ...}, output_metric: val} or flat.
+        param_names: Parameter names (order = columns of X).
+        output_metric: Key for output value.
+        method: "rbf" or "linear".
+
+    Returns:
+        SurrogateModel.
+    """
+    rows_x = []
+    rows_y = []
+    for r in results:
+        params = r.get("parameters", r)
+        try:
+            y = float(params.get(output_metric, r.get(output_metric, np.nan)))
+        except (TypeError, ValueError):
+            continue
+        if not np.isfinite(y):
+            continue
+        row = [float(params.get(p, np.nan)) for p in param_names]
+        if any(not np.isfinite(v) for v in row):
+            continue
+        rows_x.append(row)
+        rows_y.append(y)
+    if len(rows_x) < 2:
+        raise ValueError("Need at least 2 valid samples to fit surrogate")
+    X = np.array(rows_x)
+    y = np.array(rows_y)
+    return fit_surrogate(X, y, param_names=param_names, output_name=output_metric, method=method)

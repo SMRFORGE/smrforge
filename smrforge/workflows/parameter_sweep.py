@@ -6,6 +6,7 @@ enabling systematic exploration of design parameter space.
 """
 
 import json
+import os
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Union
@@ -64,6 +65,47 @@ class SweepConfig:
             combinations.append(dict(zip(param_names, values)))
         
         return combinations
+
+    @classmethod
+    def from_file(cls, path: Union[Path, str]) -> "SweepConfig":
+        """
+        Load SweepConfig from a JSON or YAML file.
+        
+        File format: parameters (param -> [start, end, step] or list of values),
+        analysis_types, reactor_template (dict or path string), output_dir, parallel,
+        max_workers, save_intermediate.
+        """
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Sweep config file not found: {path}")
+        text = path.read_text(encoding="utf-8")
+        if path.suffix.lower() in (".yaml", ".yml"):
+            try:
+                import yaml
+                data = yaml.safe_load(text)
+            except ImportError:
+                raise ImportError("PyYAML required for YAML config: pip install pyyaml")
+        else:
+            data = json.loads(text)
+        if not isinstance(data, dict):
+            raise ValueError("Config file must contain a single dict")
+        # Normalize parameters: [a,b,c] or [start,end,step] -> tuple/list
+        params = data.get("parameters", {})
+        if params:
+            normalized = {}
+            for name, spec in params.items():
+                if isinstance(spec, (list, tuple)):
+                    arr = list(spec)
+                    if len(arr) == 3 and all(isinstance(x, (int, float)) for x in arr):
+                        normalized[name] = (float(arr[0]), float(arr[1]), float(arr[2]))
+                    else:
+                        normalized[name] = [float(x) for x in arr]
+                else:
+                    normalized[name] = spec
+            data = {**data, "parameters": normalized}
+        if "output_dir" in data:
+            data["output_dir"] = Path(data["output_dir"])
+        return cls(**{k: v for k, v in data.items() if k in ("parameters", "analysis_types", "reactor_template", "output_dir", "parallel", "max_workers", "save_intermediate")})
 
 
 @dataclass
@@ -218,9 +260,17 @@ class ParameterSweep:
         else:
             return {}
     
-    def run(self) -> SweepResult:
+    def _params_key(self, params: Dict[str, float]) -> tuple:
+        """Hashable key for a parameter combination (for resume dedup)."""
+        return tuple(sorted((k, float(v)) for k, v in params.items()))
+
+    def run(self, resume: bool = False, show_progress: bool = False) -> SweepResult:
         """
         Run parameter sweep.
+        
+        Args:
+            resume: If True, load latest intermediate file and skip already-done combinations.
+            show_progress: If True and Rich is available, show a progress bar.
         
         Returns:
             SweepResult with all results and statistics
@@ -228,57 +278,133 @@ class ParameterSweep:
         logger.info(f"Starting parameter sweep with {len(self.config.parameters)} parameters")
         
         # Get all parameter combinations
-        combinations = self.config.get_all_combinations()
+        all_combinations = self.config.get_all_combinations()
+        done_keys: set = set()
+        results: List[Dict[str, Any]] = []
+        failed_cases: List[Dict[str, Any]] = []
+        
+        if resume:
+            # Find latest intermediate file and load completed combinations
+            inter_pattern = self.config.output_dir / "sweep_intermediate_*.json"
+            inter_files = sorted(self.config.output_dir.glob("sweep_intermediate_*.json"), key=lambda p: int(p.stem.rsplit("_", 1)[-1]) if p.stem.rsplit("_", 1)[-1].isdigit() else 0)
+            if inter_files:
+                latest = inter_files[-1]
+                try:
+                    with open(latest) as f:
+                        data = json.load(f)
+                    for r in data.get("results", []):
+                        if "parameters" in r:
+                            done_keys.add(self._params_key(r["parameters"]))
+                            results.append(r)
+                    for r in data.get("failed", []):
+                        if "parameters" in r:
+                            done_keys.add(self._params_key(r["parameters"]))
+                            failed_cases.append(r)
+                    logger.info(f"Resuming: loaded {len(results)} results, {len(failed_cases)} failed from {latest.name}")
+                except Exception as e:
+                    logger.warning(f"Could not load intermediate {latest}: {e}")
+        
+        combinations = [c for c in all_combinations if self._params_key(c) not in done_keys]
         n_cases = len(combinations)
-        logger.info(f"Total cases: {n_cases}")
+        n_total = len(all_combinations)
+        if n_cases == 0:
+            logger.info("No remaining cases to run (resume: all done)")
+            summary_stats = self._calculate_summary_stats(results)
+            return SweepResult(config=self.config, results=results, failed_cases=failed_cases, summary_stats=summary_stats)
+        logger.info(f"Cases to run: {n_cases} (total {n_total})")
         
-        results = []
-        failed_cases = []
+        # Resolve max_workers (env SMRFORGE_MAX_BATCH_WORKERS can cap)
+        max_workers = self.config.max_workers
+        if max_workers is None:
+            env_max = os.environ.get("SMRFORGE_MAX_BATCH_WORKERS")
+            if env_max is not None:
+                try:
+                    max_workers = max(1, int(env_max))
+                except ValueError:
+                    pass
+        if max_workers is None:
+            max_workers = min(n_cases, 8)
         
-        # Run cases
+        try:
+            from rich.progress import Progress, BarColumn, TextColumn, SpinnerColumn
+            _RICH_AVAILABLE = True
+        except ImportError:
+            _RICH_AVAILABLE = False
+        
+        completed_so_far = 0
+        total_done_before = len(results) + len(failed_cases)
+
+        def _advance(progress_cb=None):
+            nonlocal completed_so_far
+            completed_so_far += 1
+            if progress_cb:
+                progress_cb(completed_so_far)
+            total_done = total_done_before + completed_so_far
+            if self.config.save_intermediate and completed_so_far % 10 == 0:
+                self._save_intermediate(results, failed_cases, total_done)
+            if completed_so_far % max(1, n_cases // 10) == 0:
+                logger.info(f"Progress: {completed_so_far}/{n_cases} cases completed")
+        
         if self.config.parallel and n_cases > 1:
-            # Parallel execution
-            max_workers = self.config.max_workers or min(n_cases, 8)
-            logger.info(f"Running {n_cases} cases in parallel (max_workers={max_workers})")
-            
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {executor.submit(self._run_single_case, params): params 
-                          for params in combinations}
-                
-                for i, future in enumerate(as_completed(futures), 1):
-                    params = futures[future]
-                    try:
-                        result = future.result()
+            if show_progress and _RICH_AVAILABLE and n_cases > 0:
+                with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TextColumn("[progress.percentage]{task.percentage:>3.0f}%")) as progress:
+                    task_id = progress.add_task("Sweep...", total=n_cases)
+                    progress_cb = lambda n: progress.update(task_id, advance=1)
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        futures = {executor.submit(self._run_single_case, params): params for params in combinations}
+                        for future in as_completed(futures):
+                            params = futures[future]
+                            try:
+                                result = future.result()
+                                if "error" in result:
+                                    failed_cases.append(result)
+                                else:
+                                    result["success"] = True
+                                    results.append(result)
+                                _advance(progress_cb)
+                            except Exception as e:
+                                logger.error(f"Failed to get result for {params}: {e}")
+                                failed_cases.append({"parameters": params, "error": str(e)})
+                                _advance(progress_cb)
+            else:
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = {executor.submit(self._run_single_case, params): params for params in combinations}
+                    for future in as_completed(futures):
+                        params = futures[future]
+                        try:
+                            result = future.result()
+                            if "error" in result:
+                                failed_cases.append(result)
+                            else:
+                                result["success"] = True
+                                results.append(result)
+                            _advance(None)
+                        except Exception as e:
+                            logger.error(f"Failed to get result for {params}: {e}")
+                            failed_cases.append({"parameters": params, "error": str(e)})
+                            _advance(None)
+        else:
+            if show_progress and _RICH_AVAILABLE and n_cases > 0:
+                with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TextColumn("[progress.percentage]{task.percentage:>3.0f}%")) as progress:
+                    task_id = progress.add_task("Sweep...", total=n_cases)
+                    progress_cb = lambda n: progress.update(task_id, advance=1)
+                    for params in combinations:
+                        result = self._run_single_case(params)
                         if "error" in result:
                             failed_cases.append(result)
                         else:
                             result["success"] = True
                             results.append(result)
-                        
-                        if self.config.save_intermediate and i % 10 == 0:
-                            self._save_intermediate(results, failed_cases, i)
-                        
-                        if i % max(1, n_cases // 10) == 0:
-                            logger.info(f"Progress: {i}/{n_cases} cases completed")
-                    except Exception as e:
-                        logger.error(f"Failed to get result for {params}: {e}")
-                        failed_cases.append({"parameters": params, "error": str(e)})
-        else:
-            # Sequential execution
-            logger.info(f"Running {n_cases} cases sequentially")
-            for i, params in enumerate(combinations, 1):
-                result = self._run_single_case(params)
-                if "error" in result:
-                    failed_cases.append(result)
-                else:
-                    result["success"] = True
-                    results.append(result)
-                
-                if self.config.save_intermediate and i % 10 == 0:
-                    self._save_intermediate(results, failed_cases, i)
-                
-                if i % max(1, n_cases // 10) == 0:
-                    logger.info(f"Progress: {i}/{n_cases} cases completed")
+                        _advance(progress_cb)
+            else:
+                for params in combinations:
+                    result = self._run_single_case(params)
+                    if "error" in result:
+                        failed_cases.append(result)
+                    else:
+                        result["success"] = True
+                        results.append(result)
+                    _advance(None)
         
         # Calculate summary statistics
         summary_stats = self._calculate_summary_stats(results)

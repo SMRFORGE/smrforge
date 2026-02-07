@@ -385,14 +385,10 @@ def reactor_analyze(args):
         from smrforge.convenience import create_reactor
         import json
         
-        # Check for batch mode
+        # Check for batch mode: delegate to batch implementation
         if args.batch:
-            # Batch processing mode - placeholder for future implementation
-            _print_error("Batch processing is not yet fully implemented")
-            _print_info("For batch processing, use the Python API or process files individually")
-            _print_info("Example: for f in *.json; do smrforge reactor analyze --reactor $f; done")
-            sys.exit(1)
-            return  # ensure we don't fall through when exit is mocked
+            _reactor_analyze_batch(args)
+            return
         
         # Single file mode
         if not args.reactor:
@@ -478,9 +474,11 @@ def reactor_analyze(args):
 def _reactor_analyze_batch(args):
     """Run batch analysis on multiple reactors."""
     try:
+        import time
         from smrforge.convenience import create_reactor
         import json
         
+        start_time = time.time()
         # Expand glob patterns to file list
         reactor_files = []
         for pattern in args.batch:
@@ -626,8 +624,15 @@ def _reactor_analyze_batch(args):
                     else:
                         all_results[reactor_file] = result
         
-        # Save results
+        # Save results (with runtime and summary for scripting)
+        runtime_seconds = round(time.time() - start_time, 2)
         batch_results = {
+            'summary': {
+                'total': len(reactor_files),
+                'processed': len(all_results),
+                'failed': len(errors),
+                'runtime_seconds': runtime_seconds,
+            },
             'processed': len(all_results),
             'failed': len(errors),
             'results': {str(k): v for k, v in all_results.items()},
@@ -3113,11 +3118,21 @@ def sweep_run(args):
         from smrforge.workflows import ParameterSweep, SweepConfig
         from pathlib import Path
         
-        # Parse parameters
-        parameters = {}
-        if args.params:
+        # Load config from file or build from args
+        if getattr(args, "config", None) and Path(args.config).exists():
+            config = SweepConfig.from_file(args.config)
+            if args.output:
+                config.output_dir = Path(args.output)
+            if getattr(args, "no_parallel", False):
+                config.parallel = False
+            if getattr(args, "workers", None) is not None:
+                config.max_workers = args.workers
+        else:
+            if not getattr(args, "params", None) or not args.params:
+                _print_error("Either --config FILE or --params ... is required")
+                sys.exit(1)
+            parameters = {}
             for param_spec in args.params:
-                # Format: name:start:end:step or name:val1,val2,val3
                 parts = param_spec.split(':')
                 if len(parts) == 4:
                     name, start, end, step = parts
@@ -3126,33 +3141,31 @@ def sweep_run(args):
                     name, values_str = parts
                     values = [float(v) for v in values_str.split(',')]
                     parameters[name] = values
+            reactor_template = None
+            if args.reactor:
+                if Path(args.reactor).exists():
+                    import json
+                    with open(args.reactor) as f:
+                        reactor_template = json.load(f)
+                else:
+                    reactor_template = {"name": args.reactor}
+            config = SweepConfig(
+                parameters=parameters,
+                analysis_types=args.analysis or ["keff"],
+                reactor_template=reactor_template,
+                output_dir=Path(args.output) if args.output else Path("sweep_results"),
+                parallel=not getattr(args, "no_parallel", False),
+                max_workers=getattr(args, "workers", None),
+            )
         
-        # Get reactor template
-        reactor_template = None
-        if args.reactor:
-            if Path(args.reactor).exists():
-                import json
-                with open(args.reactor) as f:
-                    reactor_template = json.load(f)
-            else:
-                reactor_template = {"name": args.reactor}  # Try as preset
-        
-        # Create sweep config
-        config = SweepConfig(
-            parameters=parameters,
-            analysis_types=args.analysis or ["keff"],
-            reactor_template=reactor_template,
-            output_dir=Path(args.output) if args.output else Path("sweep_results"),
-            parallel=not args.no_parallel,
-            max_workers=args.workers
+        sweep = ParameterSweep(config)
+        results = sweep.run(
+            resume=getattr(args, "resume", False),
+            show_progress=getattr(args, "progress", False),
         )
         
-        # Run sweep
-        sweep = ParameterSweep(config)
-        results = sweep.run()
-        
-        # Save results
-        output_file = Path(args.output) / "sweep_results.json" if args.output else Path("sweep_results/sweep_results.json")
+        output_dir = config.output_dir
+        output_file = output_dir / "sweep_results.json"
         results.save(output_file)
         
         _print_success(f"\nSweep complete! Results saved to {output_file}")
@@ -3165,6 +3178,742 @@ def sweep_run(args):
     except Exception as e:
         _print_error(f"Failed to run parameter sweep: {e}")
         if args.verbose if hasattr(args, 'verbose') else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def batch_keff_run(args):
+    """Run batch k-eff on multiple reactor files (glob or list)."""
+    try:
+        from smrforge.convenience import create_reactor
+        from smrforge.utils.parallel_batch import batch_solve_keff
+        import json
+        
+        patterns = getattr(args, "reactors", None) or []
+        if not patterns:
+            _print_error("Specify at least one reactor file or glob (e.g. reactors/*.json)")
+            sys.exit(1)
+        reactor_files = []
+        for pattern in patterns:
+            matched = glob.glob(pattern, recursive=True)
+            for f in matched:
+                p = Path(f)
+                if p.suffix.lower() in (".json", ".yaml", ".yml") and p.exists():
+                    reactor_files.append(p)
+        reactor_files = list(dict.fromkeys(reactor_files))
+        if not reactor_files:
+            _print_error("No valid reactor files found")
+            sys.exit(1)
+        
+        _print_info(f"Loading {len(reactor_files)} reactor(s)...")
+        reactors = []
+        for p in reactor_files:
+            try:
+                with open(p, encoding="utf-8") as f:
+                    raw = f.read()
+                if p.suffix.lower() in (".yaml", ".yml"):
+                    if not _YAML_AVAILABLE:
+                        _print_error("YAML file given but PyYAML not installed. Install: pip install pyyaml")
+                        sys.exit(1)
+                    data = yaml.safe_load(raw)
+                else:
+                    data = json.loads(raw)
+                reactors.append(create_reactor(**data))
+            except Exception as e:
+                _print_error(f"Failed to load {p}: {e}")
+                sys.exit(1)
+        
+        parallel = not getattr(args, "no_parallel", False)
+        workers = getattr(args, "workers", None)
+        k_effs = batch_solve_keff(
+            reactors,
+            parallel=parallel,
+            max_workers=workers,
+            show_progress=not getattr(args, "no_progress", False),
+        )
+        
+        out_path = getattr(args, "output", None)
+        if out_path:
+            out_path = Path(out_path)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            data = {
+                "reactors": [str(p) for p in reactor_files],
+                "k_eff": [float(k) if not isinstance(k, Exception) else None for k in k_effs],
+                "errors": [str(k) if isinstance(k, Exception) else None for k in k_effs],
+            }
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            _print_success(f"Results saved to {out_path}")
+        
+        if _RICH_AVAILABLE:
+            table = Table(title="Batch k-eff")
+            table.add_column("Reactor", style="cyan")
+            table.add_column("k-eff", justify="right", style="green")
+            for p, k in zip(reactor_files, k_effs):
+                table.add_row(p.name, str(k) if not isinstance(k, Exception) else f"Error: {k}")
+            console.print(table)
+        else:
+            for p, k in zip(reactor_files, k_effs):
+                print(f"{p.name}: {k}")
+    except Exception as e:
+        _print_error(f"Batch k-eff failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_design_point(args):
+    """Print or save steady-state design point summary for a reactor."""
+    try:
+        from smrforge.convenience import create_reactor, get_design_point
+        reactor = _load_reactor_from_args(args)
+        point = get_design_point(reactor)
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(point, f, indent=2)
+            _print_success(f"Design point saved to {out}")
+        if _RICH_AVAILABLE:
+            table = Table(title="Design point")
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", justify="right")
+            for k, v in point.items():
+                table.add_row(k, f"{v:.6g}" if isinstance(v, (int, float)) else str(v))
+            console.print(table)
+        else:
+            print(json.dumps(point, indent=2))
+    except Exception as e:
+        _print_error(f"Design point failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_safety_report(args):
+    """Generate coupled safety margin report (nominal + optional UQ vs limits)."""
+    try:
+        from smrforge.convenience import create_reactor
+        from smrforge.validation.safety_report import safety_margin_report
+        reactor = _load_reactor_from_args(args)
+        constraint_set = None
+        if getattr(args, "constraints", None) and Path(args.constraints).exists():
+            from smrforge.validation.constraints import ConstraintSet
+            constraint_set = ConstraintSet.load(Path(args.constraints))
+        report = safety_margin_report(reactor, constraint_set=constraint_set)
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(report.to_dict(), f, indent=2)
+            _print_success(f"Safety report saved to {out}")
+        if _RICH_AVAILABLE:
+            table = Table(title="Safety margins")
+            table.add_column("Constraint", style="cyan")
+            table.add_column("Value", justify="right")
+            table.add_column("Limit", justify="right")
+            table.add_column("Margin", justify="right")
+            table.add_column("OK", justify="center")
+            for m in report.margins:
+                table.add_row(m.name, f"{m.value:.4g} {m.unit}", f"{m.limit:.4g} {m.unit}", f"{m.margin:.4g}", "[green]yes[/green]" if m.within_limit else "[red]no[/red]")
+            console.print(table)
+            console.print(f"Passed: {'[green]yes[/green]' if report.passed else '[red]no[/red]'}")
+        else:
+            print(json.dumps(report.to_dict(), indent=2))
+    except Exception as e:
+        _print_error(f"Safety report failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def _load_reactor_from_args(args):
+    """Load reactor from --reactor (file or preset name)."""
+    from smrforge.convenience import create_reactor
+    r = getattr(args, "reactor", None)
+    if not r:
+        _print_error("--reactor FILE or preset name required")
+        sys.exit(1)
+    r = Path(r) if isinstance(r, str) and (r.endswith(".json") or r.endswith(".yaml") or r.endswith(".yml")) else r
+    if isinstance(r, Path) and r.exists():
+        with open(r, encoding="utf-8") as f:
+            raw = f.read()
+        if r.suffix.lower() in (".yaml", ".yml"):
+            if not _YAML_AVAILABLE:
+                _print_error("PyYAML required for YAML reactor files")
+                sys.exit(1)
+            data = yaml.safe_load(raw)
+        else:
+            data = json.loads(raw)
+        return create_reactor(**data)
+    return create_reactor(name=str(r))
+
+
+def workflow_doe(args):
+    """Generate Design of Experiments (factorial, LHS, Sobol, random)."""
+    try:
+        from smrforge.workflows.doe import full_factorial, latin_hypercube, random_space_filling, sobol_space_filling
+        method = (getattr(args, "method", None) or "lhs").strip().lower()
+        factors = getattr(args, "factors", None) or []
+        n_samples = int(getattr(args, "samples", 10))
+        seed = getattr(args, "seed", None)
+        if seed is not None:
+            seed = int(seed)
+        names = []
+        bounds = []
+        levels = {}
+        for spec in factors:
+            parts = spec.split(":")
+            if len(parts) == 3:
+                name, low, high = parts
+                names.append(name.strip())
+                bounds.append((float(low), float(high)))
+            elif len(parts) >= 2:
+                name = parts[0].strip()
+                vals = [float(x) for x in parts[1].replace(",", " ").split()]
+                names.append(name)
+                levels[name] = vals
+        if method == "factorial" and levels:
+            design = full_factorial(levels)
+        elif method in ("lhs", "sobol", "random") and names and bounds:
+            if method == "lhs":
+                design = latin_hypercube(names, bounds, n_samples, seed=seed)
+            elif method == "sobol":
+                design = sobol_space_filling(names, bounds, n_samples, seed=seed)
+            else:
+                design = random_space_filling(names, bounds, n_samples, seed=seed)
+        else:
+            _print_error("For factorial use --factors name:v1,v2,v3 (repeat). For lhs/sobol/random use --factors name:low:high (repeat) and --samples N")
+            sys.exit(1)
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump({"method": method, "n_samples": len(design), "design": design}, f, indent=2)
+            _print_success(f"DoE ({len(design)} points) saved to {out}")
+        else:
+            print(json.dumps(design, indent=2))
+    except Exception as e:
+        _print_error(f"DoE failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_pareto(args):
+    """Compute and export Pareto front from sweep results."""
+    try:
+        from smrforge.visualization.sweep_plots import _to_dataframe, _pareto_front_mask
+        import pandas as pd
+        p = Path(getattr(args, "sweep_results", None) or "")
+        if not p.exists():
+            _print_error("--sweep-results FILE.json required")
+            sys.exit(1)
+        with open(p, encoding="utf-8") as f:
+            data = json.load(f)
+        results = data.get("results", data) if isinstance(data, dict) else data
+        df = pd.DataFrame(results) if isinstance(results, list) else pd.DataFrame([results])
+        if df.empty:
+            _print_error("No results in sweep file")
+            sys.exit(1)
+        mx = getattr(args, "metric_x", "k_eff")
+        my = getattr(args, "metric_y", None)
+        if not my:
+            numeric = df.select_dtypes(include=[np.number]).columns.tolist()
+            my = [c for c in numeric if c != mx][0] if len(numeric) > 1 else numeric[0]
+        if mx not in df.columns or my not in df.columns:
+            _print_error(f"Metrics {mx}, {my} not in results. Columns: {list(df.columns)}")
+            sys.exit(1)
+        x = pd.to_numeric(df[mx], errors="coerce").to_numpy()
+        y = pd.to_numeric(df[my], errors="coerce").to_numpy()
+        ok = np.isfinite(x) & np.isfinite(y)
+        x, y = x[ok], y[ok]
+        mask = _pareto_front_mask(x, y, maximize_x=True, maximize_y=True)
+        pareto_results = [results[i] for i in np.where(ok)[0][mask]]
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            from smrforge.workflows.pareto_report import pareto_summary_report
+            summary = pareto_summary_report(pareto_results, mx, my, maximize_x=True, maximize_y=True)
+            payload = {"metric_x": mx, "metric_y": my, "n_pareto": len(pareto_results), "pareto": pareto_results, "summary": summary}
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+            _print_success(f"Pareto set ({len(pareto_results)} points) + summary saved to {out}")
+        else:
+            print(json.dumps(pareto_results, indent=2))
+    except Exception as e:
+        _print_error(f"Pareto failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_optimize(args):
+    """Run design optimization (optionally constraint-aware)."""
+    try:
+        from smrforge.convenience import create_reactor, get_design_point
+        from smrforge.optimization.design import DesignOptimizer
+        import numpy as np
+        reactor_path = getattr(args, "reactor", None)
+        if not reactor_path:
+            _print_error("--reactor base design file or preset required")
+            sys.exit(1)
+        with open(Path(reactor_path), encoding="utf-8") as f:
+            base_spec = json.load(f)
+        param_specs = getattr(args, "params", None) or []
+        bounds = []
+        param_names = []
+        for spec in param_specs:
+            parts = spec.split(":")
+            if len(parts) != 3:
+                _print_error("Each --params must be name:low:high (e.g. enrichment:0.1:0.2)")
+                sys.exit(1)
+            name, low, high = parts[0].strip(), float(parts[1]), float(parts[2])
+            param_names.append(name)
+            bounds.append((low, high))
+        if not param_names:
+            _print_error("At least one --params name:low:high required")
+            sys.exit(1)
+        def reactor_from_x(x):
+            spec = dict(base_spec)
+            for i, name in enumerate(param_names):
+                spec[name] = float(x[i])
+            return create_reactor(**spec)
+        objective_name = (getattr(args, "objective", None) or "min_neg_keff").strip().lower()
+        if objective_name == "min_neg_keff":
+            def obj(x):
+                r = reactor_from_x(x)
+                return -get_design_point(r)["k_eff"]
+        else:
+            _print_error("Only objective min_neg_keff (maximize k_eff) supported in CLI for now")
+            sys.exit(1)
+        use_constraints = getattr(args, "constraints", False)
+        if use_constraints and Path(use_constraints).exists():
+            from smrforge.validation.constraints import ConstraintSet
+            from smrforge.optimization.design import DesignOptimizer
+            constraint_set = ConstraintSet.load(Path(use_constraints))
+            obj = DesignOptimizer.with_constraint_penalty(obj, reactor_from_x, constraint_set=constraint_set)
+        opt = DesignOptimizer(obj, bounds, method=getattr(args, "method", "differential_evolution") or "differential_evolution")
+        result = opt.optimize(max_iterations=int(getattr(args, "max_iter", 50)))
+        _print_success(f"Optimal f = {result.f_opt:.6g}, success = {result.success}")
+        optimal_point = dict(zip(param_names, result.x_opt.tolist()))
+        optimal_point["k_eff"] = -result.f_opt if objective_name == "min_neg_keff" else result.f_opt
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump({"x_opt": result.x_opt.tolist(), "param_names": param_names, "f_opt": result.f_opt, "optimal_point": optimal_point}, f, indent=2)
+            _print_success(f"Results saved to {out}")
+        if _RICH_AVAILABLE:
+            table = Table(title="Optimal parameters")
+            for k, v in optimal_point.items():
+                table.add_row(k, f"{v:.6g}")
+            console.print(table)
+        try:
+            from smrforge.workflows.audit_log import append_run
+            log_path = Path(out).parent / "runs.json" if out else None
+            append_run("optimize", args_summary={"reactor": str(reactor_path), "params": param_names}, results_summary={"f_opt": result.f_opt, "success": result.success}, passed=result.success, log_path=log_path)
+        except Exception:
+            pass
+    except Exception as e:
+        try:
+            from smrforge.workflows.audit_log import append_run
+            append_run("optimize", args_summary={"reactor": getattr(args, "reactor", None)}, passed=False, error=str(e))
+        except Exception:
+            pass
+        _print_error(f"Optimize failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_uq(args):
+    """Run uncertainty quantification on a reactor (Monte Carlo sampling)."""
+    try:
+        from smrforge.convenience import create_reactor, get_design_point
+        from smrforge.uncertainty.uq import UncertainParameter, UncertaintyPropagation
+        n_samples = int(getattr(args, "samples", 100))
+        reactor_path = getattr(args, "reactor", None)
+        if not reactor_path:
+            _print_error("--reactor base design file required")
+            sys.exit(1)
+        with open(Path(reactor_path), encoding="utf-8") as f:
+            base_spec = json.load(f)
+        param_specs = getattr(args, "params", None) or []
+        uncertain = []
+        for spec in param_specs:
+            parts = spec.split(":")
+            if len(parts) < 3:
+                continue
+            name, nominal, dist = parts[0].strip(), float(parts[1]), (parts[2].strip().lower() if len(parts) > 2 else "normal")
+            unc = (float(parts[3]) if len(parts) > 3 else 0.1)
+            if dist == "uniform" and len(parts) >= 5:
+                b = (float(parts[3]), float(parts[4]))
+                uncertain.append(UncertainParameter(name, "uniform", nominal, b))
+            else:
+                uncertain.append(UncertainParameter(name, dist, nominal, unc))
+        if not uncertain:
+            _print_error("At least one --params name:nominal:distribution[:uncertainty] required (e.g. enrichment:0.2:normal:0.02)")
+            sys.exit(1)
+        def model(x_dict):
+            spec = dict(base_spec)
+            for k, v in x_dict.items():
+                spec[k] = v
+            r = create_reactor(**spec)
+            return get_design_point(r)
+        output_names = ["k_eff", "power_thermal_mw"]
+        prop = UncertaintyPropagation(uncertain, model, output_names)
+        uq_results = prop.propagate(n_samples=n_samples, method="lhs", random_state=int(getattr(args, "seed", 42) or 0))
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            summary = {"mean": uq_results.mean.tolist() if uq_results.mean is not None else [], "std": uq_results.std.tolist() if uq_results.std is not None else [], "output_names": getattr(uq_results, "output_names", [])}
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(summary, f, indent=2)
+            _print_success(f"UQ summary saved to {out}")
+        if _RICH_AVAILABLE and uq_results.mean is not None:
+            table = Table(title="UQ summary")
+            table.add_column("Output", style="cyan")
+            table.add_column("Mean", justify="right")
+            table.add_column("Std", justify="right")
+            for i, oname in enumerate(getattr(uq_results, "output_names", ["output_" + str(i) for i in range(len(uq_results.mean))])):
+                table.add_row(str(oname), f"{uq_results.mean[i]:.6g}", f"{uq_results.std[i]:.6g}" if uq_results.std is not None else "N/A")
+            console.print(table)
+        try:
+            from smrforge.workflows.audit_log import append_run
+            out_path = getattr(args, "output", None)
+            log_path = Path(out_path).parent / "runs.json" if out_path else None
+            append_run("uq", args_summary={"reactor": str(reactor_path), "samples": n_samples}, results_summary={"mean": uq_results.mean.tolist() if uq_results.mean is not None else []}, passed=True, log_path=log_path)
+        except Exception:
+            pass
+    except Exception as e:
+        try:
+            from smrforge.workflows.audit_log import append_run
+            append_run("uq", args_summary={"reactor": getattr(args, "reactor", None)}, passed=False, error=str(e))
+        except Exception:
+            pass
+        _print_error(f"UQ failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def _write_design_study_html(out_dir, design_point, safety_report):
+    """Write a simple combined HTML report (design point + safety margins)."""
+    from smrforge.validation.safety_report import margin_narrative
+    report_dict = safety_report.to_dict() if hasattr(safety_report, "to_dict") else safety_report
+    try:
+        narrative = margin_narrative(safety_report) if hasattr(safety_report, "margins") and isinstance(getattr(safety_report, "margins", None), list) else ""
+    except Exception:
+        narrative = ""
+    rows_dp = "".join(
+        f"<tr><td>{k}</td><td>{v}</td></tr>"
+        for k, v in sorted(design_point.items()) if isinstance(v, (int, float))
+    )
+    rows_margins = ""
+    for m in report_dict.get("margins", []):
+        name = m.get("name", "")
+        value = m.get("value", "")
+        limit = m.get("limit", "")
+        unit = m.get("unit", "") or ""
+        within = "pass" if m.get("within_limit") else "fail"
+        rows_margins += f"<tr><td>{name}</td><td>{value} {unit}</td><td>{limit} {unit}</td><td>{within}</td></tr>"
+    violations = report_dict.get("violations", [])
+    passed = report_dict.get("passed", False)
+    status = "PASS" if passed else "FAIL"
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Design Study Report</title>
+<style>
+  body {{ font-family: system-ui,sans-serif; max-width: 800px; margin: 1rem auto; padding: 0 1rem; }}
+  table {{ border-collapse: collapse; width: 100%; }}
+  th, td {{ border: 1px solid #ccc; padding: 0.4rem 0.6rem; text-align: left; }}
+  th {{ background: #eee; }}
+  .pass {{ color: green; }} .fail {{ color: #c00; }}
+  h1 {{ font-size: 1.2rem; }} h2 {{ font-size: 1rem; margin-top: 1.2rem; }}
+</style>
+</head>
+<body>
+<h1>Design Study Report</h1>
+<p><strong>Overall: <span class="{('pass' if passed else 'fail')}">{status}</span></strong></p>
+<p>{narrative}</p>
+<h2>Design Point</h2>
+<table><tr><th>Metric</th><th>Value</th></tr>{rows_dp}</table>
+<h2>Safety Margins</h2>
+<table><tr><th>Constraint</th><th>Value</th><th>Limit</th><th>Status</th></tr>{rows_margins}</table>
+<h2>Violations</h2>
+<ul>{''.join(f'<li>{v}</li>' for v in violations) if violations else '<li>None</li>'}</ul>
+</body>
+</html>
+"""
+    (out_dir / "design_study_report.html").write_text(html, encoding="utf-8")
+
+
+def workflow_design_study(args):
+    """Run design point + safety report (unified design study step)."""
+    try:
+        from smrforge.convenience import create_reactor, get_design_point
+        from smrforge.validation.safety_report import safety_margin_report
+        reactor = _load_reactor_from_args(args)
+        out_dir = getattr(args, "output_dir", None) or Path("design_study_output")
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        point = get_design_point(reactor)
+        with open(out_dir / "design_point.json", "w", encoding="utf-8") as f:
+            json.dump(point, f, indent=2)
+        constraint_set = None
+        if getattr(args, "constraints", None) and Path(args.constraints).exists():
+            from smrforge.validation.constraints import ConstraintSet
+            constraint_set = ConstraintSet.load(Path(args.constraints))
+        report = safety_margin_report(reactor, constraint_set=constraint_set)
+        with open(out_dir / "safety_report.json", "w", encoding="utf-8") as f:
+            json.dump(report.to_dict(), f, indent=2)
+        if getattr(args, "html", False):
+            _write_design_study_html(out_dir, point, report)
+        _print_success(f"Design study written to {out_dir}")
+        if _RICH_AVAILABLE:
+            console.print(f"  design_point.json  – steady-state metrics")
+            console.print(f"  safety_report.json – margins and pass/fail")
+        if getattr(args, "html", False):
+            console.print(f"  design_study_report.html – combined report")
+        try:
+            from smrforge.workflows.audit_log import append_run
+            append_run(
+                "design-study",
+                args_summary={"reactor": getattr(args, "reactor"), "output_dir": str(out_dir)},
+                results_summary={"k_eff": point.get("k_eff"), "power_thermal_mw": point.get("power_thermal_mw"), "passed": report.passed},
+                passed=report.passed,
+                log_path=out_dir / "runs.json",
+            )
+        except Exception:
+            pass
+    except Exception as e:
+        try:
+            from smrforge.workflows.audit_log import append_run
+            append_run("design-study", args_summary={"reactor": getattr(args, "reactor", None)}, passed=False, error=str(e))
+        except Exception:
+            pass
+        _print_error(f"Design study failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_variant(args):
+    """Save reactor design as a named variant."""
+    try:
+        from smrforge.convenience import create_reactor, save_variant
+        reactor = _load_reactor_from_args(args)
+        name = getattr(args, "name", None) or "variant"
+        out_dir = getattr(args, "output_dir", None)
+        path = save_variant(reactor, name, output_dir=out_dir)
+        _print_success(f"Variant saved to {path}")
+    except Exception as e:
+        _print_error(f"Variant save failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_sensitivity(args):
+    """Rank parameters by sensitivity (OAT or Morris) from sweep results."""
+    try:
+        from smrforge.workflows.sensitivity import one_at_a_time_from_sweep, morris_screening
+        p = Path(getattr(args, "sweep_results", None) or "")
+        if not p.exists():
+            _print_error("--sweep-results FILE.json required")
+            sys.exit(1)
+        with open(p, encoding="utf-8") as f:
+            data = json.load(f)
+        results = data.get("results", data) if isinstance(data, dict) else data
+        if not isinstance(results, list):
+            results = [results]
+        params = getattr(args, "params", None) or []
+        if not params:
+            if results and isinstance(results[0], dict):
+                p0 = results[0].get("parameters", results[0])
+                params = [k for k in p0 if isinstance(p0.get(k), (int, float))]
+        if not params:
+            _print_error("--params name1 name2 ... or sweep results with parameter keys required")
+            sys.exit(1)
+        metric = getattr(args, "metric", "k_eff")
+        rankings = one_at_a_time_from_sweep(results, params, output_metric=metric)
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump([{"parameter": r.parameter, "effect": r.effect, "rank": r.rank} for r in rankings], f, indent=2)
+            _print_success(f"Sensitivity ranking saved to {out}")
+        else:
+            for r in rankings:
+                print(f"  {r.rank}. {r.parameter}: effect={r.effect:.4f}")
+    except Exception as e:
+        _print_error(f"Sensitivity failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_sobol(args):
+    """Compute Sobol indices from sweep or UQ results."""
+    try:
+        from smrforge.workflows.sobol_indices import sobol_indices_from_sweep_results
+        p = Path(getattr(args, "sweep_results", None) or "")
+        if not p.exists():
+            _print_error("--sweep-results FILE.json required")
+            sys.exit(1)
+        with open(p, encoding="utf-8") as f:
+            data = json.load(f)
+        results = data.get("results", data) if isinstance(data, dict) else data
+        if not isinstance(results, list):
+            results = [results]
+        params = getattr(args, "params", None) or []
+        if not params and results and isinstance(results[0], dict):
+            p0 = results[0].get("parameters", results[0])
+            params = [k for k in p0 if isinstance(p0.get(k), (int, float))]
+        if not params:
+            _print_error("--params name1 name2 ... or sweep results with parameter keys required")
+            sys.exit(1)
+        metric = getattr(args, "metric", "k_eff")
+        sobol_dict = sobol_indices_from_sweep_results(results, params, output_metric=metric)
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(sobol_dict, f, indent=2)
+            _print_success(f"Sobol indices saved to {out}")
+        else:
+            for label, si in sobol_dict.items():
+                print(f"{label}: S1={si.get('S1', [])}, ST={si.get('ST', [])}")
+    except Exception as e:
+        _print_error(f"Sobol failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_scenario(args):
+    """Run scenario-based design (multiple constraint sets / missions)."""
+    try:
+        from smrforge.workflows.scenario_design import run_scenario_design, scenario_comparison_report
+        reactor = _load_reactor_from_args(args)
+        scenarios = getattr(args, "scenarios", None) or []
+        if not scenarios:
+            _print_error("--scenarios name:path_or_preset ... required (e.g. baseload:regulatory_limits)")
+            sys.exit(1)
+        scenario_dict = {}
+        for s in scenarios:
+            part = s.split(":", 1)
+            name = part[0].strip()
+            val = part[1].strip() if len(part) > 1 else "regulatory_limits"
+            scenario_dict[name] = val
+        results = run_scenario_design(reactor, scenario_dict)
+        out_dir = Path(getattr(args, "output_dir", None) or "scenario_output")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        report_path = out_dir / "scenario_comparison.md"
+        scenario_comparison_report(results, output_path=report_path)
+        out_json = out_dir / "scenario_results.json"
+        with open(out_json, "w", encoding="utf-8") as f:
+            json.dump({k: {"passed": v.passed, "violations": v.violations, "metrics": v.metrics} for k, v in results.items()}, f, indent=2)
+        _print_success(f"Scenario comparison written to {report_path} and {out_json}")
+    except Exception as e:
+        _print_error(f"Scenario design failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_atlas(args):
+    """Build design space atlas (catalog of presets with design point + safety)."""
+    try:
+        from smrforge.workflows.atlas import build_atlas, filter_atlas
+        out_dir = Path(getattr(args, "output_dir", None) or "atlas_output")
+        presets = getattr(args, "presets", None)
+        if presets:
+            presets = [p.strip() for p in presets]
+        entries = build_atlas(out_dir, presets=presets)
+        passed = sum(1 for e in entries if e.passed)
+        _print_success(f"Atlas built: {len(entries)} designs, {passed} passed. Index: {out_dir / 'atlas_index.json'}")
+    except Exception as e:
+        _print_error(f"Atlas failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_surrogate(args):
+    """Fit surrogate model from sweep results for fast evaluation."""
+    try:
+        from smrforge.workflows.surrogate import surrogate_from_sweep_results
+        p = Path(getattr(args, "sweep_results", None) or "")
+        if not p.exists():
+            _print_error("--sweep-results FILE.json required")
+            sys.exit(1)
+        with open(p, encoding="utf-8") as f:
+            data = json.load(f)
+        results = data.get("results", data) if isinstance(data, dict) else data
+        if not isinstance(results, list):
+            results = [results]
+        params = getattr(args, "params", None) or []
+        if not params and results and isinstance(results[0], dict):
+            p0 = results[0].get("parameters", results[0])
+            params = [k for k in p0 if isinstance(p0.get(k), (int, float))]
+        if not params:
+            _print_error("--params name1 name2 ... required")
+            sys.exit(1)
+        metric = getattr(args, "metric", "k_eff")
+        method = getattr(args, "method", "rbf")
+        sur = surrogate_from_sweep_results(results, params, output_metric=metric, method=method)
+        _print_success(f"Surrogate fitted ({method}, n={sur.n_samples}). Use programmatically: sur.predict(X).")
+        out = getattr(args, "output", None)
+        if out:
+            import pickle
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "wb") as f:
+                pickle.dump(sur, f)
+            _print_success(f"Surrogate saved to {out}")
+    except Exception as e:
+        _print_error(f"Surrogate failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def workflow_requirements_to_constraints(args):
+    """Parse requirements YAML/JSON into ConstraintSet and save."""
+    try:
+        from smrforge.validation.requirements_parser import parse_requirements_to_constraint_set
+        spec_path = getattr(args, "requirements", None)
+        if not spec_path or not Path(spec_path).exists():
+            _print_error("--requirements FILE.yaml|.json required")
+            sys.exit(1)
+        cs = parse_requirements_to_constraint_set(Path(spec_path), name=getattr(args, "name", "from_requirements"))
+        out = getattr(args, "output", None)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            cs.save(Path(out))
+            _print_success(f"Constraint set saved to {out}")
+        else:
+            _print_error("--output FILE.json required to save constraint set")
+            sys.exit(1)
+    except Exception as e:
+        _print_error(f"Requirements-to-constraints failed: {e}")
+        if getattr(args, "verbose", False):
             import traceback
             traceback.print_exc()
         sys.exit(1)
@@ -3658,6 +4407,128 @@ Note: All features are also available via Python API:
     workflow_run_parser.add_argument('workflow', type=Path, help='Workflow YAML file')
     workflow_run_parser.set_defaults(func=workflow_run)
     
+    # workflow batch-keff
+    batch_keff_parser = workflow_subparsers.add_parser(
+        'batch-keff',
+        help='Run k-eff only on multiple reactor files in parallel'
+    )
+    batch_keff_parser.add_argument('reactors', nargs='+', type=str, help='Reactor files or glob patterns (e.g. configs/*.json)')
+    batch_keff_parser.add_argument('--no-parallel', action='store_true', dest='no_parallel', help='Run sequentially')
+    batch_keff_parser.add_argument('--workers', type=int, help='Max parallel workers (default: auto; see SMRFORGE_MAX_BATCH_WORKERS)')
+    batch_keff_parser.add_argument('--no-progress', action='store_true', dest='no_progress', help='Disable progress bar')
+    batch_keff_parser.add_argument('--output', type=Path, help='Save results to JSON file')
+    batch_keff_parser.set_defaults(func=batch_keff_run)
+
+    # workflow design-point
+    dp_parser = workflow_subparsers.add_parser('design-point', help='Steady-state design point summary')
+    dp_parser.add_argument('--reactor', type=str, required=True, help='Reactor file or preset name')
+    dp_parser.add_argument('--output', type=Path, help='Save JSON')
+    dp_parser.set_defaults(func=workflow_design_point)
+
+    # workflow safety-report
+    sr_parser = workflow_subparsers.add_parser('safety-report', help='Coupled safety margin report')
+    sr_parser.add_argument('--reactor', type=str, required=True, help='Reactor file or preset name')
+    sr_parser.add_argument('--constraints', type=Path, help='Constraint set JSON')
+    sr_parser.add_argument('--output', type=Path, help='Save JSON')
+    sr_parser.set_defaults(func=workflow_safety_report)
+
+    # workflow doe
+    doe_parser = workflow_subparsers.add_parser('doe', help='Design of Experiments (factorial, LHS, Sobol, random)')
+    doe_parser.add_argument('--method', type=str, choices=['factorial', 'lhs', 'sobol', 'random'], default='lhs')
+    doe_parser.add_argument('--factors', nargs='+', required=True, help='name:low:high or name:v1,v2,v3 for factorial')
+    doe_parser.add_argument('--samples', type=int, default=10, help='Samples for lhs/sobol/random')
+    doe_parser.add_argument('--seed', type=int, help='Random seed')
+    doe_parser.add_argument('--output', type=Path, help='Save JSON')
+    doe_parser.set_defaults(func=workflow_doe)
+
+    # workflow pareto
+    pareto_parser = workflow_subparsers.add_parser('pareto', help='Compute Pareto front from sweep results')
+    pareto_parser.add_argument('--sweep-results', type=Path, required=True, help='Sweep results JSON')
+    pareto_parser.add_argument('--metric-x', type=str, default='k_eff')
+    pareto_parser.add_argument('--metric-y', type=str, help='Second metric (default: first other numeric)')
+    pareto_parser.add_argument('--output', type=Path, help='Save Pareto set JSON')
+    pareto_parser.set_defaults(func=workflow_pareto)
+
+    # workflow optimize
+    opt_parser = workflow_subparsers.add_parser('optimize', help='Design optimization (optionally constraint-aware)')
+    opt_parser.add_argument('--reactor', type=Path, required=True, help='Base design JSON file')
+    opt_parser.add_argument('--params', nargs='+', required=True, help='name:low:high per parameter')
+    opt_parser.add_argument('--objective', type=str, default='min_neg_keff')
+    opt_parser.add_argument('--constraints', type=Path, help='Constraint set JSON for penalty')
+    opt_parser.add_argument('--method', type=str, default='differential_evolution')
+    opt_parser.add_argument('--max-iter', type=int, default=50)
+    opt_parser.add_argument('--output', type=Path, help='Save results JSON')
+    opt_parser.set_defaults(func=workflow_optimize)
+
+    # workflow uq
+    uq_parser = workflow_subparsers.add_parser('uq', help='Uncertainty quantification (Monte Carlo / LHS)')
+    uq_parser.add_argument('--reactor', type=Path, required=True, help='Base design JSON file')
+    uq_parser.add_argument('--params', nargs='+', required=True, help='name:nominal:distribution[:uncertainty]')
+    uq_parser.add_argument('--samples', type=int, default=100)
+    uq_parser.add_argument('--seed', type=int, default=42)
+    uq_parser.add_argument('--output', type=Path, help='Save UQ summary JSON')
+    uq_parser.set_defaults(func=workflow_uq)
+
+    # workflow design-study
+    ds_parser = workflow_subparsers.add_parser('design-study', help='Run design point + safety report')
+    ds_parser.add_argument('--reactor', type=str, required=True, help='Reactor file or preset name')
+    ds_parser.add_argument('--constraints', type=Path, help='Constraint set JSON')
+    ds_parser.add_argument('--output-dir', type=Path, default=Path('design_study_output'))
+    ds_parser.add_argument('--html', action='store_true', help='Also write design_study_report.html')
+    ds_parser.set_defaults(func=workflow_design_study)
+
+    # workflow variant
+    var_parser = workflow_subparsers.add_parser('variant', help='Save design as named variant')
+    var_parser.add_argument('--reactor', type=str, required=True, help='Reactor file or preset name')
+    var_parser.add_argument('--name', type=str, default='variant')
+    var_parser.add_argument('--output-dir', type=Path, help='Output directory')
+    var_parser.set_defaults(func=workflow_variant)
+
+    # workflow sensitivity
+    sens_parser = workflow_subparsers.add_parser('sensitivity', help='Sensitivity ranking (OAT) from sweep results')
+    sens_parser.add_argument('--sweep-results', type=Path, required=True, help='Sweep results JSON')
+    sens_parser.add_argument('--params', nargs='+', help='Parameter names (default: from results)')
+    sens_parser.add_argument('--metric', type=str, default='k_eff')
+    sens_parser.add_argument('--output', type=Path, help='Save ranking JSON')
+    sens_parser.set_defaults(func=workflow_sensitivity)
+
+    # workflow sobol
+    sobol_parser = workflow_subparsers.add_parser('sobol', help='Sobol sensitivity indices from sweep results')
+    sobol_parser.add_argument('--sweep-results', type=Path, required=True, help='Sweep results JSON')
+    sobol_parser.add_argument('--params', nargs='+', help='Parameter names (default: from results)')
+    sobol_parser.add_argument('--metric', type=str, default='k_eff')
+    sobol_parser.add_argument('--output', type=Path, help='Save Sobol JSON')
+    sobol_parser.set_defaults(func=workflow_sobol)
+
+    # workflow scenario
+    scenario_parser = workflow_subparsers.add_parser('scenario', help='Scenario-based design (multiple missions)')
+    scenario_parser.add_argument('--reactor', type=str, required=True, help='Reactor file or preset')
+    scenario_parser.add_argument('--scenarios', nargs='+', required=True, help='name:path_or_preset (e.g. baseload:regulatory_limits)')
+    scenario_parser.add_argument('--output-dir', type=Path, help='Output directory')
+    scenario_parser.set_defaults(func=workflow_scenario)
+
+    # workflow atlas
+    atlas_parser = workflow_subparsers.add_parser('atlas', help='Build design space atlas (catalog of presets)')
+    atlas_parser.add_argument('--output-dir', type=Path, default=Path('atlas_output'))
+    atlas_parser.add_argument('--presets', nargs='+', help='Preset names (default: all from list_presets)')
+    atlas_parser.set_defaults(func=workflow_atlas)
+
+    # workflow surrogate
+    sur_parser = workflow_subparsers.add_parser('surrogate', help='Fit surrogate model from sweep results')
+    sur_parser.add_argument('--sweep-results', type=Path, required=True, help='Sweep results JSON')
+    sur_parser.add_argument('--params', nargs='+', required=True, help='Parameter names')
+    sur_parser.add_argument('--metric', type=str, default='k_eff')
+    sur_parser.add_argument('--method', type=str, choices=['rbf', 'linear'], default='rbf')
+    sur_parser.add_argument('--output', type=Path, help='Save pickle surrogate')
+    sur_parser.set_defaults(func=workflow_surrogate)
+
+    # workflow requirements-to-constraints
+    req_parser = workflow_subparsers.add_parser('requirements-to-constraints', help='Parse requirements YAML/JSON to ConstraintSet')
+    req_parser.add_argument('--requirements', type=Path, required=True, help='Requirements YAML or JSON file')
+    req_parser.add_argument('--name', type=str, default='from_requirements')
+    req_parser.add_argument('--output', type=Path, required=True, help='Output constraint set JSON')
+    req_parser.set_defaults(func=workflow_requirements_to_constraints)
+    
     # Reactor subcommands
     reactor_parser = subparsers.add_parser(
         'reactor',
@@ -3925,15 +4796,18 @@ Note: All features are also available via Python API:
         'sweep',
         help='Parameter sweep and sensitivity analysis'
     )
+    sweep_parser.add_argument('--config', type=Path, help='Load sweep config from JSON or YAML file (optional; else use --params)')
     sweep_parser.add_argument('--reactor', type=str, help='Reactor file or preset name')
-    sweep_parser.add_argument('--params', nargs='+', required=True, 
-                            help='Parameter ranges (format: name:start:end:step or name:val1,val2,val3)')
-    sweep_parser.add_argument('--analysis', nargs='+', default=['keff'], 
+    sweep_parser.add_argument('--params', nargs='+',
+                            help='Parameter ranges (format: name:start:end:step or name:val1,val2,val3); required if no --config')
+    sweep_parser.add_argument('--analysis', nargs='+', default=['keff'],
                             help='Analysis types to run (default: keff)')
     sweep_parser.add_argument('--output', type=Path, help='Output directory for results')
     sweep_parser.add_argument('--no-parallel', action='store_true', dest='no_parallel',
                             help='Disable parallel execution')
     sweep_parser.add_argument('--workers', type=int, help='Number of parallel workers')
+    sweep_parser.add_argument('--resume', action='store_true', help='Resume from latest intermediate file in output dir')
+    sweep_parser.add_argument('--progress', action='store_true', help='Show progress bar (Rich)')
     sweep_parser.set_defaults(func=sweep_run)
     
     # Reactor template subcommands

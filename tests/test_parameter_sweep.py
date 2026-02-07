@@ -105,6 +105,39 @@ class TestSweepConfig:
         assert len(combinations) == 4  # 2 enrichment values × 2 power values
         assert all("enrichment" in c and "power" in c for c in combinations)
 
+    def test_from_file_json(self, tmp_path):
+        """Test loading SweepConfig from JSON file."""
+        config_file = tmp_path / "sweep_config.json"
+        config_file.write_text(
+            json.dumps({
+                "parameters": {"enrichment": [0.10, 0.20], "power": [50, 100]},
+                "analysis_types": ["keff"],
+            }),
+            encoding="utf-8",
+        )
+        config = SweepConfig.from_file(config_file)
+        assert config.parameters["enrichment"] == [0.10, 0.20]
+        assert config.parameters["power"] == [50, 100]
+        assert config.analysis_types == ["keff"]
+
+    def test_from_file_range_tuple(self, tmp_path):
+        """Test from_file normalizes [start, end, step] to range tuple."""
+        config_file = tmp_path / "sweep_config.json"
+        config_file.write_text(
+            json.dumps({
+                "parameters": {"x": [0.0, 1.0, 0.25]},
+                "analysis_types": ["keff"],
+            }),
+            encoding="utf-8",
+        )
+        config = SweepConfig.from_file(config_file)
+        assert config.parameters["x"] == (0.0, 1.0, 0.25)
+
+    def test_from_file_not_found(self):
+        """Test from_file raises FileNotFoundError for missing file."""
+        with pytest.raises(FileNotFoundError, match="not found"):
+            SweepConfig.from_file(Path("/nonexistent/sweep.json"))
+
 
 class TestSweepResult:
     """Tests for SweepResult class."""
