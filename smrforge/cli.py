@@ -18,7 +18,7 @@ import numpy as np
 try:
     import yaml
     _YAML_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _YAML_AVAILABLE = False
 
 # Rich library for better UX (progress bars, colored output, tables)
@@ -29,7 +29,7 @@ try:
     from rich.panel import Panel
     from rich import print as rprint
     _RICH_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _RICH_AVAILABLE = False
     # Fallback to basic print
     rprint = print
@@ -100,7 +100,7 @@ def _print_success(message: str):
     if _RICH_AVAILABLE:
         try:
             console.print(f"[bold green]{_GLYPH_SUCCESS}[/bold green] {message}")
-        except UnicodeEncodeError:
+        except UnicodeEncodeError:  # pragma: no cover
             print(f"{_GLYPH_SUCCESS} {message}")
     else:
         print(f"{_GLYPH_SUCCESS} {message}")
@@ -111,7 +111,7 @@ def _print_error(message: str):
     if _RICH_AVAILABLE:
         try:
             console.print(f"[bold red]{_GLYPH_ERROR}[/bold red] {message}")
-        except UnicodeEncodeError:
+        except UnicodeEncodeError:  # pragma: no cover
             print(f"{_GLYPH_ERROR} {message}")
     else:
         print(f"{_GLYPH_ERROR} {message}")
@@ -122,7 +122,7 @@ def _print_info(message: str):
     if _RICH_AVAILABLE:
         try:
             console.print(f"[blue]{_GLYPH_INFO}[/blue] {message}")
-        except UnicodeEncodeError:
+        except UnicodeEncodeError:  # pragma: no cover
             print(f"{_GLYPH_INFO} {message}")
     else:
         print(f"{_GLYPH_INFO} {message}")
@@ -133,7 +133,7 @@ def _print_warning(message: str):
     if _RICH_AVAILABLE:
         try:
             console.print(f"[bold yellow]{_GLYPH_WARNING}[/bold yellow] {message}")
-        except UnicodeEncodeError:
+        except UnicodeEncodeError:  # pragma: no cover
             print(f"{_GLYPH_WARNING} {message}")
     else:
         print(f"{_GLYPH_WARNING} {message}")

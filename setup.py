@@ -57,6 +57,10 @@ setup(
         "pyvista>=0.40.0",
         "dash>=2.0",
         "dash-bootstrap-components>=1.0.0",
+        # Uncertainty quantification and sensitivity analysis (required)
+        "SALib>=1.4.0",
+        # Statistical visualization for UQ (required)
+        "seaborn>=0.12.0",
     ],
     extras_require={
         "dev": [
@@ -81,16 +85,12 @@ setup(
             "sandy",  # Lighter-weight alternative for ENDF parsing
         ],
         "uq": [
-            # Uncertainty quantification and sensitivity analysis
-            "SALib>=1.4.0",  # Sensitivity analysis library
-            "seaborn>=0.12.0",  # Statistical visualization
+            # UQ extras (SALib and seaborn are now required in install_requires)
         ],
         "all": [
             # Install all optional dependencies
-            # Note: Visualization dependencies (plotly, pyvista, dash) are now required
+            # Note: Visualization (plotly, pyvista, dash), SALib and seaborn are now required
             "sandy",
-            "SALib>=1.4.0",
-            "seaborn>=0.12.0",
         ],
     },
     classifiers=[

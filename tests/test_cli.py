@@ -3044,12 +3044,15 @@ class TestSweepRun:
     """Test sweep_run command."""
     
     def test_sweep_run_basic(self):
-        """Test sweep_run basic."""
+        """Test sweep_run basic (config from args; ParameterSweep patched)."""
         args = Mock(
             params=['power:100:200:50'],
             reactor=None,
             analysis=['keff'],
             output=None,
+            config=None,
+            resume=False,
+            progress=False,
             no_parallel=False,
             workers=4,
             verbose=False
@@ -3077,6 +3080,9 @@ class TestSweepRun:
             reactor=reactor_file,
             analysis=['keff'],
             output=None,
+            config=None,
+            resume=False,
+            progress=False,
             no_parallel=False,
             workers=4,
             verbose=False
@@ -3101,6 +3107,9 @@ class TestSweepRun:
             reactor='valar-10',
             analysis=['keff'],
             output=None,
+            config=None,
+            resume=False,
+            progress=False,
             no_parallel=False,
             workers=4,
             verbose=False
@@ -3466,3 +3475,354 @@ class TestDesignStudyHtmlReport:
         assert "50.0" in text
         assert "1.02" in text
         assert "PASS" in text
+
+
+class TestCLIHelpers:
+    """Test _to_jsonable, _supports_unicode, _save_workflow_plot."""
+
+    def test_to_jsonable_ndarray(self):
+        out = cli_module._to_jsonable(np.array([1.0, 2.0]))
+        assert out == [1.0, 2.0]
+
+    def test_to_jsonable_np_generic(self):
+        out = cli_module._to_jsonable(np.float64(3.14))
+        assert out == 3.14
+
+    def test_to_jsonable_path(self):
+        out = cli_module._to_jsonable(Path("/foo/bar"))
+        assert out == "/foo/bar" or "bar" in str(out)
+
+    def test_to_jsonable_dict(self):
+        out = cli_module._to_jsonable({"a": np.array([1]), "b": 2})
+        assert out == {"a": [1], "b": 2}
+
+    def test_to_jsonable_list_tuple(self):
+        assert cli_module._to_jsonable([np.array([1])]) == [[1]]
+        # Tuples become lists in JSON-safe output
+        assert cli_module._to_jsonable((np.array([1]),)) == [[1]]
+
+    def test_to_jsonable_set(self):
+        out = cli_module._to_jsonable({1, 2})
+        assert set(out) == {1, 2}
+
+    def test_to_jsonable_other(self):
+        assert cli_module._to_jsonable("hello") == "hello"
+        assert cli_module._to_jsonable(42) == 42
+
+    def test_supports_unicode(self):
+        # Just ensure it doesn't raise; result depends on env
+        _ = cli_module._supports_unicode("✓")
+
+    def test_save_workflow_plot_matplotlib(self, tmp_path):
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.plot([1, 2], [1, 2])
+        # Use .pdf to avoid PIL/backend PNG issues in some envs
+        out = tmp_path / "out.pdf"
+        cli_module._save_workflow_plot((fig, ax), out)
+        assert out.exists()
+        plt.close(fig)
+
+    def test_save_workflow_plot_plotly_html(self, tmp_path):
+        mock_fig = Mock()
+        mock_fig.write_html = Mock()
+        out = tmp_path / "out.html"
+        cli_module._save_workflow_plot(mock_fig, out)
+        mock_fig.write_html.assert_called_once_with(str(out))
+
+    def test_save_workflow_plot_plotly_image_fallback(self, tmp_path):
+        mock_fig = Mock()
+        mock_fig.write_image = Mock(side_effect=Exception("kaleido missing"))
+        mock_fig.write_html = Mock()
+        out = tmp_path / "out.png"
+        cli_module._save_workflow_plot(mock_fig, out)
+        mock_fig.write_html.assert_called_once()
+        assert mock_fig.write_html.call_args[0][0].endswith(".html")
+
+    def test_save_workflow_plot_unsupported(self):
+        with pytest.raises(ValueError, match="Unsupported figure type"):
+            cli_module._save_workflow_plot("not a figure", Path("/tmp/x.png"))
+
+
+class TestDataInterpolate:
+    """Test data_interpolate CLI command."""
+
+    def test_data_interpolate_invalid_nuclide(self):
+        args = Mock(
+            nuclide="INVALID",
+            reaction="fission",
+            temperature=600.0,
+            method="linear",
+            available_temps=None,
+            endf_dir=None,
+            output=None,
+            plot=False,
+            plot_output=None,
+            verbose=False,
+        )
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit) as mock_exit:
+            with patch("smrforge.cli._print_error"):
+                with patch("smrforge.convenience_utils.get_nuclide", return_value=None):
+                    with pytest.raises(SystemExit):
+                        cli_module.data_interpolate(args)
+        mock_exit.assert_called_with(1)
+
+    def test_data_interpolate_success_mocked(self, tmp_path):
+        from smrforge.core.reactor_core import Nuclide
+        args = Mock(
+            nuclide="U235",
+            reaction="fission",
+            temperature=600.0,
+            method="linear",
+            available_temps=None,
+            endf_dir=None,
+            output=tmp_path / "out.json",
+            plot=False,
+            plot_output=None,
+            verbose=False,
+        )
+        u235 = Nuclide(Z=92, A=235)
+        energy = np.linspace(1e-5, 10, 50)
+        xs = np.ones(50) * 1.5
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.convenience_utils.get_nuclide", return_value=u235):
+                with patch("smrforge.core.reactor_core.NuclearDataCache", Mock()):
+                    with patch(
+                        "smrforge.core.temperature_interpolation.interpolate_cross_section_temperature",
+                        return_value=(energy, xs),
+                    ):
+                        with patch("smrforge.cli._RICH_AVAILABLE", False):
+                            cli_module.data_interpolate(args)
+        assert (tmp_path / "out.json").exists()
+
+
+class TestDataShield:
+    """Test data_shield CLI command."""
+
+    def test_data_shield_invalid_nuclide(self):
+        args = Mock(
+            nuclide="INVALID",
+            reaction="fission",
+            temperature=600.0,
+            sigma_0=1.0,
+            method="bondarenko",
+            endf_dir=None,
+            output=None,
+            plot=False,
+            plot_output=None,
+            compare=False,
+        )
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with patch("smrforge.convenience_utils.get_nuclide", return_value=None):
+                    with pytest.raises(SystemExit):
+                        cli_module.data_shield(args)
+
+
+class TestDecayHeatCalculate:
+    """Test decay_heat_calculate CLI command."""
+
+    def test_decay_heat_no_inventory_or_nuclides(self):
+        args = Mock(inventory=None, nuclides=None, output=None, plot=False, plot_output=None, verbose=False, endf_dir=None)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.decay_heat_calculate(args)
+
+    def test_decay_heat_invalid_nuclide_spec(self):
+        args = Mock(
+            inventory=None,
+            nuclides=["bad"],
+            output=None,
+            plot=False,
+            plot_output=None,
+            verbose=False,
+            endf_dir=None,
+        )
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.decay_heat_calculate(args)
+
+    def test_decay_heat_success_nuclides_mocked(self, tmp_path):
+        from smrforge.core.reactor_core import Nuclide
+        u235 = Nuclide(Z=92, A=235)
+        mock_result = Mock()
+        mock_result.total_decay_heat = np.array([1e6, 5e5])
+        mock_result.gamma_decay_heat = np.array([4e5, 2e5])
+        mock_result.beta_decay_heat = np.array([6e5, 3e5])
+        mock_result.nuclide_contributions = {u235: np.array([1e6, 5e5])}
+        mock_result.get_decay_heat_at_time = Mock(side_effect=lambda t: 1e6 if t <= 3600 else 5e5)
+        args = Mock(
+            inventory=None,
+            nuclides=["U235:1e20"],
+            times=None,
+            time_range=None,
+            output=tmp_path / "decay.json",
+            plot=False,
+            plot_output=None,
+            verbose=False,
+            endf_dir=None,
+            backend="plotly",
+            format="png",
+        )
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.convenience_utils.get_nuclide", return_value=u235):
+                with patch("smrforge.decay_heat.DecayHeatCalculator") as MockCalc:
+                    inst = MockCalc.return_value
+                    inst.calculate_decay_heat.return_value = mock_result
+                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                        cli_module.decay_heat_calculate(args)
+        assert (tmp_path / "decay.json").exists()
+
+
+class TestGitHubActionsCLI:
+    """Test github_actions_* CLI commands."""
+
+    def test_github_repo_root_invalid_dir(self, tmp_path):
+        # Use a file path (not a directory) so _github_repo_root exits
+        not_dir = tmp_path / "file.txt"
+        not_dir.write_text("x")
+        args = Mock(repo_root=str(not_dir), output=None, verbose=False)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.github_actions_status(args)
+
+    def test_github_actions_status_success(self, tmp_path):
+        (tmp_path / ".github").mkdir()
+        (tmp_path / ".github" / "workflows-enabled").write_text("true\n")
+        args = Mock(repo_root=str(tmp_path), output=None, verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._RICH_AVAILABLE", False):
+                cli_module.github_actions_status(args)
+
+    def test_github_actions_enable_success(self, tmp_path):
+        args = Mock(repo_root=str(tmp_path), verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            cli_module.github_actions_enable(args)
+        assert (tmp_path / ".github" / "workflows-enabled").read_text().strip() == "true"
+
+    def test_github_actions_disable_success(self, tmp_path):
+        (tmp_path / ".github").mkdir(parents=True)
+        (tmp_path / ".github" / "workflows-enabled").write_text("true\n")
+        args = Mock(repo_root=str(tmp_path), verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            cli_module.github_actions_disable(args)
+        assert (tmp_path / ".github" / "workflows-enabled").read_text().strip() == "false"
+
+    def test_github_actions_list_success(self, tmp_path):
+        args = Mock(repo_root=str(tmp_path), verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._RICH_AVAILABLE", False):
+                cli_module.github_actions_list(args)
+
+    def test_github_actions_set_unknown_feature(self):
+        args = Mock(repo_root=None, feature="unknown-feature", value="on", verbose=False)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with patch("pathlib.Path.cwd", return_value=Path(".")):
+                    with pytest.raises(SystemExit):
+                        cli_module.github_actions_set(args)
+
+    def test_github_actions_set_success(self, tmp_path):
+        (tmp_path / ".github").mkdir(parents=True)
+        (tmp_path / ".github" / "workflows-config.json").write_text('{"ci": true}\n')
+        args = Mock(repo_root=str(tmp_path), feature="ci", value="off", verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            cli_module.github_actions_set(args)
+        data = json.loads((tmp_path / ".github" / "workflows-config.json").read_text())
+        assert data.get("ci") is False
+
+    def test_github_actions_configure_with_flags(self, tmp_path):
+        args = Mock(repo_root=str(tmp_path), ci=True, verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            cli_module.github_actions_configure(args)
+        assert (tmp_path / ".github" / "workflows-config.json").exists()
+
+    def test_main_github_status(self, tmp_path):
+        (tmp_path / ".github").mkdir()
+        (tmp_path / ".github" / "workflows-enabled").write_text("true\n")
+        with patch("smrforge.cli.sys.exit"):
+            with patch("sys.argv", ["smrforge", "github", "status", "--repo-root", str(tmp_path)]):
+                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    cli_module.main()
+
+
+class TestWorkflowCLI:
+    """Test workflow_* CLI handlers with mocks to improve CLI coverage."""
+
+    def test_workflow_doe_lhs_success(self, tmp_path):
+        out = tmp_path / "doe.json"
+        args = Mock(method="lhs", factors=["a:0:1", "b:0:10"], samples=5, seed=42, output=out, verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._RICH_AVAILABLE", False):
+                cli_module.workflow_doe(args)
+        assert out.exists()
+        data = json.loads(out.read_text())
+        assert "design" in data
+        assert data["method"] == "lhs"
+
+    def test_workflow_doe_factorial_success(self, tmp_path):
+        out = tmp_path / "doe.json"
+        args = Mock(method="factorial", factors=["x:1,2", "y:10,20"], samples=10, seed=None, output=out, verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._RICH_AVAILABLE", False):
+                cli_module.workflow_doe(args)
+        assert out.exists()
+
+    def test_workflow_doe_error_invalid_factors(self):
+        args = Mock(method="lhs", factors=[], samples=5, seed=None, output=None, verbose=False)
+        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli._print_error"):
+                with pytest.raises(SystemExit):
+                    cli_module.workflow_doe(args)
+
+    def test_workflow_design_point_success(self, tmp_path):
+        out = tmp_path / "point.json"
+        args = Mock(reactor="valar-10", output=out, verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._load_reactor_from_args") as mock_load:
+                mock_load.return_value = Mock()
+                with patch("smrforge.convenience.get_design_point", return_value={"k_eff": 1.0, "power": 50.0}):
+                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                        cli_module.workflow_design_point(args)
+        assert out.exists()
+
+    def test_workflow_safety_report_success(self, tmp_path):
+        out = tmp_path / "report.json"
+        args = Mock(reactor="valar-10", constraints=None, output=out, verbose=False)
+        report = Mock()
+        report.to_dict.return_value = {"passed": True, "margins": []}
+        report.passed = True
+        report.margins = []
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._load_reactor_from_args", return_value=Mock()):
+                with patch("smrforge.validation.safety_report.safety_margin_report", return_value=report):
+                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                        cli_module.workflow_safety_report(args)
+        assert out.exists()
+
+    def test_workflow_pareto_success(self, tmp_path):
+        sweep = tmp_path / "sweep.json"
+        sweep.write_text(json.dumps({"results": [{"k_eff": 1.0, "power": 50}, {"k_eff": 1.1, "power": 60}]}))
+        out = tmp_path / "pareto.json"
+        args = Mock(sweep_results=sweep, metric_x="k_eff", metric_y="power", output=out, plot=None, verbose=False)
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli._RICH_AVAILABLE", False):
+                cli_module.workflow_pareto(args)
+        assert out.exists()
+
+    def test_workflow_requirements_to_constraints_success(self, tmp_path):
+        reqs = tmp_path / "reqs.yaml"
+        reqs.write_text("constraints: []\n")
+        out = tmp_path / "constraints.json"
+        args = Mock(requirements=reqs, name="test", output=out, verbose=False)
+        mock_cs = Mock()
+        with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.validation.requirements_parser.parse_requirements_to_constraint_set", return_value=mock_cs):
+                cli_module.workflow_requirements_to_constraints(args)
+        mock_cs.save.assert_called_once()
+        assert mock_cs.save.call_args[0][0] == out or str(mock_cs.save.call_args[0][0]) == str(out)

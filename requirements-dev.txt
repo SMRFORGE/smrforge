@@ -34,9 +34,11 @@ ipykernel>=6.0
 # Required for units tests (also in requirements.txt; explicit here for dev)
 pint>=0.20.0
 
+# Required for UQ (also in requirements.txt)
+seaborn>=0.12.0
+SALib>=1.4.0
+
 # Optional deps that unblock skipped tests / optional features
-seaborn
-SALib
 pyarrow  # parquet support (alternative: fastparquet)
 Pillow   # PIL-based image support for animations/exports
 imageio  # GIF export support for animations

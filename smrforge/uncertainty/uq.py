@@ -10,10 +10,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
-try:
-    import seaborn as sns
-except ImportError:
-    sns = None  # Optional dependency
+import seaborn as sns
 try:
     import plotly.graph_objects as go
 except ImportError:
@@ -28,6 +25,7 @@ try:
     from SALib.analyze import fast, morris, sobol
     from SALib.sample import latin, saltelli
     from SALib.sample import sobol as sobol_sample
+    from SALib.sample import morris as morris_sample
     _SALIB_AVAILABLE = True
 except ImportError:
     _SALIB_AVAILABLE = False
@@ -38,6 +36,7 @@ except ImportError:
     latin = None
     saltelli = None
     sobol_sample = None
+    morris_sample = None
 
 from scipy.stats import qmc  # Quasi-Monte Carlo
 from scipy.stats import lognorm, norm, truncnorm, uniform
@@ -793,7 +792,7 @@ class SensitivityAnalysis:
         }
 
         # Generate Morris samples
-        param_samples = morris.sample(problem, n_trajectories, num_levels=n_levels)
+        param_samples = morris_sample.sample(problem, n_trajectories, num_levels=n_levels)
 
         n_evals = param_samples.shape[0]
         self.console.print(f"Total evaluations: {n_evals}")

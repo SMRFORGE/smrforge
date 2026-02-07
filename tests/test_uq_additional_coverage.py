@@ -206,72 +206,54 @@ class TestSensitivityAnalysisEdgeCases:
     """Test edge cases for SensitivityAnalysis."""
     
     def test_sensitivity_sobol_analysis_single_parameter(self):
-        """Test Sobol analysis with single parameter."""
+        """Test Sobol analysis with single parameter (SALib required)."""
         params = [UncertainParameter("p1", "uniform", 0.0, (0.0, 1.0))]
         def model(params_dict):
             return {"output": params_dict["p1"] * 2.0}
-        
+
         analysis = SensitivityAnalysis(
             parameters=params,
             model=model,
             output_names=["output"]
         )
-        
-        # Skip if SALib not available
+        # May have limitations with single parameter
         try:
-            from SALib.sample import saltelli
-            # Should work but may have limitations with single parameter
-            try:
-                results = analysis.sobol_analysis(n_samples=10, calc_second_order=False)
-                assert isinstance(results, dict)
-            except (ValueError, RuntimeError):
-                # Acceptable if single parameter causes issues
-                pass
-        except ImportError:
-            pytest.skip("SALib not available")
+            results = analysis.sobol_analysis(n_samples=10, calc_second_order=False)
+            assert isinstance(results, dict)
+        except (ValueError, RuntimeError):
+            # Acceptable if single parameter causes issues in SALib
+            pass
     
     def test_sensitivity_sobol_analysis_model_returns_array(self):
-        """Test Sobol analysis with model returning array."""
+        """Test Sobol analysis with model returning array (SALib required)."""
         params = [
             UncertainParameter("p1", "uniform", 0.0, (0.0, 1.0)),
             UncertainParameter("p2", "uniform", 0.0, (0.0, 1.0)),
         ]
         def model(params_dict):
             return np.array([params_dict["p1"] + params_dict["p2"]])
-        
+
         analysis = SensitivityAnalysis(
             parameters=params,
             model=model,
             output_names=["output"]
         )
-        
-        # Skip if SALib not available
-        try:
-            from SALib.sample import saltelli
-            results = analysis.sobol_analysis(n_samples=10, calc_second_order=False)
-            assert isinstance(results, dict)
-        except ImportError:
-            pytest.skip("SALib not available")
+        results = analysis.sobol_analysis(n_samples=10, calc_second_order=False)
+        assert isinstance(results, dict)
     
     def test_sensitivity_morris_screening_single_parameter(self):
-        """Test Morris screening with single parameter."""
+        """Test Morris screening with single parameter (SALib required)."""
         params = [UncertainParameter("p1", "uniform", 0.0, (0.0, 1.0))]
         def model(params_dict):
             return {"output": params_dict["p1"] * 2.0}
-        
+
         analysis = SensitivityAnalysis(
             parameters=params,
             model=model,
             output_names=["output"]
         )
-        
-        # Skip if SALib not available
-        try:
-            from SALib.sample import morris
-            results = analysis.morris_screening(n_trajectories=5, n_levels=4)
-            assert isinstance(results, dict)
-        except ImportError:
-            pytest.skip("SALib not available")
+        results = analysis.morris_screening(n_trajectories=5, n_levels=4)
+        assert isinstance(results, dict)
 
 
 class TestUQResultsEdgeCases:

@@ -101,14 +101,10 @@ class TestVisualizationTools:
 
     def test_plot_scatter_matrix(self, sample_uq_results):
         """Test plot_scatter_matrix method."""
-        try:
-            fig = VisualizationTools.plot_scatter_matrix(sample_uq_results, max_params=2)
-            assert fig is not None
-            # Clean up
-            import matplotlib.pyplot as plt
-            plt.close(fig.fig)
-        except ImportError:
-            pytest.skip("seaborn not installed")
+        fig = VisualizationTools.plot_scatter_matrix(sample_uq_results, max_params=2)
+        assert fig is not None
+        import matplotlib.pyplot as plt
+        plt.close(fig.fig)
 
     def test_plot_scatter_matrix_invalid_results(self):
         """Test that invalid results raises ValueError."""
