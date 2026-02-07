@@ -1,0 +1,480 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.12.0rc3, pytest-9.0.2, pluggy-1.6.0
+cachedir: output\pytest_cache
+rootdir: C:\Users\cmwha\OneDrive\Documents\GitHub\smrforge
+configfile: pytest.ini
+plugins: anyio-4.12.1, dash-3.3.0, asyncio-1.3.0, cov-7.0.0, zarr-3.1.5
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 4726 items
+
+tests\test_adaptive_sampling.py ..............................           [  0%]
+tests\test_adjoint_weighting.py ...                                      [  0%]
+tests\test_anisotropic_scattering.py .........                           [  0%]
+tests\test_assembly.py .........................................         [  1%]
+tests\test_async_methods.py ...............                              [  2%]
+tests\test_backend_fallback_chain.py .....                               [  2%]
+tests\test_burnup_adaptive_tracking.py ........                          [  2%]
+tests\test_burnup_checkpointing.py .......s.....s                        [  2%]
+tests\test_burnup_init.py ...                                            [  2%]
+tests\test_burnup_solver.py ........                                     [  2%]
+tests\test_burnup_solver_comprehensive.py ...........................    [  3%]
+tests\test_burnup_visualization.py .....                                 [  3%]
+tests\test_cli.py ...................................................... [  4%]
+........................................................................ [  6%]
+......................                                                   [  6%]
+tests\test_constants.py .............................                    [  7%]
+tests\test_constraints.py ...................                            [  7%]
+tests\test_control_controllers.py ................                       [  8%]
+tests\test_control_integration.py ...............................        [  8%]
+tests\test_control_integration_extended.py ............                  [  8%]
+tests\test_control_rod_worth.py ...............                          [  9%]
+tests\test_control_rods.py ............................................. [ 10%]
+............                                                             [ 10%]
+tests\test_convenience.py .............................................. [ 11%]
+.....................                                                    [ 11%]
+tests\test_convenience_and_init_import_paths.py ..                       [ 11%]
+tests\test_convenience_init.py ...                                       [ 11%]
+tests\test_convenience_init_comprehensive.py ..............              [ 12%]
+tests\test_convenience_package.py .                                      [ 12%]
+tests\test_convenience_transients.py ............                        [ 12%]
+tests\test_convenience_utils.py ..........                               [ 12%]
+tests\test_convenience_utils_comprehensive.py .......................... [ 13%]
+........................................s..........                      [ 14%]
+tests\test_converters.py .........                                       [ 14%]
+tests\test_core.py ..                                                    [ 14%]
+tests\test_coverage_small_gaps.py ........                               [ 14%]
+tests\test_coverage_table_258_277.py ................................... [ 15%]
+............                                                             [ 15%]
+tests\test_data_downloader.py .......................................... [ 16%]
+...s.........s.                                                          [ 17%]
+tests\test_data_downloader_extended.py ................................. [ 17%]
+.......                                                                  [ 17%]
+tests\test_data_validation.py .......................................... [ 18%]
+........                                                                 [ 18%]
+tests\test_decay_chain_utils.py ..................................       [ 19%]
+tests\test_decay_heat_calculator_comprehensive.py ...................... [ 20%]
+.                                                                        [ 20%]
+tests\test_decay_heat_remaining_coverage.py ..................           [ 20%]
+tests\test_decay_parser.py ............................                  [ 21%]
+tests\test_doppler_broaden.py .............                              [ 21%]
+tests\test_economics_cost_modeling.py ................                   [ 21%]
+tests\test_economics_integration.py ...................                  [ 22%]
+tests\test_endf_compatibility_wrappers.py ...............                [ 22%]
+tests\test_endf_evaluation_parsing.py .............                      [ 22%]
+tests\test_endf_parser.py .....s                                         [ 22%]
+tests\test_endf_parser_complete_coverage.py ......s.s............        [ 23%]
+tests\test_endf_parser_edge_cases.py .............                       [ 23%]
+tests\test_endf_parser_polars_unavailable.py .......                     [ 23%]
+tests\test_endf_parser_remaining.py ...........................          [ 24%]
+tests\test_endf_reactor_core_integration.py s.s..s..                     [ 24%]
+tests\test_endf_setup_comprehensive.py .........................         [ 24%]
+tests\test_endf_validation.py .ss.............                           [ 25%]
+tests\test_endf_workflows_e2e.py ...................                     [ 25%]
+tests\test_energy_angle_parser.py ..........                             [ 25%]
+tests\test_error_messages.py .....................................       [ 26%]
+tests\test_extract_mf3_data.py ..................                        [ 27%]
+tests\test_extract_mf3_data_pattern3_flat.py .....                       [ 27%]
+tests\test_extract_mf3_data_pattern4.py ...........                      [ 27%]
+tests\test_extract_mf3_data_patterns.py .............                    [ 27%]
+tests\test_fast_reactor_smr.py ...........                               [ 27%]
+tests\test_fetch_and_cache.py .........                                  [ 28%]
+tests\test_fetch_and_cache_async_comprehensive.py ...........            [ 28%]
+tests\test_fetch_and_cache_complete_coverage.py ....................     [ 28%]
+tests\test_fetch_and_cache_temperature.py ......                         [ 28%]
+tests\test_fetch_and_cache_with_mock_files.py .........                  [ 29%]
+tests\test_fission_yield_parser.py .......                               [ 29%]
+tests\test_fuel_cycle_advanced_optimization.py ......................... [ 29%]
+                                                                         [ 29%]
+tests\test_fuel_cycle_init.py ..                                         [ 29%]
+tests\test_fuel_cycle_optimization.py ...............                    [ 30%]
+tests\test_fuel_management_integration.py ...........                    [ 30%]
+tests\test_fuel_performance.py ............                              [ 30%]
+tests\test_gamma_production_parser_comprehensive.py .................... [ 31%]
+...............                                                          [ 31%]
+tests\test_gamma_transport_solver_comprehensive.py ..................... [ 31%]
+........                                                                 [ 31%]
+tests\test_generate_multigroup.py ......                                 [ 32%]
+tests\test_generate_multigroup_complete_coverage.py .................... [ 32%]
+.                                                                        [ 32%]
+tests\test_generate_multigroup_edge_cases.py ...........                 [ 32%]
+tests\test_geometry.py ....................................              [ 33%]
+tests\test_geometry_advanced_import.py ................................. [ 34%]
+..................                                                       [ 34%]
+tests\test_geometry_advanced_import_extended.py ........................ [ 35%]
+..............                                                           [ 35%]
+tests\test_geometry_advanced_mesh.py ................                    [ 35%]
+tests\test_geometry_importers.py ................                        [ 36%]
+tests\test_geometry_validation.py ...................................... [ 36%]
+.......................                                                  [ 37%]
+tests\test_geometry_validation_extended.py ........ss.........s......... [ 38%]
+.......................                                                  [ 38%]
+tests\test_get_endf_url.py ................                              [ 38%]
+tests\test_gui_callbacks_analysis.py ..                                  [ 38%]
+tests\test_gui_callbacks_data_manager.py ..                              [ 38%]
+tests\test_gui_callbacks_feature_lab.py .                                [ 38%]
+tests\test_gui_callbacks_geometry_designer.py ..                         [ 38%]
+tests\test_gui_callbacks_navigation.py ..                                [ 39%]
+tests\test_gui_callbacks_projects.py ..                                  [ 39%]
+tests\test_gui_callbacks_reactor_builder.py ..                           [ 39%]
+tests\test_gui_callbacks_results.py ..                                   [ 39%]
+tests\test_gui_callbacks_theme.py ..                                     [ 39%]
+tests\test_gui_components.py .                                           [ 39%]
+tests\test_gui_web_app.py ..                                             [ 39%]
+tests\test_help.py ...............................................       [ 40%]
+tests\test_help_and_readers_branches.py ..                               [ 40%]
+tests\test_help_comprehensive.py ....................................... [ 41%]
+.........                                                                [ 41%]
+tests\test_hybrid_solver.py ..............                               [ 41%]
+tests\test_implicit_mc.py .............                                  [ 41%]
+tests\test_import_compat_helpers.py ......                               [ 42%]
+tests\test_init_modules.py ............................................. [ 42%]
+ss.................................................                      [ 44%]
+tests\test_init_modules_importerror_branches.py ...                      [ 44%]
+tests\test_integral_reactor_designs.py .............                     [ 44%]
+tests\test_integration.py .........................s.............s...... [ 45%]
+..                                                                       [ 45%]
+tests\test_io_readers.py .............                                   [ 45%]
+tests\test_k_eff_benchmarking.py .....                                   [ 45%]
+tests\test_k_eff_benchmarking_integration.py ...                         [ 45%]
+tests\test_logging.py ......................                             [ 46%]
+tests\test_logo.py .....                                                 [ 46%]
+tests\test_long_term_thermal.py ....                                     [ 46%]
+tests\test_lwr_burnup.py ............................................... [ 47%]
+..........................                                               [ 48%]
+tests\test_lwr_smr_geometry.py ...................                       [ 48%]
+tests\test_material_aging.py .....                                       [ 48%]
+tests\test_material_mapping.py ..................                        [ 48%]
+tests\test_material_mapping_comprehensive.py ........................... [ 49%]
+..................                                                       [ 49%]
+tests\test_materials_database.py ....................................... [ 50%]
+...                                                                      [ 50%]
+tests\test_mechanics_fuel_rod.py ..............                          [ 51%]
+tests\test_memory_mapped.py .................................            [ 51%]
+tests\test_memory_pool.py ...........................                    [ 52%]
+tests\test_mesh_3d_comprehensive.py .................................... [ 53%]
+..................                                                       [ 53%]
+tests\test_mesh_extraction_comprehensive.py ............................ [ 54%]
+...................                                                      [ 54%]
+tests\test_mesh_generation.py ......................                     [ 54%]
+tests\test_molten_salt_smr.py .....................                      [ 55%]
+tests\test_monte_carlo.py ................................               [ 56%]
+tests\test_monte_carlo_edge_cases.py .....                               [ 56%]
+tests\test_monte_carlo_optimized.py ...................................  [ 56%]
+tests\test_monte_carlo_validation.py ..............                      [ 57%]
+tests\test_multigroup_advanced.py ...................................... [ 57%]
+...................................................................      [ 59%]
+tests\test_neutronics.py .......................                         [ 59%]
+tests\test_neutronics_coverage_gaps.py .......                           [ 60%]
+tests\test_neutronics_parallel.py ........                               [ 60%]
+tests\test_neutronics_robust.py ......................                   [ 60%]
+tests\test_nuclide_inventory_tracker.py .............                    [ 60%]
+tests\test_optimization_design.py .................                      [ 61%]
+tests\test_optimization_utils.py ....................................... [ 62%]
+...............                                                          [ 62%]
+tests\test_package_init_import_fallbacks.py ..                           [ 62%]
+tests\test_parallel_batch.py ............................                [ 63%]
+tests\test_parallel_batch_extended.py .....................              [ 63%]
+tests\test_parameter_sweep.py .........s..............                   [ 64%]
+tests\test_parse_mf3_section.py ..............                           [ 64%]
+tests\test_photon_parser_comprehensive.py .............................. [ 64%]
+.....                                                                    [ 65%]
+tests\test_pivot_for_solver.py ..............                            [ 65%]
+tests\test_presets_htgr.py ........................                      [ 65%]
+tests\test_presets_init.py ..                                            [ 65%]
+tests\test_prompt_delayed_chi.py ...                                     [ 65%]
+tests\test_pydantic_layer.py ........................................... [ 66%]
+...                                                                      [ 66%]
+tests\test_reaction_data_interpolate.py ..................               [ 67%]
+tests\test_reaction_to_mt.py ..................                          [ 67%]
+tests\test_reactor_core.py ....................................          [ 68%]
+tests\test_reactor_core_additional_coverage.py ......................... [ 69%]
+........                                                                 [ 69%]
+tests\test_reactor_core_additional_edge_cases.py ....................... [ 69%]
+........................                                                 [ 70%]
+tests\test_reactor_core_additional_utility_coverage.py ........          [ 70%]
+tests\test_reactor_core_advanced_error_handling.py sss.........s         [ 70%]
+tests\test_reactor_core_async_edge_cases.py ..........                   [ 70%]
+tests\test_reactor_core_comprehensive.py ............................... [ 71%]
+..............                                                           [ 71%]
+tests\test_reactor_core_coverage_gaps.py .ss..........                   [ 72%]
+tests\test_reactor_core_critical.py .................................... [ 72%]
+                                                                         [ 72%]
+tests\test_reactor_core_critical_comprehensive.py ...................... [ 73%]
+..................                                                       [ 73%]
+tests\test_reactor_core_smr_features.py ..........                       [ 73%]
+tests\test_reactor_core_utility_functions.py ...................s....s.. [ 74%]
+..................                                                       [ 74%]
+tests\test_regulatory_traceability.py .................................. [ 75%]
+......................                                                   [ 76%]
+tests\test_regulatory_traceability_extended.py ......................... [ 76%]
+.....                                                                    [ 76%]
+tests\test_resonance_selfshield_comprehensive.py ....................... [ 77%]
+.............                                                            [ 77%]
+tests\test_resonance_selfshield_critical.py ......................       [ 77%]
+tests\test_resonance_selfshield_critical_comprehensive.py .............. [ 78%]
+........                                                                 [ 78%]
+tests\test_safety_transient_optimizations.py ...                         [ 78%]
+tests\test_safety_validation.py ...................                      [ 78%]
+tests\test_save_to_cache.py ........                                     [ 78%]
+tests\test_self_shielding_integration.py ............................... [ 79%]
+.....                                                                    [ 79%]
+tests\test_self_shielding_integration_extended.py ......                 [ 79%]
+tests\test_simple_endf_parse.py ......                                   [ 80%]
+tests\test_smr_compact_core.py ............                              [ 80%]
+tests\test_smr_fuel_management.py ........                               [ 80%]
+tests\test_smr_mesh_optimization.py .............                        [ 80%]
+tests\test_smr_scram_system.py .............                             [ 80%]
+tests\test_standards_parser.py ...........s............................  [ 81%]
+tests\test_standards_parser_extended.py ................................ [ 82%]
+                                                                         [ 82%]
+tests\test_temperature_interpolation.py .................                [ 82%]
+tests\test_templates.py .......................                          [ 83%]
+tests\test_thermal.py .............................................      [ 84%]
+tests\test_thermal_lumped.py ...........                                 [ 84%]
+tests\test_thermal_multiphysics_coupling.py .................            [ 84%]
+tests\test_thermal_scattering_parser.py ...........                      [ 85%]
+tests\test_thermal_scattering_parser_comprehensive.py .................. [ 85%]
+....................................                                     [ 86%]
+tests\test_thermal_upscattering.py .....                                 [ 86%]
+tests\test_thermal_validation.py .........................               [ 86%]
+tests\test_transient_visualization.py s.......s.                         [ 87%]
+tests\test_transport.py ..............................ss................ [ 88%]
+.....                                                                    [ 88%]
+tests\test_transport_class.py ...................                        [ 88%]
+tests\test_two_phase_advanced.py ..........................              [ 89%]
+tests\test_two_phase_flow.py .......                                     [ 89%]
+tests\test_two_phase_integration.py .                                    [ 89%]
+tests\test_uncertainty.py ..                                             [ 89%]
+tests\test_uncertainty_comprehensive.py ................................ [ 90%]
+.........                                                                [ 90%]
+tests\test_uncertainty_visualization.py .....s.........                  [ 90%]
+tests\test_units.py ssssssssssssssssssssssssssss...                      [ 91%]
+tests\test_uq_additional_coverage.py ...............sss....              [ 91%]
+tests\test_uq_comprehensive.py ......................................... [ 92%]
+............................                                             [ 93%]
+tests\test_utils_error_messages.py ..................................... [ 93%]
+............................                                             [ 94%]
+tests\test_utils_init.py .....                                           [ 94%]
+tests\test_utils_logging.py .................                            [ 95%]
+tests\test_utils_logging_extended.py ...........................         [ 95%]
+tests\test_utils_logo.py ....                                            [ 95%]
+tests\test_utils_profiling.py ..                                         [ 95%]
+tests\test_utils_units.py .s..s.s.....sss.sss..ss.                       [ 96%]
+tests\test_utils_units_extended.py ss.sss.s.sssssss.                     [ 96%]
+tests\test_validation_comprehensive.py .s......                          [ 96%]
+tests\test_validation_context.py ...                                     [ 96%]
+tests\test_validation_init.py ..                                         [ 96%]
+tests\test_version.py ...                                                [ 96%]
+tests\test_visualization_advanced_blockers.py .............              [ 97%]
+tests\test_visualization_analytics_helpers.py ......                     [ 97%]
+tests\test_visualization_animations_blockers.py ........                 [ 97%]
+tests\test_visualization_comparison.py .                                 [ 97%]
+tests\test_visualization_economics_plots_blockers.py .....               [ 97%]
+tests\test_visualization_geometry.py ...............                     [ 97%]
+tests\test_visualization_geometry_verification_blockers.py ....          [ 98%]
+tests\test_visualization_mesh_3d_comprehensive.py ...................... [ 98%]
+.........................                                                [ 99%]
+tests\test_visualization_mesh_tally_blockers.py ................         [ 99%]
+tests\test_visualization_plot_api.py .....                               [ 99%]
+tests\test_visualization_slice_plots.py ..                               [ 99%]
+tests\test_visualization_tally_data_blockers.py .......                  [ 99%]
+tests\test_visualization_validation_plots_blockers.py .....              [ 99%]
+tests\test_visualization_voxel_plots.py ..........                       [ 99%]
+tests\test_visualization_voxel_plots_plotly_blockers.py .                [ 99%]
+tests\test_viz_common.py .
+ERROR: Coverage failure: total of 89.6 is less than fail-under=90.0
+                                                                         [100%]
+
+=============================== tests coverage ================================
+_____________ coverage: platform win32, python 3.12.0-candidate-3 _____________
+
+Name                                             Stmts   Miss  Cover   Missing
+------------------------------------------------------------------------------
+smrforge\__init__.py                               143      0 100.0%
+smrforge\__version__.py                              4      0 100.0%
+smrforge\_import_compat.py                          38      0 100.0%
+smrforge\burnup\__init__.py                         23      0 100.0%
+smrforge\burnup\solver.py                          573    181  68.4%   67-68, 341-343, 382, 386, 443, 467-489, 492-493, 556, 566-569, 657, 665-691, 804, 814-915, 933-978, 992-1006, 1030-1034, 1043, 1055-1061, 1071, 1131, 1148-1151, 1177, 1184, 1191-1195, 1205-1210, 1228, 1246-1249, 1264, 1277, 1290, 1308-1309, 1312, 1355-1383
+smrforge\burnup\visualization.py                   160      0 100.0%
+smrforge\control\__init__.py                         2      0 100.0%
+smrforge\control\controllers.py                    262    109  58.4%   20-22, 76-79, 372, 449-462, 487-533, 560-602, 622-664, 680-708, 736-772, 789-792, 796-797, 801, 805
+smrforge\convenience_utils.py                      165     11  93.3%   29-30, 38-39, 338, 584-586, 615, 662, 723, 746
+smrforge\core\__init__.py                           80      0 100.0%
+smrforge\core\constants.py                          37      0 100.0%
+smrforge\core\control_rod_worth.py                  96      9  90.6%   48, 150, 181, 187, 203, 248-250, 273
+smrforge\core\material_mapping.py                   61      0 100.0%
+smrforge\core\materials_database.py                262      0 100.0%
+smrforge\core\reactor_core.py                     1490    228  84.7%   43, 50, 251-255, 257, 290, 311, 316-318, 329-332, 430, 602-605, 686-687, 953-956, 989-992, 1002-1003, 1014-1017, 1036-1038, 1041, 1155, 1165, 1175, 1184, 1187-1188, 1193, 1207-1208, 1211-1212, 1236-1243, 1247-1250, 1257-1258, 1265, 1393-1403, 1415-1416, 1460-1510, 1616-1617, 1729, 1738, 1780, 1797-1800, 1834-1835, 1847-1848, 1887, 1897-1899, 1955, 2032, 2109, 2173, 2190, 2195, 2226-2227, 2254, 2264, 2328, 2333, 2352, 2360-2379, 2382, 2390, 2427, 2445-2447, 2520-2521, 2572-2591, 2946-2991, 3216-3219, 3235-3238, 3263-3264, 3267, 3282-3286, 3431-3438, 3480-3499, 3544, 3571-3576, 3607-3609, 3829-3831, 3916-3918, 4092, 4169, 4198-4201
+smrforge\core\resonance_selfshield.py              163     15  90.8%   252-258, 375-381, 402-412
+smrforge\decay_heat\__init__.py                      2      0 100.0%
+smrforge\decay_heat\calculator.py                  155      0 100.0%
+smrforge\economics\__init__.py                       2      0 100.0%
+smrforge\economics\cost_modeling.py                148      0 100.0%
+smrforge\fuel\__init__.py                            2      0 100.0%
+smrforge\fuel\performance.py                        58      0 100.0%
+smrforge\fuel_cycle\__init__.py                     14      0 100.0%
+smrforge\fuel_cycle\advanced_optimization.py       172      0 100.0%
+smrforge\fuel_cycle\long_term.py                    80     13  83.8%   153-158, 175, 219-235, 288
+smrforge\fuel_cycle\material_aging.py              106     21  80.2%   69, 120, 145, 164, 184, 202, 207, 222-227, 280-284, 297-300, 322, 334
+smrforge\fuel_cycle\optimization.py                173      0 100.0%
+smrforge\gamma_transport\__init__.py                 2      0 100.0%
+smrforge\gamma_transport\solver.py                 207     13  93.7%   118-119, 130-133, 186-187, 206-207, 321-322, 370
+smrforge\geometry\__init__.py                      139      0 100.0%
+smrforge\geometry\advanced_mesh.py                 230    108  53.0%   23-26, 31, 40-42, 190-196, 278-279, 314, 340-341, 353-356, 390-405, 410-418, 426-458, 466-513, 539-554, 564-580
+smrforge\geometry\assembly.py                      211      0 100.0%
+smrforge\geometry\control_rods.py                  219      0 100.0%
+smrforge\geometry\core_geometry.py                 305     23  92.5%   551, 604-616, 625-646
+smrforge\geometry\fast_reactor_smr.py              128      8  93.8%   61, 109-110, 161, 167, 201, 236, 367
+smrforge\geometry\importers.py                     186     23  87.6%   214-215, 230-232, 239-242, 281-282, 368, 386-387, 397-398, 413-417, 426, 465, 527-529
+smrforge\geometry\lwr_smr.py                       290     15  94.8%   129, 185, 334-336, 366, 597-606, 620
+smrforge\geometry\mesh_3d.py                       234      0 100.0%
+smrforge\geometry\mesh_extraction.py               119      0 100.0%
+smrforge\geometry\mesh_generation.py               121      0 100.0%
+smrforge\geometry\molten_salt_smr.py               173      9  94.8%   117-120, 170-171, 214, 284, 328, 391
+smrforge\geometry\smr_compact_core.py               80      0 100.0%
+smrforge\geometry\smr_fuel_management.py            96     15  84.4%   121-124, 152-161, 210, 215-223
+smrforge\geometry\smr_mesh_optimization.py         169      0 100.0%
+smrforge\geometry\smr_scram_system.py              125     23  81.6%   164-179, 183-186, 245-247, 302, 312-315, 341, 355
+smrforge\geometry\two_phase_flow.py                 92      9  90.2%   69, 71, 77, 94, 96, 102, 133, 135, 206
+smrforge\help.py                                   210      1  99.5%   10
+smrforge\io\__init__.py                              3      0 100.0%
+smrforge\io\converters.py                           44      0 100.0%
+smrforge\io\readers.py                              64      0 100.0%
+smrforge\materials\__init__.py                       1      0 100.0%
+smrforge\mechanics\__init__.py                       2      0 100.0%
+smrforge\mechanics\fuel_rod.py                     288    123  57.3%   170, 212, 359-360, 366-367, 407, 635-645, 653-674, 696-698, 703-704, 708, 711, 746-765, 784-837, 866-889, 917-926, 952-953, 974-1070
+smrforge\neutronics\__init__.py                     66     16  75.8%   36-42, 63-69, 92-98, 112-118
+smrforge\neutronics\monte_carlo.py                 309      7  97.7%   300, 343-344, 347, 392, 394-395
+smrforge\neutronics\solver.py                      450     72  84.0%   26, 31, 36-38, 46, 55-57, 81-82, 214-215, 364-366, 380-381, 388-389, 456-469, 477-481, 492-496, 500-504, 534-535, 539, 561, 563, 648, 650-652, 880-897, 947, 979-982, 1013, 1036-1038, 1103, 1194-1207, 1214, 1222, 1230, 1238
+smrforge\neutronics\transport.py                   417     72  82.7%   114, 121, 145, 152, 187, 193-195, 229, 290, 335, 341-343, 359-365, 425, 636, 659, 753-761, 791-879, 1030, 1034-1035
+smrforge\optimization\__init__.py                    2      0 100.0%
+smrforge\optimization\design.py                    147      0 100.0%
+smrforge\presets\__init__.py                        10      0 100.0%
+smrforge\presets\htgr.py                           142      0 100.0%
+smrforge\presets\smr_lwr.py                         59     18  69.5%   42, 45-48, 62, 142-148, 151, 186-192, 195, 230-236, 239, 274-280, 283
+smrforge\safety\__init__.py                         10      0 100.0%
+smrforge\thermal\__init__.py                        34      0 100.0%
+smrforge\thermal\hydraulics.py                     304      0 100.0%
+smrforge\thermal\lumped.py                          95      8  91.6%   186, 192, 201, 261, 263, 346-351
+smrforge\thermal\multiphysics_coupling.py          169     23  86.4%   109, 136-141, 152, 173-178, 186-191, 229, 321, 354, 357, 360
+smrforge\thermal\two_phase_advanced.py             371      0 100.0%
+smrforge\thermal\two_phase_integration.py            9      0 100.0%
+smrforge\uncertainty\__init__.py                     9      0 100.0%
+smrforge\uncertainty\visualization.py              168    112  33.3%   20-22, 28-30, 38, 40, 84-101, 116, 145-158, 173-209, 224-265, 278-298
+smrforge\utils\__init__.py                          23      0 100.0%
+smrforge\utils\error_messages.py                    57      0 100.0%
+smrforge\utils\logging.py                           48      0 100.0%
+smrforge\utils\logo.py                              14      0 100.0%
+smrforge\utils\memory_mapped.py                     59      0 100.0%
+smrforge\utils\memory_pool.py                       58      0 100.0%
+smrforge\utils\optimization_utils.py                48      0 100.0%
+smrforge\utils\profiling.py                         27      0 100.0%
+smrforge\utils\units.py                             95      3  96.8%   65, 156, 158
+smrforge\validation\__init__.py                     11      0 100.0%
+smrforge\validation\constraints.py                 117     18  84.6%   121-128, 133-142, 226, 240-242, 255-263
+smrforge\validation\data_validation.py             336      0 100.0%
+smrforge\validation\integration.py                 141      0 100.0%
+smrforge\validation\models.py                        2      0 100.0%
+smrforge\validation\pydantic_layer.py              321     16  95.0%   209-210, 223, 243, 317, 489, 496, 508-509, 526, 529, 546, 549, 553, 561, 699
+smrforge\validation\regulatory_traceability.py     142      0 100.0%
+smrforge\validation\standards_parser.py            216     11  94.9%   502-504, 510-512, 565, 567-568, 570-571
+smrforge\validation\validators.py                    2      0 100.0%
+smrforge\workflows\__init__.py                       2      0 100.0%
+smrforge\workflows\parameter_sweep.py              159     11  93.1%   187, 219, 253, 259, 263-265, 278, 303, 325-326
+smrforge\workflows\templates.py                     90      0 100.0%
+------------------------------------------------------------------------------
+TOTAL                                            12948   1344  89.6%
+FAIL Required test coverage of 90.0% not reached. Total coverage: 89.62%
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_burnup_checkpointing.py:264: h5py not available
+SKIPPED [1] tests\test_burnup_checkpointing.py:436: ELEMENT_SYMBOLS_REVERSE not available
+SKIPPED [1] tests\test_convenience_utils_comprehensive.py:669: PebbleBedCore extraction testing requires more setup
+SKIPPED [1] tests\test_data_downloader.py:596: tqdm not available
+SKIPPED [1] tests\test_data_downloader.py:900: tqdm not available
+SKIPPED [1] tests\test_endf_parser.py:125: ReactionData constructor interface unclear
+SKIPPED [1] tests\test_endf_parser_complete_coverage.py:177: Polars is available, cannot test unavailable path
+SKIPPED [1] tests\test_endf_parser_complete_coverage.py:222: Polars is available, cannot test unavailable path
+SKIPPED [1] tests\test_endf_reactor_core_integration.py:96: ENDF files not available for full integration test
+SKIPPED [1] tests\test_endf_reactor_core_integration.py:129: ENDF parser backend not available
+SKIPPED [1] tests\test_endf_reactor_core_integration.py:208: ENDF files not available for caching test
+SKIPPED [1] tests\test_endf_validation.py:57: H2O TSL file not found
+SKIPPED [1] tests\test_endf_validation.py:79: Graphite TSL file not found
+SKIPPED [1] tests\test_geometry_validation_extended.py:269: Block has no fuel channels
+SKIPPED [1] tests\test_geometry_validation_extended.py:291: Block has no fuel channels
+SKIPPED [1] tests\test_geometry_validation_extended.py:528: Block has no fuel channels
+SKIPPED [1] tests\test_init_modules.py:487: Complex reloading test - ImportError handling already covered in specific tests
+SKIPPED [1] tests\test_init_modules.py:493: Complex reloading test - ImportError handling already covered in specific tests
+SKIPPED [1] tests\test_integration.py:309: ValidatedSolver requires specific geometry interface
+SKIPPED [1] tests\test_integration.py:569: solve_with_validation requires full geometry interface
+SKIPPED [1] tests\test_parameter_sweep.py:178: Parquet support not available (pyarrow/fastparquet)
+SKIPPED [1] tests\test_reactor_core_advanced_error_handling.py:57: Requires valid ENDF file setup - covered by integration tests
+SKIPPED [1] tests\test_reactor_core_advanced_error_handling.py:86: Requires valid ENDF file setup - covered by integration tests
+SKIPPED [1] tests\test_reactor_core_advanced_error_handling.py:114: Requires valid ENDF file setup - covered by integration tests
+SKIPPED [1] tests\test_reactor_core_advanced_error_handling.py:318: Requires valid ENDF file setup - covered by integration tests
+SKIPPED [1] tests\test_reactor_core_coverage_gaps.py:47: Complex mocking required - backend paths tested in integration tests
+SKIPPED [1] tests\test_reactor_core_coverage_gaps.py:54: Complex mocking required - error paths tested in integration tests
+SKIPPED [1] tests\test_reactor_core_utility_functions.py:346: ImportError testing is complex - exception handling already covered by parser_exception test
+SKIPPED [1] tests\test_reactor_core_utility_functions.py:416: ImportError testing is complex - exception handling already covered by parser_exception test
+SKIPPED [1] tests\test_standards_parser.py:336: yaml is available, cannot test ImportError path
+SKIPPED [1] tests\test_transient_visualization.py:28: Requires plotly installation and interactive display
+SKIPPED [1] tests\test_transient_visualization.py:178: Requires full transient solver - integration test
+SKIPPED [1] tests\test_transport.py:451: Region is not hashable, cannot use as dict key in tests
+SKIPPED [1] tests\test_transport.py:479: Region is not hashable, cannot use as dict key in tests
+SKIPPED [1] tests\test_uncertainty_visualization.py:111: seaborn not installed
+SKIPPED [1] tests\test_units.py:21: Pint not installed
+SKIPPED [1] tests\test_units.py:29: Pint not installed
+SKIPPED [1] tests\test_units.py:43: Pint not installed
+SKIPPED [1] tests\test_units.py:58: Pint not installed
+SKIPPED [1] tests\test_units.py:69: Pint not installed
+SKIPPED [1] tests\test_units.py:76: Pint not installed
+SKIPPED [1] tests\test_units.py:87: Pint not installed
+SKIPPED [1] tests\test_units.py:97: Pint not installed
+SKIPPED [1] tests\test_units.py:107: Pint not installed
+SKIPPED [1] tests\test_units.py:117: Pint not installed
+SKIPPED [1] tests\test_units.py:129: Pint not installed
+SKIPPED [1] tests\test_units.py:139: Pint not installed
+SKIPPED [1] tests\test_units.py:149: Pint not installed
+SKIPPED [1] tests\test_units.py:156: Pint not installed
+SKIPPED [1] tests\test_units.py:166: Pint not installed
+SKIPPED [1] tests\test_units.py:181: Pint not installed
+SKIPPED [1] tests\test_units.py:188: Pint not installed
+SKIPPED [1] tests\test_units.py:196: Pint not installed
+SKIPPED [1] tests\test_units.py:207: Pint not installed
+SKIPPED [1] tests\test_units.py:218: Pint not installed
+SKIPPED [1] tests\test_units.py:228: Pint not installed
+SKIPPED [1] tests\test_units.py:238: Pint not installed
+SKIPPED [1] tests\test_units.py:248: Pint not installed
+SKIPPED [1] tests\test_units.py:258: Pint not installed
+SKIPPED [1] tests\test_units.py:272: Pint not installed
+SKIPPED [1] tests\test_units.py:284: Pint not installed
+SKIPPED [1] tests\test_units.py:294: Pint not installed
+SKIPPED [1] tests\test_units.py:308: Pint not installed
+SKIPPED [1] tests\test_uq_additional_coverage.py:231: SALib not available
+SKIPPED [1] tests\test_uq_additional_coverage.py:254: SALib not available
+SKIPPED [1] tests\test_uq_additional_coverage.py:274: SALib not available
+SKIPPED [1] tests\test_utils_units.py:28: Pint not available
+SKIPPED [1] tests\test_utils_units.py:62: Pint not available
+SKIPPED [1] tests\test_utils_units.py:80: Pint not available
+SKIPPED [1] tests\test_utils_units.py:254: Pint not available
+SKIPPED [1] tests\test_utils_units.py:267: Pint not available
+SKIPPED [1] tests\test_utils_units.py:280: Pint not available
+SKIPPED [1] tests\test_utils_units.py:302: Pint not available
+SKIPPED [1] tests\test_utils_units.py:315: Pint not available
+SKIPPED [1] tests\test_utils_units.py:328: Pint not available
+SKIPPED [1] tests\test_utils_units.py:366: Pint not available
+SKIPPED [1] tests\test_utils_units.py:377: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:25: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:38: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:64: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:76: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:89: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:112: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:138: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:148: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:164: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:175: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:189: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:204: Pint not available
+SKIPPED [1] tests\test_utils_units_extended.py:227: Pint not available
+SKIPPED [1] tests\test_validation_comprehensive.py:83: H2O TSL material not found
+========= 4635 passed, 91 skipped, 441 warnings in 540.23s (0:09:00) ==========

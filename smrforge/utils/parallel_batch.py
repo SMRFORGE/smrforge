@@ -7,6 +7,7 @@ improving efficiency for parameter sweeps and design studies.
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
+import os
 import sys
 from typing import Callable, List, Optional, Protocol, TypeVar, Union
 
@@ -43,6 +44,19 @@ class ReactorLike(Protocol):
         ...
 
 
+def _resolve_max_workers(max_workers: Optional[int]) -> int:
+    """Resolve max_workers: env SMRFORGE_MAX_BATCH_WORKERS, then cpu_count, then cap."""
+    if max_workers is not None:
+        return max(1, int(max_workers))
+    env_max = os.environ.get("SMRFORGE_MAX_BATCH_WORKERS")
+    if env_max is not None:
+        try:
+            return max(1, int(env_max))
+        except ValueError:
+            pass
+    return cpu_count()
+
+
 def batch_process(
     items: List[T],
     func: Callable[[T], R],
@@ -50,7 +64,10 @@ def batch_process(
     max_workers: Optional[int] = None,
     use_threads: bool = False,
     show_progress: bool = False,
-) -> List[R]:
+    timeout: Optional[float] = 60.0,
+    per_future_timeout: Optional[float] = 60.0,
+    raise_on_failure: bool = False,
+) -> List[Union[R, Exception]]:
     """
     Process items in parallel with automatic parallelization.
     
@@ -62,16 +79,20 @@ def batch_process(
         items: List of items to process
         func: Function to apply to each item (must be picklable if using processes)
         parallel: Enable parallel processing (default: True)
-        max_workers: Maximum number of workers (default: CPU count)
+        max_workers: Maximum number of workers (default: CPU count, or SMRFORGE_MAX_BATCH_WORKERS)
         use_threads: Use ThreadPoolExecutor instead of ProcessPoolExecutor (for I/O-bound)
         show_progress: Show progress bar if Rich is available
+        timeout: Total timeout in seconds for the batch (None = no limit). Default 60.
+        per_future_timeout: Timeout in seconds per future.result() (None = wait indefinitely). Default 60.
+        raise_on_failure: If True, raise the first exception encountered; otherwise return it in the list.
     
     Returns:
-        List of results in same order as items
+        List of results in same order as items (failed items may be Exception instances unless raise_on_failure).
     
     Raises:
         RuntimeError: If parallel processing fails (errors are logged, not raised by default).
         PicklingError: If func or items are not picklable when using ProcessPoolExecutor.
+        Exception: If raise_on_failure is True and any item raises.
     
     Examples:
         >>> from smrforge.utils.parallel_batch import batch_process
@@ -97,10 +118,8 @@ def batch_process(
         logger.debug(f"Processing {len(items)} items serially")
         return [func(item) for item in items]
     
-    # Determine number of workers
-    if max_workers is None:
-        max_workers = cpu_count()
-    
+    # Determine number of workers (env SMRFORGE_MAX_BATCH_WORKERS can cap)
+    max_workers = _resolve_max_workers(max_workers)
     # Limit workers to number of items and ensure at least 1
     max_workers = max(1, min(max_workers, len(items)))
     
@@ -152,16 +171,17 @@ def batch_process(
                     completed_count = 0
                     import time
                     start_time = time.time()
-                    timeout = 60.0  # 60 second timeout per batch
+                    batch_timeout = timeout
+                    future_timeout = per_future_timeout
                     
-                    for future in as_completed(futures, timeout=timeout):
-                        if time.time() - start_time > timeout:
+                    for future in as_completed(futures, timeout=batch_timeout):
+                        if batch_timeout is not None and (time.time() - start_time) > batch_timeout:
                             logger.warning("Timeout waiting for futures, cancelling remaining")
                             break
                         idx = futures[future]  # Get index directly
                         item = items[idx]  # Get item for logging
                         try:
-                            result = future.result(timeout=1.0)  # Quick timeout per future
+                            result = future.result(timeout=future_timeout)
                             results[idx] = result
                             progress.update(task, advance=1)
                             completed_count += 1
@@ -169,6 +189,11 @@ def batch_process(
                             logger.error(f"Error processing item {item}: {e}")
                             results[idx] = e  # Store error for now
                             completed_count += 1
+                            if raise_on_failure:
+                                for f in futures:
+                                    if not f.done():
+                                        f.cancel()
+                                raise
                     
                     # Cancel any remaining futures
                     for future in futures:
@@ -198,23 +223,29 @@ def batch_process(
                 completed_count = 0
                 import time
                 start_time = time.time()
-                timeout = 60.0  # 60 second timeout per batch
+                batch_timeout = timeout
+                future_timeout = per_future_timeout
                 
                 try:
-                    for future in as_completed(futures, timeout=timeout):
-                        if time.time() - start_time > timeout:
+                    for future in as_completed(futures, timeout=batch_timeout):
+                        if batch_timeout is not None and (time.time() - start_time) > batch_timeout:
                             logger.warning("Timeout waiting for futures, cancelling remaining")
                             break
                         idx = futures[future]  # Get index directly
                         item = items[idx]  # Get item for logging
                         try:
-                            result = future.result(timeout=1.0)  # Quick timeout per future
+                            result = future.result(timeout=future_timeout)
                             results[idx] = result
                             completed_count += 1
                         except Exception as e:
                             logger.error(f"Error processing item {item}: {e}")
                             results[idx] = e  # Store error for now
                             completed_count += 1
+                            if raise_on_failure:
+                                for f in futures:
+                                    if not f.done():
+                                        f.cancel()
+                                raise
                 except Exception as e:
                     logger.warning(f"Error in as_completed: {e}, cancelling remaining futures")
                 
@@ -232,8 +263,8 @@ def batch_process(
     errors = [r for r in results if isinstance(r, Exception)]
     if errors:
         logger.warning(f"{len(errors)} errors occurred during batch processing")
-        # Raise first error or return results with errors
-        # For now, return results and let user handle errors
+        if raise_on_failure:
+            raise errors[0]
     
     return results
 
@@ -243,7 +274,10 @@ def batch_solve_keff(
     parallel: bool = True,
     max_workers: Optional[int] = None,
     show_progress: bool = True,
-) -> List[float]:
+    timeout: Optional[float] = 60.0,
+    per_future_timeout: Optional[float] = 60.0,
+    raise_on_failure: bool = False,
+) -> List[Union[float, Exception]]:
     """
     Batch solve k-eff for multiple reactors in parallel.
     
@@ -252,11 +286,14 @@ def batch_solve_keff(
     Args:
         reactors: List of reactor objects (must have solve_keff() method)
         parallel: Enable parallel processing (default: True)
-        max_workers: Maximum number of workers (default: CPU count)
+        max_workers: Maximum number of workers (default: CPU count or SMRFORGE_MAX_BATCH_WORKERS)
         show_progress: Show progress bar (default: True)
+        timeout: Total batch timeout in seconds (None = no limit)
+        per_future_timeout: Timeout per solve_keff() call in seconds (None = wait indefinitely)
+        raise_on_failure: If True, raise on first failure; otherwise return exceptions in list
     
     Returns:
-        List of k-eff values in same order as reactors
+        List of k-eff values in same order as reactors (or Exception for failures)
     
     Raises:
         AttributeError: If reactor objects don't have solve_keff() method.
@@ -286,4 +323,7 @@ def batch_solve_keff(
         parallel=parallel,
         max_workers=max_workers,
         show_progress=show_progress,
+        timeout=timeout,
+        per_future_timeout=per_future_timeout,
+        raise_on_failure=raise_on_failure,
     )

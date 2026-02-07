@@ -1,0 +1,6 @@
+{
+  "ci": true,
+  "docs": true,
+  "performance": false,
+  "security": true
+}
