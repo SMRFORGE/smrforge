@@ -35,18 +35,27 @@ class TestSetupLoggingEdgeCases:
         logger = logging.getLogger("smrforge")
         assert logger.level == logging.DEBUG
     
-    def test_setup_logging_custom_date_format(self):
+    def test_setup_logging_custom_date_format(self, tmp_path):
         """Test setup_logging with custom date format."""
         custom_date_format = "%Y-%m-%d"
+        log_file = tmp_path / "test.log"
         logging_module.setup_logging(
             level="INFO",
-            date_format=custom_date_format
+            log_file=log_file,
+            date_format=custom_date_format,
         )
         logger = logging.getLogger("smrforge")
-        # Verify formatter was created with custom date format
-        assert len(logger.handlers) > 0
-        handler = logger.handlers[0]
-        assert handler.formatter.datefmt == custom_date_format
+        # Verify formatter was created with custom date format (file handler has formatter)
+        assert len(logger.handlers) >= 1
+        for handler in logger.handlers:
+            if hasattr(handler, "formatter") and handler.formatter is not None:
+                assert handler.formatter.datefmt == custom_date_format
+                break
+        else:
+            # RichHandler-only (no file): date_format passed via log_time_format
+            assert any(
+                h.__class__.__name__ == "RichHandler" for h in logger.handlers
+            )
     
     def test_setup_logging_file_creates_parent_dir(self, tmp_path):
         """Test that setup_logging creates parent directory for log file."""

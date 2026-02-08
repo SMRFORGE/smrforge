@@ -123,7 +123,7 @@ These modules are fully implemented, tested, and ready for production use:
 
 ### Utilities
 - ✅ **Utilities Module** (`smrforge.utils`)
-  - Logging framework and configuration
+  - Logging framework with Rich colorized console output (level colors, rich tracebacks)
   - Logo access functions
   - Structured logging throughout package
 
@@ -320,4 +320,4 @@ If you're using features that are marked as experimental or not implemented:
 
 ---
 
-*Last Updated: January 25, 2026*
+*Last Updated: February 2026*

@@ -1,6 +1,6 @@
 # Logging in SMRForge
 
-SMRForge includes a comprehensive logging framework for debugging, monitoring, and tracking solver operations.
+SMRForge includes a comprehensive logging framework for debugging, monitoring, and tracking solver operations. Console output uses **Rich** for colorized, readable log formatting when available.
 
 ## Quick Start
 
@@ -48,12 +48,12 @@ SMRForge automatically logs important events in core modules:
 - Convergence information (final k_eff, iterations, time)
 - Errors and warnings
 
-Example output:
+Example output (console uses Rich colorization when available):
 ```
-2024-12-21 10:30:45 - smrforge.neutronics - INFO - Solving 2-group diffusion equation
-2024-12-21 10:30:45 - smrforge.neutronics - DEBUG - Iteration   10: k_eff = 1.00123456, error = 1.23e-04
-2024-12-21 10:30:45 - smrforge.neutronics - INFO - Converged in 25 iterations
-2024-12-21 10:30:45 - smrforge.neutronics - INFO - Solver converged: k_eff = 1.00123456, time = 2.34 seconds
+2024-12-21 10:30:45 INFO     Solving 2-group diffusion equation     smrforge.neutronics
+2024-12-21 10:30:45 DEBUG    Iteration   10: k_eff = 1.00123456, error = 1.23e-04
+2024-12-21 10:30:45 INFO     Converged in 25 iterations
+2024-12-21 10:30:45 INFO     Solver converged: k_eff = 1.00123456, time = 2.34 seconds
 ```
 
 ### Nuclear Data Cache
@@ -68,6 +68,18 @@ Example output:
 2024-12-21 10:30:45 - smrforge.core - INFO - Fetching nuclear data: U235/fission at 1200.0K (backend: sandy)
 2024-12-21 10:30:45 - smrforge.core - DEBUG - Cache write: endfb8.0/U235/fission/1200.0K
 ```
+
+## Rich Colorized Output
+
+When Rich is installed (included in SMRForge requirements), console logging uses `RichHandler`:
+
+- **Color-coded levels**: DEBUG (gray), INFO (cyan), WARNING (yellow), ERROR (red), CRITICAL (bold red)
+- **Rich tracebacks**: Exceptions are formatted with syntax highlighting
+- **Column layout**: Time, level, message, and source path in readable columns
+- **File logging**: Remains plain text (no ANSI codes in log files)
+- **NO_COLOR**: Set `NO_COLOR=1` to disable colors
+
+Falls back to standard `StreamHandler` if Rich is unavailable.
 
 ## Log Levels
 
@@ -107,12 +119,14 @@ logging.getLogger("smrforge").setLevel(logging.INFO)
 
 ## Custom Format
 
-You can customize the log format:
+You can customize the log format for **file output** (and for console when Rich is unavailable):
 
 ```python
 custom_format = "%(levelname)s [%(name)s] %(message)s"
 setup_logging(level="INFO", format_string=custom_format)
 ```
+
+When Rich is used for console output, it uses its own column layout; `format_string` applies to file handlers.
 
 ## Integration with Solver Options
 

@@ -2,12 +2,20 @@
 Logging configuration and utilities for SMRForge.
 
 This module provides structured logging throughout the SMRForge package.
+Console output uses Rich for colorized, readable log formatting.
 """
 
 import logging
 import sys
 from pathlib import Path
 from typing import Optional
+
+try:
+    from rich.logging import RichHandler
+
+    _RICH_LOGGING_AVAILABLE = True
+except ImportError:
+    _RICH_LOGGING_AVAILABLE = False
 
 # Create the main logger for SMRForge
 _logger: Optional[logging.Logger] = None
@@ -62,11 +70,11 @@ def setup_logging(
     # Convert level string to logging constant
     log_level = getattr(logging, level.upper(), logging.INFO)
 
-    # Default format
+    # Default format (used for file handler)
     if format_string is None:
         format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-    # Create formatter
+    # Create formatter for file handler (plain text, no ANSI codes)
     formatter = logging.Formatter(fmt=format_string, datefmt=date_format)
 
     # Get root logger
@@ -76,10 +84,22 @@ def setup_logging(
     # Remove existing handlers to avoid duplicates
     root_logger.handlers.clear()
 
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(log_level)
-    console_handler.setFormatter(formatter)
+    # Console handler: use RichHandler for colorized output when available
+    if _RICH_LOGGING_AVAILABLE:
+        # Rich format: [date time] level  name  message
+        # RichHandler uses log_time_format for strftime
+        console_handler = RichHandler(
+            level=log_level,
+            show_time=True,
+            show_level=True,
+            show_path=True,
+            rich_tracebacks=True,
+            log_time_format=date_format,
+        )
+    else:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(log_level)
+        console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
 
     # File handler (if specified)
