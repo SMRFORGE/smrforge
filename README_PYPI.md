@@ -1,6 +1,6 @@
 # SMRForge
 
-![SMRForge Logo](https://raw.githubusercontent.com/cmwhalen/smrforge/main/docs/logo/nukepy-logo.png)
+![SMRForge Logo](https://raw.githubusercontent.com/SMRFORGE/smrforge/main/docs/logo/nukepy-logo.png)
 
 **Small Modular Reactor Design and Analysis Toolkit**
 
@@ -49,7 +49,7 @@ python -m smrforge.core.endf_setup
 - **API how-to (practical guide)**: `https://smrforge.readthedocs.io/en/latest/api/howto.html`
 - **Full API reference**: `https://smrforge.readthedocs.io/en/latest/api_reference.html`
 - **Interactive notebooks guide**: `https://smrforge.readthedocs.io/en/latest/guides/testing-notebooks.html`
-- **Source / Issues**: `https://github.com/cmwhalen/smrforge`
+- **Source / Issues**: `https://github.com/SMRFORGE/smrforge`
 
 ## License
 

@@ -168,7 +168,7 @@ pip install smrforge[all]     # All optional dependencies
 
 ```bash
 # Clone repository
-git clone https://github.com/cmwhalen/smrforge.git
+git clone https://github.com/SMRFORGE/smrforge.git
 cd smrforge
 
 # Create virtual environment (recommended)
@@ -188,7 +188,7 @@ pip install -e ".[dev,docs,viz]"
 # Install uv: https://github.com/astral-sh/uv
 
 # Clone repository
-git clone https://github.com/cmwhalen/smrforge.git
+git clone https://github.com/SMRFORGE/smrforge.git
 cd smrforge
 
 # Install with uv (much faster!)
@@ -201,7 +201,7 @@ uv pip install -e . --python 3.10
 
 ```bash
 # Clone repository
-git clone https://github.com/cmwhalen/smrforge.git
+git clone https://github.com/SMRFORGE/smrforge.git
 cd smrforge
 
 # Build and run with Docker Compose
@@ -454,7 +454,7 @@ See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`e
 ## Documentation
 
 📚 **Full documentation available at:**
-- **GitHub Pages**: [https://cmwhalen.github.io/smrforge/](https://cmwhalen.github.io/smrforge/)
+- **GitHub Pages**: [https://SMRFORGE.github.io/smrforge/](https://SMRFORGE.github.io/smrforge/)
 - **Read the Docs**: [https://smrforge.readthedocs.io](https://smrforge.readthedocs.io)
 
 [![Documentation Status](https://readthedocs.org/projects/smrforge/badge/?version=latest)](https://smrforge.readthedocs.io/en/latest/?badge=latest)
@@ -473,7 +473,7 @@ See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`e
 - **[CLI Guide](docs/guides/cli-guide.md)** - Command-line interface
 
 **Reference:**
-- **[API Documentation](https://cmwhalen.github.io/smrforge/)** - Complete API reference
+- **[API Documentation](https://SMRFORGE.github.io/smrforge/)** - Complete API reference
 - **[Feature Status](docs/status/feature-status.md)** - Module status and capabilities
 - **[Performance Optimizations](docs/technical/OPTIMIZATION-STATUS-REPORT.md)** - Performance improvements (Phase 1-3 complete)
 - **[Test Coverage](COVERAGE_TRACKING.md)** - Coverage tracking and path to 90%
@@ -592,7 +592,7 @@ Contributions are welcome! Please see [`CONTRIBUTING.md`](CONTRIBUTING.md) for g
 
 ```bash
 # Clone repository
-git clone https://github.com/cmwhalen/smrforge.git
+git clone https://github.com/SMRFORGE/smrforge.git
 cd smrforge
 
 # Create virtual environment
@@ -635,7 +635,7 @@ If you use SMRForge in your research, please cite:
   title={SMRForge: Small Modular Reactor Design and Analysis Toolkit},
   author={SMRForge Development Team},
   year={2026},
-  url={https://github.com/cmwhalen/smrforge}
+  url={https://github.com/SMRFORGE/smrforge}
 }
 ```
 

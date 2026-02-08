@@ -346,8 +346,8 @@ result = smr.quick_transient(
 
 - **PyRK:** https://github.com/pyrk/pyrk
 - **PyRK Documentation:** https://pyrk.github.io
-- **SMRForge Repository:** https://github.com/cmwhalen/smrforge
-- **SMRForge Documentation:** https://cmwhalen.github.io/smrforge/
+- **SMRForge Repository:** https://github.com/SMRFORGE/smrforge
+- **SMRForge Documentation:** https://SMRFORGE.github.io/smrforge/
 
 ---
 

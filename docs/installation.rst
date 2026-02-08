@@ -22,7 +22,7 @@ To install in development mode (editable):
 
 .. code-block:: bash
 
-   git clone https://github.com/cmwhalen/smrforge.git
+   git clone https://github.com/SMRFORGE/smrforge.git
    cd smrforge
    pip install -e .
 

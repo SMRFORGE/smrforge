@@ -104,4 +104,4 @@ if os.environ.get("READTHEDOCS") == "True":
 
 # GitHub Pages settings
 # Ensure proper base URL for GitHub Pages
-html_baseurl = "https://cmwhalen.github.io/smrforge/"
+html_baseurl = "https://SMRFORGE.github.io/smrforge/"

@@ -220,7 +220,7 @@ k_eff, flux = solver.solve_steady_state()
 - **API Reference**: Complete with examples
 - **Example Scripts**: 11+ working examples
 - **Quick Start Guide**: Get started in minutes
-- **GitHub Repository**: [github.com/cmwhalen/smrforge](https://github.com/cmwhalen/smrforge)
+- **GitHub Repository**: [github.com/SMRFORGE/smrforge](https://github.com/SMRFORGE/smrforge)
 
 ---
 
@@ -283,9 +283,9 @@ python -c "import smrforge as smr; results = smr.analyze_preset('valar-10'); pri
 
 ## 📞 Contact & Links
 
-- **GitHub**: [github.com/cmwhalen/smrforge](https://github.com/cmwhalen/smrforge)
+- **GitHub**: [github.com/SMRFORGE/smrforge](https://github.com/SMRFORGE/smrforge)
 - **Documentation**: [smrforge.readthedocs.io](https://smrforge.readthedocs.io)
-- **Issues**: [github.com/cmwhalen/smrforge/issues](https://github.com/cmwhalen/smrforge/issues)
+- **Issues**: [github.com/SMRFORGE/smrforge/issues](https://github.com/SMRFORGE/smrforge/issues)
 - **License**: MIT
 
 ---

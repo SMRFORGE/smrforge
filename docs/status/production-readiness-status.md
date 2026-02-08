@@ -181,7 +181,7 @@
 - ✅ API docs generated with `sphinx-apidoc` (docs/api/ directory exists)
 - ✅ GitHub Pages deployment workflow configured (.github/workflows/docs.yml)
 - ✅ Documentation deployed at:
-  - GitHub Pages: https://cmwhalen.github.io/smrforge/
+  - GitHub Pages: https://SMRFORGE.github.io/smrforge/
   - Read the Docs: https://smrforge.readthedocs.io
 - ⚠️ Docstrings need review and enhancement (ongoing maintenance)
 

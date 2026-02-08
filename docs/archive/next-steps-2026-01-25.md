@@ -238,7 +238,7 @@ pytest --cov=smrforge --cov-report=html --cov-report=term-missing
 
 **Priority:** High - Essential for user adoption
 
-**Documentation URL:** https://cmwhalen.github.io/smrforge/ (after enabling in settings)
+**Documentation URL:** https://SMRFORGE.github.io/smrforge/ (after enabling in settings)
 
 ---
 

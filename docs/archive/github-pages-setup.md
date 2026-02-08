@@ -12,7 +12,7 @@
 - Only triggers on changes to `docs/`, `smrforge/`, or configuration files
 
 ✅ **Documentation links updated** in `README.md`
-- Added GitHub Pages link: https://cmwhalen.github.io/smrforge/
+- Added GitHub Pages link: https://SMRFORGE.github.io/smrforge/
 - Kept Read the Docs as alternative: https://smrforge.readthedocs.io
 
 ✅ **Sphinx configuration updated** (`docs/conf.py`)
@@ -26,7 +26,7 @@ To enable GitHub Pages, you need to configure it in the repository settings:
 
 ### Step 1: Enable GitHub Pages
 
-1. Go to your repository on GitHub: https://github.com/cmwhalen/smrforge
+1. Go to your repository on GitHub: https://github.com/SMRFORGE/smrforge
 2. Click **Settings** (top menu)
 3. Scroll down to **Pages** (left sidebar)
 4. Under **Source**, select **GitHub Actions** (NOT "Deploy from a branch")
@@ -48,7 +48,7 @@ After enabling GitHub Pages:
    - Wait for it to complete (usually 2-5 minutes)
 
 4. Access your documentation:
-   - URL: https://cmwhalen.github.io/smrforge/
+   - URL: https://SMRFORGE.github.io/smrforge/
    - May take a few minutes after deployment completes
 
 ---
@@ -122,7 +122,7 @@ If the workflow fails:
 ### URL Not Working
 
 - GitHub Pages URLs are: `https://<username>.github.io/<repository>/`
-- For this repo: `https://cmwhalen.github.io/smrforge/`
+- For this repo: `https://SMRFORGE.github.io/smrforge/`
 - May take 5-10 minutes after first deployment
 - Check repository Settings > Pages for the exact URL
 
@@ -187,7 +187,7 @@ All content is in the `docs/` directory:
 
 1. ✅ **Enable GitHub Pages** in repository settings (manual step)
 2. ✅ **Wait for first deployment** (automatic after enabling)
-3. ✅ **Verify documentation** is accessible at https://cmwhalen.github.io/smrforge/
+3. ✅ **Verify documentation** is accessible at https://SMRFORGE.github.io/smrforge/
 4. ✅ **Update links** if needed (already done in README.md)
 
 ---

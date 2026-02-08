@@ -113,7 +113,7 @@ def create_app() -> Optional["dash.Dash"]:
                 html.P(
                     [
                         "SMRForge Dashboard - ",
-                        html.A("Documentation", href="https://github.com/cmwhalen/smrforge", target="_blank"),
+                        html.A("Documentation", href="https://github.com/SMRFORGE/smrforge", target="_blank"),
                         " | ",
                         html.A("CLI Available", href="#", id="cli-info-link"),
                     ],

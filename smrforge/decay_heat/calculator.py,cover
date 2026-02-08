@@ -1,0 +1,390 @@
+> """
+> Decay heat calculator using decay data.
+  
+> This module implements comprehensive decay heat calculations using:
+> - Decay constants from decay data
+> - Gamma-ray energy spectra (MF=8, MT=460)
+> - Beta energy spectra (MF=8, MT=455)
+> - Time-dependent decay heat curves
+> """
+  
+> from dataclasses import dataclass
+> from typing import Dict, List, Optional
+  
+> import numpy as np
+  
+> from ..core.reactor_core import Nuclide, NuclearDataCache, DecayData
+> from ..core.decay_parser import DecayData as ParsedDecayData
+> from ..core.gamma_production_parser import GammaProductionData
+> from ..utils.logging import get_logger
+  
+> logger = get_logger("smrforge.decay_heat")
+  
+  
+> @dataclass
+> class DecayHeatResult:
+>     """
+>     Decay heat calculation result.
+      
+>     Attributes:
+>         times: Time points [s] after shutdown
+>         total_decay_heat: Total decay heat [W] at each time
+>         gamma_decay_heat: Gamma decay heat [W] at each time
+>         beta_decay_heat: Beta decay heat [W] at each time
+>         nuclide_contributions: Dictionary mapping nuclide -> decay heat [W] at each time
+>     """
+      
+>     times: np.ndarray  # [s]
+>     total_decay_heat: np.ndarray  # [W]
+>     gamma_decay_heat: np.ndarray  # [W]
+>     beta_decay_heat: np.ndarray  # [W]
+>     nuclide_contributions: Dict[Nuclide, np.ndarray]  # nuclide -> decay heat [W]
+      
+>     def get_decay_heat_at_time(self, time: float) -> float:
+>         """
+>         Get total decay heat at a specific time.
+          
+>         Args:
+>             time: Time after shutdown [s]
+          
+>         Returns:
+>             Decay heat [W]
+>         """
+>         idx = np.searchsorted(self.times, time)
+>         if idx >= len(self.times):
+!             return self.total_decay_heat[-1]
+>         if idx == 0:
+!             return self.total_decay_heat[0]
+          
+          # Linear interpolation
+>         t1, t2 = self.times[idx - 1], self.times[idx]
+>         h1, h2 = self.total_decay_heat[idx - 1], self.total_decay_heat[idx]
+          
+>         if t2 > t1:
+!             frac = (time - t1) / (t2 - t1)
+!             return h1 + frac * (h2 - h1)
+>         return h1
+  
+  
+> class DecayHeatCalculator:
+>     """
+>     Calculator for time-dependent decay heat.
+      
+>     Computes decay heat from radioactive decay using:
+>     - Decay constants (from decay data)
+>     - Gamma-ray energy spectra
+>     - Beta energy spectra
+>     - Nuclide concentrations
+      
+>     Usage:
+>         >>> from smrforge.decay_heat import DecayHeatCalculator
+>         >>> from smrforge.core.reactor_core import Nuclide
+>         >>> 
+>         >>> calculator = DecayHeatCalculator()
+>         >>> 
+>         >>> # Set initial concentrations
+>         >>> u235 = Nuclide(Z=92, A=235)
+>         >>> cs137 = Nuclide(Z=55, A=137)
+>         >>> concentrations = {u235: 1e20, cs137: 1e19}  # atoms/cm³
+>         >>> 
+>         >>> # Calculate decay heat over time
+>         >>> times = np.array([0, 3600, 86400, 604800])  # 0, 1h, 1d, 1w
+>         >>> result = calculator.calculate_decay_heat(concentrations, times)
+>         >>> 
+>         >>> # Get decay heat at specific time
+>         >>> heat_1day = result.get_decay_heat_at_time(86400)
+>         >>> print(f"Decay heat after 1 day: {heat_1day:.2e} W")
+>     """
+      
+      # Energy conversion constants
+>     MEV_TO_JOULE = 1.602176634e-13  # MeV to Joules
+>     GAMMA_ENERGY_FRACTION = 0.8  # Typical fraction of decay energy as gamma
+>     BETA_ENERGY_FRACTION = 0.2  # Typical fraction of decay energy as beta
+      
+>     def __init__(self, cache: Optional[NuclearDataCache] = None):
+>         """
+>         Initialize decay heat calculator.
+          
+>         Args:
+>             cache: Optional NuclearDataCache for accessing decay data
+>         """
+>         self.cache = cache if cache is not None else NuclearDataCache()
+          # DecayData may or may not accept cache parameter
+>         try:
+>             self.decay_data = DecayData(cache=self.cache)
+>         except TypeError:
+              # Fallback for compatibility
+>             self.decay_data = DecayData()
+>             self.decay_data._cache = self.cache
+>         self._decay_data_cache: Dict[Nuclide, Optional[DecayData]] = {}
+      
+>     def calculate_decay_heat(
+>         self,
+>         concentrations: Dict[Nuclide, float],
+>         times: np.ndarray,
+>         initial_time: float = 0.0,
+>     ) -> DecayHeatResult:
+>         """
+>         Calculate time-dependent decay heat.
+          
+>         Args:
+>             concentrations: Dictionary mapping nuclide -> initial concentration [atoms/cm³]
+>             times: Time points after shutdown [s]
+>             initial_time: Initial time (typically 0.0 for shutdown)
+          
+>         Returns:
+>             DecayHeatResult with decay heat at each time point
+>         """
+>         n_times = len(times)
+>         total_heat = np.zeros(n_times)
+>         gamma_heat = np.zeros(n_times)
+>         beta_heat = np.zeros(n_times)
+>         nuclide_contributions: Dict[Nuclide, np.ndarray] = {}
+          
+          # Calculate decay heat for each nuclide
+>         for nuclide, N0 in concentrations.items():
+>             if N0 <= 0:
+!                 continue
+              
+              # Get decay data
+>             decay_info = self._get_decay_data(nuclide)
+>             if decay_info is None:
+!                 continue
+              
+              # Calculate nuclide decay heat over time
+>             nuclide_heat = np.zeros(n_times)
+>             nuclide_gamma = np.zeros(n_times)
+>             nuclide_beta = np.zeros(n_times)
+              
+>             lambda_decay = decay_info.decay_constant
+              
+>             if lambda_decay <= 0:
+!                 continue
+              
+              # Get energy per decay
+              # Try to use gamma production data for more accurate gamma energy
+>             gamma_energy_per_decay = self._get_gamma_energy_per_decay(nuclide, decay_info)
+>             beta_energy_per_decay = decay_info.get_total_beta_energy()  # MeV
+              
+              # If beta spectrum not available, use typical values
+>             if beta_energy_per_decay == 0:
+>                 beta_energy_per_decay = self._estimate_beta_energy(nuclide)
+              
+              # Calculate decay heat: H(t) = N(t) * λ * E_per_decay
+              # N(t) = N0 * exp(-λ*t)
+>             for i, t in enumerate(times):
+>                 N_t = N0 * np.exp(-lambda_decay * (t - initial_time))
+                  
+                  # Decay rate: R = λ * N(t) [decays/s]
+>                 decay_rate = lambda_decay * N_t
+                  
+                  # Gamma decay heat: H_gamma = R * E_gamma
+>                 gamma_power = decay_rate * gamma_energy_per_decay * self.MEV_TO_JOULE  # W
+                  
+                  # Beta decay heat: H_beta = R * E_beta
+>                 beta_power = decay_rate * beta_energy_per_decay * self.MEV_TO_JOULE  # W
+                  
+                  # Total decay heat
+>                 total_power = gamma_power + beta_power
+                  
+>                 nuclide_heat[i] = total_power
+>                 nuclide_gamma[i] = gamma_power
+>                 nuclide_beta[i] = beta_power
+              
+>             nuclide_contributions[nuclide] = nuclide_heat
+>             total_heat += nuclide_heat
+>             gamma_heat += nuclide_gamma
+>             beta_heat += nuclide_beta
+          
+>         return DecayHeatResult(
+>             times=times,
+>             total_decay_heat=total_heat,
+>             gamma_decay_heat=gamma_heat,
+>             beta_decay_heat=beta_heat,
+>             nuclide_contributions=nuclide_contributions,
+>         )
+      
+>     def _get_decay_data(self, nuclide: Nuclide) -> Optional[ParsedDecayData]:
+>         """Get decay data for a nuclide (with caching)."""
+!         if nuclide in self._decay_data_cache:
+!             return self._decay_data_cache[nuclide]
+          
+          # Try to get from DecayData class
+!         try:
+!             from ..core.decay_parser import ENDFDecayParser
+!             from ..core.reactor_core import Library
+              
+              # Try to find decay file
+!             decay_file = self.cache._find_local_decay_file(nuclide, Library.ENDF_B_VIII_1)
+!             if decay_file:
+!                 parser = ENDFDecayParser()
+!                 decay_data = parser.parse_file(decay_file)
+!                 self._decay_data_cache[nuclide] = decay_data
+!                 return decay_data
+!         except Exception:
+!             pass
+          
+          # Fallback: use DecayData class methods
+!         half_life = self.decay_data.get_half_life(nuclide)
+!         lambda_decay = self.decay_data.get_decay_constant(nuclide)
+          
+!         if lambda_decay > 0:
+              # Create minimal ParsedDecayData
+!             decay_data = ParsedDecayData(
+!                 nuclide=nuclide,
+!                 half_life=half_life,
+!                 decay_constant=lambda_decay,
+!                 is_stable=False,
+!                 decay_modes=[],
+!                 daughters={},
+!             )
+!             self._decay_data_cache[nuclide] = decay_data
+!             return decay_data
+          
+!         return None
+      
+>     def _get_gamma_energy_per_decay(self, nuclide: Nuclide, decay_info: ParsedDecayData) -> float:
+>         """
+>         Get gamma energy per decay, using gamma production data if available.
+          
+>         Args:
+>             nuclide: Nuclide instance.
+>             decay_info: DecayData instance.
+          
+>         Returns:
+>             Gamma energy per decay [MeV].
+>         """
+          # First try decay data gamma spectrum
+>         gamma_energy = decay_info.get_total_gamma_energy()
+>         if gamma_energy > 0:
+>             return gamma_energy
+          
+          # Try gamma production data (for fission products, etc.)
+!         try:
+!             gamma_prod_data = self.cache.get_gamma_production_data(nuclide)
+!             if gamma_prod_data:
+                  # Get prompt gamma yield (for fission products)
+                  # For decay, we want total gamma energy, not yield
+                  # But we can use the spectrum if available
+!                 if "fission" in gamma_prod_data.prompt_spectra:
+!                     spectrum = gamma_prod_data.prompt_spectra["fission"]
+                      # Total energy = sum(energy * intensity)
+!                     total_energy = np.sum(spectrum.energy * spectrum.intensity)
+!                     if total_energy > 0:
+!                         return total_energy
+!         except Exception:
+!             pass
+          
+          # Fallback: estimate from decay mode
+!         return self._estimate_gamma_energy(nuclide)
+      
+>     def _estimate_gamma_energy(self, nuclide: Nuclide) -> float:
+>         """Estimate gamma energy per decay [MeV]."""
+          # Typical gamma energies by decay type
+          # Beta decay: ~1-2 MeV average
+          # Alpha decay: ~0.1-0.5 MeV average
+          # Fission products: ~1-2 MeV average
+          
+          # Simplified: use 1.5 MeV as average
+!         return 1.5  # MeV
+      
+>     def calculate_gamma_source(
+>         self,
+>         concentrations: Dict[Nuclide, float],
+>         times: np.ndarray,
+>         energy_groups: np.ndarray,
+>         initial_time: float = 0.0,
+>     ) -> np.ndarray:
+>         """
+>         Calculate time-dependent gamma source spectrum for transport solver.
+          
+>         Uses gamma production data when available for accurate energy spectra.
+          
+>         Args:
+>             concentrations: Dictionary mapping nuclide -> initial concentration [atoms/cm³]
+>             times: Time points [s] after shutdown
+>             energy_groups: Energy group boundaries [MeV] (n_groups + 1)
+>             initial_time: Initial time (typically 0.0 for shutdown)
+          
+>         Returns:
+>             Gamma source [n_times, n_groups] [photons/cm³/s]
+>         """
+>         n_times = len(times)
+>         n_groups = len(energy_groups) - 1
+>         gamma_source = np.zeros((n_times, n_groups))
+          
+          # Group centers
+>         group_centers = (energy_groups[:-1] + energy_groups[1:]) / 2
+          
+>         for nuclide, N0 in concentrations.items():
+>             if N0 <= 0:
+>                 continue
+              
+              # Get decay data
+>             decay_info = self._get_decay_data(nuclide)
+>             if decay_info is None:
+>                 continue
+              
+>             lambda_decay = decay_info.decay_constant
+>             if lambda_decay <= 0:
+!                 continue
+              
+              # Try to get gamma production spectrum
+>             gamma_spectrum = None
+>             try:
+>                 gamma_prod_data = self.cache.get_gamma_production_data(nuclide)
+>                 if gamma_prod_data:
+                      # Use fission spectrum if available (for fission products)
+>                     if "fission" in gamma_prod_data.prompt_spectra:
+>                         gamma_spectrum = gamma_prod_data.prompt_spectra["fission"]
+>             except Exception:
+>                 pass
+              
+              # If no gamma production data, try decay data gamma spectrum
+>             if gamma_spectrum is None and decay_info.gamma_spectrum:
+                  # Convert decay gamma spectrum to production-like format
+>                 from ..core.gamma_production_parser import GammaProductionSpectrum
+>                 gamma_spectrum = GammaProductionSpectrum(
+>                     reaction="decay",
+>                     energy=decay_info.gamma_spectrum.energy,
+>                     intensity=decay_info.gamma_spectrum.intensity,
+>                     total_yield=decay_info.gamma_spectrum.total_energy,
+>                     prompt=True,
+>                 )
+              
+              # Calculate gamma source over time
+>             for i, t in enumerate(times):
+>                 N_t = N0 * np.exp(-lambda_decay * (t - initial_time))
+>                 decay_rate = lambda_decay * N_t  # [decays/s]
+                  
+>                 if gamma_spectrum:
+                      # Use real gamma spectrum
+                      # Interpolate spectrum to energy groups
+>                     for g in range(n_groups):
+>                         E_center = group_centers[g]
+                          # Find closest energy in spectrum
+>                         idx = np.searchsorted(gamma_spectrum.energy, E_center)
+>                         if idx < len(gamma_spectrum.energy):
+>                             intensity = gamma_spectrum.intensity[idx]
+>                             gamma_source[i, g] += decay_rate * intensity
+>                 else:
+                      # Fallback: uniform distribution
+                      # Estimate total gamma yield
+>                     gamma_yield = decay_info.get_total_gamma_energy() / 1.5  # Approximate
+>                     if gamma_yield == 0:
+!                         gamma_yield = 1.0  # Default
+                      
+                      # Distribute uniformly (simplified)
+>                     gamma_source[i, :] += decay_rate * gamma_yield / n_groups
+          
+>         return gamma_source
+      
+>     def _estimate_beta_energy(self, nuclide: Nuclide) -> float:
+>         """Estimate beta energy per decay [MeV]."""
+          # Typical beta energies
+          # Beta- decay: ~0.5-1.5 MeV average
+          # Beta+ decay: ~0.3-1.0 MeV average
+          
+          # Simplified: use 0.8 MeV as average
+>         return 0.8  # MeV
+  

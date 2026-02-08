@@ -44,7 +44,7 @@ This will download and install SMRForge and all its dependencies. Wait for the i
 
 - **From source (development):**
   ```bash
-  git clone https://github.com/cmwhalen/smrforge.git
+  git clone https://github.com/SMRFORGE/smrforge.git
   cd smrforge
   pip install -e .
   ```
@@ -723,7 +723,7 @@ Once you're comfortable with the basics, try:
 
 ### 4. Join the Community
 
-- **GitHub**: [github.com/cmwhalen/smrforge](https://github.com/cmwhalen/smrforge)
+- **GitHub**: [github.com/SMRFORGE/smrforge](https://github.com/SMRFORGE/smrforge)
 - **Issues**: Report bugs or request features on GitHub
 - **Documentation**: Read the full docs online
 

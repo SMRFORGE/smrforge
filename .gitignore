@@ -95,6 +95,10 @@ scripts/monitor_coverage_run.ps1
 scripts/run_coverage_analysis.ps1
 scripts/show_coverage_progress.ps1
 
+# Transition scripts (do not commit to GitHub)
+scripts/transition_to_smrforge_org.py
+scripts/transition_docs.py
+
 # IDE / local
 .cursor/
 
