@@ -4,7 +4,9 @@
 # Build: docker build -t smrforge:latest .
 # Run:   docker run -it smrforge:latest
 #
-# Last Updated: January 29, 2026
+# Last Updated: February 2026
+# Recent Additions (February 2026):
+# - Rich colorized logging: Console logging uses RichHandler for color-coded levels (DEBUG, INFO, WARNING, ERROR, CRITICAL), rich tracebacks. File logging remains plain text. Set NO_COLOR=1 to disable colors.
 # Recent Additions (January 2026):
 # - Pint mandatory: pint>=0.20.0 now in setup.py install_requires (required for unit checking)
 # - Memory and performance profiling (January 2026): profile_performance.py (--mode cpu|memory|both, --function keff|mesh|monte_carlo), run_performance_profile.*, update_performance_baselines.py, smrforge.utils.profiling. See docs/development/memory-and-performance-assessment.md.

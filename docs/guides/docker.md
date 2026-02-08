@@ -401,7 +401,10 @@ docker compose exec smrforge python -c "import smrforge; print('OK')"
 docker compose exec smrforge python -c "import numpy, scipy, matplotlib, pandas; print('Core packages OK')"
 docker compose exec smrforge python -c "import requests, httpx, tqdm, yaml, pint; print('Downloader/config/units deps OK')"
 docker compose exec smrforge python -c "import sandy; print('SANDY OK')" || echo "SANDY not installed (optional)"
+docker compose exec smrforge python -c "import rich; print('Rich OK')"
 ```
+
+When running interactively, console logging is colorized via Rich. To disable colors (e.g., in CI), set `NO_COLOR=1`.
 
 ### Getting More Help
 
