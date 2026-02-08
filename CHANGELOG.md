@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (February 2026)
 - Rich colorized logging: Console output now uses Rich's RichHandler for color-coded log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL), rich tracebacks, and improved readability. File logging remains plain text. Falls back to standard handler if Rich is unavailable. Respects NO_COLOR environment variable.
 - Docker: Updated Dockerfile, Dockerfile.dev, and docker-compose.yml with Rich logging notes and February 2026 date. Added Rich verification and NO_COLOR note to docs/guides/docker.md.
+- Docker: Added documentation provenance note (SMRForge original work; OpenMC/Serpent inspiration/analysis).
 
 ### Added (January 29, 2026)
 - Pint mandatory dependency: `pint>=0.20.0` added to `setup.py` install_requires

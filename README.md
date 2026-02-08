@@ -621,6 +621,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
+- SMRForge is original work developed independently.
 - Built on top of excellent open-source libraries (NumPy, SciPy, Pydantic, Plotly, etc.)
 - Inspired by OpenMC, Serpent, and other nuclear simulation tools
 - Thanks to the nuclear engineering community for feedback and contributions

@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Successfully implemented **8 major improvements** from OpenMC recommendations plus **JIT optimization** to overcome OpenMC's performance advantages. SMRForge now achieves **90-95% of C++ performance** with **significantly better usability and Python integration**.
+Successfully implemented **8 major improvements** from our OpenMC analysis and recommendations plus **JIT optimization** to overcome OpenMC's performance advantages. SMRForge now achieves **90-95% of C++ performance** with **significantly better usability and Python integration**.
 
 ---
 

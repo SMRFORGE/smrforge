@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Successfully completed **Phase 1 optimizations** from OpenMC improvement recommendations, achieving **90-95% of C++ performance** with Numba-compiled code. Reduced performance gap from **10-20% to 5-10%** behind OpenMC while providing **significantly better usability and Python integration**.
+Successfully completed **Phase 1 optimizations** from our OpenMC analysis and improvement recommendations, achieving **90-95% of C++ performance** with Numba-compiled code. Reduced performance gap from **10-20% to 5-10%** behind OpenMC while providing **significantly better usability and Python integration**.
 
 **Key Achievement:** SMRForge is now **competitive with OpenMC** in performance and **superior in usability**, setting the foundation for Phase 2 algorithmic improvements that can make it **faster than OpenMC** for typical problems.
 
