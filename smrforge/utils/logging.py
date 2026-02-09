@@ -14,7 +14,7 @@ try:
     from rich.logging import RichHandler
 
     _RICH_LOGGING_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _RICH_LOGGING_AVAILABLE = False
 
 # Create the main logger for SMRForge
@@ -96,7 +96,7 @@ def setup_logging(
             rich_tracebacks=True,
             log_time_format=date_format,
         )
-    else:
+    else:  # pragma: no cover
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(log_level)
         console_handler.setFormatter(formatter)

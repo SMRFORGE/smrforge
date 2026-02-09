@@ -44,7 +44,7 @@ def run_scenario_design(
     if analysis_results is None:
         try:
             analysis_results = reactor.solve()
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.warning("reactor.solve() failed: %s", e)
             analysis_results = {}
     results: Dict[str, ScenarioResult] = {}

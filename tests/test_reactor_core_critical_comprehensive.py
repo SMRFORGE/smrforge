@@ -9,6 +9,7 @@ Focuses on:
 - Error handling and edge cases
 """
 
+import builtins
 import numpy as np
 import pytest
 from pathlib import Path
@@ -510,11 +511,13 @@ class TestReactorCoreEdgeCases:
     def test_get_parser_cpp_parser(self, temp_cache_dir):
         """Test _get_parser with C++ parser available."""
         cache = NuclearDataCache(cache_dir=temp_cache_dir)
-        
-        # Mock endf_parserpy imports
+        real_import = builtins.__import__
+        def import_effect(name, *args, **kwargs):
+            if name == 'endf_parserpy':
+                return MagicMock()
+            return real_import(name, *args, **kwargs)
         with patch('smrforge.core.reactor_core.EndfParserCpp', create=True):
-            with patch('builtins.__import__', side_effect=lambda name, *args, **kwargs: 
-                       MagicMock() if name == 'endf_parserpy' else __import__(name, *args, **kwargs)):
+            with patch('builtins.__import__', side_effect=import_effect):
                 parser = cache._get_parser()
                 # Parser may be None if not available
                 assert parser is None or hasattr(parser, 'parsefile')
@@ -533,6 +536,7 @@ class TestReactorCoreEdgeCases:
         mock_endf_parserpy.EndfParserFactory = mock_factory
         
         # Mock the import to raise ImportError when trying to import EndfParserCpp
+        real_import = builtins.__import__
         def import_side_effect(name, globals=None, locals=None, fromlist=(), level=0):
             # If trying to import EndfParserCpp from endf_parserpy, raise ImportError
             if name == 'endf_parserpy' and fromlist and 'EndfParserCpp' in fromlist:
@@ -540,9 +544,7 @@ class TestReactorCoreEdgeCases:
             # Otherwise, return the mock module
             if name == 'endf_parserpy':
                 return mock_endf_parserpy
-            # Default behavior for other imports - use builtins
-            import builtins
-            return builtins.__import__(name, globals, locals, fromlist, level)
+            return real_import(name, globals, locals, fromlist, level)
         
         with patch('builtins.__import__', side_effect=import_side_effect):
             with patch.dict('sys.modules', {'endf_parserpy': mock_endf_parserpy}, clear=False):
@@ -554,9 +556,12 @@ class TestReactorCoreEdgeCases:
     def test_get_parser_not_available(self, temp_cache_dir):
         """Test _get_parser when endf-parserpy is not available."""
         cache = NuclearDataCache(cache_dir=temp_cache_dir)
-        
-        # Mock ImportError for endf-parserpy
-        with patch('builtins.__import__', side_effect=ImportError("No module named 'endf_parserpy'")):
+        real_import = builtins.__import__
+        def import_effect(name, *args, **kwargs):
+            if name == 'endf_parserpy':
+                raise ImportError("No module named 'endf_parserpy'")
+            return real_import(name, *args, **kwargs)
+        with patch('builtins.__import__', side_effect=import_effect):
             parser = cache._get_parser()
             assert parser is None
     

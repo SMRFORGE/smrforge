@@ -478,3 +478,32 @@ class TestDesignValidator:
 
         assert result.passed is True
         assert not result.violations
+
+    def test_validate_reactor_no_spec_skipped(self):
+        """Test constraint not in metrics when reactor has no .spec is skipped (continue at line 242)."""
+        reactor_no_spec = type("Reactor", (), {})()  # no .spec
+        analysis_results = {"k_eff": 1.05}
+
+        constraint_set = ConstraintSet(name="test")
+        constraint_set.add_constraint("some_metric", 100.0, "max", "", "Not in metrics")
+
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(reactor_no_spec, analysis_results)
+
+        assert result.passed is True
+
+    def test_validate_min_constraint_no_violation_severity_none(self):
+        """Test min constraint when value >= limit sets severity None (no violation, line 261)."""
+        mock_reactor = Mock()
+        mock_reactor.spec = Mock()
+        mock_reactor.spec.min_margin = 15.0
+        analysis_results = {"k_eff": 1.05}
+
+        constraint_set = ConstraintSet(name="test")
+        constraint_set.add_constraint("min_margin", 10.0, "min", "", "Min 10")
+
+        validator = DesignValidator(constraint_set)
+        result = validator.validate(mock_reactor, analysis_results)
+
+        assert result.passed is True
+        assert not result.violations

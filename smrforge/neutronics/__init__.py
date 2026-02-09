@@ -8,7 +8,7 @@ try:
     # MultiGroupDiffusion is the main solver class (alias for backward compatibility)
     NeutronicsSolver = MultiGroupDiffusion
     _SOLVER_AVAILABLE = True
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     import warnings
 
     warnings.warn(f"Could not import neutronics solver: {e}", ImportWarning)
@@ -20,7 +20,7 @@ try:
     # Alias for backward compatibility
     MonteCarlo = MonteCarloSolver
     _MC_AVAILABLE = True
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     import warnings
 
     warnings.warn(f"Could not import Monte Carlo solver: {e}", ImportWarning)
@@ -33,7 +33,7 @@ try:
     )
 
     _MC_OPTIMIZED_AVAILABLE = True
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     import warnings
 
     warnings.warn(
@@ -45,7 +45,7 @@ try:
     from smrforge.neutronics.transport import Transport
 
     _TRANSPORT_AVAILABLE = True
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     import warnings
 
     warnings.warn(f"Could not import transport solver: {e}", ImportWarning)
@@ -60,7 +60,7 @@ try:
     )
 
     _ADAPTIVE_AVAILABLE = True
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     import warnings
 
     warnings.warn(
@@ -89,7 +89,7 @@ try:
     )
 
     _HYBRID_AVAILABLE = True
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     import warnings
 
     warnings.warn(
@@ -109,7 +109,7 @@ try:
     )
 
     _IMC_AVAILABLE = True
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     import warnings
 
     warnings.warn(

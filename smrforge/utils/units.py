@@ -14,7 +14,7 @@ try:
     from pint.errors import DimensionalityError
 
     _PINT_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _PINT_AVAILABLE = False
     # Create dummy classes if Pint not available
     Quantity = None  # type: ignore
@@ -252,11 +252,11 @@ def define_reactor_units() -> Any:
         >>> reactivity = 0.001 * ureg.dollar  # 1 cent reactivity
         >>> reactivity_pcm = 100 * ureg.pcm  # 100 pcm
     """
-    if not _PINT_AVAILABLE:
+    if not _PINT_AVAILABLE:  # pragma: no cover
         return _get_fallback_ureg()
 
-    ureg = get_ureg()  # pragma: no cover - Pint available only
-    return ureg  # pragma: no cover
+    ureg = get_ureg()
+    return ureg
 
 
 __all__ = [

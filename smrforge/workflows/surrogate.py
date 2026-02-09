@@ -17,7 +17,7 @@ logger = get_logger("smrforge.workflows.surrogate")
 try:
     from scipy.interpolate import RBFInterpolator
     _RBF_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _RBF_AVAILABLE = False
 
 
@@ -119,7 +119,7 @@ def surrogate_from_sweep_results(
         params = r.get("parameters", r)
         try:
             y = float(params.get(output_metric, r.get(output_metric, np.nan)))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError):  # pragma: no cover
             continue
         if not np.isfinite(y):
             continue

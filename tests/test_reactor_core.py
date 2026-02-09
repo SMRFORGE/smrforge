@@ -342,9 +342,10 @@ class TestDecayData:
         decay = DecayData()
         nuc = Nuclide(Z=92, A=235, m=0)
 
-        # Placeholder implementation returns 1e10 seconds
+        # Returns placeholder 1e10 s when no decay data, or real half-life when loaded
         half_life = decay._get_half_life(nuc)
-        assert half_life == 1e10
+        assert half_life > 0
+        assert 1e9 <= half_life <= 1e20
 
     def test_get_daughters(self):
         """Test _get_daughters method."""

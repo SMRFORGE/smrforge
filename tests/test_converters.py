@@ -29,11 +29,16 @@ class TestSerpentConverter:
         
         assert output_file.exists()
         
-        # Check file contents
+        # Check file contents (Community: upgrade message or "would go here"; Pro: SMRForge Pro)
         with open(output_file) as f:
             content = f.read()
         assert "Serpent" in content
-        assert "placeholder" in content.lower()
+        assert (
+            "placeholder" in content.lower()
+            or "smrforge pro" in content.lower()
+            or "upgrade to pro" in content.lower()
+            or "would go here" in content.lower()
+        )
     
     def test_export_reactor_content(self, tmp_path):
         """Test export file content structure."""
@@ -49,11 +54,11 @@ class TestSerpentConverter:
         assert any("%" in line for line in lines)
         assert any("SMRForge" in line for line in lines)
     
-    def test_import_reactor_raises_not_implemented(self):
-        """Test that import raises NotImplementedError."""
-        input_file = Path("nonexistent.serp")
-        
-        with pytest.raises(NotImplementedError, match="Serpent import not yet implemented"):
+    def test_import_reactor_raises_not_implemented(self, tmp_path):
+        """Test that import raises NotImplementedError (Community) or Pro stub (Pro)."""
+        input_file = tmp_path / "x.serp"
+        input_file.write_text("")
+        with pytest.raises(NotImplementedError, match="Serpent"):
             SerpentConverter.import_reactor(input_file)
 
 
@@ -122,7 +127,7 @@ class TestOpenMCConverter:
         geometry_file = tmp_path / "geometry.xml"
         geometry_file.write_text('<?xml version="1.0"?><geometry></geometry>')
         
-        with pytest.raises(NotImplementedError, match="OpenMC import not yet implemented"):
+        with pytest.raises(NotImplementedError, match="OpenMC"):
             OpenMCConverter.import_reactor(geometry_file)
     
     def test_import_reactor_with_materials_file(self, tmp_path):
@@ -132,5 +137,5 @@ class TestOpenMCConverter:
         geometry_file.write_text('<?xml version="1.0"?><geometry></geometry>')
         materials_file.write_text('<?xml version="1.0"?><materials></materials>')
         
-        with pytest.raises(NotImplementedError, match="OpenMC import not yet implemented"):
+        with pytest.raises(NotImplementedError, match="OpenMC"):
             OpenMCConverter.import_reactor(geometry_file, materials_file)

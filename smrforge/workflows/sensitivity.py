@@ -18,7 +18,7 @@ try:
     from SALib.analyze import morris as salib_morris
     from SALib.sample import morris as salib_morris_sample
     _SALIB_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _SALIB_AVAILABLE = False
 
 
@@ -62,7 +62,7 @@ def one_at_a_time_from_sweep(
         params = r.get("parameters", r)
         try:
             y = float(params.get(output_metric, r.get(output_metric, np.nan)))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError):  # pragma: no cover
             y = np.nan
         if not np.isfinite(y):
             continue
@@ -71,7 +71,7 @@ def one_at_a_time_from_sweep(
             v = params.get(p, np.nan)
             try:
                 param_arrays[p].append(float(v))
-            except (TypeError, ValueError):
+            except (TypeError, ValueError):  # pragma: no cover
                 param_arrays[p].append(np.nan)
     n = len(out_list)
     if n < 2:

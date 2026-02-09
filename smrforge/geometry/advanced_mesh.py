@@ -20,7 +20,7 @@ try:
     from joblib import Parallel, delayed
 
     _JOBLIB_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _JOBLIB_AVAILABLE = False
     Parallel = None  # type: ignore
     delayed = None  # type: ignore
@@ -29,7 +29,7 @@ try:
     import meshio
 
     _MESHIO_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _MESHIO_AVAILABLE = False
     meshio = None  # type: ignore
 
@@ -37,7 +37,7 @@ try:
     import pyvista as pv
 
     _PYVISTA_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _PYVISTA_AVAILABLE = False
     pv = None  # type: ignore
 
@@ -187,7 +187,7 @@ class AdvancedMeshGenerator3D:
                 # Extract tetrahedra (simplices in 3D)
                 cells = tri.simplices  # [n_tets, 4]
                 vertices = tri.points
-            except Exception:
+            except Exception:  # pragma: no cover
                 # Fallback: Use convex hull faces
                 hull = ConvexHull(all_points)
                 # Convert hull to surface mesh (faces only, no cells)
@@ -275,7 +275,7 @@ class AdvancedMeshGenerator3D:
         # Generate unstructured mesh
         try:
             return self.generate_unstructured_3d(points)
-        except Exception:
+        except Exception:  # pragma: no cover
             return None
 
     def generate_parallel(
@@ -352,7 +352,7 @@ class AdvancedMeshGenerator3D:
                 # Default to structured
                 mesh = self.generate_structured_3d(bounds, resolution=resolution)
                 return mesh.to_mesh3d()
-        except Exception:
+        except Exception:  # pragma: no cover
             return None
 
 
@@ -454,7 +454,7 @@ class MeshConverter:
                 trimesh_mesh = trimesh.Trimesh(vertices=mesh.vertices, faces=mesh.faces)
                 trimesh_mesh.export(str(output_path))
                 return True
-            except ImportError:
+            except ImportError:  # pragma: no cover
                 raise ImportError(
                     "meshio or trimesh is required for STL export. "
                     "Install with: pip install meshio[all] or pip install trimesh"

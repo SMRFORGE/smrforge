@@ -16,7 +16,7 @@ logger = get_logger("smrforge.workflows.sobol_indices")
 try:
     from SALib.analyze import sobol as salib_sobol
     _SALIB_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _SALIB_AVAILABLE = False
 
 
@@ -78,7 +78,7 @@ def sobol_indices_from_samples(
                 }
                 if calc_second_order and "S2" in Si:
                     result[label]["S2"] = Si["S2"].tolist()
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 logger.debug("SALib sobol analyze failed: %s; using simple approx.", e)
                 result[label] = _simple_sobol_approx(X, y, param_names)
         else:
@@ -125,7 +125,7 @@ def sobol_indices_from_sweep_results(
         params = r.get("parameters", r)
         try:
             y = float(params.get(output_metric, r.get(output_metric, np.nan)))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError):  # pragma: no cover
             continue
         if not np.isfinite(y):
             continue

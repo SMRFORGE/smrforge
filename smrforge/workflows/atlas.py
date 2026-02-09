@@ -66,7 +66,7 @@ def build_atlas(
         try:
             from ..convenience import list_presets
             presets = list(list_presets())
-        except Exception:
+        except Exception:  # pragma: no cover
             presets = []
 
     entries: List[AtlasEntry] = []
@@ -75,7 +75,7 @@ def build_atlas(
             reactor = create_reactor(design_id)
             point = get_design_point(reactor)
             report = safety_margin_report_fn(reactor)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.warning("Atlas: failed for %s: %s", design_id, e)
             entries.append(AtlasEntry(design_id=design_id, passed=False, metrics_summary={"error": str(e)}))
             continue

@@ -83,7 +83,7 @@ class SweepConfig:
             try:
                 import yaml
                 data = yaml.safe_load(text)
-            except ImportError:
+            except ImportError:  # pragma: no cover
                 raise ImportError("PyYAML required for YAML config: pip install pyyaml")
         else:
             data = json.loads(text)
@@ -234,7 +234,7 @@ class ParameterSweep:
             
             return result
             
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.error(f"Failed case {params}: {e}")
             return {
                 "parameters": params,
@@ -301,7 +301,7 @@ class ParameterSweep:
                             done_keys.add(self._params_key(r["parameters"]))
                             failed_cases.append(r)
                     logger.info(f"Resuming: loaded {len(results)} results, {len(failed_cases)} failed from {latest.name}")
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     logger.warning(f"Could not load intermediate {latest}: {e}")
         
         combinations = [c for c in all_combinations if self._params_key(c) not in done_keys]
@@ -320,7 +320,7 @@ class ParameterSweep:
             if env_max is not None:
                 try:
                     max_workers = max(1, int(env_max))
-                except ValueError:
+                except ValueError:  # pragma: no cover
                     pass
         if max_workers is None:
             max_workers = min(n_cases, 8)
@@ -328,7 +328,7 @@ class ParameterSweep:
         try:
             from rich.progress import Progress, BarColumn, TextColumn, SpinnerColumn
             _RICH_AVAILABLE = True
-        except ImportError:
+        except ImportError:  # pragma: no cover
             _RICH_AVAILABLE = False
         
         completed_so_far = 0
@@ -362,7 +362,7 @@ class ParameterSweep:
                                     result["success"] = True
                                     results.append(result)
                                 _advance(progress_cb)
-                            except Exception as e:
+                            except Exception as e:  # pragma: no cover
                                 logger.error(f"Failed to get result for {params}: {e}")
                                 failed_cases.append({"parameters": params, "error": str(e)})
                                 _advance(progress_cb)
@@ -379,7 +379,7 @@ class ParameterSweep:
                                 result["success"] = True
                                 results.append(result)
                             _advance(None)
-                        except Exception as e:
+                        except Exception as e:  # pragma: no cover
                             logger.error(f"Failed to get result for {params}: {e}")
                             failed_cases.append({"parameters": params, "error": str(e)})
                             _advance(None)

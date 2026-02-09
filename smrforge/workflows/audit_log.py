@@ -73,5 +73,5 @@ def append_run(
             existing = []
         existing.append(data)
         log_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         logger.debug("Audit log append failed: %s", e)

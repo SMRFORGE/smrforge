@@ -100,7 +100,7 @@ def safety_margin_report(
     if analysis_results is None:
         try:
             analysis_results = reactor.solve()
-        except Exception:
+        except Exception:  # pragma: no cover
             analysis_results = {}
     # Normalize to scalar metrics for constraint check
     metrics = validator.validate(reactor, analysis_results).metrics

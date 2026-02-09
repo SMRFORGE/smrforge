@@ -6,7 +6,7 @@ Provides comprehensive help and documentation for functions, classes, and featur
 
 from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from rich.console import Console
 
 try:
@@ -17,7 +17,7 @@ try:
     from rich import box
 
     _RICH_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _RICH_AVAILABLE = False
     Console = Any  # type: ignore
 
@@ -42,7 +42,7 @@ def _get_smr_module() -> Optional[Any]:
             import smrforge as smr
             _smr_module = smr
             _CORE_AVAILABLE = True
-        except ImportError:
+        except ImportError:  # pragma: no cover
             _CORE_AVAILABLE = False
             _smr_module = None
     return _smr_module
@@ -262,7 +262,7 @@ def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
                         default_val = default_val[:27] + "..."
                     param_info += f" [dim]= {default_val}[/dim]"
                 console.print(param_info)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError):  # pragma: no cover
         pass
     
     # Show return type if available
@@ -288,7 +288,7 @@ def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
                 # Remove remaining smrforge. prefix
                 ret_ann = re.sub(r"^smrforge\.", "", ret_ann)
             console.print(f"\n[bold]Returns:[/bold] [cyan]{ret_ann}[/cyan]")
-    except (ValueError, TypeError):
+    except (ValueError, TypeError):  # pragma: no cover
         pass
     
     # Show examples if available

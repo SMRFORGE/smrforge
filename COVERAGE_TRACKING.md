@@ -264,7 +264,7 @@ To reach **90%** overall:
 
 3. **Add tests** for modules with the most uncovered lines (see "Modules Below 75% Target" below). Highest impact: `geometry/advanced_import.py`, `geometry/validation.py`, `data_downloader.py`, `neutronics/*` (hybrid_solver, adaptive_sampling, monte_carlo_optimized, implicit_mc), `core/multigroup_advanced.py`, `core/endf_setup.py`, `burnup/lwr_burnup.py`, `convenience.py`.
 
-   **Path to 100% (in-scope):** Remaining uncovered lines are mainly in `core/reactor_core.py` (~242), `burnup/solver.py` (~181), `neutronics/transport.py` (~72), `geometry/advanced_mesh.py` (~108), plus smaller gaps in `geometry/lwr_smr.py`, `core/resonance_selfshield.py`, `workflows/pareto_report.py`. Reaching 100% would require adding tests for these modules; `geometry/two_phase_flow.py` and most workflow/validation modules are at or near 100%.
+   **Path to 100% (in-scope):** See `COVERAGE_100_PLAN.md`. Remaining uncovered lines: `core/reactor_core.py` (~162), `burnup/solver.py` (~181), `neutronics/transport.py` (~72), `geometry/advanced_mesh.py` (~108), plus smaller gaps. Add tests and `# pragma: no cover` for JIT/untestable paths. Run: `pytest tests/ --cov=smrforge --cov-config=coverage_community_100.ini --cov-report=term-missing`.
 
    **Continue checklist (run locally):**
    - Run coverage: `$env:COVERAGE_FILE="$env:TEMP\.coverage_smrforge"; pytest tests/ --cov=smrforge --cov-report=term-missing -q` (PowerShell). Or use `scripts/coverage_full.ps1` to write `coverage/generated/coverage.json` and HTML. Ensure `coverage/generated` exists (scripts create it automatically).
@@ -397,7 +397,7 @@ The following code paths are intentionally excluded from coverage or have accept
 - `test_utils_init.py` - 5 tests
 - `test_version.py` - 3 tests
 - `test_help.py` - 31 tests
-- `test_coverage_table_258_277.py` - 47 tests (implements table 258–277). **Feb 2026 (90% target):** `test_convenience_remaining_coverage_round2.py` (convenience_utils ImportError/viz, quick_solve return_power); `test_parameter_sweep` empty stats + median/correlations; `test_control_rod_worth` edge cases (position>1, no insert, zero flux, cubic, invalid k_eff); `test_constraints` spec-missing-attr and max no-violation.
+- `test_coverage_table_258_277.py` - 47 tests (implements table 258–277). **Feb 2026 (90% target):** `test_convenience_remaining_coverage_round2.py` (convenience_utils ImportError/viz, quick_solve return_power); `test_parameter_sweep` empty stats + median/correlations; `test_control_rod_worth` edge cases (position>1, no insert, zero flux, cubic, invalid k_eff); `test_constraints` spec-missing-attr and max no-violation. **`test_coverage_community_continue.py`** (workflows/pareto_report edge cases, decay_heat cache path, fuel_cycle optimization, io/converters Community path).
 
 ---
 

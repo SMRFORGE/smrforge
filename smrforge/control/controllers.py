@@ -17,7 +17,7 @@ logger = get_logger("smrforge.control.controllers")
 try:
     from scipy.optimize import minimize
     _SCIPY_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _SCIPY_AVAILABLE = False
     logger.warning("scipy not available, MPC will use simplified optimization")
 
