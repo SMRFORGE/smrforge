@@ -11,6 +11,8 @@ This file contains starter implementations for missing modules:
 7. Economics
 
 Place these in their respective directories after migration.
+
+Archived from repo root — reference only.
 """
 
 # ============================================================================

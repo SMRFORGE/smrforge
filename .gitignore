@@ -139,3 +139,16 @@ docker-compose.override.yml
 # Zarr data files
 *.zarr
 *.zarr.zip
+
+# Runtime / generated artifacts (root)
+.smrforge_runs.json
+/results.json
+/sweep_results.json
+/smrforge_project.json
+testing_results.txt
+
+# Coverage temp files (e.g. from coverage.py)
+*.cover
+
+# One-off security audit reports
+security_reports/

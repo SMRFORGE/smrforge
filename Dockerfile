@@ -137,7 +137,9 @@ FROM python:3.11-slim
 # Metadata labels
 LABEL maintainer="SMRForge Development Team" \
       description="Small Modular Reactor Design and Analysis Toolkit" \
-      version="0.1.0"
+      version="0.1.0" \
+      org.opencontainers.image.title="SMRForge Community" \
+      org.opencontainers.image.description="SMRForge Community Edition - reactor design and analysis toolkit"
 
 # Set working directory
 WORKDIR /app
@@ -151,7 +153,8 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     MPLBACKEND=Agg \
-    PYVISTA_OFF_SCREEN=true
+    PYVISTA_OFF_SCREEN=true \
+    SMRFORGE_TIER=community
 
 # Install system dependencies
 # Scientific Python packages require various system libraries
