@@ -90,6 +90,7 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Convert to OpenMC format
 - [ ] Convert from Serpent format (if available)
 - [ ] Convert from OpenMC format (if available)
+- [ ] Serpent run+parse (Community): run_serpent, parse_res_file, run_and_parse; parse_serpent_res with sample _res.m
 - [ ] Verify output file formats
 
 **Test Script**: `testing/test_07_io_converters.py`  

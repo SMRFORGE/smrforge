@@ -32,7 +32,7 @@ All documentation files have been updated with:
 - `HELP_SYSTEM_DOCUMENTATION.md` → Merged into `docs/guides/help-system.md` (deleted duplicate)
 
 **Kept Separate (with cross-references):**
-- `docs/roadmaps/development-roadmap.md` and `docs/roadmaps/next-steps.md` - Different scopes (roadmap vs. immediate steps)
+- SMRForge-Private/roadmaps/development-roadmap.md and next-steps - Different scopes (roadmap vs. immediate steps)
 
 ### 3. New Documentation
 

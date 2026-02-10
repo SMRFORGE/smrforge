@@ -4,7 +4,7 @@
 
 This document describes the implementation status and stability of SMRForge modules.
 
-**Roadmap:** See `docs/roadmaps/CONSOLIDATED-ROADMAP.md` for the consolidated “what to do next”.
+**Roadmap:** Roadmaps are in SMRForge-Private (local docs, not in repo). See `SMRForge-Private/roadmaps/CONSOLIDATED-ROADMAP.md` for the consolidated “what to do next”.
 
 ---
 

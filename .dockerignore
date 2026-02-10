@@ -39,8 +39,9 @@ docs/.doctrees/
 # Uncomment the next line to exclude all docs except what's needed for package
 # docs/
 
-# Backup directories
+# Backup and redundant directories
 backup_*/
+smrforge-*/
 
 # Coverage and test artifacts
 .coverage
@@ -48,8 +49,12 @@ backup_*/
 .pytest_cache/
 htmlcov/
 coverage/generated/
+coverage/tracking/
 report_*.txt
+coverage_run.txt
+coverage_run_*.txt
 *.cover
+*.py,cover
 
 # ReadTheDocs and build artifacts
 .readthedocs.yml

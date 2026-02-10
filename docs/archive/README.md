@@ -12,7 +12,7 @@ Outdated, superseded, or session-specific documents are kept here for reference.
 |-----------|----------|
 | **root-session/** | One-off root-level session docs (coverage runs, test coordination, etc.) |
 | **testing-session/** | Manual testing session notes, result templates, fix summaries |
-| **roadmaps-superseded/** | Roadmap docs superseded by [CONSOLIDATED-ROADMAP](../roadmaps/CONSOLIDATED-ROADMAP.md) |
+| **roadmaps-superseded/** | Roadmap docs superseded by CONSOLIDATED-ROADMAP (now in SMRForge-Private/roadmaps/) |
 | **technical-superseded/** | Technical docs consolidated into OPTIMIZATION-STATUS-REPORT, etc. |
 
 ---

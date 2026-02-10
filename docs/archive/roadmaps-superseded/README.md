@@ -1,3 +1,3 @@
 # Superseded roadmaps (archived)
 
-Superseded by [CONSOLIDATED-ROADMAP.md](../../roadmaps/CONSOLIDATED-ROADMAP.md) and [development-roadmap.md](../../roadmaps/development-roadmap.md).
+Superseded by CONSOLIDATED-ROADMAP and development-roadmap (moved to SMRForge-Private/roadmaps/).

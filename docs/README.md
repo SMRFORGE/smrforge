@@ -31,9 +31,8 @@ This directory contains all SMRForge documentation organized by category. See **
 - Testing documentation
 - Coverage information
 
-### Roadmaps (`roadmaps/`)
-- **CONSOLIDATED-ROADMAP** (primary), development roadmap
-- Implementation priority analysis, optimization suggestions
+### Roadmaps
+- Moved to **SMRForge-Private** (local docs, not in repo): CONSOLIDATED-ROADMAP, development roadmap, implementation-priority-analysis
 - Superseded items in `archive/roadmaps-superseded/`
 
 ### Status (`status/`)
@@ -133,7 +132,7 @@ This directory contains all SMRForge documentation organized by category. See **
 ### For Developers
 - See `development/code-style.md`
 - Review `development/release-process.md`
-- Check `roadmaps/development-roadmap.md`
+- Check SMRForge-Private/roadmaps/development-roadmap.md (local)
 
 ### For Contributors
 - Read `../CONTRIBUTING.md`

@@ -1,17 +1,12 @@
-# INTEGRATION_GUIDE.md (as Python comments)
-"""
-=============================================================================
-PYDANTIC v2 INTEGRATION GUIDE FOR SMRFORGE
-=============================================================================
+# Pydantic v2 Integration Guide for SMRForge
 
 This guide shows how to integrate Pydantic models with existing SMRForge code.
 
-STEP 1: Update pyproject.toml
-=============================================================================
-"""
+## STEP 1: Update pyproject.toml
 
-# Add to pyproject.toml:
-"""
+Add to `pyproject.toml`:
+
+```toml
 [project]
 dependencies = [
     # ... existing dependencies
@@ -19,29 +14,28 @@ dependencies = [
     "pydantic-settings>=2.1",
     "python-dotenv>=1.0",  # For .env file loading
 ]
-"""
+```
 
-"""
-STEP 2: Update Existing Classes
-=============================================================================
-"""
+## STEP 2: Update Existing Classes
 
-# BEFORE (old dataclass approach):
-"""
+### BEFORE (old dataclass approach)
+
+```python
 from dataclasses import dataclass
 
 @dataclass
 class ReactorSpec:
     power_thermal: float
     temperature: float
-    
+
     def __post_init__(self):
         if self.power_thermal <= 0:
             raise ValueError("Power must be positive")
-"""
+```
 
-# AFTER (Pydantic):
-"""
+### AFTER (Pydantic)
+
+```python
 from smrforge.validation.models import ReactorSpecification
 
 # Just use the Pydantic model - validation is automatic!
@@ -54,22 +48,21 @@ spec = ReactorSpecification(
 
 # Validation happens automatically on construction
 # Invalid values raise pydantic.ValidationError with clear messages
-"""
+```
 
-"""
-STEP 3: Migrate Reference Designs
-=============================================================================
-"""
+## STEP 3: Migrate Reference Designs
 
-# BEFORE:
-"""
+### BEFORE
+
+```python
 class ValarAtomicsReactor:
     def __init__(self):
         self.spec = ReactorSpecification(...)  # Custom class
-"""
+```
 
-# AFTER:
-"""
+### AFTER
+
+```python
 from smrforge.validation.models import ReactorSpecification, ReactorType, FuelType
 
 class ValarAtomicsReactor:
@@ -97,12 +90,12 @@ class ValarAtomicsReactor:
             doppler_coefficient=-3.5e-5,  # Auto-validates negative
             shutdown_margin=0.05,
         )
-    
+
     # Can now serialize easily:
     def to_json(self, filepath):
         with open(filepath, 'w') as f:
             f.write(self.spec.model_dump_json(indent=2))
-    
+
     @classmethod
     def from_json(cls, filepath):
         with open(filepath) as f:
@@ -110,56 +103,53 @@ class ValarAtomicsReactor:
         reactor = cls.__new__(cls)
         reactor.spec = spec
         return reactor
-"""
+```
 
-"""
-STEP 4: Migrate Solver Classes
-=============================================================================
-"""
+## STEP 4: Migrate Solver Classes
 
-# BEFORE:
-"""
+### BEFORE
+
+```python
 class MultiGroupDiffusion:
     def __init__(self, geometry, xs_data, options):
         self.geometry = geometry
         self.xs_data = xs_data
         self.options = options
         # Manual validation...
-"""
+```
 
-# AFTER:
-"""
+### AFTER
+
+```python
 from smrforge.validation.models import CrossSectionData, SolverOptions
 
 class MultiGroupDiffusion:
-    def __init__(self, geometry, xs_data: CrossSectionData, 
+    def __init__(self, geometry, xs_data: CrossSectionData,
                  options: SolverOptions):
         # Type hints + Pydantic ensures xs_data and options are valid
         self.geometry = geometry
         self.xs_data = xs_data  # Already validated by Pydantic
         self.options = options  # Already validated by Pydantic
-        
+
         # Additional domain-specific validation if needed
         self._validate_geometry()
-    
+
     def _validate_geometry(self):
         # Custom physics validation beyond Pydantic
-        from validation.validators import DataValidator
+        from smrforge.validation.validators import DataValidator
         validator = DataValidator()
         result = validator.validate_solver_inputs(
             self.geometry, self.xs_data, self.options
         )
         if result.has_errors():
             raise ValueError(f"Geometry validation failed: {result}")
-"""
+```
 
-"""
-STEP 5: Configuration Files
-=============================================================================
-"""
+## STEP 5: Configuration Files
 
-# Create reactor_config.yaml:
-"""
+Create `reactor_config.yaml`:
+
+```yaml
 name: "My-HTGR"
 reactor_type: "prismatic"
 power_thermal: 50000000  # 50 MW
@@ -180,46 +170,44 @@ capacity_factor: 0.92
 target_burnup: 100.0
 doppler_coefficient: -0.000035
 shutdown_margin: 0.08
-"""
+```
 
-# Load in Python:
-"""
+Load in Python:
+
+```python
 from smrforge.validation.models import load_reactor_from_yaml
 
 spec = load_reactor_from_yaml("reactor_config.yaml")
 # Automatically validated on load!
-"""
+```
 
-"""
-STEP 6: Environment-Based Settings
-=============================================================================
-"""
+## STEP 6: Environment-Based Settings
 
-# Create .env file:
-"""
+Create `.env` file:
+
+```
 SMRFORGE_CACHE_DIR=/data/smrforge/cache
 SMRFORGE_OUTPUT_DIR=/results
 SMRFORGE_NUCLEAR_DATA_LIBRARY=endfb8.0
 SMRFORGE_N_THREADS=16
 SMRFORGE_STRICT_VALIDATION=true
-"""
+```
 
-# Use in code:
-"""
+Use in code:
+
+```python
 from smrforge.validation.models import SMRForgeSettings
 
 settings = SMRForgeSettings()  # Auto-loads from environment
 print(settings.cache_dir)  # Path('/data/smrforge/cache')
 print(settings.n_threads)  # 16
-"""
+```
 
-"""
-STEP 7: API Integration (FastAPI example)
-=============================================================================
-"""
+## STEP 7: API Integration (FastAPI example)
 
-# If building a web API:
-"""
+If building a web API:
+
+```python
 from fastapi import FastAPI, HTTPException
 from smrforge.validation.models import ReactorSpecification
 
@@ -235,16 +223,16 @@ def analyze_reactor(spec: ReactorSpecification):
         "power_thermal": 10000000,
         ... all other fields
     }
-    
+
     Pydantic automatically:
     - Validates all fields
     - Returns 422 with detailed errors if invalid
     - Converts types (string "10000000" -> float 10000000.0)
     '''
-    
+
     # spec is guaranteed valid here
     from smrforge.analysis import run_complete_analysis
-    
+
     try:
         results = run_complete_analysis(spec)
         return {"status": "success", "results": results}
@@ -252,15 +240,13 @@ def analyze_reactor(spec: ReactorSpecification):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Auto-generated OpenAPI docs at http://localhost:8000/docs
-"""
+```
 
-"""
-STEP 8: Validation Error Handling
-=============================================================================
-"""
+## STEP 8: Validation Error Handling
 
-# Pydantic provides detailed error messages:
-"""
+Pydantic provides detailed error messages:
+
+```python
 from pydantic import ValidationError
 from smrforge.validation.models import ReactorSpecification
 
@@ -296,15 +282,13 @@ except ValidationError as e:
       }
     ]
     '''
-"""
+```
 
-"""
-STEP 9: Testing with Pydantic
-=============================================================================
-"""
+## STEP 9: Testing with Pydantic
 
-# pytest example:
-"""
+pytest example:
+
+```python
 import pytest
 from pydantic import ValidationError
 from smrforge.validation.models import ReactorSpecification
@@ -337,15 +321,13 @@ def test_temperature_order_validated():
             # ...
         )
     assert "Inlet temperature must be less than outlet" in str(exc_info.value)
-"""
+```
 
-"""
-STEP 10: Performance Considerations
-=============================================================================
-"""
+## STEP 10: Performance Considerations
 
-# Pydantic v2 is fast, but for hot paths:
-"""
+Pydantic v2 is fast, but for hot paths:
+
+```python
 from smrforge.validation.models import ReactorSpecification
 
 # Disable validation for trusted data (use carefully!):
@@ -364,15 +346,13 @@ for i in range(1000):
     spec = ReactorSpecification(...)  # Full validation
 elapsed = time.time() - start
 print(f"1000 validations: {elapsed:.3f} s")  # ~0.1-0.5s typical
-"""
+```
 
-"""
-STEP 11: Combining Pydantic with Custom Validators
-=============================================================================
-"""
+## STEP 11: Combining Pydantic with Custom Validators
 
-# Best practice: Pydantic for data, custom for physics
-"""
+Best practice: Pydantic for data, custom for physics:
+
+```python
 from smrforge.validation.models import ReactorSpecification
 from smrforge.validation.validators import DataValidator, PhysicalValidator
 
@@ -392,15 +372,13 @@ if result.has_errors():
 from smrforge.neutronics.solver import MultiGroupDiffusion
 solver = MultiGroupDiffusion(core, xs_data, options)
 k_eff, flux = solver.solve_steady_state()
-"""
+```
 
-"""
-STEP 12: Schema Generation for Documentation
-=============================================================================
-"""
+## STEP 12: Schema Generation for Documentation
 
-# Auto-generate JSON Schema:
-"""
+Auto-generate JSON Schema:
+
+```python
 from smrforge.validation.models import ReactorSpecification
 import json
 
@@ -416,140 +394,35 @@ with open('reactor_spec_schema.json', 'w') as f:
 # - Constraints (min, max, etc.)
 # - Descriptions
 # - Examples
-"""
+```
 
-"""
-MIGRATION CHECKLIST
-=============================================================================
+## Migration Checklist
 
-□ Install pydantic and pydantic-settings
-□ Create validation/models.py with Pydantic models
-□ Update ReactorSpecification classes to use Pydantic
-□ Update solver options to use SolverOptions model
-□ Update cross section data to use CrossSectionData model
-□ Create SMRForgeSettings for configuration
-□ Update tests to handle ValidationError
-□ Add JSON/YAML loading utilities
-□ Update documentation with examples
-□ Add schema generation to docs build
-□ Profile performance (should be fast with Pydantic v2)
-□ Keep custom validators for complex physics
-□ Add validation to CI/CD pipeline
+- [ ] Install pydantic and pydantic-settings
+- [ ] Create validation/models.py with Pydantic models
+- [ ] Update ReactorSpecification classes to use Pydantic
+- [ ] Update solver options to use SolverOptions model
+- [ ] Update cross section data to use CrossSectionData model
+- [ ] Create SMRForgeSettings for configuration
+- [ ] Update tests to handle ValidationError
+- [ ] Add JSON/YAML loading utilities
+- [ ] Update documentation with examples
+- [ ] Add schema generation to docs build
+- [ ] Profile performance (should be fast with Pydantic v2)
+- [ ] Keep custom validators for complex physics
+- [ ] Add validation to CI/CD pipeline
 
-BENEFITS ACHIEVED
-=============================================================================
+## Benefits Achieved
 
-✓ Automatic validation on construction
-✓ Type safety with runtime checks
-✓ Clear error messages with field locations
-✓ JSON/YAML serialization built-in
-✓ Auto-generated API documentation
-✓ Configuration file support
-✓ Environment variable support
-✓ 5-50x faster than pure Python validation
-✓ Wide industry adoption (proven)
-✓ Excellent documentation
-✓ IDE autocomplete support
-✓ Reduced boilerplate code
-"""
-
-
-# =============================================================================
-# EXAMPLE: Complete Workflow with Pydantic
-# =============================================================================
-
-def complete_workflow_example():
-    """Example showing complete workflow with Pydantic validation."""
-    from rich.console import Console
-    from smrforge.validation.models import (
-        ReactorSpecification, GeometryParameters, 
-        SolverOptions, SMRForgeSettings, FuelType, ReactorType
-    )
-    
-    console = Console()
-    console.print("[bold cyan]Complete Pydantic Workflow Example[/bold cyan]\n")
-    
-    # 1. Load settings
-    settings = SMRForgeSettings()
-    console.print(f"[bold]Settings:[/bold]")
-    console.print(f"  Cache: {settings.cache_dir}")
-    console.print(f"  Library: {settings.nuclear_data_library}")
-    
-    # 2. Create reactor spec (auto-validated)
-    console.print("\n[bold]Creating reactor specification...[/bold]")
-    try:
-        spec = ReactorSpecification(
-            name="Example-HTGR",
-            reactor_type=ReactorType.PRISMATIC,
-            power_thermal=25e6,
-            power_electric=10e6,
-            inlet_temperature=773.15,
-            outlet_temperature=1073.15,
-            max_fuel_temperature=1873.15,
-            primary_pressure=7.0e6,
-            core_height=250.0,
-            core_diameter=120.0,
-            reflector_thickness=40.0,
-            fuel_type=FuelType.UCO,
-            enrichment=0.19,
-            heavy_metal_loading=300.0,
-            coolant_flow_rate=12.0,
-            cycle_length=2190,
-            capacity_factor=0.93,
-            target_burnup=120.0,
-            doppler_coefficient=-3.2e-5,
-            shutdown_margin=0.06
-        )
-        console.print(f"  ✓ Spec created: {spec.name}")
-        console.print(f"    Power density: {spec.power_density:.2f} MW/m³")
-        console.print(f"    Efficiency: {spec.thermal_efficiency*100:.1f}%")
-    except Exception as e:
-        console.print(f"  ✗ Validation failed: {e}")
-        return
-    
-    # 3. Save to file
-    console.print("\n[bold]Saving to JSON...[/bold]")
-    from pathlib import Path
-    from smrforge.validation.models import save_reactor_to_json
-    save_reactor_to_json(spec, Path("example_reactor.json"))
-    console.print("  ✓ Saved to example_reactor.json")
-    
-    # 4. Load from file
-    console.print("\n[bold]Loading from JSON...[/bold]")
-    from smrforge.validation.models import load_reactor_from_json
-    spec_loaded = load_reactor_from_json(Path("example_reactor.json"))
-    console.print(f"  ✓ Loaded: {spec_loaded.name}")
-    
-    # 5. Geometry parameters
-    console.print("\n[bold]Creating geometry...[/bold]")
-    geom = GeometryParameters(
-        n_rings=4,
-        lattice_pitch=38.0,
-        block_height=62.5,
-        n_axial_blocks=4,
-        n_radial_mesh=25,
-        n_axial_mesh=60
-    )
-    console.print(f"  ✓ Geometry: {geom.n_rings} rings, {geom.n_axial_blocks} axial")
-    
-    # 6. Solver options
-    console.print("\n[bold]Configuring solver...[/bold]")
-    options = SolverOptions(
-        max_iterations=500,
-        tolerance=1e-6,
-        acceleration="chebyshev",
-        verbose=True
-    )
-    console.print(f"  ✓ Solver: {options.eigen_method} method, tol={options.tolerance}")
-    
-    console.print("\n[bold green]All validations passed![/bold green]")
-    console.print(f"\nReactor: {spec.name}")
-    console.print(f"  Type: {spec.reactor_type.value}")
-    console.print(f"  Power: {spec.power_thermal/1e6:.1f} MWth")
-    console.print(f"  Enrichment: {spec.enrichment*100:.1f}% ({spec.enrichment_class.value})")
-    console.print(f"  Core: {spec.core_height:.0f} cm H × {spec.core_diameter:.0f} cm D")
-    console.print(f"  Aspect ratio: {spec.aspect_ratio:.2f}")
-
-
-if __name__ == "__main__":
-    complete_workflow_example()
+- Automatic validation on construction
+- Type safety with runtime checks
+- Clear error messages with field locations
+- JSON/YAML serialization built-in
+- Auto-generated API documentation
+- Configuration file support
+- Environment variable support
+- 5-50x faster than pure Python validation
+- Wide industry adoption (proven)
+- Excellent documentation
+- IDE autocomplete support
+- Reduced boilerplate code

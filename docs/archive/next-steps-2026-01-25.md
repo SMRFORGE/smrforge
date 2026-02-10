@@ -6,7 +6,7 @@
 
 This document consolidates next steps and recommended additions based on current package state.
 
-**Note:** For the main development roadmap, see `docs/roadmaps/development-roadmap.md`.
+**Note:** For the main development roadmap, see SMRForge-Private/roadmaps/development-roadmap.md (local).
 
 ---
 

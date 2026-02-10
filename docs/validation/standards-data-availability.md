@@ -107,6 +107,6 @@ If `standards-version.VIII.1` is not available in your ENDF download:
 ---
 
 **See also:**
-- `docs/roadmaps/CONSOLIDATED-ROADMAP.md` (roadmap); `docs/archive/roadmaps-superseded/next-work-options.md` - historical validation status
+- SMRForge-Private/roadmaps/CONSOLIDATED-ROADMAP.md (roadmap, local); `docs/archive/roadmaps-superseded/next-work-options.md` - historical validation status
 - `benchmarks/validation_benchmarks.json` - Benchmark database format
 - `scripts/run_validation.py` - Validation runner script

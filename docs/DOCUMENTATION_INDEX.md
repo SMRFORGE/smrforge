@@ -65,16 +65,14 @@ This document provides a comprehensive index of all SMRForge documentation files
 
 ---
 
-## 🗺️ Roadmaps (`roadmaps/`)
+## 🗺️ Roadmaps
 
-### Planning Documents
-- **[CONSOLIDATED-ROADMAP](roadmaps/CONSOLIDATED-ROADMAP.md)** - **Primary** - Unified roadmap (completed, pending, future)
-- **[Development Roadmap](roadmaps/development-roadmap.md)** - Development priorities
-- **[Implementation Priority Analysis](roadmaps/implementation-priority-analysis.md)** - Priority analysis
-- **[Optimization Suggestions](roadmaps/optimization-suggestions.md)** - Optimization suggestions
-- **[CLI Enhancement Plan](roadmaps/cli-enhancement-plan.md)** - CLI improvements
+**Roadmaps moved to SMRForge-Private (local docs, not in repo).** If you have access, see `SMRForge-Private/roadmaps/` for:
+- CONSOLIDATED-ROADMAP.md (primary)
+- development-roadmap.md, implementation-priority-analysis.md
+- optimization-suggestions.md, cli-enhancement-plan.md
 
-**Archived (superseded by CONSOLIDATED-ROADMAP):** [next-steps](archive/roadmaps-superseded/next-steps.md), [next-work-options](archive/roadmaps-superseded/next-work-options.md), [NEXT-FEATURES](archive/roadmaps-superseded/NEXT-FEATURES.md) → `archive/roadmaps-superseded/`
+**Archived (in repo):** [next-steps](archive/roadmaps-superseded/next-steps.md), [next-work-options](archive/roadmaps-superseded/next-work-options.md), [NEXT-FEATURES](archive/roadmaps-superseded/NEXT-FEATURES.md) → `archive/roadmaps-superseded/`
 
 ---
 
@@ -246,7 +244,7 @@ See **[archive/README.md](archive/README.md)** for the archive layout and subdir
 ### For Developers
 1. Read [CONTRIBUTING](../CONTRIBUTING.md)
 2. Follow [Code Style Guide](development/code-style.md)
-3. Check [CONSOLIDATED-ROADMAP](roadmaps/CONSOLIDATED-ROADMAP.md) or [Development Roadmap](roadmaps/development-roadmap.md)
+3. Check SMRForge-Private/roadmaps/CONSOLIDATED-ROADMAP.md or development-roadmap.md (local)
 4. Review [Feature Status](status/feature-status.md)
 5. Use Sphinx **API Reference** (see above) for module-level docs
 
@@ -262,5 +260,5 @@ See **[archive/README.md](archive/README.md)** for the archive layout and subdir
 - All dates in documentation use format: **Month Day, Year** (e.g., January 18, 2026)
 - Documents are updated when features are implemented or information changes
 - Historical implementation summaries are kept in `docs/archive/` for reference
-- For the most current status, see [Feature Status](status/feature-status.md) and [CONSOLIDATED-ROADMAP](roadmaps/CONSOLIDATED-ROADMAP.md)
+- For the most current status, see [Feature Status](status/feature-status.md) and SMRForge-Private/roadmaps/CONSOLIDATED-ROADMAP.md (local)
 - Documentation structure follows the consolidation plan in [Documentation Consolidation Plan](archive/DOCUMENTATION_CONSOLIDATION_PLAN_2026.md)

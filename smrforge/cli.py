@@ -1632,6 +1632,71 @@ def validate_run(args):
         sys.exit(1)  # pragma: no cover
 
 
+def report_design(args):
+    """Generate design summary report from reactor analysis."""
+    try:
+        import smrforge as smr
+        from smrforge.reporting import generate_markdown_report
+
+        if args.preset:
+            results = smr.analyze_preset(args.preset)
+            title = f"Design Summary: {args.preset}"
+        elif args.reactor and args.reactor.exists():
+            reactor = smr.SimpleReactor.load(args.reactor)
+            results = reactor.solve()
+            title = f"Design Summary: {args.reactor.stem}"
+        else:
+            _print_error("Specify --preset or --reactor.")
+            sys.exit(1)
+        out = Path(args.output) if args.output else Path("design_report.md")
+        generate_markdown_report(results, title=title, output_path=out)
+        _print_success(f"Report saved to {out}")
+    except Exception as e:
+        _print_error(f"Report generation failed: {e}")
+        sys.exit(1)
+
+
+def validate_benchmark(args):
+    """Run Community benchmark cases and optionally generate report."""
+    try:
+        from smrforge.benchmarks import CommunityBenchmarkRunner
+
+        runner = CommunityBenchmarkRunner(
+            benchmarks_path=getattr(args, "benchmarks_file", None)
+        )
+        results = runner.run_all(
+            case_ids=getattr(args, "cases", None) or None
+        )
+        if not results:
+            _print_error("No benchmark cases found or run.")
+            sys.exit(1)
+        passed = sum(1 for p, _, _ in results.values() if p)
+        total = len(results)
+        for cid, (p, val, err) in results.items():
+            status = _GLYPH_SUCCESS if p else _GLYPH_ERROR
+            msg = f"  {err}" if err else ""
+            if _RICH_AVAILABLE and console:
+                console.print(f"  {status} {cid}: k_eff={val:.6f}{msg}")
+            else:
+                print(f"  {status} {cid}: k_eff={val:.6f}{msg}")
+        if passed == total:
+            _print_success(f"All {total} benchmarks passed.")
+        else:
+            _print_error(f"{total - passed}/{total} benchmarks failed.")
+            sys.exit(1)
+        out = getattr(args, "output", None)
+        if out:
+            runner.generate_report(results=results, output_path=Path(out))
+            _print_success(f"Report saved to {out}")
+    except Exception as e:
+        _print_error(f"Benchmark run failed: {e}")
+        if getattr(args, "verbose", False):
+            import traceback
+
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def visualize_geometry(args):
     """Visualize reactor geometry."""
     try:
@@ -4824,6 +4889,17 @@ Note: All features are also available via Python API:
     validate_run_parser.add_argument('--output', type=Path, help='Output file for results')
     validate_run_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     validate_run_parser.set_defaults(func=validate_run)
+
+    # validate benchmark (Community benchmark suite)
+    validate_benchmark_parser = validate_subparsers.add_parser(
+        'benchmark',
+        help='Run Community benchmark cases (regression validation)'
+    )
+    validate_benchmark_parser.add_argument('--benchmarks-file', type=Path, help='Path to community_benchmarks.json')
+    validate_benchmark_parser.add_argument('--cases', nargs='+', help='Specific case IDs to run')
+    validate_benchmark_parser.add_argument('--output', type=Path, help='Output Markdown report path')
+    validate_benchmark_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+    validate_benchmark_parser.set_defaults(func=validate_benchmark)
     
     # Visualize subcommands
     visualize_parser = subparsers.add_parser(
@@ -4925,6 +5001,21 @@ Note: All features are also available via Python API:
     validate_design_parser.set_defaults(func=validate_design)
     
     # Config subcommands
+    # Report subcommands (Community design summary)
+    report_parser = subparsers.add_parser(
+        'report',
+        help='Generate design summary report (Community). For full reports see SMRForge Pro.'
+    )
+    report_subparsers = report_parser.add_subparsers(dest='report_command', help='Report commands')
+    report_design_parser = report_subparsers.add_parser(
+        'design',
+        help='Generate Markdown design summary from reactor analysis'
+    )
+    report_design_parser.add_argument('--preset', type=str, help='Preset name (e.g. valar-10)')
+    report_design_parser.add_argument('--reactor', type=Path, help='Reactor JSON file')
+    report_design_parser.add_argument('--output', '-o', type=Path, default=Path('design_report.md'), help='Output Markdown file')
+    report_design_parser.set_defaults(func=report_design)
+
     config_parser = subparsers.add_parser(
         'config',
         help='Configuration management'

@@ -288,7 +288,7 @@ smrforge validate run `
 
 ---
 
-**Note:** This document is historical. Most items listed here are now complete. See `docs/roadmaps/next-steps.md` for current next steps.
+**Note:** This document is historical. Most items listed here are now complete. See SMRForge-Private/roadmaps/ for current roadmaps (local).
 
 ---
 

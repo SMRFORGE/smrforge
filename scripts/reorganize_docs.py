@@ -39,12 +39,12 @@ FILE_MAPPINGS = {
     "COVERAGE_EXCLUSIONS.md": "docs/development/coverage-exclusions.md",
     "COVERAGE_INVENTORY.md": "docs/development/coverage-inventory.md",
     
-    # Roadmaps
-    "DEVELOPMENT_ROADMAP.md": "docs/roadmaps/development-roadmap.md",
-    "NEXT_STEPS.md": "docs/roadmaps/next-steps.md",
-    "NEXT_WORK_OPTIONS.md": "docs/roadmaps/next-work-options.md",
-    "IMPLEMENTATION_PRIORITY_ANALYSIS.md": "docs/roadmaps/implementation-priority-analysis.md",
-    "OPTIMIZATION_SUGGESTIONS.md": "docs/roadmaps/optimization-suggestions.md",
+    # Roadmaps (in SMRForge-Private at Documents/SMRForge-Private, not in repo)
+    "DEVELOPMENT_ROADMAP.md": "../../SMRForge-Private/roadmaps/development-roadmap.md",
+    "NEXT_STEPS.md": "../../SMRForge-Private/roadmaps/next-steps.md",
+    "NEXT_WORK_OPTIONS.md": "../../SMRForge-Private/roadmaps/next-work-options.md",
+    "IMPLEMENTATION_PRIORITY_ANALYSIS.md": "../../SMRForge-Private/roadmaps/implementation-priority-analysis.md",
+    "OPTIMIZATION_SUGGESTIONS.md": "../../SMRForge-Private/roadmaps/optimization-suggestions.md",
     
     # Status
     "FEATURE_STATUS.md": "docs/status/feature-status.md",

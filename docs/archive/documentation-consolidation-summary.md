@@ -66,8 +66,8 @@ Consolidated and streamlined documentation to reduce redundancy and improve main
 - `docs/technical/nuclear-data-backends.md` - Technical documentation
 - `docs/technical/logging-usage.md` - User guide
 - `docs/technical/coupling-reduction.md` - Architecture notes
-- `docs/roadmaps/optimization-suggestions.md` - Future work
-- `docs/roadmaps/next-steps.md` - Roadmap
+- SMRForge-Private/roadmaps/optimization-suggestions.md - Future work (local)
+- SMRForge-Private/roadmaps/ - Roadmap (local)
 - `RECOMMENDED_ADDITIONS.md` - Future work
 - `docs/status/production-readiness-status.md` - Current assessment
 - `docs/guides/usage.md` - Usage guide (consolidated from USAGE_SUMMARY.md and EASY_USAGE_EXAMPLES.md)

@@ -125,7 +125,7 @@ def test_convert_to_serpent(reactor_file):
 
 def test_convert_from_openmc():
     """Test converting from OpenMC format."""
-    print("\n4. Testing convert from OpenMC format...")
+    print("\n4. Testing convert from OpenMC format (import)...")
     
     # Check if we have an OpenMC model from previous conversion
     openmc_dir = Path('openmc_output')
@@ -158,6 +158,36 @@ def test_convert_from_openmc():
             print(f"⏭️  Skipped (not yet implemented: {e})")
             return False
             
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def test_serpent_run_parse():
+    """Test Serpent run+parse (Community): parse_res_file with sample _res.m."""
+    print("\n4a. Testing Serpent parse_res_file (Community)...")
+    try:
+        from pathlib import Path
+        from smrforge.io import parse_serpent_res
+
+        res_dir = Path("output/manual_testing") if Path("output").exists() else Path(".")
+        res_dir.mkdir(parents=True, exist_ok=True)
+        res_file = res_dir / "sample_model_res.m"
+        res_file.write_text("IMP_KEFF (idx, [1: 2]) = [ 1.04349E+00 0.00189 ];\n")
+
+        parsed = parse_serpent_res(res_file)
+        if "k_eff" in parsed and parsed.get("k_eff_source") == "IMP_KEFF":
+            print(f"✅ Serpent parse_res_file: k_eff={parsed['k_eff']:.5f}")
+            if res_file.exists():
+                res_file.unlink()
+            return True
+        print("⚠️ Parsed but k_eff/k_eff_source missing")
+        return False
+    except ImportError as e:
+        print(f"⏭️ Skipped (parse_serpent_res not available: {e})")
+        return False
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
@@ -214,6 +244,7 @@ def main():
     results = {}
     results['convert_to_openmc'] = test_convert_to_openmc(reactor_file)
     results['convert_to_serpent'] = test_convert_to_serpent(reactor_file)
+    results['serpent_run_parse'] = test_serpent_run_parse()
     results['convert_from_openmc'] = test_convert_from_openmc()
     results['convert_from_serpent'] = test_convert_from_serpent()
     

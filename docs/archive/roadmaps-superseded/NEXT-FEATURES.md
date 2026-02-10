@@ -6,7 +6,7 @@ This file is kept for backwards compatibility with older links.
 
 The actively maintained roadmap is:
 
-- `docs/roadmaps/next-steps.md`
+- SMRForge-Private/roadmaps/ (local)
 
 The previous detailed “next features” backlog was archived here:
 

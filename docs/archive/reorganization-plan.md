@@ -127,12 +127,8 @@ smrforge/
 - `docs/development/coverage-exclusions.md` → `docs/development/coverage-exclusions.md`
 - `docs/development/coverage-inventory.md` → `docs/development/coverage-inventory.md`
 
-### Move to `docs/roadmaps/`
-- `docs/roadmaps/development-roadmap.md` → `docs/roadmaps/development-roadmap.md`
-- `docs/roadmaps/next-steps.md` → `docs/roadmaps/next-steps.md`
-- `docs/roadmaps/next-work-options.md` → `docs/roadmaps/next-work-options.md`
-- `docs/roadmaps/implementation-priority-analysis.md` → `docs/roadmaps/implementation-priority-analysis.md`
-- `docs/roadmaps/optimization-suggestions.md` → `docs/roadmaps/optimization-suggestions.md`
+### ~~Move to `docs/roadmaps/`~~ (roadmaps now in SMRForge-Private)
+- Roadmap files moved to SMRForge-Private/roadmaps/ (local, not in repo)
 
 ### Move to `docs/status/`
 - `docs/status/feature-status.md` → `docs/status/feature-status.md`

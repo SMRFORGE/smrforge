@@ -80,7 +80,9 @@ geometry_3d.html
 coverage/generated/
 coverage/tracking/
 report_*.txt
+coverage_run.txt
 coverage_run_*.txt
+coverage_output.txt
 coverage_run_*.txt.errors
 coverage_run_output*.txt
 coverage_run_output*.errors*
@@ -146,9 +148,13 @@ docker-compose.override.yml
 /sweep_results.json
 /smrforge_project.json
 testing_results.txt
+/design_report.md
+/design_summary_example.md
+/community_benchmark_report.md
 
 # Coverage temp files (e.g. from coverage.py)
 *.cover
+*.py,cover
 
 # One-off security audit reports
 security_reports/
