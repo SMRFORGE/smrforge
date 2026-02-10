@@ -147,9 +147,22 @@ CLI is excluded from the main project coverage run (see `pytest.ini` omit) so th
 - **Coverage:** Constraint sets, validation logic, severity classification
 - **Status:** ✅ Complete (includes bug fix for severity logic)
 
-#### `io/converters.py` - ✅ **~75-80%**
-- **Tests:** 11 tests in `test_converters.py` (OpenMC export/import, Serpent placeholder, Pro delegation)
-- **Coverage:** Placeholder implementations and error handling
+#### `io/converters.py` - ✅ **100%**
+- **Tests:** 11 tests in `test_converters.py` (OpenMC export/import, Serpent placeholder, Pro delegation) + `test_coverage_community_continue.py` (Community path)
+- **Coverage:** Full Community OpenMC export/import; placeholder Serpent; Pro delegation
+- **Status:** ✅ Complete
+
+#### `io/openmc_run.py` - ✅ **~92%**
+- **Tests:** 10 tests in `test_coverage_community_continue.py::TestOpenMCRunCoverage`
+- **Coverage:** run_openmc (FileNotFoundError, success, nonzero returncode), parse_statepoint (FileNotFoundError, h5py ImportError, k_eff/tallies), run_and_parse
+- **Status:** ✅ Complete
+
+#### `io/openmc_export.py` - ✅ **~98%**
+- **Tests:** Extended in `test_coverage_community_continue.py::TestOpenMCExportExtended` (PebbleBedCore, _get_core fallbacks, empty materials, unsupported core, empty composition)
+- **Status:** ✅ Complete
+
+#### `io/openmc_import.py` - ✅ **~90%**
+- **Tests:** Extended in `test_coverage_community_continue.py::TestOpenMCImportExtended` (FileNotFoundError, parse-fail ValueError, materials_file path)
 - **Status:** ✅ Complete
 
 #### `burnup/solver.py` (checkpointing) - ✅ **~75-80%**
@@ -397,7 +410,7 @@ The following code paths are intentionally excluded from coverage or have accept
 - `test_utils_init.py` - 5 tests
 - `test_version.py` - 3 tests
 - `test_help.py` - 31 tests
-- `test_coverage_table_258_277.py` - 47 tests (implements table 258–277). **Feb 2026 (90% target):** `test_convenience_remaining_coverage_round2.py` (convenience_utils ImportError/viz, quick_solve return_power); `test_parameter_sweep` empty stats + median/correlations; `test_control_rod_worth` edge cases (position>1, no insert, zero flux, cubic, invalid k_eff); `test_constraints` spec-missing-attr and max no-violation. **`test_coverage_community_continue.py`** (workflows/pareto_report edge cases, decay_heat cache path, fuel_cycle optimization, io/converters Community path).
+- `test_coverage_table_258_277.py` - 47 tests (implements table 258–277). **Feb 2026 (90% target):** `test_convenience_remaining_coverage_round2.py` (convenience_utils ImportError/viz, quick_solve return_power); `test_parameter_sweep` empty stats + median/correlations; `test_control_rod_worth` edge cases (position>1, no insert, zero flux, cubic, invalid k_eff); `test_constraints` spec-missing-attr and max no-violation. **`test_coverage_community_continue.py`** (workflows/pareto_report edge cases, decay_heat cache path, fuel_cycle optimization, io/converters Community path; io/openmc_run run_openmc/parse_statepoint/run_and_parse; io/openmc_export PebbleBedCore/fallbacks/errors; io/openmc_import FileNotFound/ValueError/materials).
 
 ---
 

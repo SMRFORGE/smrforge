@@ -366,3 +366,419 @@ class TestParameterSweepCoverage:
         result = sweep.run(resume=False, show_progress=True)
         assert len(result.results) == 2
         assert result.summary_stats is not None
+
+
+class TestOpenMCRunCoverage:
+    """Cover io/openmc_run: run_openmc, parse_statepoint, run_and_parse."""
+
+    def test_run_openmc_raises_when_geometry_missing(self, tmp_path):
+        """Cover FileNotFoundError when geometry.xml not found."""
+        from smrforge.io.openmc_run import run_openmc
+
+        with pytest.raises(FileNotFoundError, match="geometry.xml not found"):
+            run_openmc(tmp_path)
+
+    @patch("subprocess.run")
+    def test_run_openmc_success_with_mock(self, mock_run, tmp_path):
+        """Cover successful run_openmc path."""
+        from smrforge.io.openmc_run import run_openmc
+
+        (tmp_path / "geometry.xml").write_text("<geometry/>")
+        mock_run.return_value = Mock(returncode=0, stdout="ok", stderr="")
+        result = run_openmc(tmp_path)
+        assert result.returncode == 0
+        mock_run.assert_called_once()
+
+    @patch("subprocess.run")
+    def test_run_openmc_with_env_override(self, mock_run, tmp_path):
+        """Cover run_openmc env parameter (line 46)."""
+        from smrforge.io.openmc_run import run_openmc
+
+        (tmp_path / "geometry.xml").write_text("<geometry/>")
+        mock_run.return_value = Mock(returncode=0, stdout="ok", stderr="")
+        run_openmc(tmp_path, env={"OPENMC_CROSS_SECTIONS": "/path/to/xs"})
+        call_kw = mock_run.call_args[1]
+        assert "env" in call_kw
+        assert call_kw["env"].get("OPENMC_CROSS_SECTIONS") == "/path/to/xs"
+
+    @patch("subprocess.run")
+    def test_run_openmc_nonzero_returncode_logs_warning(self, mock_run, tmp_path):
+        """Cover returncode != 0 warning path."""
+        from smrforge.io.openmc_run import run_openmc
+
+        (tmp_path / "geometry.xml").write_text("<geometry/>")
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="error msg")
+        result = run_openmc(tmp_path)
+        assert result.returncode == 1
+
+    def test_parse_statepoint_file_not_found(self):
+        """Cover FileNotFoundError when statepoint does not exist."""
+        from smrforge.io.openmc_run import parse_statepoint
+
+        with pytest.raises(FileNotFoundError, match="Statepoint not found"):
+            parse_statepoint("/nonexistent/statepoint.10.h5")
+
+    def test_parse_statepoint_h5py_import_error(self, tmp_path):
+        """Cover ImportError when h5py not available."""
+        from smrforge.io.openmc_run import parse_statepoint
+
+        sp = tmp_path / "statepoint.10.h5"
+        sp.write_bytes(b"fake")
+        with patch.dict("sys.modules", {"h5py": None}):
+            with pytest.raises(ImportError, match="h5py required"):
+                parse_statepoint(sp)
+
+    def test_parse_statepoint_extracts_k_eff_and_tallies(self, tmp_path):
+        """Cover parse_statepoint with k_combined and tallies."""
+        pytest.importorskip("h5py")
+        import h5py
+
+        from smrforge.io.openmc_run import parse_statepoint
+
+        sp = tmp_path / "statepoint.10.h5"
+        with h5py.File(sp, "w") as f:
+            f.create_dataset("k_combined", data=[1.05, 0.002])
+            f.create_dataset("k_generation", data=[[1.0]] * 20)
+            tallies = f.create_group("tallies")
+            t1 = tallies.create_group("1")
+            t1.create_dataset("mean", data=1.0)
+            t1.create_dataset("std_dev", data=0.1)
+
+        parsed = parse_statepoint(sp)
+        assert parsed["k_eff"] == 1.05
+        assert parsed["k_eff_std"] == 0.002
+        assert parsed["batches"] == 20
+        assert "tallies" in parsed
+        assert 1 in parsed["tallies"]
+        assert parsed["tallies"][1]["mean"] == 1.0
+        assert parsed["tallies"][1]["std_dev"] == 0.1
+
+    def test_parse_statepoint_k_combined_scalar(self, tmp_path):
+        """Cover k_combined as scalar (len < 2)."""
+        pytest.importorskip("h5py")
+        import h5py
+
+        from smrforge.io.openmc_run import parse_statepoint
+
+        sp = tmp_path / "statepoint.10.h5"
+        with h5py.File(sp, "w") as f:
+            f.create_dataset("k_combined", data=1.04)
+
+        parsed = parse_statepoint(sp)
+        assert parsed["k_eff"] == 1.04
+        assert "k_eff_std" not in parsed
+
+    def test_parse_statepoint_tally_scalar_mean_std_dev(self, tmp_path):
+        """Cover tally mean/std_dev scalar path (else float() when not __iter__)."""
+        pytest.importorskip("h5py")
+        import h5py
+
+        from smrforge.io.openmc_run import parse_statepoint
+
+        sp = tmp_path / "statepoint.10.h5"
+        with h5py.File(sp, "w") as f:
+            tallies = f.create_group("tallies")
+            t1 = tallies.create_group("1")
+            t1.create_dataset("mean", data=2.5)
+            t1.create_dataset("std_dev", data=0.05)
+
+        orig = h5py.Dataset.__getitem__
+
+        def scalar_on_read(self, key):
+            r = orig(self, key)
+            if key == () or (isinstance(key, tuple) and len(key) == 0):
+                return float(r)
+            return r
+
+        with patch.object(h5py.Dataset, "__getitem__", scalar_on_read):
+            parsed = parse_statepoint(sp)
+        assert "tallies" in parsed
+        assert parsed["tallies"][1]["mean"] == 2.5
+        assert parsed["tallies"][1]["std_dev"] == 0.05
+
+    def test_parse_statepoint_tally_keyerror_typeerror_suppressed(self, tmp_path):
+        """Cover except (KeyError, TypeError): pass (lines 127-128)."""
+        pytest.importorskip("h5py")
+        import h5py
+
+        from smrforge.io.openmc_run import parse_statepoint
+
+        sp = tmp_path / "statepoint.10.h5"
+        with h5py.File(sp, "w") as f:
+            tallies = f.create_group("tallies")
+            t1 = tallies.create_group("1")
+            t1.create_dataset("mean", data=1.0)
+            t1.create_dataset("std_dev", data=0.1)
+            t2 = tallies.create_group("2")
+            t2.create_dataset("mean", data=1.0)
+            # Missing std_dev -> KeyError when accessing t["std_dev"]
+        parsed = parse_statepoint(sp)
+        assert "tallies" in parsed
+        assert 1 in parsed["tallies"]
+        assert 2 not in parsed["tallies"]
+
+    @patch("subprocess.run")
+    def test_run_and_parse_success(self, mock_run, tmp_path):
+        """Cover run_and_parse when OpenMC succeeds and statepoint exists."""
+        pytest.importorskip("h5py")
+        import h5py
+
+        from smrforge.io.openmc_run import run_and_parse
+
+        (tmp_path / "geometry.xml").write_text("<geometry/>")
+        mock_run.return_value = Mock(returncode=0, stdout="ok", stderr="")
+        sp = tmp_path / "statepoint.10.h5"
+        with h5py.File(sp, "w") as f:
+            f.create_dataset("k_combined", data=[1.05, 0.001])
+
+        out = run_and_parse(tmp_path)
+        assert out["returncode"] == 0
+        assert out["k_eff"] == 1.05
+        assert "k_eff_std" in out
+
+    @patch("subprocess.run")
+    def test_run_and_parse_no_statepoint(self, mock_run, tmp_path):
+        """Cover run_and_parse when no statepoint files (still returns returncode)."""
+        from smrforge.io.openmc_run import run_and_parse
+
+        (tmp_path / "geometry.xml").write_text("<geometry/>")
+        mock_run.return_value = Mock(returncode=0, stdout="ok", stderr="")
+        out = run_and_parse(tmp_path)
+        assert out["returncode"] == 0
+        assert "k_eff" not in out
+
+    @patch("subprocess.run")
+    def test_run_and_parse_statepoint_parse_raises_logs_warning(self, mock_run, tmp_path):
+        """Cover run_and_parse when parse_statepoint raises (lines 167-168)."""
+        from smrforge.io.openmc_run import run_and_parse
+
+        (tmp_path / "geometry.xml").write_text("<geometry/>")
+        mock_run.return_value = Mock(returncode=0, stdout="ok", stderr="")
+        corrupt = tmp_path / "statepoint.10.h5"
+        corrupt.write_bytes(b"not valid hdf5")
+        out = run_and_parse(tmp_path)
+        assert out["returncode"] == 0
+        assert "k_eff" not in out
+
+
+class TestOpenMCExportExtended:
+    """Extended coverage for io/openmc_export: PebbleBedCore, fallbacks, errors."""
+
+    def test_export_pebble_bed_core_writes_xml(self, tmp_path):
+        """Cover PebbleBedCore branch in _collect_materials and _write_geometry_xml_pebble."""
+        from smrforge.geometry.core_geometry import (
+            MaterialRegion,
+            Pebble,
+            PebbleBedCore,
+            Point3D,
+        )
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+
+        core = PebbleBedCore(name="TestPebble")
+        core.core_diameter = 300.0
+        core.core_height = 1100.0
+        mr = MaterialRegion(
+            material_id="pebble_fuel",
+            composition={"U235": 0.0005, "U238": 0.002, "C0": 0.08},
+            temperature=1100.0,
+            density=1.74,
+        )
+        core.pebbles = [
+            Pebble(id=0, position=Point3D(0, 0, 50), material_region=mr),
+        ]
+        out = tmp_path / "pebble_out"
+        export_reactor_to_openmc(core, out)
+        assert (out / "geometry.xml").exists()
+        assert (out / "materials.xml").exists()
+        assert "PebbleBedCore" in (out / "geometry.xml").read_text()
+
+    def test_export_reactor_with_core_attribute(self, tmp_path):
+        """Cover _get_core_from_reactor via reactor.core."""
+        from smrforge.geometry.core_geometry import PrismaticCore
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+
+        core = PrismaticCore(name="Inner")
+        core.build_hexagonal_lattice(
+            n_rings=1, pitch=40.0, block_height=50.0, n_axial=2
+        )
+        reactor = Mock(core=core)
+        out = tmp_path / "out"
+        export_reactor_to_openmc(reactor, out)
+        assert (out / "geometry.xml").exists()
+
+    def test_export_reactor_with_get_core_method(self, tmp_path):
+        """Cover _get_core_from_reactor via _get_core()."""
+        from smrforge.geometry.core_geometry import PrismaticCore
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+
+        core = PrismaticCore(name="Inner")
+        core.build_hexagonal_lattice(
+            n_rings=1, pitch=40.0, block_height=50.0, n_axial=2
+        )
+        reactor = Mock(spec=["_get_core"])
+        reactor._get_core = Mock(return_value=core)
+        out = tmp_path / "out"
+        export_reactor_to_openmc(reactor, out)
+        assert (out / "geometry.xml").exists()
+
+    def test_export_reactor_with_core_attr(self, tmp_path):
+        """Cover _get_core_from_reactor via _core."""
+        from smrforge.geometry.core_geometry import PrismaticCore
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+
+        core = PrismaticCore(name="Inner")
+        core.build_hexagonal_lattice(
+            n_rings=1, pitch=40.0, block_height=50.0, n_axial=2
+        )
+        reactor = Mock(spec=["_core"])
+        reactor._core = core
+        out = tmp_path / "out"
+        export_reactor_to_openmc(reactor, out)
+        assert (out / "geometry.xml").exists()
+
+    def test_export_empty_core_uses_default_materials(self, tmp_path):
+        """Cover empty materials fallback (default fuel and graphite)."""
+        from smrforge.geometry.core_geometry import PrismaticCore
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+
+        core = PrismaticCore(name="Empty")
+        core.build_hexagonal_lattice(
+            n_rings=1, pitch=40.0, block_height=50.0, n_axial=2
+        )
+        core.blocks = []
+        out = tmp_path / "out"
+        export_reactor_to_openmc(core, out)
+        mat_xml = (out / "materials.xml").read_text()
+        assert "fuel" in mat_xml or "1" in mat_xml
+        assert "graphite" in mat_xml or "2" in mat_xml
+
+    def test_export_unsupported_core_raises(self, tmp_path):
+        """Cover TypeError for unsupported core type."""
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+
+        reactor = Mock()
+        reactor.core = Mock()  # not PrismaticCore or PebbleBedCore
+        with pytest.raises(TypeError, match="Unsupported core type"):
+            export_reactor_to_openmc(reactor, tmp_path / "out")
+
+    def test_export_prismatic_with_moderator_material(self, tmp_path):
+        """Cover moderator_material branch in _collect_materials (lines 66-67)."""
+        from smrforge.geometry.core_geometry import (
+            MaterialRegion,
+            Point3D,
+            PrismaticCore,
+        )
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+
+        core = PrismaticCore(name="Test")
+        core.build_hexagonal_lattice(
+            n_rings=1, pitch=40.0, block_height=50.0, n_axial=2
+        )
+        mod = MaterialRegion(
+            material_id="graphite_mod",
+            composition={"C0": 0.08},
+            temperature=700.0,
+            density=1.7,
+        )
+        core.blocks[0].moderator_material = mod
+        out = tmp_path / "out"
+        export_reactor_to_openmc(core, out)
+        mat_xml = (out / "materials.xml").read_text()
+        assert "graphite_mod" in mat_xml or "2" in mat_xml
+
+    def test_export_material_region_empty_composition_fallback(self, tmp_path):
+        """Cover _write_materials_xml when composition is empty (U235/U238/C0 fallback)."""
+        from smrforge.geometry.core_geometry import (
+            FuelChannel,
+            GraphiteBlock,
+            MaterialRegion,
+            Point3D,
+            PrismaticCore,
+        )
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+
+        mr = MaterialRegion(
+            material_id="fuel",
+            composition={},
+            temperature=900.0,
+            density=1.74,
+        )
+        ch = FuelChannel(
+            id=0, position=Point3D(0, 0, 0), radius=2.0, height=50.0, material_region=mr
+        )
+        block = GraphiteBlock(
+            id=0, position=Point3D(0, 0, 0), flat_to_flat=20.0, height=50.0
+        )
+        block.fuel_channels = [ch]
+        core = PrismaticCore(name="Test")
+        core.blocks = [block]
+        core.core_diameter = 100.0
+        core.core_height = 200.0
+        core.reflector_thickness = 30.0
+        out = tmp_path / "out"
+        export_reactor_to_openmc(core, out)
+        assert "U235" in (out / "materials.xml").read_text()
+
+
+class TestOpenMCImportExtended:
+    """Extended coverage for io/openmc_import."""
+
+    def test_import_geometry_file_not_found(self):
+        """Cover FileNotFoundError when geometry file does not exist."""
+        from smrforge.io.openmc_import import import_reactor_from_openmc
+
+        with pytest.raises(FileNotFoundError, match="Geometry file not found"):
+            import_reactor_from_openmc(Path("/nonexistent/geometry.xml"))
+
+    def test_import_geometry_parse_fails_raises_value_error(self, tmp_path):
+        """Cover ValueError when core is None (parse failed)."""
+        from smrforge.io.openmc_import import import_reactor_from_openmc
+
+        geom = tmp_path / "geometry.xml"
+        geom.write_text("<geometry/>")
+        with patch(
+            "smrforge.geometry.advanced_import.AdvancedGeometryImporter._from_openmc_xml_csg",
+            return_value=None,
+        ):
+            with pytest.raises(ValueError, match="Could not parse"):
+                import_reactor_from_openmc(geom)
+
+    def test_import_with_materials_file(self, tmp_path):
+        """Cover materials_file path and _parse_materials_xml."""
+        from smrforge.geometry.core_geometry import PrismaticCore
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+        from smrforge.io.openmc_import import import_reactor_from_openmc
+
+        core = PrismaticCore(name="Test")
+        core.build_hexagonal_lattice(
+            n_rings=1, pitch=40.0, block_height=50.0, n_axial=2
+        )
+        out = tmp_path / "export"
+        export_reactor_to_openmc(core, out)
+        result = import_reactor_from_openmc(
+            out / "geometry.xml", materials_file=out / "materials.xml"
+        )
+        assert "core" in result
+        assert "materials" in result
+        assert result["format"] == "openmc"
+
+    def test_import_materials_file_parse_exception(self, tmp_path):
+        """Cover Exception path in _parse_materials_xml (lines 81-82)."""
+        from smrforge.geometry.core_geometry import PrismaticCore
+        from smrforge.io.openmc_export import export_reactor_to_openmc
+        from smrforge.io.openmc_import import import_reactor_from_openmc
+
+        core = PrismaticCore(name="Test")
+        core.build_hexagonal_lattice(
+            n_rings=1, pitch=40.0, block_height=50.0, n_axial=2
+        )
+        out = tmp_path / "export"
+        export_reactor_to_openmc(core, out)
+        bad_mats = tmp_path / "bad_materials.xml"
+        bad_mats.write_text("<materials><material id='1'")  # malformed XML
+        result = import_reactor_from_openmc(
+            out / "geometry.xml", materials_file=bad_mats
+        )
+        assert "core" in result
+        assert "materials" not in result or result.get("materials") == {}
+

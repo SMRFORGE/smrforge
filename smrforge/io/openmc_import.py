@@ -58,7 +58,7 @@ def _parse_materials_xml(path: Path) -> Dict[int, Dict[str, Any]]:
     """Parse materials.xml into a dict of material_id -> {name, composition, temperature}."""
     try:
         import xml.etree.ElementTree as ET
-    except ImportError:
+    except ImportError:  # pragma: no cover
         return {}
 
     materials: Dict[int, Dict[str, Any]] = {}

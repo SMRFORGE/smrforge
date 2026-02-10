@@ -110,16 +110,18 @@ def parse_statepoint(statepoint_path: Union[str, Path]) -> Dict[str, Any]:
                 try:
                     tid = int(key)
                     t = f["tallies"][key]
+                    mean_raw = t["mean"][()]
+                    std_raw = t["std_dev"][()]
                     tallies[tid] = {
                         "mean": (
-                            t["mean"][()].tolist()
-                            if hasattr(t["mean"], "__iter__")
-                            else float(t["mean"][()])
+                            mean_raw.tolist()
+                            if hasattr(mean_raw, "__iter__")
+                            else float(mean_raw)
                         ),
                         "std_dev": (
-                            t["std_dev"][()].tolist()
-                            if hasattr(t["std_dev"], "__iter__")
-                            else float(t["std_dev"][()])
+                            std_raw.tolist()
+                            if hasattr(std_raw, "__iter__")
+                            else float(std_raw)
                         ),
                     }
                 except (KeyError, TypeError):
