@@ -152,3 +152,9 @@ testing_results.txt
 
 # One-off security audit reports
 security_reports/
+
+# Manual testing (not in GitHub)
+output/manual_testing/
+
+# Private documents (business plans, roadmaps, whitepapers — kept in SMRForge-Private)
+SMRForge-Private/

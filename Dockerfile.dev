@@ -6,6 +6,7 @@
 #
 # Last Updated: February 10, 2026
 # Recent Additions (February 2026):
+# - Serpent round-trip (Community): run_serpent, parse_res_file, run_and_parse in smrforge.io.serpent_run.
 # - OpenMC integration (Community): Full export/import, subprocess runner, statepoint HDF5 parsing. See examples/openmc_export_example.py.
 # - Rich colorized logging: Console logging uses RichHandler for color-coded levels (DEBUG, INFO, WARNING, ERROR, CRITICAL), rich tracebacks. File logging remains plain text. Set NO_COLOR=1 to disable colors.
 # - Documentation: README and technical docs clarify SMRForge is original work; OpenMC/Serpent references are inspiration and analysis, not code derivation.
