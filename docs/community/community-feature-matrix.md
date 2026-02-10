@@ -2,6 +2,8 @@
 
 Each feature includes: **workflow**, **required data**, and **outputs**.
 
+> **Pro:** For Serpent/OpenMC/MCNP export, full benchmark suite, and regulatory reports, see [Community vs Pro](../../community_vs_pro.md). Community includes Serpent run+parse (round-trip with Pro export): `smrforge.io.run_serpent()`, `parse_serpent_res()`.
+
 ---
 
 ## 1. Neutronics (Multi-Group Diffusion)

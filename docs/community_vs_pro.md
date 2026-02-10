@@ -9,6 +9,7 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 | Multi-group diffusion | ✅ | ✅ |
 | Monte Carlo (built-in) | ✅ | ✅ |
 | Serpent export/import | ❌ | ✅ Full |
+| Serpent run+parse (round-trip with Pro export) | ✅ | ✅ |
 | OpenMC export/import | ✅ Full | ✅ Full (Pro: tally viz) |
 | MCNP export | ❌ | ✅ Full |
 | Benchmark suite | ✅ 3 cases | ✅ 10+ cases |

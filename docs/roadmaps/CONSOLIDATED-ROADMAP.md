@@ -104,15 +104,14 @@ This document consolidates all roadmap information from multiple sources to prov
 
 **Completed:**
 - ✅ I/O converters framework (`smrforge/io/converters.py`)
-- ✅ Serpent converter placeholder (ready for implementation)
-- ✅ OpenMC converter placeholder (ready for implementation)
+- ✅ Serpent run+parse (Community): `smrforge.io.serpent_run` — run_serpent, parse_res_file, run_and_parse (round-trip with Pro export)
+- ✅ OpenMC full export/import (Community): geometry, materials, settings XML; run_openmc; parse_statepoint
+- ✅ Serpent/OpenMC full export/import via Pro
 
 **Remaining Work:**
 - Enhanced reactor design export (HDF5, YAML)
 - Results export (CSV, HDF5, Parquet) via CLI
-- Complete Serpent format support (import/export)
-- Complete OpenMC format support (import/export)
-- MCNP format conversion
+- MCNP format conversion (Pro)
 
 **Impact:** Better interoperability with other nuclear codes  
 **Effort:** 1 week (remaining work)

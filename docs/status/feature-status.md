@@ -1,6 +1,6 @@
 # SMRForge Feature Status
 
-**Last Updated:** January 25, 2026
+**Last Updated:** February 10, 2026
 
 This document describes the implementation status and stability of SMRForge modules.
 
@@ -185,6 +185,11 @@ These modules are fully implemented, tested, and ready for production use:
   - Dose rate computation
   - Shielding calculations
   - Ready for photon cross-section data integration
+
+### I/O and Format Converters
+- ✅ **OpenMC integration** (`smrforge.io.openmc_run`, `openmc_export`, `openmc_import`) - Full export/import, subprocess runner, statepoint HDF5 parsing
+- ✅ **Serpent run+parse** (`smrforge.io.serpent_run`) - **NEW (February 2026)** - run_serpent, parse_res_file, run_and_parse for Serpent round-trip with Pro export
+- ✅ **Converters framework** (`smrforge.io.converters`) - SerpentConverter, OpenMCConverter (Pro delegation for Serpent/OpenMC full export/import)
 
 ---
 

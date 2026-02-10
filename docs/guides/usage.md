@@ -1,10 +1,10 @@
 # SMRForge Usage Guide
 
-**Last Updated:** January 1, 2026
+**Last Updated:** February 10, 2026
 
 This guide shows how to use SMRForge with simple one-liners and easy-to-use APIs.
 
-> **Pro:** For Serpent/MCNP export and tally visualization, see [Community vs Pro](../community_vs_pro.md). OpenMC export/import is available in Community (see `examples/openmc_export_example.py`).
+> **Pro:** For Serpent/MCNP export and tally visualization, see [Community vs Pro](../community_vs_pro.md). Community: OpenMC full export/import; Serpent run+parse (round-trip with Pro export). See `examples/openmc_export_example.py`.
 
 ## Quick Reference
 

@@ -22,6 +22,8 @@ __all__ = [
     "OutputWriter",
     "SerpentConverter",
     "OpenMCConverter",
+    "run_serpent",
+    "parse_serpent_res",
 ]
 
 
@@ -46,3 +48,17 @@ def parse_openmc_statepoint(path):
     from smrforge.io.openmc_run import parse_statepoint
 
     return parse_statepoint(path)
+
+
+def run_serpent(work_dir, input_file, executable=None, timeout=None):
+    """Convenience: run Serpent 2 in work_dir on input_file."""
+    from smrforge.io.serpent_run import run_serpent as _run_serpent_fn
+
+    return _run_serpent_fn(work_dir, input_file, executable=executable, timeout=timeout)
+
+
+def parse_serpent_res(path):
+    """Convenience: parse Serpent _res.m file for k-eff and related results."""
+    from smrforge.io.serpent_run import parse_res_file
+
+    return parse_res_file(path)

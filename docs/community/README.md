@@ -3,6 +3,8 @@
 **Tier:** Community (free, open-source)  
 **Scope:** Core reactor physics, multi-group diffusion, burnup, geometry, presets, validation, and visualization.
 
+> **Pro:** For Serpent/OpenMC/MCNP export, full benchmark suite, and regulatory reports, see [Community vs Pro](../../community_vs_pro.md). Community includes Serpent run+parse (round-trip with Pro export).
+
 ---
 
 ## Community Tier Feature Overview

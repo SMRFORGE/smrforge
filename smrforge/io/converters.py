@@ -40,7 +40,10 @@ class SerpentConverter:
     """
     Converter for Serpent format.
 
-    Community: placeholder. Pro: full export/import. Delegate to smrforge_pro if available.
+    Community: placeholder export/import; serpent_run provides run + parse_res for round-trip.
+    Pro: full export/import. Delegate to smrforge_pro if available.
+
+    Round-trip workflow: Pro export_reactor -> run_serpent -> parse_res_file -> use in SMRForge.
     """
 
     @staticmethod

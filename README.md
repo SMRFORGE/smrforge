@@ -125,7 +125,7 @@ SMRForge includes **comprehensive performance optimizations**:
 - **Multi-Physics Coupling**: ✅ **IMPLEMENTED** - Unified coupling framework integrating all physics domains
 - **Fuel Performance**: ✅ **IMPLEMENTED** - Fuel temperature calculations, swelling models, fission gas release
 - **General Optimization**: ✅ **IMPLEMENTED** - Design optimization, loading pattern optimization with genetic algorithms
-- **General I/O Utilities**: ✅ **IMPLEMENTED** - File readers/writers (JSON, YAML, CSV), format converters (Serpent, OpenMC). **OpenMC integration (Community):** Full export/import, subprocess runner, statepoint HDF5 parsing.
+- **General I/O Utilities**: ✅ **IMPLEMENTED** - File readers/writers (JSON, YAML, CSV), format converters (Serpent, OpenMC). **OpenMC integration (Community):** Full export/import, subprocess runner, statepoint HDF5 parsing. **Serpent round-trip (Community):** run_serpent, parse_res_file, run_and_parse for k-eff results (works with Pro export).
 - **CLI Enhancements** (January 25, 2026):
   - ✅ **Data interpolation command** - `smrforge data interpolate` for cross-section temperature interpolation
   - ✅ **Self-shielding command** - `smrforge data shield` for resonance self-shielding calculations

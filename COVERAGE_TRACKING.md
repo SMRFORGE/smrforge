@@ -1,6 +1,6 @@
 # SMRForge Coverage Tracking
 
-**Last Updated:** February 6, 2026  
+**Last Updated:** February 10, 2026  
 **Target Coverage:** **90%** for in-scope modules  
 **Overall Project Coverage:** **90.5%** (reached Feb 6; standard exclusions include uncertainty/visualization, mechanics/fuel_rod)
 
@@ -163,6 +163,12 @@ CLI is excluded from the main project coverage run (see `pytest.ini` omit) so th
 
 #### `io/openmc_import.py` - ✅ **~90%**
 - **Tests:** Extended in `test_coverage_community_continue.py::TestOpenMCImportExtended` (FileNotFoundError, parse-fail ValueError, materials_file path)
+- **Status:** ✅ Complete
+
+#### `io/serpent_run.py` - ✅ **~93%**
+- **Tests:** 13 tests in `test_serpent_run.py`
+- **Coverage:** run_serpent, parse_res_file, run_and_parse; io convenience (run_serpent, parse_serpent_res)
+- **Serpent round-trip:** Pro export → Community run_serpent + parse_res_file → use k-eff in SMRForge
 - **Status:** ✅ Complete
 
 #### `burnup/solver.py` (checkpointing) - ✅ **~75-80%**
