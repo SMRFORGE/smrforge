@@ -25,7 +25,7 @@ This is the **single source of truth** for test coverage tracking in SMRForge.
 | `workflows/parameter_sweep.py` | **~75-80%** | 75-80% | ✅ **COMPLETE** | 24 tests |
 | `workflows/templates.py` | **~75-80%** | 75-80% | ✅ **COMPLETE** | 15 tests |
 | `validation/constraints.py` | **~75-80%** | 75-80% | ✅ **COMPLETE** | 12 tests |
-| `io/converters.py` | **~75-80%** | 50-75% | ✅ **COMPLETE** | 8 tests |
+| `io/converters.py` | **~75-80%** | 50-75% | ✅ **COMPLETE** | 11 tests (OpenMC full export/import) |
 | `burnup/solver.py` | **~75-80%** | 75-80% | ✅ **COMPLETE** | 12 tests |
 
 ### CLI (`cli.py`)
@@ -148,7 +148,7 @@ CLI is excluded from the main project coverage run (see `pytest.ini` omit) so th
 - **Status:** ✅ Complete (includes bug fix for severity logic)
 
 #### `io/converters.py` - ✅ **~75-80%**
-- **Tests:** 8 tests in `test_converters.py`
+- **Tests:** 11 tests in `test_converters.py` (OpenMC export/import, Serpent placeholder, Pro delegation)
 - **Coverage:** Placeholder implementations and error handling
 - **Status:** ✅ Complete
 
@@ -371,7 +371,7 @@ The following code paths are intentionally excluded from coverage or have accept
 - `test_parameter_sweep.py` - 24 tests
 - `test_templates.py` - 15 tests
 - `test_constraints.py` - 12 tests
-- `test_converters.py` - 8 tests
+- `test_converters.py` - 11 tests (OpenMC full export/import)
 - `test_burnup_checkpointing.py` - 12 tests
 
 **Utilities:**

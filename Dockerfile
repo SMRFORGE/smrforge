@@ -6,6 +6,7 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
+# - OpenMC integration (Community): Full export/import (geometry.xml, materials.xml, settings.xml), subprocess runner, statepoint HDF5 parsing. See smrforge.io.openmc_export, openmc_import, openmc_run.
 # - Rich colorized logging: Console logging uses RichHandler for color-coded levels (DEBUG, INFO, WARNING, ERROR, CRITICAL), rich tracebacks. File logging remains plain text. Set NO_COLOR=1 to disable colors.
 # - Documentation: README and technical docs clarify SMRForge is original work; OpenMC/Serpent references are inspiration and analysis, not code derivation.
 # Recent Additions (January 2026):

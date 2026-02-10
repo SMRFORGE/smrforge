@@ -125,7 +125,7 @@ SMRForge includes **comprehensive performance optimizations**:
 - **Multi-Physics Coupling**: ✅ **IMPLEMENTED** - Unified coupling framework integrating all physics domains
 - **Fuel Performance**: ✅ **IMPLEMENTED** - Fuel temperature calculations, swelling models, fission gas release
 - **General Optimization**: ✅ **IMPLEMENTED** - Design optimization, loading pattern optimization with genetic algorithms
-- **General I/O Utilities**: ✅ **IMPLEMENTED** - File readers/writers (JSON, YAML, CSV), format converters (Serpent, OpenMC)
+- **General I/O Utilities**: ✅ **IMPLEMENTED** - File readers/writers (JSON, YAML, CSV), format converters (Serpent, OpenMC). **OpenMC integration (Community):** Full export/import, subprocess runner, statepoint HDF5 parsing.
 - **CLI Enhancements** (January 25, 2026):
   - ✅ **Data interpolation command** - `smrforge data interpolate` for cross-section temperature interpolation
   - ✅ **Self-shielding command** - `smrforge data shield` for resonance self-shielding calculations
@@ -497,7 +497,8 @@ See the [`examples/`](examples/) directory for complete working examples:
 ### Advanced Examples
 - **`comprehensive_examples.py`** - Complete workflow demonstrations
 - **`advanced_features_examples.py`** - **NEW**: Advanced features including visualization, decay chains, LWR SMRs, self-shielding
-- **`openmc_visualization_examples.py`** - **NEW**: OpenMC-inspired visualization features (Unified Plot API, mesh tallies, voxel plots, etc.)
+- **`openmc_export_example.py`** - **NEW**: OpenMC export/import, subprocess runner, statepoint parsing (Community)
+- **`openmc_visualization_examples.py`** - OpenMC-inspired visualization features (Unified Plot API, mesh tallies, voxel plots, etc.)
 - **`complete_integration_example.py`** - Full integration example
 - **`integrated_safety_uq.py`** - Safety analysis with uncertainty quantification
 - **`lwr_smr_example.py`** - **NEW**: LWR SMR geometry and analysis examples

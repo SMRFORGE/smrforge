@@ -28,6 +28,7 @@ Examples for the **Community edition**. Each example lists workflow and required
 - `../mesh_3d_example.py` — 3D mesh extraction
 - `../geometry_import_example.py` — Geometry import
 - `../custom_reactor.py` — Custom reactor creation
+- `../openmc_export_example.py` — OpenMC export/import, run, statepoint parsing (Community)
 
 ### Visualization
 - `../visualization_3d_example.py` — 3D mesh plot
@@ -53,6 +54,10 @@ Examples for the **Community edition**. Each example lists workflow and required
 - `../convenience_methods_example.py` — quick_keff, create_simple_*, get_nuclide
 - `../preset_designs.py` — Presets
 - `../help_system_example.py` — Help
+
+### Validation & Reporting
+- `../community_benchmark_example.py` — Run Community benchmark cases and generate report
+- Report generator: `smrforge report design --preset valar-10 -o design_report.md`
 
 ---
 

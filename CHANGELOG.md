@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (February 2026)
+- **OpenMC integration (Community):** Full OpenMC export/import in Community tier. Export PrismaticCore/PebbleBedCore to geometry.xml, materials.xml, settings.xml; import OpenMC geometry; run OpenMC via subprocess; parse statepoint HDF5 for k-eff and tallies. `OpenMCConverter.export_reactor()`, `import_reactor()`, `smrforge.io.openmc_run.run_openmc()`, `parse_statepoint()`. See examples/openmc_export_example.py.
 - Rich colorized logging: Console output now uses Rich's RichHandler for color-coded log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL), rich tracebacks, and improved readability. File logging remains plain text. Falls back to standard handler if Rich is unavailable. Respects NO_COLOR environment variable.
 - Docker: Updated Dockerfile, Dockerfile.dev, and docker-compose.yml with Rich logging notes and February 2026 date. Added Rich verification and NO_COLOR note to docs/guides/docker.md.
 - Docker: Added documentation provenance note (SMRForge original work; OpenMC/Serpent inspiration/analysis).
