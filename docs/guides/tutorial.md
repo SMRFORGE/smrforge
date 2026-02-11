@@ -218,6 +218,7 @@ smrforge validate design --reactor reactor.json --output validation_report.json
 Notes:
 - `reactor.json` is your **input data** you can edit and reuse.
 - `results.json` is your **output data** from analysis.
+- Use `examples/inputs/reactor.json` as a sample without creating one first.
 
 **Launch the web dashboard:**
 ```bash

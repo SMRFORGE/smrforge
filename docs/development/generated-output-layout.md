@@ -29,10 +29,10 @@ python examples/community_benchmark_example.py
 
 ## CLI Output
 
-For CLI commands, pass `--output` to write to `output/`:
+For CLI commands, pass `--output` to write to `output/`. Use `examples/inputs/reactor.json` as sample input:
 
 ```bash
-smrforge reactor analyze --reactor reactor.json --neutronics --output output/results.json
+smrforge reactor analyze --reactor examples/inputs/reactor.json --neutronics --output output/results.json
 smrforge workflow sweep --preset valar-10 --output output/sweep_results
 smrforge report design --preset valar-10 -o output/design_report.md
 ```

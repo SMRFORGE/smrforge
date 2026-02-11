@@ -1,6 +1,9 @@
 {
-  "name": "example-reactor",
-  "reactor_type": "htgr",
-  "power_mw": 100,
-  "enrichment": 0.195
+  "name": "Valar-10",
+  "power_mw": 10,
+  "enrichment": 0.195,
+  "reactor_type": "prismatic",
+  "fuel_type": "UCO",
+  "core_height": 200,
+  "core_diameter": 100
 }
