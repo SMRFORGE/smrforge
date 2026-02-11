@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **New convenience functions:** `quick_sweep()` (parameter sweep), `quick_economics()` (cost estimate), `quick_optimize()` (design optimization), `quick_uq()` (uncertainty quantification), `list_reactor_types()`, `list_fuel_types()` for easier discovery and workflows.
+- **Discovery helpers:** `get_default_endf_dir()`, `list_endf_libraries()`, `list_geometry_types()`, `list_analysis_types()`, `list_surrogates()`. **quick_download_endf()** for one-liner ENDF data downloads.
 - **Discovery and help functions:** `system_info()` (version and capabilities), `help_topics()`, `list_constraint_sets()`, `get_constraint_set()`, `get_example_path()`, `list_examples()`, `list_nuclides()`, `list_sweepable_params()`, `get_default_output_dir()`.
 - **Rich display options:** `system_info(display=True)` prints capabilities table; `quick_sweep`, `quick_economics`, `quick_optimize`, `quick_uq` support `display=True` for Rich summary tables; ENDF setup wizard uses Rich Panel/Table when available.
 

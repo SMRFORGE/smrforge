@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -206,6 +206,98 @@ def list_sweepable_params() -> List[str]:
 def get_default_output_dir() -> Path:
     """Return the default output directory used by sweeps and workflows."""
     return Path("output")
+
+
+def get_default_endf_dir() -> Path:
+    """
+    Return the default directory for ENDF nuclear data files.
+
+    Returns:
+        Path to standard ENDF storage directory (~/ENDF-Data on Unix, %USERPROFILE%\\ENDF-Data on Windows).
+
+    Example:
+        >>> path = get_default_endf_dir()
+        >>> print(f"Store ENDF files in: {path}")
+    """
+    from ..core.reactor_core import get_standard_endf_directory
+
+    return get_standard_endf_directory()
+
+
+def list_endf_libraries() -> List[str]:
+    """List supported ENDF nuclear data library names for downloads and caching."""
+    return ["ENDF/B-VIII.0", "ENDF/B-VIII.1", "JEFF-3.3", "JENDL-5.0"]
+
+
+def list_geometry_types() -> List[str]:
+    """List supported core geometry type names (PrismaticCore, PebbleBedCore, etc.)."""
+    return ["PrismaticCore", "PebbleBedCore", "CompactSMRCore", "MSRSMRCore"]
+
+
+def list_analysis_types() -> List[str]:
+    """List analysis type names supported by quick_sweep and parameter sweeps."""
+    return ["keff", "burnup", "transient", "economics"]
+
+
+def list_surrogates() -> List[str]:
+    """List names of registered surrogate models (from plugin registry)."""
+    try:
+        from ..workflows.plugin_registry import list_surrogates as _list
+
+        return _list()
+    except ImportError:
+        return []
+
+
+def quick_download_endf(
+    library: str = "ENDF/B-VIII.1",
+    output_dir: Optional[Union[str, Path]] = None,
+    nuclide_set: str = "common_smr",
+    show_progress: bool = True,
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Download ENDF nuclear data files to a default or specified directory.
+
+    Args:
+        library: Library version (e.g., "ENDF/B-VIII.1").
+        output_dir: Output directory. Defaults to get_default_endf_dir() if None.
+        nuclide_set: Pre-defined set ("common_smr") or pass elements/isotopes via kwargs.
+        show_progress: If True, show progress indicators.
+        **kwargs: Passed to download_endf_data (elements, isotopes, max_workers, etc.).
+
+    Returns:
+        Dictionary with download statistics (downloaded, skipped, failed, total, output_dir).
+
+    Example:
+        >>> stats = quick_download_endf()
+        >>> stats = quick_download_endf(library="ENDF/B-VIII.1", nuclide_set="common_smr")
+    """
+    try:
+        from ..data_downloader import download_endf_data
+    except ImportError as e:
+        raise ImportError(
+            "quick_download_endf requires data_downloader (requests). "
+            f"Install: pip install requests. Original: {e}"
+        ) from e
+
+    if output_dir is None:
+        output_dir = get_default_endf_dir()
+
+    kwargs_clean = {k: v for k, v in kwargs.items() if k not in ("display",)}
+    # Use nuclide_set only when elements/isotopes not specified
+    use_nuclide_set = (
+        nuclide_set
+        if not (kwargs_clean.get("elements") or kwargs_clean.get("isotopes"))
+        else None
+    )
+    return download_endf_data(
+        library=library,
+        output_dir=output_dir,
+        nuclide_set=use_nuclide_set,
+        show_progress=show_progress,
+        **kwargs_clean,
+    )
 
 
 def get_preset(name: str) -> ReactorSpecification:
@@ -519,7 +611,9 @@ def quick_sweep(
         except Exception:
             template = {"name": str(preset_or_reactor)}
 
-    analysis_types = [analysis] if analysis in ("keff", "neutronics", "burnup") else ["keff"]
+    analysis_types = (
+        [analysis] if analysis in ("keff", "neutronics", "burnup") else ["keff"]
+    )
     output_dir = Path(output_path).parent if output_path else Path("output")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -666,7 +760,9 @@ def quick_optimize(
     result = opt.optimize(max_iterations=max_iter, **kwargs_opt)
 
     optimal_point = dict(zip(param_names, result.x_opt.tolist()))
-    optimal_point["k_eff"] = -result.f_opt if obj_name in ("max_keff", "min_neg_keff") else result.f_opt
+    optimal_point["k_eff"] = (
+        -result.f_opt if obj_name in ("max_keff", "min_neg_keff") else result.f_opt
+    )
 
     out = {
         "x_opt": result.x_opt.tolist(),
@@ -803,12 +899,26 @@ def _display_economics_summary(result: Dict) -> None:
             tbl.add_row("LCOE", f"${float(v):.2f}/kWh")
         cap = result.get("capital_costs")
         if cap is not None:
-            v = cap.get("total_overnight_cost", cap.get("total", cap)) if isinstance(cap, dict) else cap
-            tbl.add_row("Capital", f"${float(v):,.0f}" if isinstance(v, (int, float)) else str(v))
+            v = (
+                cap.get("total_overnight_cost", cap.get("total", cap))
+                if isinstance(cap, dict)
+                else cap
+            )
+            tbl.add_row(
+                "Capital",
+                f"${float(v):,.0f}" if isinstance(v, (int, float)) else str(v),
+            )
         op = result.get("operating_costs")
         if op is not None:
-            v = op.get("total_operating_cost", op.get("total", op)) if isinstance(op, dict) else op
-            tbl.add_row("Operating (annual)", f"${float(v):,.0f}" if isinstance(v, (int, float)) else str(v))
+            v = (
+                op.get("total_operating_cost", op.get("total", op))
+                if isinstance(op, dict)
+                else op
+            )
+            tbl.add_row(
+                "Operating (annual)",
+                f"${float(v):,.0f}" if isinstance(v, (int, float)) else str(v),
+            )
         Console().print(tbl)
     except (ImportError, TypeError, KeyError):
         pass
@@ -825,7 +935,9 @@ def _display_optimize_summary(out: Dict) -> None:
         tbl.add_column("Value", justify="right")
         for k, v in out.get("optimal_point", {}).items():
             tbl.add_row(k, f"{v:.4g}" if isinstance(v, (int, float)) else str(v))
-        tbl.add_row("Success", "[green]yes[/green]" if out.get("success") else "[red]no[/red]")
+        tbl.add_row(
+            "Success", "[green]yes[/green]" if out.get("success") else "[red]no[/red]"
+        )
         Console().print(tbl)
     except ImportError:
         pass
@@ -847,7 +959,11 @@ def _display_uq_summary(result: Dict) -> None:
         for i, name in enumerate(names):
             m = means[i] if i < len(means) else "—"
             s = stds[i] if i < len(stds) else "—"
-            tbl.add_row(name, f"{m:.4g}" if isinstance(m, (int, float)) else str(m), f"{s:.4g}" if isinstance(s, (int, float)) else str(s))
+            tbl.add_row(
+                name,
+                f"{m:.4g}" if isinstance(m, (int, float)) else str(m),
+                f"{s:.4g}" if isinstance(s, (int, float)) else str(s),
+            )
         Console().print(tbl)
     except ImportError:
         pass
@@ -1065,6 +1181,12 @@ __all__ = [
     "list_nuclides",
     "list_sweepable_params",
     "get_default_output_dir",
+    "get_default_endf_dir",
+    "list_endf_libraries",
+    "list_geometry_types",
+    "list_analysis_types",
+    "list_surrogates",
+    "quick_download_endf",
     "get_preset",
     "load_reactor",
     "create_reactor",

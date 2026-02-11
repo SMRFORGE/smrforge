@@ -37,6 +37,10 @@ def main():
     print("  list_sweepable_params (first 5):", smr.list_sweepable_params()[:5])
     print("  list_nuclides (first 5):", smr.list_nuclides()[:5])
     print("  list_examples (first 5):", smr.list_examples()[:5])
+    print("  list_endf_libraries:", smr.list_endf_libraries())
+    print("  list_geometry_types:", smr.list_geometry_types())
+    print("  list_analysis_types:", smr.list_analysis_types())
+    print("  list_surrogates:", smr.list_surrogates())
 
     # 4. Example path
     print("\n4. Example path:")
@@ -44,10 +48,11 @@ def main():
     path = smr.get_example_path("reactor")
     print(f"  get_example_path('reactor') -> {path}")
 
-    # 5. Default output dir
-    print("\n5. Default output directory:")
+    # 5. Default directories
+    print("\n5. Default directories:")
     print("-" * 70)
-    print(f"  {smr.get_default_output_dir()}")
+    print(f"  get_default_output_dir: {smr.get_default_output_dir()}")
+    print(f"  get_default_endf_dir: {smr.get_default_endf_dir()}")
 
     # 6. Load and run from example
     print("\n6. Load reactor from example and solve k-eff:")

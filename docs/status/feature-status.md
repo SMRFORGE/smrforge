@@ -103,6 +103,8 @@ These modules are fully implemented, tested, and ready for production use:
 
 ### Convenience API
 - ✅ **Convenience Functions** (`smrforge.convenience`) - One-liner APIs
+- ✅ **Discovery helpers**: `list_endf_libraries`, `list_geometry_types`, `list_analysis_types`, `list_surrogates`; `get_default_endf_dir`
+- ✅ **quick_download_endf** - Download ENDF data to default or specified directory
 - ✅ **SimpleReactor** - High-level reactor wrapper
 
 ### Visualization

@@ -1293,6 +1293,46 @@ def _get_examples() -> Dict[str, List[Dict[str, str]]]:
                 "code": "path = smr.get_example_path('reactor')",
             },
         ],
+        "get_default_endf_dir": [
+            {
+                "description": "Get default ENDF data directory",
+                "code": "path = smr.get_default_endf_dir()",
+            },
+        ],
+        "list_endf_libraries": [
+            {
+                "description": "List supported ENDF libraries",
+                "code": "libs = smr.list_endf_libraries()",
+            },
+        ],
+        "list_geometry_types": [
+            {
+                "description": "List core geometry types",
+                "code": "types = smr.list_geometry_types()",
+            },
+        ],
+        "list_analysis_types": [
+            {
+                "description": "List sweep analysis types",
+                "code": "types = smr.list_analysis_types()",
+            },
+        ],
+        "list_surrogates": [
+            {
+                "description": "List registered surrogate models",
+                "code": "surrogates = smr.list_surrogates()",
+            },
+        ],
+        "quick_download_endf": [
+            {
+                "description": "Download ENDF data to default dir",
+                "code": "stats = smr.quick_download_endf()",
+            },
+            {
+                "description": "Download specific elements",
+                "code": "stats = smr.quick_download_endf(elements=['U', 'Pu'], nuclide_set=None)",
+            },
+        ],
     }
 
 

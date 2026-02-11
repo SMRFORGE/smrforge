@@ -39,7 +39,9 @@ class TestQuickSweep:
     def test_sweep_with_reactor_json_path(self):
         from smrforge import quick_sweep
 
-        reactor_path = Path(__file__).resolve().parents[1] / "examples" / "inputs" / "reactor.json"
+        reactor_path = (
+            Path(__file__).resolve().parents[1] / "examples" / "inputs" / "reactor.json"
+        )
         if not reactor_path.exists():
             pytest.skip("examples/inputs/reactor.json not found")
 
@@ -73,7 +75,9 @@ class TestQuickEconomics:
     def test_economics_with_reactor_json_path(self):
         from smrforge import quick_economics
 
-        reactor_path = Path(__file__).resolve().parents[1] / "examples" / "inputs" / "reactor.json"
+        reactor_path = (
+            Path(__file__).resolve().parents[1] / "examples" / "inputs" / "reactor.json"
+        )
         if not reactor_path.exists():
             pytest.skip("examples/inputs/reactor.json not found")
 
@@ -199,8 +203,81 @@ class TestQuickUq:
 
         out = quick_uq(
             "valar-10",
-            [{"name": "enrichment", "nominal": 0.195, "distribution": "normal", "uncertainty": 0.01}],
+            [
+                {
+                    "name": "enrichment",
+                    "nominal": 0.195,
+                    "distribution": "normal",
+                    "uncertainty": 0.01,
+                }
+            ],
             n_samples=3,
         )
         assert "mean" in out
         assert "output_names" in out
+
+
+class TestGetDefaultEndfDir:
+    def test_returns_path(self):
+        from smrforge import get_default_endf_dir
+
+        p = get_default_endf_dir()
+        assert isinstance(p, Path)
+        assert "ENDF" in str(p) or "endf" in str(p).lower()
+
+
+class TestListEndfLibraries:
+    def test_returns_libraries(self):
+        from smrforge import list_endf_libraries
+
+        result = list_endf_libraries()
+        assert "ENDF/B-VIII.1" in result
+        assert "ENDF/B-VIII.0" in result
+
+
+class TestListGeometryTypes:
+    def test_returns_core_types(self):
+        from smrforge import list_geometry_types
+
+        result = list_geometry_types()
+        assert "PrismaticCore" in result
+        assert "PebbleBedCore" in result
+
+
+class TestListAnalysisTypes:
+    def test_returns_analysis_types(self):
+        from smrforge import list_analysis_types
+
+        result = list_analysis_types()
+        assert "keff" in result
+        assert "burnup" in result
+
+
+class TestListSurrogates:
+    def test_returns_list(self):
+        from smrforge import list_surrogates
+
+        result = list_surrogates()
+        assert isinstance(result, list)
+
+
+class TestQuickDownloadEndf:
+    def test_quick_download_endf_mocked(self):
+        """Test quick_download_endf with mocked download (no network)."""
+        from unittest.mock import MagicMock, patch
+
+        from smrforge import quick_download_endf
+
+        mock_stats = {
+            "downloaded": 0,
+            "skipped": 5,
+            "failed": 0,
+            "total": 5,
+            "output_dir": "/tmp",
+        }
+        with patch(
+            "smrforge.data_downloader.download_endf_data", return_value=mock_stats
+        ):
+            stats = quick_download_endf(show_progress=False)
+            assert stats["total"] == 5
+            assert "output_dir" in stats
