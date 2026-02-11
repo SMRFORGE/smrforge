@@ -18,7 +18,7 @@ Main modules:
 - economics: Cost modeling (✅ Implemented - capital, operating, LCOE)
 - fuel_cycle: Fuel cycle optimization and long-term simulation (✅ Implemented - optimization, material aging)
 
-⚠️ Feature Status: See FEATURE_STATUS.md for detailed status of each module.
+⚠️ Feature Status: See docs/status/feature-status.md for detailed status of each module.
 """
 
 # Import version from dedicated module

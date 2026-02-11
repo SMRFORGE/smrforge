@@ -32,7 +32,6 @@ omit =
     */data_downloader.py
     */geometry/validation.py
     */burnup/lwr_burnup.py
-    */convenience.py
     */convenience/__init__.py
     */economics/integration.py
     */burnup/fuel_management_integration.py
