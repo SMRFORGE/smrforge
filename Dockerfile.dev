@@ -6,6 +6,7 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
+# - Coding guidelines: optional deps fallbacks, Rich, convenience APIs, kwargs hygiene, path handling (docs/development/code-style.md).
 # - Discovery and help: system_info(), help_topics(), list_constraint_sets(), get_example_path(), list_examples(), list_nuclides(), list_sweepable_params(); quick_optimize(), quick_uq(). See examples/discovery_help_example.py.
 # - Rich display: system_info(display=True), quick_*(display=True); ENDF setup wizard uses Rich Panel/Table.
 # - Convenience API consolidated: Legacy smrforge/convenience.py removed; all in smrforge/convenience/ package. No API changes.

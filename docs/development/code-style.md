@@ -158,6 +158,77 @@ pre-commit install
 - Use docstrings for all public classes and functions
 - Follow Google or NumPy docstring style
 - Include type information in docstrings if not in type hints
+- **Convenience functions**: Include an `Example` block in docstrings (see `smrforge.convenience`)
+
+---
+
+## Optional Dependencies and Fallbacks
+
+When using optional libraries (Rich, tqdm, Polars, etc.):
+
+- Always use `try/except ImportError` with a sensible fallback
+- Never assume optional deps are installed; provide plain-text or no-op fallback
+- For Rich on Windows: prefer ASCII-safe alternatives (`"yes"/"no"`) over Unicode symbols (✓ ✗) when rendering to legacy consoles
+
+```python
+try:
+    from rich.console import Console
+    from rich.table import Table
+    _RICH_AVAILABLE = True
+except ImportError:
+    _RICH_AVAILABLE = False
+
+def print_summary(data: dict) -> None:
+    if _RICH_AVAILABLE:
+        table = Table(title="Summary")
+        # ... add rows, Console().print(table)
+    else:
+        for k, v in data.items():
+            print(f"  {k}: {v}")
+```
+
+---
+
+## Console Output and Rich
+
+For user-facing console output:
+
+- Prefer Rich (Table, Panel, Console) when Rich is available
+- Always provide a plain `print()` fallback when Rich is not installed
+- For functions that return data + optionally display: use `display: bool = False`; only render when `display=True`
+- Use `logger` for debug/progress; use Rich/print for user-facing summaries
+- See `smrforge/core/endf_setup.py`, `smrforge/help.py` for examples
+
+---
+
+## Convenience API Patterns
+
+For discovery and quick workflow functions:
+
+- **Naming**: `list_*()` for discovery, `get_*()` for retrieval, `quick_*()` for simple workflows
+- **Signatures**: Accept preset names, paths, or objects (e.g. `Union[str, Path, SimpleReactor]`)
+- **Return values**: Return structured data (dicts); use `display=True` for optional Rich tables
+- **Docstrings**: Include an `Example` block
+- See `smrforge.convenience` for patterns
+
+---
+
+## Keyword Argument Hygiene
+
+When wrapping functions that accept `**kwargs`:
+
+- Filter out wrapper-specific parameters before passing through
+- Example: `quick_economics(display=True)` must not pass `display` to `estimate_costs_from_spec()`
+- Pattern: `kwargs_clean = {k: v for k, v in kwargs.items() if k not in ("display",)}`
+
+---
+
+## Path Handling
+
+- Use `pathlib.Path` for file paths; avoid raw `str` for filesystem paths
+- Use `Path(__file__).resolve().parents[N]` for repo-relative paths (e.g. examples)
+- Call `.expanduser()` and `.resolve()` for user-provided paths
+- Validate `.exists()` before use in examples or wizards
 
 ---
 

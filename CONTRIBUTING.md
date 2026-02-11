@@ -298,18 +298,20 @@ If you're setting up the repository on GitHub for the first time:
 ## Pull Request Process
 
 1. **Ensure tests pass** - CI will run automatically
-2. **Update documentation** - If adding features, update relevant docs
-3. **Add changelog entry** - Add entry to CHANGELOG.md in [Unreleased]
-4. **Request review** - Assign reviewers if possible
-5. **Address feedback** - Respond to review comments
+2. **Update documentation** - If adding features, update relevant docs and examples
+3. **Add changelog entry** - Add entry to CHANGELOG.md for user-facing changes
+4. **Update Docker comments** - Add notes to Dockerfile/Dockerfile.dev for notable features
+5. **Request review** - Assign reviewers if possible
+6. **Address feedback** - Respond to review comments
 
 ### PR Checklist
 
 - [ ] Tests pass locally
 - [ ] Code follows style guidelines (Black, isort)
 - [ ] Type hints added (where appropriate)
-- [ ] Documentation updated
-- [ ] Changelog updated
+- [ ] Documentation updated (including docstrings with Example blocks for new convenience functions)
+- [ ] Changelog updated (CHANGELOG.md)
+- [ ] Docker files updated (Dockerfile, Dockerfile.dev) if adding notable features
 - [ ] No merge conflicts
 
 ## Project Structure

@@ -61,13 +61,42 @@ def main():
     print("-" * 70)
     out = smr.quick_sweep(path, {"enrichment": [0.18, 0.20]}, analysis="keff")
     for r in out["results"]:
-        print(f"  enrichment={r['parameters']['enrichment']:.2f} -> k_eff={r['k_eff']:.4f}")
+        print(
+            f"  enrichment={r['parameters']['enrichment']:.2f} -> k_eff={r['k_eff']:.4f}"
+        )
 
-    # 8. Quick economics
+    # 8. Quick economics (optional display=True for Rich summary)
     print("\n8. Quick economics:")
     print("-" * 70)
     costs = smr.quick_economics(path)
     print(f"  LCOE: ${costs.get('lcoe', 0):.2f}/kWh")
+
+    # 9. Quick optimize (small run; optional display=True)
+    print("\n9. Quick optimize (enrichment bounds):")
+    print("-" * 70)
+    opt = smr.quick_optimize(path, {"enrichment": (0.18, 0.22)}, max_iter=3)
+    print(f"  Best k_eff: {opt.get('best_k_eff', 'N/A')}")
+
+    # 10. Quick UQ (optional display=True)
+    print("\n10. Quick UQ (enrichment uncertainty):")
+    print("-" * 70)
+    uq = smr.quick_uq(
+        path,
+        [
+            {
+                "name": "enrichment",
+                "nominal": 0.195,
+                "distribution": "normal",
+                "uncertainty": 0.02,
+            }
+        ],
+        n_samples=20,
+    )
+    mean_val = uq.get("k_eff_mean")
+    if isinstance(mean_val, (int, float)):
+        print(f"  k_eff mean: {mean_val:.4f}")
+    else:
+        print(f"  UQ result keys: {list(uq.keys())}")
 
     print("\n" + "=" * 70)
     print("Try: smr.help('convenience') for full list")

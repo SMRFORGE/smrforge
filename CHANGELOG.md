@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Convenience API consolidation:** Removed legacy `smrforge/convenience.py`; all convenience functionality now lives in `smrforge/convenience/` package. No public API changes—`from smrforge.convenience import create_reactor` and `smrforge.create_reactor` work unchanged.
+- **Documentation:** Coding guidelines expanded in `docs/development/code-style.md` (optional deps, Rich, convenience APIs, kwargs hygiene, path handling). CONTRIBUTING.md PR checklist updated (changelog, Docker, docstrings). Testing-and-coverage.md: "Testing Optional Features" and "Coverage Exclusions" sections. Help examples for `system_info`, `quick_sweep`, `quick_economics`, `quick_optimize`, `quick_uq` (including `display=True`). Discovery example (`examples/discovery_help_example.py`) extended with `quick_optimize` and `quick_uq` demos.
 
 ## [0.2.0] - 2026-02-XX (Beta)
 

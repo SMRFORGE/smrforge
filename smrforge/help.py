@@ -91,9 +91,13 @@ def system_info(verbose: bool = False, display: bool = False) -> Dict[str, Any]:
         result["fuel_cycle"] = getattr(smr, "_FUEL_CYCLE_AVAILABLE", False)
         result["gui"] = getattr(smr, "_GUI_AVAILABLE", False)
         result["data_downloader"] = getattr(smr, "_DATA_DOWNLOADER_AVAILABLE", False)
-        result["convenience_utils"] = getattr(smr, "_CONVENIENCE_UTILS_AVAILABLE", False)
+        result["convenience_utils"] = getattr(
+            smr, "_CONVENIENCE_UTILS_AVAILABLE", False
+        )
         conv = getattr(smr, "convenience", None)
-        result["presets"] = getattr(conv, "_PRESETS_AVAILABLE", False) if conv else False
+        result["presets"] = (
+            getattr(conv, "_PRESETS_AVAILABLE", False) if conv else False
+        )
         result["transients"] = (
             getattr(conv, "_TRANSIENT_CONVENIENCE_AVAILABLE", False) if conv else False
         )
@@ -1233,6 +1237,60 @@ def _get_examples() -> Dict[str, List[Dict[str, str]]]:
             {
                 "description": "Create simple solver",
                 "code": "solver = smr.create_simple_solver(core=core)",
+            },
+        ],
+        "system_info": [
+            {
+                "description": "Check version and capabilities (returns dict)",
+                "code": "info = smr.system_info()",
+            },
+            {
+                "description": "Display capabilities as Rich table",
+                "code": "smr.system_info(display=True)",
+            },
+        ],
+        "quick_sweep": [
+            {
+                "description": "Parameter sweep with preset",
+                "code": "out = smr.quick_sweep('valar-10', {'enrichment': [0.18, 0.20]})",
+            },
+            {
+                "description": "Sweep with Rich summary",
+                "code": "out = smr.quick_sweep('valar-10', {'enrichment': [0.18, 0.20]}, display=True)",
+            },
+        ],
+        "quick_economics": [
+            {
+                "description": "Cost estimate from preset",
+                "code": "costs = smr.quick_economics('valar-10')",
+            },
+            {
+                "description": "Economics with Rich summary",
+                "code": "costs = smr.quick_economics('valar-10', display=True)",
+            },
+        ],
+        "quick_optimize": [
+            {
+                "description": "Design optimization",
+                "code": "out = smr.quick_optimize('valar-10', {'enrichment': (0.18, 0.22)})",
+            },
+        ],
+        "quick_uq": [
+            {
+                "description": "Uncertainty quantification",
+                "code": "out = smr.quick_uq('valar-10', [{'name':'enrichment','nominal':0.195,'distribution':'normal','uncertainty':0.02}], n_samples=50)",
+            },
+        ],
+        "list_presets": [
+            {
+                "description": "List preset designs",
+                "code": "presets = smr.list_presets()",
+            },
+        ],
+        "get_example_path": [
+            {
+                "description": "Get path to example input",
+                "code": "path = smr.get_example_path('reactor')",
             },
         ],
     }

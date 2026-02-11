@@ -20,7 +20,9 @@ This document consolidates information about test coverage, external data depend
 2. [Modules Requiring External Data](#modules-requiring-external-data)
 3. [Coverage Completion Roadmap](#coverage-completion-roadmap)
 4. [Priority Tasks](#priority-tasks)
-5. [Implementation Strategy](#implementation-strategy)
+5. [Testing Optional Features](#testing-optional-features)
+6. [Coverage Exclusions](#coverage-exclusions)
+7. [Implementation Strategy](#implementation-strategy)
 
 ---
 
@@ -365,6 +367,27 @@ All priority tasks from the testing and coverage roadmap have been successfully 
 13. **✅ Test `_mt_to_reaction_name`** ✅ **COMPLETE**
     - **Status**: Tested via parsing tests
     - **Coverage gain**: Achieved (+11%)
+
+---
+
+## Testing Optional Features
+
+When testing code that depends on optional dependencies (Rich, presets, Polars, etc.):
+
+- Use `pytest.skip("reason")` when required optional deps are unavailable
+- Example: `if not _PRESETS_AVAILABLE: pytest.skip("Presets not available")`
+- Test both code paths when feasible (with and without optional dep)
+- Relax string assertions (e.g. accept both `"="` and Rich box chars) so tests pass with or without Rich
+- See `tests/test_convenience_new_functions.py`, `tests/test_endf_setup_comprehensive.py` for examples
+
+---
+
+## Coverage Exclusions
+
+- Use `# pragma: no cover` only for branches that are genuinely hard to reach (e.g. Windows-only failures, rare env paths)
+- Add a brief comment explaining why the branch is excluded
+- Prefer adding tests over exclusions when possible
+- See `.coveragerc` and [COVERAGE_TRACKING.md](../../COVERAGE_TRACKING.md) for scope and policy
 
 ---
 
