@@ -203,6 +203,8 @@ For user-facing console output:
 
 ## Convenience API Patterns
 
+When adding new functions or features, consider adding a convenience wrapper where appropriate.
+
 For discovery and quick workflow functions:
 
 - **Naming**: `list_*()` for discovery, `get_*()` for retrieval, `quick_*()` for simple workflows
