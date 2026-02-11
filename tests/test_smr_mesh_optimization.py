@@ -4,8 +4,8 @@ Tests for SMR-specific mesh optimization.
 Tests compact geometry meshing, SMR-optimized refinement, and adaptive refinement.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
     from smrforge.geometry.smr_mesh_optimization import (

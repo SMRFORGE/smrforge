@@ -67,7 +67,7 @@ def quick_transient(
             - "T_fuel": Fuel temperature array [K]
             - "T_moderator": Moderator temperature array [K]
             - "reactivity": Total reactivity array [dk/k]
-    
+
     Keyword Args:
         plot: Whether to generate and display plot (default: False).
         plot_output: Output file path for plot (optional, e.g., "transient.png" or "transient.html").
@@ -101,9 +101,7 @@ def quick_transient(
         >>> print(f"Final temperature: {final_temp:.1f} K")
     """
     if not _SAFETY_AVAILABLE:
-        raise ImportError(
-            "Safety module not available. Install required dependencies."
-        )
+        raise ImportError("Safety module not available. Install required dependencies.")
 
     if power <= 0:
         raise ValueError(f"power must be > 0, got {power}")
@@ -152,18 +150,22 @@ def quick_transient(
                     return reactivity_insertion - 0.20  # Fully inserted
             else:
                 return reactivity_insertion
+
     elif transient_type == "reactivity_step":
         # Step change in reactivity
         def rho_external(t):
             return reactivity_insertion if t > 0 else 0.0
+
     elif transient_type == "power_change":
         # Power change transient (no reactivity, just temperature feedback)
         def rho_external(t):
             return 0.0
+
     elif transient_type == "decay_heat":
         # Decay heat removal (no reactivity, just decay heat)
         def rho_external(t):
             return -0.05 if scram_available and t >= scram_delay else 0.0  # Scram
+
     else:
         raise ValueError(
             f"Unknown transient_type: {transient_type}. "
@@ -185,6 +187,7 @@ def quick_transient(
             A = 100.0  # m² effective area
             Q_removal = h_effective * A * (T_mod - T_ambient)
             return min(P_decay, Q_removal)  # Can't remove more than decay heat
+
     else:
         # Normal operation (constant heat removal)
         def power_removal(t, T_fuel, T_mod):
@@ -221,6 +224,7 @@ def quick_transient(
     if plot or plot_output:
         try:
             from smrforge.visualization.transients import plot_transient
+
             plot_transient(
                 result,
                 output=plot_output,
@@ -229,9 +233,10 @@ def quick_transient(
             )
         except ImportError as e:
             import warnings
+
             warnings.warn(
                 f"Plotting not available: {e}. Install matplotlib or plotly for visualization.",
-                UserWarning
+                UserWarning,
             )
 
     return result

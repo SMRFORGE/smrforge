@@ -2,9 +2,10 @@
 Tests for thermal scattering law (TSL) parser.
 """
 
+from pathlib import Path
+
 import numpy as np
 import pytest
-from pathlib import Path
 
 from smrforge.core.reactor_core import Nuclide
 from smrforge.core.thermal_scattering_parser import (
@@ -68,7 +69,7 @@ class TestScatteringLawData:
         """Test temperature interpolation in get_s()."""
         alpha = np.array([0.1, 1.0, 10.0])
         beta = np.array([-5.0, 0.0, 5.0])
-        
+
         # Multi-temperature data
         temperatures = np.array([293.6, 600.0, 900.0])
         s_alpha_beta = np.zeros((3, 3, 3))  # [n_temp, n_alpha, n_beta]
@@ -105,7 +106,10 @@ class TestThermalScatteringParser:
         parser = ThermalScatteringParser()
 
         assert parser._extract_material_name("tsl-H_in_H2O.endf") == "H in H2O"
-        assert parser._extract_material_name("thermal-C_in_graphite.endf") == "C in graphite"
+        assert (
+            parser._extract_material_name("thermal-C_in_graphite.endf")
+            == "C in graphite"
+        )
         assert parser._extract_material_name("ts-D_in_D2O.endf") == "D in D2O"
 
     def test_create_placeholder_data(self):
@@ -122,12 +126,15 @@ class TestThermalScatteringParser:
         assert not data.coherent_scattering
         assert len(data.alpha_values) > 0
         assert len(data.beta_values) > 0
-        assert data.s_alpha_beta.shape == (len(data.alpha_values), len(data.beta_values))
+        assert data.s_alpha_beta.shape == (
+            len(data.alpha_values),
+            len(data.beta_values),
+        )
 
     def test_compute_thermal_scattering_xs(self):
         """Test thermal scattering cross-section calculation."""
         parser = ThermalScatteringParser()
-        
+
         # Create test data
         alpha = np.logspace(-2, 2, 10)
         beta = np.linspace(-10, 10, 20)
@@ -171,11 +178,14 @@ class TestTSLIntegration:
 
     def test_get_thermal_scattering_data(self):
         """Test getting TSL data via reactor_core."""
-        from smrforge.core.reactor_core import NuclearDataCache, get_thermal_scattering_data
+        from smrforge.core.reactor_core import (
+            NuclearDataCache,
+            get_thermal_scattering_data,
+        )
 
         cache = NuclearDataCache()
         tsl_data = get_thermal_scattering_data("H_in_H2O", cache=cache)
-        
+
         # Should return None if files not available, or ScatteringLawData if available
         assert tsl_data is None or isinstance(tsl_data, ScatteringLawData)
 
@@ -185,7 +195,6 @@ class TestTSLIntegration:
 
         cache = NuclearDataCache()
         materials = cache.list_available_tsl_materials()
-        
+
         # Should return a list (may be empty if no files)
         assert isinstance(materials, list)
-

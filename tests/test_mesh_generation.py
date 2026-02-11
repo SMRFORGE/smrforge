@@ -123,7 +123,9 @@ class TestAdvancedMeshGenerator:
         generator = AdvancedMeshGenerator()
 
         # Create a good quality mesh (nearly equilateral triangles)
-        vertices = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, np.sqrt(3) / 2], [1.5, np.sqrt(3) / 2]])
+        vertices = np.array(
+            [[0.0, 0.0], [1.0, 0.0], [0.5, np.sqrt(3) / 2], [1.5, np.sqrt(3) / 2]]
+        )
         triangles = np.array([[0, 1, 2], [1, 3, 2]])
 
         quality = generator.evaluate_mesh_quality(vertices, triangles)
@@ -163,7 +165,9 @@ class TestAdvancedMeshGenerator:
         # Very skinny triangle will have very small angles and high aspect ratio
         # Check that it fails at least one quality criterion
         # (min_angle > 10, max_angle < 170, aspect_ratio < 10, skewness > 0.3)
-        assert quality.is_good() == False  # Should fail quality checks (use == for numpy bool)
+        assert (
+            quality.is_good() == False
+        )  # Should fail quality checks (use == for numpy bool)
 
     def test_refine_mesh_no_criteria(self):
         """Test mesh refinement without criteria."""
@@ -186,7 +190,9 @@ class TestAdvancedMeshGenerator:
         triangles = np.array([[0, 1, 2]])
         criteria = np.array([2.0])  # High refinement indicator
 
-        new_vertices, new_triangles = generator.refine_mesh(vertices, triangles, criteria)
+        new_vertices, new_triangles = generator.refine_mesh(
+            vertices, triangles, criteria
+        )
 
         # Should have more vertices and triangles after refinement
         assert len(new_vertices) > len(vertices)  # Added midpoints
@@ -202,7 +208,9 @@ class TestAdvancedMeshGenerator:
         # Use criteria where most are low, so median is low and threshold filters them out
         criteria = np.array([0.1, 0.2])  # Low refinement indicators
 
-        new_vertices, new_triangles = generator.refine_mesh(vertices, triangles, criteria)
+        new_vertices, new_triangles = generator.refine_mesh(
+            vertices, triangles, criteria
+        )
 
         # Should return unchanged for low criteria (threshold = 0.15 * 1.5 = 0.225, both < threshold)
         assert np.array_equal(new_vertices, vertices)
@@ -240,7 +248,9 @@ class TestAdvancedMeshGenerator:
         # This refines exactly the two 10.0 triangles and keeps the 1.0 triangles.
         criteria = np.array([10.0, 10.0, 1.0, 1.0])
 
-        new_vertices, new_triangles = generator.refine_mesh(vertices, triangles, criteria)
+        new_vertices, new_triangles = generator.refine_mesh(
+            vertices, triangles, criteria
+        )
 
         # Two refined triangles each create 3 midpoints, but they share one edge midpoint.
         assert len(new_vertices) == len(vertices) + 5
@@ -345,7 +355,9 @@ class TestComputeMeshGradient:
 
         assert len(gradient) == len(field)
         # Check approximate values (gradient of x^2 = 2x)
-        assert gradient[5] == pytest.approx(10.0, rel=0.1)  # At x=5, gradient should be ~10
+        assert gradient[5] == pytest.approx(
+            10.0, rel=0.1
+        )  # At x=5, gradient should be ~10
 
     def test_compute_mesh_gradient_forward(self):
         """Test forward difference gradient."""
@@ -372,4 +384,3 @@ class TestComputeMeshGradient:
 
         with pytest.raises(ValueError, match="Unknown method"):
             compute_mesh_gradient(field, mesh, method="invalid")
-

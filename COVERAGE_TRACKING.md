@@ -281,9 +281,9 @@ To reach **90%** overall:
 
 2. **ENDF path for tests:** Set `SMRFORGE_ENDF_DIR` (or `LOCAL_ENDF_DIR`) to your ENDF root so tests that need real ENDF files run instead of skipping. Example: `C:\Users\cmwha\Downloads\ENDF-B-VIII.1`. Conftest auto-detects this path at session start if the directory exists.
 
-3. **Add tests** for modules with the most uncovered lines (see "Modules Below 75% Target" below). Highest impact: `geometry/advanced_import.py`, `geometry/validation.py`, `data_downloader.py`, `neutronics/*` (hybrid_solver, adaptive_sampling, monte_carlo_optimized, implicit_mc), `core/multigroup_advanced.py`, `core/endf_setup.py`, `burnup/lwr_burnup.py`, `convenience.py`.
+3. **Add tests** for modules with the most uncovered lines (see "Modules Below 75% Target" below). Highest impact: `geometry/advanced_import.py`, `geometry/validation.py`, `data_downloader.py`, `neutronics/*` (hybrid_solver, adaptive_sampling, monte_carlo_optimized, implicit_mc), `core/multigroup_advanced.py`, `core/endf_setup.py`, `burnup/lwr_burnup.py`, `convenience/__init__.py`.
 
-   **Path to 100% (in-scope):** See `COVERAGE_100_PLAN.md`. Remaining uncovered lines: `core/reactor_core.py` (~162), `burnup/solver.py` (~181), `neutronics/transport.py` (~72), `geometry/advanced_mesh.py` (~108), plus smaller gaps. Add tests and `# pragma: no cover` for JIT/untestable paths. Run: `pytest tests/ --cov=smrforge --cov-config=coverage_community_100.ini --cov-report=term-missing`.
+   **Path to 100% (in-scope):** See `docs/development/COVERAGE_100_PLAN.md`. Remaining uncovered lines: `core/reactor_core.py` (~162), `burnup/solver.py` (~181), `neutronics/transport.py` (~72), `geometry/advanced_mesh.py` (~108), plus smaller gaps. Add tests and `# pragma: no cover` for JIT/untestable paths. Run: `pytest tests/ --cov=smrforge --cov-config=coverage/config/coverage_community_100.ini --cov-report=term-missing`.
 
    **Continue checklist (run locally):**
    - Run coverage: `$env:COVERAGE_FILE="$env:TEMP\.coverage_smrforge"; pytest tests/ --cov=smrforge --cov-report=term-missing -q` (PowerShell). Or use `scripts/coverage_full.ps1` to write `coverage/generated/coverage.json` and HTML. Ensure `coverage/generated` exists (scripts create it automatically).
@@ -314,7 +314,7 @@ To reach **90%** overall:
 | `core/decay_chain_utils.py` | **95%** ✅ | 4 | ✅ **>80%** | `test_decay_chain_utils` + 258_277 |
 | `neutronics/implicit_mc.py` | **90%** ✅ | 9 | ✅ **>80%** | `test_implicit_mc` + 258_277 |
 | `utils/optimization_utils.py` | **100%** ✅ | 0 | ✅ **>80%** | `test_optimization_utils` |
-| `convenience.py` | **~41%** | ~63 | 🟡 | Preset path env-dependent; custom path covered. **Below 80%.** |
+| `convenience/__init__.py` | **~41%** | ~63 | 🟡 | Preset path env-dependent; custom path covered. **Below 80%.** |
 | `geometry/validation.py` | **96%** ✅ | 12 | ✅ **>80%** | `test_geometry_validation` + 258_277 |
 | `geometry/advanced_import.py` | **98%** ✅ | 8 | ✅ **>80%** | `test_geometry_advanced_import` + 258_277 |
 | `burnup/lwr_burnup.py` | **99%** ✅ | 1 | ✅ **>80%** | `test_lwr_burnup` |
@@ -326,7 +326,7 @@ To reach **90%** overall:
 | `core/self_shielding_integration.py` | **100%** ✅ | 0 | ✅ **>80%** | `test_self_shielding_integration` + 258_277 |
 | `core/endf_setup.py` | **90%** ✅ | 20 | ✅ **>80%** | `test_endf_setup_comprehensive` + 258_277 |
 
-**Table 269-291 “all over 80%” (Jan 2026):** Use `coverage_table_269_291.ini` and run the focused table test set (see Path to 90%). All listed modules reach **>80%** except `convenience.py` (~41%); preset path is env-dependent (Polars/full deps). Run:  
+**Table 269-291 “all over 80%” (Jan 2026):** Use `coverage_table_269_291.ini` and run the focused table test set (see Path to 90%). All listed modules reach **>80%** except `convenience/__init__.py` (~41%); preset path is env-dependent (Polars/full deps). Run:  
 `pytest <table_test_paths> --cov=smrforge --cov-config=coverage_table_269_291.ini --cov-report=term`.
 
 **Note:** Some modules shown as low coverage may have comprehensive tests but appear low due to exclusions or test configuration differences. The default test run excludes `test_parallel_batch.py`, `test_parallel_batch_extended.py`, `test_optimization_utils.py`, `test_safety.py`, and `tests/performance/test_performance_benchmarks.py` (see `pytest.ini`).
@@ -446,7 +446,7 @@ All scripts create `coverage/generated` automatically. That directory is gitigno
 - `.coveragerc` - Coverage configuration
 - `pytest.ini` - Test configuration and exclusions
 
-**Note:** Historical coverage files live in `coverage/archive/`. Current reports go to `coverage/generated/` (gitignored). Generate fresh coverage data using the commands or scripts above.
+**Note:** Historical coverage files live in `coverage/archive/`. Current reports go to `coverage/generated/` (gitignored). See `coverage/README.md` for the coverage entry point. Generate fresh coverage data using the commands or scripts above.
 
 ---
 
@@ -491,17 +491,7 @@ All scripts create `coverage/generated` automatically. That directory is gitigno
 
 ## Historical Coverage Files
 
-**Note:** The following coverage JSON files are historical snapshots (archived under `coverage/archive/json/`):
-- `coverage/archive/json/coverage.json` - Full project snapshot
-- `coverage/archive/json/coverage_final.json` - Final snapshot with exclusions
-- `coverage/archive/json/coverage_current.json` - Current state snapshot
-- `coverage/archive/json/coverage_reactor.json` - Reactor module only
-- `coverage/archive/json/coverage_reactor_full.json` - Reactor module full
-- `coverage/archive/json/coverage_reactor_final.json` - Reactor module final
-- `coverage/archive/json/coverage_uq.json` - Uncertainty module only
-- `coverage/archive/json/coverage_uq_full.json` - Uncertainty module full
-- `coverage/archive/json/coverage_check.json` - Check snapshot
-- `coverage/archive/json/coverage_new_modules.json` - New modules snapshot
+**Historical JSON (single snapshot):** `coverage/archive/json/latest.json` — Single historical snapshot (Feb 2026 consolidation).
 
 **Recommendation:** Generate fresh coverage data using the commands in the "Coverage Generation" section rather than relying on historical files. These files may be outdated and do not reflect the current state of the codebase.
 

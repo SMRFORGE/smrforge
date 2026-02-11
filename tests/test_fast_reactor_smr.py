@@ -4,10 +4,11 @@ Tests for Fast Reactor SMR geometry classes.
 Tests sodium-cooled fast reactor geometry, wire-wrap spacers, and hexagonal assemblies.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
+    from smrforge.geometry.core_geometry import MaterialRegion, Point3D
     from smrforge.geometry.fast_reactor_smr import (
         FastReactorAssembly,
         FastReactorFuelPin,
@@ -16,7 +17,6 @@ try:
         LiquidMetalChannel,
         WireWrapSpacer,
     )
-    from smrforge.geometry.core_geometry import Point3D, MaterialRegion
 
     _FAST_REACTOR_SMR_AVAILABLE = True
 except ImportError:
@@ -71,10 +71,16 @@ class TestFastReactorFuelPin:
     def test_fuel_pin_creation(self):
         """Test creating a fast reactor fuel pin."""
         fuel_mat = MaterialRegion(
-            material_id="MOX", composition={"Pu239": 0.15, "U238": 0.85}, temperature=900.0, density=10.0
+            material_id="MOX",
+            composition={"Pu239": 0.15, "U238": 0.85},
+            temperature=900.0,
+            density=10.0,
         )
         clad_mat = MaterialRegion(
-            material_id="SS316", composition={"Fe": 0.70, "Cr": 0.18, "Ni": 0.12}, temperature=700.0, density=8.0
+            material_id="SS316",
+            composition={"Fe": 0.70, "Cr": 0.18, "Ni": 0.12},
+            temperature=700.0,
+            density=8.0,
         )
 
         pin = FastReactorFuelPin(
@@ -94,8 +100,12 @@ class TestFastReactorFuelPin:
 
     def test_fuel_pin_volume(self):
         """Test fuel pin volume calculations."""
-        fuel_mat = MaterialRegion(material_id="MOX", composition={}, temperature=900.0, density=10.0)
-        clad_mat = MaterialRegion(material_id="SS316", composition={}, temperature=700.0, density=8.0)
+        fuel_mat = MaterialRegion(
+            material_id="MOX", composition={}, temperature=900.0, density=10.0
+        )
+        clad_mat = MaterialRegion(
+            material_id="SS316", composition={}, temperature=700.0, density=8.0
+        )
 
         pin = FastReactorFuelPin(
             id=1,
@@ -137,9 +147,18 @@ class TestFastReactorAssembly:
 
     def test_build_hexagonal_lattice(self):
         """Test building hexagonal lattice of fuel pins."""
-        fuel_mat = MaterialRegion(material_id="MOX", composition={}, temperature=900.0, density=10.0)
-        clad_mat = MaterialRegion(material_id="SS316", composition={}, temperature=700.0, density=8.0)
-        coolant_mat = MaterialRegion(material_id="sodium", composition={"Na": 1.0}, temperature=773.15, density=0.85)
+        fuel_mat = MaterialRegion(
+            material_id="MOX", composition={}, temperature=900.0, density=10.0
+        )
+        clad_mat = MaterialRegion(
+            material_id="SS316", composition={}, temperature=700.0, density=8.0
+        )
+        coolant_mat = MaterialRegion(
+            material_id="sodium",
+            composition={"Na": 1.0},
+            temperature=773.15,
+            density=0.85,
+        )
 
         assembly = FastReactorAssembly(
             id=1,
@@ -168,9 +187,15 @@ class TestFastReactorAssembly:
 
     def test_total_fuel_volume(self):
         """Test total fuel volume calculation."""
-        fuel_mat = MaterialRegion(material_id="MOX", composition={}, temperature=900.0, density=10.0)
-        clad_mat = MaterialRegion(material_id="SS316", composition={}, temperature=700.0, density=8.0)
-        coolant_mat = MaterialRegion(material_id="sodium", composition={}, temperature=773.15, density=0.85)
+        fuel_mat = MaterialRegion(
+            material_id="MOX", composition={}, temperature=900.0, density=10.0
+        )
+        clad_mat = MaterialRegion(
+            material_id="SS316", composition={}, temperature=700.0, density=8.0
+        )
+        coolant_mat = MaterialRegion(
+            material_id="sodium", composition={}, temperature=773.15, density=0.85
+        )
 
         assembly = FastReactorAssembly(
             id=1,
@@ -215,9 +240,15 @@ class TestFastReactorSMRCore:
 
     def test_build_hexagonal_core_lattice(self):
         """Test building hexagonal core lattice."""
-        fuel_mat = MaterialRegion(material_id="MOX", composition={}, temperature=900.0, density=10.0)
-        clad_mat = MaterialRegion(material_id="SS316", composition={}, temperature=700.0, density=8.0)
-        coolant_mat = MaterialRegion(material_id="sodium", composition={}, temperature=773.15, density=0.85)
+        fuel_mat = MaterialRegion(
+            material_id="MOX", composition={}, temperature=900.0, density=10.0
+        )
+        clad_mat = MaterialRegion(
+            material_id="SS316", composition={}, temperature=700.0, density=8.0
+        )
+        coolant_mat = MaterialRegion(
+            material_id="sodium", composition={}, temperature=773.15, density=0.85
+        )
 
         core = FastReactorSMRCore(name="Test-SFR")
         core.build_hexagonal_core_lattice(
@@ -242,9 +273,15 @@ class TestFastReactorSMRCore:
 
     def test_core_fuel_volume(self):
         """Test core fuel volume calculation."""
-        fuel_mat = MaterialRegion(material_id="MOX", composition={}, temperature=900.0, density=10.0)
-        clad_mat = MaterialRegion(material_id="SS316", composition={}, temperature=700.0, density=8.0)
-        coolant_mat = MaterialRegion(material_id="sodium", composition={}, temperature=773.15, density=0.85)
+        fuel_mat = MaterialRegion(
+            material_id="MOX", composition={}, temperature=900.0, density=10.0
+        )
+        clad_mat = MaterialRegion(
+            material_id="SS316", composition={}, temperature=700.0, density=8.0
+        )
+        coolant_mat = MaterialRegion(
+            material_id="sodium", composition={}, temperature=773.15, density=0.85
+        )
 
         core = FastReactorSMRCore(name="Test-SFR")
         core.build_hexagonal_core_lattice(

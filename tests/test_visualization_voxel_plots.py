@@ -7,7 +7,9 @@ def test_voxel_grid_prismatic_core_is_nonempty():
     from smrforge.visualization.voxel_plots import _create_voxel_grid
 
     core = PrismaticCore(name="VoxelTestCore")
-    core.build_hexagonal_lattice(n_rings=1, pitch=40.0, block_height=80.0, n_axial=1, flat_to_flat=36.0)
+    core.build_hexagonal_lattice(
+        n_rings=1, pitch=40.0, block_height=80.0, n_axial=1, flat_to_flat=36.0
+    )
 
     grid = _create_voxel_grid(
         core,
@@ -132,7 +134,10 @@ def test_plot_voxel_pyvista_importerror_when_pyvista_unavailable(monkeypatch):
 
 
 def test_export_voxel_to_hdf5_and_convert_to_vtk(tmp_path):
-    from smrforge.visualization.voxel_plots import convert_voxel_hdf5_to_vtk, export_voxel_to_hdf5
+    from smrforge.visualization.voxel_plots import (
+        convert_voxel_hdf5_to_vtk,
+        export_voxel_to_hdf5,
+    )
 
     voxel_grid = {
         "x": np.array([0.5, 1.5]),
@@ -232,8 +237,12 @@ def test_plot_voxel_dispatches_to_plotly_and_pyvista(monkeypatch):
 
     plotly_sentinel = object()
     pyvista_sentinel = object()
-    monkeypatch.setattr(vp, "_plot_voxel_plotly", lambda *args, **kwargs: plotly_sentinel)
-    monkeypatch.setattr(vp, "_plot_voxel_pyvista", lambda *args, **kwargs: pyvista_sentinel)
+    monkeypatch.setattr(
+        vp, "_plot_voxel_plotly", lambda *args, **kwargs: plotly_sentinel
+    )
+    monkeypatch.setattr(
+        vp, "_plot_voxel_pyvista", lambda *args, **kwargs: pyvista_sentinel
+    )
 
     assert vp.plot_voxel(object(), backend="plotly") is plotly_sentinel
     assert vp.plot_voxel(object(), backend="pyvista") is pyvista_sentinel
@@ -294,4 +303,3 @@ def test_plot_voxel_pyvista_backend_path(monkeypatch):
     assert len(plotter.meshes) == 1
     grid, _ = plotter.meshes[0]
     assert "flux" in grid
-

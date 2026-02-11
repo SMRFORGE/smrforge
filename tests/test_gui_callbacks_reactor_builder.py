@@ -68,6 +68,7 @@ def test_reactor_builder_callbacks_cover_branches():
 
     # load_presets: strategy1 raises -> strategy2 uses convenience.list_presets
     import smrforge.convenience as conv
+
     with (
         patch("smrforge.list_presets", side_effect=RuntimeError("nope")),
         patch.object(conv, "list_presets", return_value=["c1"]),
@@ -77,7 +78,9 @@ def test_reactor_builder_callbacks_cover_branches():
 
     # load_presets: exercise "conv_mod has no list_presets" branch (best-effort)
     import types
+
     import smrforge as smr_pkg
+
     real_conv = smr_pkg.convenience
     fake_conv = types.ModuleType("smrforge.convenience")
     with (
@@ -106,15 +109,15 @@ def test_reactor_builder_callbacks_cover_branches():
     with (
         patch("smrforge.list_presets", side_effect=RuntimeError("nope")),
         patch.object(conv, "list_presets", side_effect=RuntimeError("nope2")),
-        patch("smrforge.presets.htgr.DesignLibrary", side_effect=RuntimeError("no lib")),
+        patch(
+            "smrforge.presets.htgr.DesignLibrary", side_effect=RuntimeError("no lib")
+        ),
     ):
         opts = load_presets({})
         assert opts and opts[0].get("disabled") is True
 
     # load_presets: none found -> placeholder
-    with (
-        patch("smrforge.list_presets", return_value=[]),
-    ):
+    with (patch("smrforge.list_presets", return_value=[]),):
         opts = load_presets({})
         assert opts and opts[0].get("disabled") is True
 
@@ -129,12 +132,44 @@ def test_reactor_builder_callbacks_cover_branches():
     # create_reactor: no ctx.triggered => PreventUpdate
     with patch.object(dash, "callback_context", SimpleNamespace(triggered=[])):
         with pytest.raises(dash.exceptions.PreventUpdate):
-            create_reactor(None, None, None, None, None, None, None, None, None, None, None, None, None)
+            create_reactor(
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
 
     # create_reactor: load preset button but preset missing => PreventUpdate
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "load-preset-button.n_clicks"}])):
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "load-preset-button.n_clicks"}]),
+    ):
         with pytest.raises(dash.exceptions.PreventUpdate):
-            create_reactor(None, 1, None, None, None, None, None, None, None, None, None, None, None)
+            create_reactor(
+                None,
+                1,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
 
     # create_reactor: preset load success
     from smrforge.validation.models import ReactorSpecification
@@ -162,26 +197,59 @@ def test_reactor_builder_callbacks_cover_branches():
     )
     reactor = SimpleNamespace(spec=spec)
     with (
-        patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "load-preset-button.n_clicks"}])),
+        patch.object(
+            dash,
+            "callback_context",
+            SimpleNamespace(triggered=[{"prop_id": "load-preset-button.n_clicks"}]),
+        ),
         patch("smrforge.create_reactor", return_value=reactor),
     ):
-        data, feedback = create_reactor(None, 1, "p1", None, None, None, None, None, None, None, None, None, None)
+        data, feedback = create_reactor(
+            None, 1, "p1", None, None, None, None, None, None, None, None, None, None
+        )
         assert isinstance(feedback, dbc.Alert)
         assert data.get("name") == "Preset"
 
     # create_reactor: preset load validation fails
     with (
-        patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "load-preset-button.n_clicks"}])),
+        patch.object(
+            dash,
+            "callback_context",
+            SimpleNamespace(triggered=[{"prop_id": "load-preset-button.n_clicks"}]),
+        ),
         patch("smrforge.create_reactor", return_value=reactor),
-        patch("smrforge.validation.models.ReactorSpecification", side_effect=RuntimeError("validation error")),
+        patch(
+            "smrforge.validation.models.ReactorSpecification",
+            side_effect=RuntimeError("validation error"),
+        ),
     ):
-        data, feedback = create_reactor(None, 2, "p1", None, None, None, None, None, None, None, None, None, None)
+        data, feedback = create_reactor(
+            None, 2, "p1", None, None, None, None, None, None, None, None, None, None
+        )
         assert data == {}
         assert isinstance(feedback, dbc.Alert)
 
     # create_reactor: custom reactor success
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "create-reactor-button.n_clicks"}])):
-        data, feedback = create_reactor(1, None, None, "Custom", "prismatic", 10.0, 200.0, 100.0, 0.195, 800.0, 900.0, 7.0e6, 150.0)
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "create-reactor-button.n_clicks"}]),
+    ):
+        data, feedback = create_reactor(
+            1,
+            None,
+            None,
+            "Custom",
+            "prismatic",
+            10.0,
+            200.0,
+            100.0,
+            0.195,
+            800.0,
+            900.0,
+            7.0e6,
+            150.0,
+        )
         assert isinstance(feedback, dbc.Alert)
         assert data.get("name") == "Custom"
 
@@ -191,19 +259,31 @@ def test_reactor_builder_callbacks_cover_branches():
             raise RuntimeError("validation error: bad fields")
 
     with (
-        patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "create-reactor-button.n_clicks"}])),
+        patch.object(
+            dash,
+            "callback_context",
+            SimpleNamespace(triggered=[{"prop_id": "create-reactor-button.n_clicks"}]),
+        ),
         patch("smrforge.validation.models.ReactorSpecification", RaisingSpec),
     ):
-        data, feedback = create_reactor(2, None, None, None, None, None, None, None, None, None, None, None, None)
+        data, feedback = create_reactor(
+            2, None, None, None, None, None, None, None, None, None, None, None, None
+        )
         assert data == {}
         assert isinstance(feedback, dbc.Alert)
 
     # create_reactor: outer exception
     with (
-        patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "load-preset-button.n_clicks"}])),
+        patch.object(
+            dash,
+            "callback_context",
+            SimpleNamespace(triggered=[{"prop_id": "load-preset-button.n_clicks"}]),
+        ),
         patch("smrforge.create_reactor", side_effect=RuntimeError("boom")),
     ):
-        data, feedback = create_reactor(None, 3, "p1", None, None, None, None, None, None, None, None, None, None)
+        data, feedback = create_reactor(
+            None, 3, "p1", None, None, None, None, None, None, None, None, None, None
+        )
         assert data == {}
         assert isinstance(feedback, dbc.Alert)
 
@@ -214,8 +294,8 @@ def test_reactor_builder_callbacks_cover_branches():
     spec_data = {
         "name": "X",
         "reactor_type": "prismatic",
-        "power_thermal": 2.0e6,   # >= 1e6
-        "core_height": 2000.0,    # >= 1e3
+        "power_thermal": 2.0e6,  # >= 1e6
+        "core_height": 2000.0,  # >= 1e3
         "shutdown_margin": 0.005,  # < 0.01
         "capacity_factor": 0.95,  # normal float
         "primary_pressure": 7.0e6,
@@ -223,4 +303,3 @@ def test_reactor_builder_callbacks_cover_branches():
     }
     card = display_reactor_spec(spec_data)
     assert isinstance(card, dbc.Card)
-

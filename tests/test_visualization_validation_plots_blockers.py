@@ -88,8 +88,15 @@ def test_summary_counts_supported_and_unsupported():
     import smrforge.visualization.validation_plots as vp
 
     # data_validation-like shape (summary() -> dict)
-    r1 = SimpleNamespace(summary=lambda: {"critical": 1, "error": 2, "warning": 3, "info": 4})
-    assert vp._summary_counts(r1) == {"critical": 1, "error": 2, "warning": 3, "info": 4}
+    r1 = SimpleNamespace(
+        summary=lambda: {"critical": 1, "error": 2, "warning": 3, "info": 4}
+    )
+    assert vp._summary_counts(r1) == {
+        "critical": 1,
+        "error": 2,
+        "warning": 3,
+        "info": 4,
+    }
 
     # constraints-like shape (violations/warnings)
     r2 = SimpleNamespace(violations=[1, 2], warnings=[3])
@@ -103,7 +110,9 @@ def test_summary_counts_supported_and_unsupported():
 def test_plot_validation_summary_plotly_matplotlib_and_errors(monkeypatch):
     import smrforge.visualization.validation_plots as vp
 
-    r = SimpleNamespace(summary=lambda: {"critical": 0, "error": 1, "warning": 2, "info": 3})
+    r = SimpleNamespace(
+        summary=lambda: {"critical": 0, "error": 1, "warning": 2, "info": 3}
+    )
 
     monkeypatch.setattr(vp, "_PLOTLY_AVAILABLE", True)
     monkeypatch.setattr(vp, "ensure_plotly_available", lambda ok: None)
@@ -176,4 +185,3 @@ def test_plot_validation_issues_constraints_branch(monkeypatch):
 
     with pytest.raises(ValueError, match="Unknown backend"):
         vp.plot_validation_issues(r, backend="nope")
-

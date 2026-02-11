@@ -30,12 +30,17 @@ except ImportError:  # pragma: no cover
     go = None  # type: ignore
 
 from smrforge.uncertainty.uq import UQResults
-from smrforge.visualization._viz_common import ensure_matplotlib_available, ensure_plotly_available
+from smrforge.visualization._viz_common import (
+    ensure_matplotlib_available,
+    ensure_plotly_available,
+)
 
 
 def _get_output_data(results: UQResults, output_idx: int) -> np.ndarray:
     if output_idx < 0 or output_idx >= len(results.output_names):
-        raise ValueError(f"output_idx must be in [0, {len(results.output_names)}), got {output_idx}")
+        raise ValueError(
+            f"output_idx must be in [0, {len(results.output_names)}), got {output_idx}"
+        )
     if results.output_samples is None or results.output_samples.size == 0:
         raise ValueError("results.output_samples is empty")
     return np.asarray(results.output_samples[:, output_idx], dtype=float)
@@ -74,10 +79,24 @@ def plot_uq_distribution(
         fig = go.Figure()
         fig.add_trace(go.Histogram(x=data, nbinsx=bins, name=name, opacity=0.85))
         if show_stats:
-            fig.add_vline(x=mean, line_dash="dash", line_color="red", annotation_text="mean")
-            fig.add_vline(x=median, line_dash="dot", line_color="gray", annotation_text="median")
-            fig.add_vline(x=pmap[p_lo], line_dash="dash", line_color="orange", annotation_text=f"p{int(p_lo*100)}")
-            fig.add_vline(x=pmap[p_hi], line_dash="dash", line_color="orange", annotation_text=f"p{int(p_hi*100)}")
+            fig.add_vline(
+                x=mean, line_dash="dash", line_color="red", annotation_text="mean"
+            )
+            fig.add_vline(
+                x=median, line_dash="dot", line_color="gray", annotation_text="median"
+            )
+            fig.add_vline(
+                x=pmap[p_lo],
+                line_dash="dash",
+                line_color="orange",
+                annotation_text=f"p{int(p_lo*100)}",
+            )
+            fig.add_vline(
+                x=pmap[p_hi],
+                line_dash="dash",
+                line_color="orange",
+                annotation_text=f"p{int(p_hi*100)}",
+            )
         fig.update_layout(title=plot_title, xaxis_title=name, yaxis_title="count")
         return fig
 
@@ -88,7 +107,12 @@ def plot_uq_distribution(
         if show_stats:
             ax.axvline(mean, linestyle="--", color="red", label="mean")
             ax.axvline(median, linestyle=":", color="gray", label="median")
-            ax.axvline(pmap[p_lo], linestyle="--", color="orange", label=f"p{int(p_lo*100)}/{int(p_hi*100)}")
+            ax.axvline(
+                pmap[p_lo],
+                linestyle="--",
+                color="orange",
+                label=f"p{int(p_lo*100)}/{int(p_hi*100)}",
+            )
             ax.axvline(pmap[p_hi], linestyle="--", color="orange")
             ax.legend()
         ax.set_title(plot_title)
@@ -190,7 +214,11 @@ def plot_uq_sobol_indices(
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
         fig.add_trace(go.Bar(x=S1_o[::-1], y=names_o[::-1], orientation="h", name="S1"))
-        fig.add_trace(go.Bar(x=ST_o[::-1], y=names_o[::-1], orientation="h", name="ST", opacity=0.6))
+        fig.add_trace(
+            go.Bar(
+                x=ST_o[::-1], y=names_o[::-1], orientation="h", name="ST", opacity=0.6
+            )
+        )
         fig.update_layout(title=plot_title, barmode="overlay", xaxis_title="index")
         return fig
 
@@ -283,14 +311,18 @@ def plot_uq_scatter_matrix_plotly(
         raise ValueError("No parameters available")
 
     out = _get_output_data(results, output_idx)
-    labels = list(results.parameter_names[:n_params]) + [results.output_names[output_idx]]
+    labels = list(results.parameter_names[:n_params]) + [
+        results.output_names[output_idx]
+    ]
     X = np.asarray(results.parameter_samples[:, :n_params], dtype=float)
     M = np.column_stack([X, out])
 
     # Use plotly's Splom if available.
     fig = go.Figure(
         data=go.Splom(
-            dimensions=[dict(label=labels[i], values=M[:, i]) for i in range(M.shape[1])],
+            dimensions=[
+                dict(label=labels[i], values=M[:, i]) for i in range(M.shape[1])
+            ],
             marker=dict(size=3, opacity=0.5),
         )
     )
@@ -305,4 +337,3 @@ __all__ = [
     "plot_uq_morris_indices",
     "plot_uq_scatter_matrix_plotly",
 ]
-

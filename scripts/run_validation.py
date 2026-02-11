@@ -7,6 +7,9 @@ generates validation reports with timing and benchmarking results.
 
 Usage:
     python scripts/run_validation.py [--endf-dir PATH] [--benchmarks benchmarks.json] [--output REPORT.txt] [--json-output RESULTS.json] [--verbose]
+
+Output location: Reports are generated artifacts. Use output/validation/ to keep them organized:
+    --output output/validation/validation_report.txt --json-output output/validation/validation_report.json
 """
 
 import argparse

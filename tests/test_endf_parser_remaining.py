@@ -6,8 +6,9 @@ This test suite covers:
 - ENDFEvaluation.__getitem__ KeyError path
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture
@@ -15,6 +16,7 @@ def endf_evaluation_class():
     """Get the ENDFEvaluation class."""
     try:
         from smrforge.core.endf_parser import ENDFEvaluation
+
         return ENDFEvaluation
     except ImportError:
         pytest.skip("ENDF parser not available")
@@ -24,7 +26,7 @@ def endf_evaluation_class():
 def empty_endf_file(temp_dir):
     """Create an empty ENDF file for testing."""
     endf_path = temp_dir / "empty_test.endf"
-    
+
     # Minimal ENDF file structure (just header, no reactions)
     endf_content = """ 1.001000+3 9.991673-1          0          0          0          0 125 1451    1
  9.223500+4 2.350000+2          0          0          0          0 125 1451    2
@@ -164,10 +166,12 @@ class TestMtToReactionName:
             111: "n,2alpha",
             112: "n,3alpha",
         }
-        
+
         for mt, expected_name in known_mappings.items():
             result = endf_evaluation_class._mt_to_reaction_name(mt)
-            assert result == expected_name, f"MT={mt} should map to '{expected_name}', got '{result}'"
+            assert (
+                result == expected_name
+            ), f"MT={mt} should map to '{expected_name}', got '{result}'"
 
     def test_mt_to_reaction_name_is_static_method(self, endf_evaluation_class):
         """Test that _mt_to_reaction_name can be called without an instance."""
@@ -179,53 +183,63 @@ class TestMtToReactionName:
 class TestENDFEvaluationGetItemKeyError:
     """Test ENDFEvaluation.__getitem__ KeyError path."""
 
-    def test_getitem_raises_keyerror_for_missing_reaction(self, endf_evaluation_class, empty_endf_file):
+    def test_getitem_raises_keyerror_for_missing_reaction(
+        self, endf_evaluation_class, empty_endf_file
+    ):
         """Test __getitem__ raises KeyError when reaction MT number is not found."""
         evaluation = endf_evaluation_class(empty_endf_file)
-        
+
         # Should raise KeyError for nonexistent reaction
         with pytest.raises(KeyError) as exc_info:
             _ = evaluation[1]  # MT=1 (total) - should not exist in empty file
-        
+
         # Verify error message contains useful information
         error_msg = str(exc_info.value)
         assert "MT=1" in error_msg or "1" in error_msg
         assert "not found" in error_msg.lower() or "not found" in error_msg
 
-    def test_getitem_keyerror_for_multiple_missing_reactions(self, endf_evaluation_class, empty_endf_file):
+    def test_getitem_keyerror_for_multiple_missing_reactions(
+        self, endf_evaluation_class, empty_endf_file
+    ):
         """Test __getitem__ raises KeyError for various missing reactions."""
         evaluation = endf_evaluation_class(empty_endf_file)
-        
+
         # Test various missing MT numbers
         for mt in [1, 2, 18, 102, 999]:
             with pytest.raises(KeyError) as exc_info:
                 _ = evaluation[mt]
-            
+
             # Verify error message mentions the MT number
             error_msg = str(exc_info.value)
             assert str(mt) in error_msg
 
-    def test_getitem_keyerror_message_includes_filename(self, endf_evaluation_class, empty_endf_file):
+    def test_getitem_keyerror_message_includes_filename(
+        self, endf_evaluation_class, empty_endf_file
+    ):
         """Test KeyError message includes filename for debugging."""
         evaluation = endf_evaluation_class(empty_endf_file)
-        
+
         with pytest.raises(KeyError) as exc_info:
             _ = evaluation[1]
-        
+
         error_msg = str(exc_info.value)
         # Should mention the filename (at least part of it)
-        assert "endf" in error_msg.lower() or str(empty_endf_file.name) in error_msg or str(empty_endf_file) in error_msg
+        assert (
+            "endf" in error_msg.lower()
+            or str(empty_endf_file.name) in error_msg
+            or str(empty_endf_file) in error_msg
+        )
 
     def test_getitem_keyerror_format(self, endf_evaluation_class, empty_endf_file):
         """Test KeyError has expected format."""
         evaluation = endf_evaluation_class(empty_endf_file)
-        
+
         with pytest.raises(KeyError) as exc_info:
             _ = evaluation[18]  # MT=18 (fission)
-        
+
         # KeyError should be raised (not ValueError, AttributeError, etc.)
         assert isinstance(exc_info.value, KeyError)
-        
+
         # Should have a message
         error_msg = str(exc_info.value)
         assert len(error_msg) > 0
@@ -233,11 +247,10 @@ class TestENDFEvaluationGetItemKeyError:
     def test_getitem_keyerror_vs_contains(self, endf_evaluation_class, empty_endf_file):
         """Test that __getitem__ raises KeyError only for reactions not in __contains__."""
         evaluation = endf_evaluation_class(empty_endf_file)
-        
+
         # Verify reaction is not in evaluation
         assert 1 not in evaluation
-        
+
         # Getting it should raise KeyError
         with pytest.raises(KeyError):
             _ = evaluation[1]
-

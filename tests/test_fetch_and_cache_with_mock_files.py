@@ -12,13 +12,14 @@ to test all 4 backend chains in _fetch_and_cache:
 All tests use the actual ENDF files to ensure real code paths are exercised.
 """
 
-import numpy as np
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
-from smrforge.core.reactor_core import NuclearDataCache, Nuclide, Library
+import numpy as np
+import pytest
+
+from smrforge.core.reactor_core import Library, NuclearDataCache, Nuclide
 
 
 @pytest.fixture
@@ -65,8 +66,34 @@ class TestFetchAndCacheWithRealEndfFiles:
         mock_parser.parsefile.return_value = {
             3: {
                 1: {  # MT=1 (total)
-                    "E": np.array([1.0e5, 1.2e4, 1.4e4, 1.6e4, 7.5e4, 8.0e4, 1.7e5, 2.2e6, 3.4e6, 5.2e6]),
-                    "XS": np.array([2.044521e1, 1.895510e1, 1.873167e1, 1.851423e1, 1.397675e1, 1.370721e1, 1.036336e1, 2.753484e0, 2.113381e0, 1.582216e0]),
+                    "E": np.array(
+                        [
+                            1.0e5,
+                            1.2e4,
+                            1.4e4,
+                            1.6e4,
+                            7.5e4,
+                            8.0e4,
+                            1.7e5,
+                            2.2e6,
+                            3.4e6,
+                            5.2e6,
+                        ]
+                    ),
+                    "XS": np.array(
+                        [
+                            2.044521e1,
+                            1.895510e1,
+                            1.873167e1,
+                            1.851423e1,
+                            1.397675e1,
+                            1.370721e1,
+                            1.036336e1,
+                            2.753484e0,
+                            2.113381e0,
+                            1.582216e0,
+                        ]
+                    ),
                 }
             }
         }
@@ -178,7 +205,12 @@ class TestFetchAndCacheWithRealEndfFiles:
         mock_mf3 = Mock()
         # Create a proper mock data structure for SANDY
         mock_data = Mock()
-        mock_data.__getitem__ = Mock(side_effect=lambda k: {"E": np.array([1e5, 1e6, 1e7]), "XS": np.array([10.0, 12.0, 15.0])}[k])
+        mock_data.__getitem__ = Mock(
+            side_effect=lambda k: {
+                "E": np.array([1e5, 1e6, 1e7]),
+                "XS": np.array([10.0, 12.0, 15.0]),
+            }[k]
+        )
         mock_mf3.data = mock_data
         # Set up .values attribute on the arrays
         mock_data.__getitem__.return_value.values = np.array([1e5, 1e6, 1e7])
@@ -187,7 +219,9 @@ class TestFetchAndCacheWithRealEndfFiles:
         mock_e_array.values = np.array([1e5, 1e6, 1e7])
         mock_xs_array = Mock()
         mock_xs_array.values = np.array([10.0, 12.0, 15.0])
-        mock_data.__getitem__ = Mock(side_effect=lambda k: mock_e_array if k == "E" else mock_xs_array)
+        mock_data.__getitem__ = Mock(
+            side_effect=lambda k: mock_e_array if k == "E" else mock_xs_array
+        )
 
         mock_endf6 = Mock()
         mock_endf6.filter_by.return_value = [mock_mf3]
@@ -511,8 +545,12 @@ class TestFetchAndCacheWithRealEndfFiles:
             with patch.object(
                 cache, "_ensure_endf_file", return_value=real_mock_endf_u235
             ):
-                with patch.object(cache, "_simple_endf_parse", return_value=(None, None)):
-                    with pytest.raises(ImportError, match="No suitable backend available"):
+                with patch.object(
+                    cache, "_simple_endf_parse", return_value=(None, None)
+                ):
+                    with pytest.raises(
+                        ImportError, match="No suitable backend available"
+                    ):
                         cache._fetch_and_cache(
                             u235, "total", 293.6, Library.ENDF_B_VIII, key
                         )

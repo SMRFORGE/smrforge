@@ -4,8 +4,8 @@ Tests for anisotropic scattering matrix computation.
 Tests Legendre moment (P0, P1, P2) scattering matrices for thermal SMR calculations.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
     from smrforge.core.endf_extractors import (

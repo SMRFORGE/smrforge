@@ -4,18 +4,19 @@ Tests for SMR-focused features in reactor_core.py.
 Tests resonance self-shielding, fission yields, and delayed neutron data.
 """
 
-import pytest
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 try:
     from smrforge.core.reactor_core import (
+        Library,
         NuclearDataCache,
         Nuclide,
-        Library,
         get_cross_section_with_self_shielding,
-        get_fission_yields,
         get_delayed_neutron_data,
+        get_fission_yields,
     )
 
     _REACTOR_CORE_AVAILABLE = True
@@ -128,9 +129,7 @@ class TestFissionYields:
 
         try:
             u235 = Nuclide(Z=92, A=235)
-            yields = get_fission_yields(
-                cache, u235, yield_type="cumulative"
-            )
+            yields = get_fission_yields(cache, u235, yield_type="cumulative")
 
             if yields is not None:
                 assert isinstance(yields, dict)

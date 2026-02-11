@@ -46,7 +46,9 @@ def run_with_memory_profile(
                 {
                     "size_mb": stat.size_diff / (1024 * 1024),
                     "count": stat.count_diff,
-                    "traceback": "\n".join(stat.traceback.format()) if stat.traceback else "",
+                    "traceback": (
+                        "\n".join(stat.traceback.format()) if stat.traceback else ""
+                    ),
                 }
             )
         report: Dict[str, Any] = {

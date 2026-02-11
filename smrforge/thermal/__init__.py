@@ -83,11 +83,11 @@ if _TWO_PHASE_ADVANCED_AVAILABLE:
 
 # Try to import multi-physics coupling (optional)
 try:
+    from smrforge.thermal.hydraulics import ConjugateHeatTransfer
     from smrforge.thermal.multiphysics_coupling import (
         MultiPhysicsCoupling,
         MultiPhysicsOptions,
     )
-    from smrforge.thermal.hydraulics import ConjugateHeatTransfer
 
     _MULTIPHYSICS_AVAILABLE = True
 except ImportError:

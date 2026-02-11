@@ -179,9 +179,11 @@ class TestTransientOptimizations:
 
         # Long transient should have fewer points per unit time (larger effective step size)
         # This is a heuristic check - actual behavior depends on solver
-        time_span_short = result_short[time_key_short][-1] - result_short[time_key_short][0]
+        time_span_short = (
+            result_short[time_key_short][-1] - result_short[time_key_short][0]
+        )
         time_span_long = result_long[time_key_long][-1] - result_long[time_key_long][0]
-        
+
         points_per_second_short = len(result_short[time_key_short]) / time_span_short
         points_per_second_long = len(result_long[time_key_long]) / time_span_long
 

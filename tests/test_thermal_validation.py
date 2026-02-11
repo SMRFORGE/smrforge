@@ -37,22 +37,31 @@ class TestChannelThermalHydraulicsValidation:
         from smrforge.thermal.hydraulics import ChannelThermalHydraulics
 
         with pytest.raises(ValueError, match="geometry must be ChannelGeometry"):
-            ChannelThermalHydraulics(geometry="invalid", inlet_conditions=simple_inlet_conditions)
+            ChannelThermalHydraulics(
+                geometry="invalid", inlet_conditions=simple_inlet_conditions
+            )
 
     def test_invalid_inlet_conditions_type(self, simple_geometry):
         """Test that invalid inlet_conditions type raises ValueError."""
         from smrforge.thermal.hydraulics import ChannelThermalHydraulics
 
         with pytest.raises(ValueError, match="inlet_conditions must be dict"):
-            ChannelThermalHydraulics(geometry=simple_geometry, inlet_conditions="invalid")
+            ChannelThermalHydraulics(
+                geometry=simple_geometry, inlet_conditions="invalid"
+            )
 
     def test_missing_inlet_key(self, simple_geometry):
         """Test that missing inlet condition key raises ValueError."""
         from smrforge.thermal.hydraulics import ChannelThermalHydraulics
 
-        incomplete = {"temperature": 823.15, "pressure": 7.0e6}  # Missing mass_flow_rate
+        incomplete = {
+            "temperature": 823.15,
+            "pressure": 7.0e6,
+        }  # Missing mass_flow_rate
         with pytest.raises(ValueError, match="missing required key"):
-            ChannelThermalHydraulics(geometry=simple_geometry, inlet_conditions=incomplete)
+            ChannelThermalHydraulics(
+                geometry=simple_geometry, inlet_conditions=incomplete
+            )
 
     def test_invalid_temperature(self, simple_geometry):
         """Test that invalid temperature raises ValueError."""
@@ -92,7 +101,10 @@ class TestChannelThermalHydraulicsValidation:
 
     def test_invalid_geometry_length(self, simple_inlet_conditions):
         """Test that invalid geometry length raises ValueError."""
-        from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
+        from smrforge.thermal.hydraulics import (
+            ChannelGeometry,
+            ChannelThermalHydraulics,
+        )
 
         invalid_geom = ChannelGeometry(
             length=-100.0,  # Negative
@@ -101,13 +113,19 @@ class TestChannelThermalHydraulicsValidation:
             heated_perimeter=np.pi * 1.0,
         )
         with pytest.raises(ValueError, match="length.*must be > 0"):
-            ChannelThermalHydraulics(geometry=invalid_geom, inlet_conditions=simple_inlet_conditions)
+            ChannelThermalHydraulics(
+                geometry=invalid_geom, inlet_conditions=simple_inlet_conditions
+            )
 
-    def test_invalid_power_profile_length(self, simple_geometry, simple_inlet_conditions):
+    def test_invalid_power_profile_length(
+        self, simple_geometry, simple_inlet_conditions
+    ):
         """Test that incorrect power profile length raises ValueError."""
         from smrforge.thermal.hydraulics import ChannelThermalHydraulics
 
-        th = ChannelThermalHydraulics(geometry=simple_geometry, inlet_conditions=simple_inlet_conditions)
+        th = ChannelThermalHydraulics(
+            geometry=simple_geometry, inlet_conditions=simple_inlet_conditions
+        )
 
         wrong_length = np.ones(50)  # Wrong length
         with pytest.raises(ValueError, match="power_profile length.*!= z length"):
@@ -117,7 +135,9 @@ class TestChannelThermalHydraulicsValidation:
         """Test that negative power profile values are handled."""
         from smrforge.thermal.hydraulics import ChannelThermalHydraulics
 
-        th = ChannelThermalHydraulics(geometry=simple_geometry, inlet_conditions=simple_inlet_conditions)
+        th = ChannelThermalHydraulics(
+            geometry=simple_geometry, inlet_conditions=simple_inlet_conditions
+        )
 
         # Negative values should be set to zero with warning
         power_profile = np.ones(len(th.z)) * 100.0
@@ -131,7 +151,9 @@ class TestChannelThermalHydraulicsValidation:
         """Test that incorrect T_fuel length raises ValueError."""
         from smrforge.thermal.hydraulics import ChannelThermalHydraulics
 
-        th = ChannelThermalHydraulics(geometry=simple_geometry, inlet_conditions=simple_inlet_conditions)
+        th = ChannelThermalHydraulics(
+            geometry=simple_geometry, inlet_conditions=simple_inlet_conditions
+        )
         th.set_power_profile(np.ones(len(th.z)) * 100.0)
 
         wrong_length = np.ones(50) * 1200.0  # Wrong length
@@ -142,7 +164,9 @@ class TestChannelThermalHydraulicsValidation:
         """Test that negative T_fuel raises ValueError."""
         from smrforge.thermal.hydraulics import ChannelThermalHydraulics
 
-        th = ChannelThermalHydraulics(geometry=simple_geometry, inlet_conditions=simple_inlet_conditions)
+        th = ChannelThermalHydraulics(
+            geometry=simple_geometry, inlet_conditions=simple_inlet_conditions
+        )
         th.set_power_profile(np.ones(len(th.z)) * 100.0)
 
         invalid_t_fuel = np.ones(len(th.z)) * 1200.0
@@ -268,7 +292,12 @@ class TestPorousMediaFlowValidation:
         )
 
         with pytest.raises(ValueError, match="mdot must be > 0"):
-            bed.solve_flow(mdot=-50.0, T_in=573.0, P_in=7.0e6, q_vol_profile=np.ones(bed.nz + 1) * 5.0)
+            bed.solve_flow(
+                mdot=-50.0,
+                T_in=573.0,
+                P_in=7.0e6,
+                q_vol_profile=np.ones(bed.nz + 1) * 5.0,
+            )
 
     def test_invalid_t_in(self):
         """Test that invalid T_in raises ValueError."""
@@ -282,7 +311,12 @@ class TestPorousMediaFlowValidation:
         )
 
         with pytest.raises(ValueError, match="T_in must be > 0"):
-            bed.solve_flow(mdot=50.0, T_in=-573.0, P_in=7.0e6, q_vol_profile=np.ones(bed.nz + 1) * 5.0)
+            bed.solve_flow(
+                mdot=50.0,
+                T_in=-573.0,
+                P_in=7.0e6,
+                q_vol_profile=np.ones(bed.nz + 1) * 5.0,
+            )
 
     def test_invalid_p_in(self):
         """Test that invalid P_in raises ValueError."""
@@ -296,7 +330,12 @@ class TestPorousMediaFlowValidation:
         )
 
         with pytest.raises(ValueError, match="P_in must be > 0"):
-            bed.solve_flow(mdot=50.0, T_in=573.0, P_in=-7.0e6, q_vol_profile=np.ones(bed.nz + 1) * 5.0)
+            bed.solve_flow(
+                mdot=50.0,
+                T_in=573.0,
+                P_in=-7.0e6,
+                q_vol_profile=np.ones(bed.nz + 1) * 5.0,
+            )
 
     def test_invalid_q_vol_profile_length(self):
         """Test that incorrect q_vol_profile length raises ValueError."""
@@ -311,5 +350,6 @@ class TestPorousMediaFlowValidation:
 
         wrong_length = np.ones(30)  # Wrong length
         with pytest.raises(ValueError, match="q_vol_profile length.*!= z length"):
-            bed.solve_flow(mdot=50.0, T_in=573.0, P_in=7.0e6, q_vol_profile=wrong_length)
-
+            bed.solve_flow(
+                mdot=50.0, T_in=573.0, P_in=7.0e6, q_vol_profile=wrong_length
+            )

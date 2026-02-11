@@ -66,7 +66,9 @@ class ControlRod:
         """Check if rod is fully withdrawn."""
         return self.insertion >= 0.99
 
-    def worth_at_position(self, position: float, worth_profile: Optional[Callable[[float], float]] = None) -> float:
+    def worth_at_position(
+        self, position: float, worth_profile: Optional[Callable[[float], float]] = None
+    ) -> float:
         """
         Calculate reactivity worth at a specific axial position.
 
@@ -88,7 +90,9 @@ class ControlRod:
 
         # Use worth profile if provided, otherwise uniform
         if worth_profile is not None:
-            worth_fraction = worth_profile(position / self.length if self.length > 0 else 0.0)
+            worth_fraction = worth_profile(
+                position / self.length if self.length > 0 else 0.0
+            )
         else:
             # Uniform worth
             worth_fraction = 1.0
@@ -132,7 +136,9 @@ class ControlRodBank:
     priority: BankPriority = BankPriority.MANUAL
     dependencies: List[str] = field(default_factory=list)
     zone: Optional[str] = None
-    worth_profile: Optional[Callable[[float], float]] = None  # position fraction -> worth fraction
+    worth_profile: Optional[Callable[[float], float]] = (
+        None  # position fraction -> worth fraction
+    )
 
     def add_rod(self, rod: ControlRod):
         """Add a control rod to this bank."""
@@ -197,7 +203,9 @@ class ControlRodBank:
             return 0.0
         return max(rod.length for rod in self.rods)
 
-    def get_rods_by_position(self, min_distance: float, max_distance: float) -> List[ControlRod]:
+    def get_rods_by_position(
+        self, min_distance: float, max_distance: float
+    ) -> List[ControlRod]:
         """
         Get rods within a distance range from a reference point.
 
@@ -217,11 +225,16 @@ class ControlRodBank:
             rod
             for rod in self.rods
             if min_distance
-            <= np.sqrt((rod.position.x - reference.x) ** 2 + (rod.position.y - reference.y) ** 2)
+            <= np.sqrt(
+                (rod.position.x - reference.x) ** 2
+                + (rod.position.y - reference.y) ** 2
+            )
             <= max_distance
         ]
 
-    def can_insert(self, system: Optional["ControlRodSystem"] = None) -> Tuple[bool, Optional[str]]:
+    def can_insert(
+        self, system: Optional["ControlRodSystem"] = None
+    ) -> Tuple[bool, Optional[str]]:
         """
         Check if bank can be inserted based on dependencies.
 
@@ -286,8 +299,12 @@ class ControlRodSystem:
         self.scram_threshold: Optional[float] = None
         self.sequences: List[ControlRodSequence] = []
         self.scram_history: List[ScramEvent] = []
-        self.axial_worth_profile: Optional[Callable[[float], float]] = None  # z_fraction -> worth_fraction
-        self.radial_worth_profile: Optional[Callable[[float], float]] = None  # r_fraction -> worth_fraction
+        self.axial_worth_profile: Optional[Callable[[float], float]] = (
+            None  # z_fraction -> worth_fraction
+        )
+        self.radial_worth_profile: Optional[Callable[[float], float]] = (
+            None  # r_fraction -> worth_fraction
+        )
 
     def add_bank(self, bank: ControlRodBank):
         """Add a control rod bank to the system."""
@@ -300,7 +317,9 @@ class ControlRodSystem:
                 return bank
         return None
 
-    def scram_all(self, trigger_reason: str = "Manual scram", timestamp: Optional[float] = None):
+    def scram_all(
+        self, trigger_reason: str = "Manual scram", timestamp: Optional[float] = None
+    ):
         """
         Scram all banks - fully insert all rods with enhanced tracking.
 
@@ -361,7 +380,9 @@ class ControlRodSystem:
 
         return margin
 
-    def execute_sequence(self, sequence: ControlRodSequence, check_dependencies: bool = True):
+    def execute_sequence(
+        self, sequence: ControlRodSequence, check_dependencies: bool = True
+    ):
         """
         Execute a control rod sequence.
 
@@ -375,12 +396,16 @@ class ControlRodSystem:
         for bank_name, target_insertion, _time_seconds in sequence.steps:
             bank = self.get_bank(bank_name)
             if bank is None:
-                raise ValueError(f"Bank '{bank_name}' not found in sequence '{sequence.name}'")
+                raise ValueError(
+                    f"Bank '{bank_name}' not found in sequence '{sequence.name}'"
+                )
 
             if check_dependencies:
                 can_insert, reason = bank.can_insert(self)
                 if not can_insert:
-                    raise ValueError(f"Cannot execute step for bank '{bank_name}': {reason}")
+                    raise ValueError(
+                        f"Cannot execute step for bank '{bank_name}': {reason}"
+                    )
 
             bank.set_insertion(target_insertion)
 
@@ -424,7 +449,8 @@ class ControlRodSystem:
 
                 # Calculate axial worth
                 axial_worth = rod.worth_at_position(
-                    axial_position, worth_profile=bank.worth_profile or self.axial_worth_profile
+                    axial_position,
+                    worth_profile=bank.worth_profile or self.axial_worth_profile,
                 )
 
                 # Apply radial factor
@@ -441,7 +467,10 @@ class ControlRodSystem:
         return [bank for bank in self.banks if bank.zone == zone]
 
     def sequenced_insertion(
-        self, target_insertion: float, bank_names: Optional[List[str]] = None, order_by_priority: bool = True
+        self,
+        target_insertion: float,
+        bank_names: Optional[List[str]] = None,
+        order_by_priority: bool = True,
     ):
         """
         Insert banks in sequence based on priority and dependencies.
@@ -456,7 +485,11 @@ class ControlRodSystem:
         """
         # Select banks to insert
         banks_to_insert = (
-            [self.get_bank(name) for name in bank_names if self.get_bank(name) is not None]
+            [
+                self.get_bank(name)
+                for name in bank_names
+                if self.get_bank(name) is not None
+            ]
             if bank_names
             else self.banks
         )
@@ -477,7 +510,8 @@ class ControlRodSystem:
                 ready = [
                     b
                     for b in remaining
-                    if not b.dependencies or all(dep in [o.name for o in ordered] for dep in b.dependencies)
+                    if not b.dependencies
+                    or all(dep in [o.name for o in ordered] for dep in b.dependencies)
                 ]
                 if not ready:
                     raise ValueError("Circular dependency in control rod banks")
@@ -524,7 +558,9 @@ class ControlRodSystem:
             ControlRodSequence instance
         """
         steps = []
-        insertion_values = np.linspace(1.0, 0.0, withdrawal_steps + 1)[1:]  # Skip fully withdrawn
+        insertion_values = np.linspace(1.0, 0.0, withdrawal_steps + 1)[
+            1:
+        ]  # Skip fully withdrawn
 
         # Order banks
         if regulation_first:
@@ -539,5 +575,8 @@ class ControlRodSystem:
             for bank in ordered_banks:
                 steps.append((bank.name, insertion, 1.0))  # 1 second per step
 
-        return ControlRodSequence(name=name, steps=steps, description=f"Standard withdrawal sequence ({withdrawal_steps} steps)")
-
+        return ControlRodSequence(
+            name=name,
+            steps=steps,
+            description=f"Standard withdrawal sequence ({withdrawal_steps} steps)",
+        )

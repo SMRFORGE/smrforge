@@ -46,7 +46,10 @@ class TestGetLogoData:
 
     def test_get_logo_data_returns_none_when_not_found(self):
         """Test that get_logo_data returns None when logo doesn't exist."""
-        with patch("smrforge.utils.logo.get_logo_path", side_effect=FileNotFoundError("Logo not found")):
+        with patch(
+            "smrforge.utils.logo.get_logo_path",
+            side_effect=FileNotFoundError("Logo not found"),
+        ):
             logo_data = get_logo_data()
             assert logo_data is None
 
@@ -62,4 +65,3 @@ class TestGetLogoData:
                 assert logo_data == expected_data
         except FileNotFoundError:
             pytest.skip("Logo file not found in test environment")
-

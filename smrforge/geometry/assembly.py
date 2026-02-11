@@ -66,7 +66,9 @@ class Assembly:
     refueling_history: List[RefuelingEvent] = field(default_factory=list)
     orientation: float = 0.0  # Degrees (0, 60, 120, 180, 240, 300 for hexagonal)
     original_position: Optional[Point3D] = None  # Original position
-    position_history: List[Tuple[int, Point3D]] = field(default_factory=list)  # [(cycle, position), ...]
+    position_history: List[Tuple[int, Point3D]] = field(
+        default_factory=list
+    )  # [(cycle, position), ...]
 
     def burnup_fraction(self, target_burnup: float = 120.0) -> float:
         """
@@ -110,7 +112,9 @@ class Assembly:
 
     def record_position(self, cycle: int):
         """Record current position for this cycle."""
-        self.position_history.append((cycle, Point3D(self.position.x, self.position.y, self.position.z)))
+        self.position_history.append(
+            (cycle, Point3D(self.position.x, self.position.y, self.position.z))
+        )
 
     def move_to(self, new_position: Point3D, cycle: Optional[int] = None):
         """
@@ -121,7 +125,9 @@ class Assembly:
             cycle: Optional cycle number for history tracking
         """
         if self.original_position is None:
-            self.original_position = Point3D(self.position.x, self.position.y, self.position.z)
+            self.original_position = Point3D(
+                self.position.x, self.position.y, self.position.z
+            )
         self.position = new_position
         if cycle is not None:
             self.record_position(cycle)
@@ -193,7 +199,9 @@ class RefuelingPattern:
             return self.shuffle_sequence
 
         # Create position mapping
-        sorted_assemblies = sorted(assemblies, key=lambda a: (a.position.x, a.position.y))
+        sorted_assemblies = sorted(
+            assemblies, key=lambda a: (a.position.x, a.position.y)
+        )
         n = len(assemblies)
         shuffle_map = {}
 
@@ -277,7 +285,10 @@ class AssemblyManager:
         return [a for a in self.assemblies if a.is_depleted(target_burnup)]
 
     def shuffle_assemblies(
-        self, pattern: RefuelingPattern, shuffle_type: str = "position_based", apply_positions: bool = True
+        self,
+        pattern: RefuelingPattern,
+        shuffle_type: str = "position_based",
+        apply_positions: bool = True,
     ):
         """
         Shuffle assemblies according to refueling pattern with position tracking.
@@ -295,7 +306,9 @@ class AssemblyManager:
 
         if shuffle_type == "position_based" or shuffle_type.startswith("radial"):
             # Advanced position-based shuffling
-            shuffle_map = pattern.generate_position_based_shuffle(self.assemblies, shuffle_type)
+            shuffle_map = pattern.generate_position_based_shuffle(
+                self.assemblies, shuffle_type
+            )
 
             # Create position map
             id_to_assembly = {a.id: a for a in self.assemblies}
@@ -320,7 +333,9 @@ class AssemblyManager:
 
         else:
             # Simple batch-only shuffle (original behavior)
-            sorted_assemblies = sorted(self.assemblies, key=lambda a: (a.position.x, a.position.y))
+            sorted_assemblies = sorted(
+                self.assemblies, key=lambda a: (a.position.x, a.position.y)
+            )
             for assembly in sorted_assemblies:
                 if assembly.batch >= pattern.n_batches:
                     assembly.batch = -1  # Discharged
@@ -380,13 +395,17 @@ class AssemblyManager:
             Average burnup [MWd/kgU]
         """
         assemblies = (
-            self.get_assemblies_by_batch(batch) if batch is not None else self.assemblies
+            self.get_assemblies_by_batch(batch)
+            if batch is not None
+            else self.assemblies
         )
         if not assemblies:
             return 0.0
         return np.mean([a.burnup for a in assemblies])
 
-    def cycle_length_estimate(self, power_thermal: float, target_burnup: float = 120.0) -> float:
+    def cycle_length_estimate(
+        self, power_thermal: float, target_burnup: float = 120.0
+    ) -> float:
         """
         Estimate cycle length.
 
@@ -415,7 +434,10 @@ class AssemblyManager:
         """Record current geometry state."""
         snapshot = GeometrySnapshot(
             cycle=self.current_cycle,
-            assemblies_positions={a.id: Point3D(a.position.x, a.position.y, a.position.z) for a in self.assemblies},
+            assemblies_positions={
+                a.id: Point3D(a.position.x, a.position.y, a.position.z)
+                for a in self.assemblies
+            },
             assemblies_batches={a.id: a.batch for a in self.assemblies},
             assemblies_burnup={a.id: a.burnup for a in self.assemblies},
             assemblies_orientation={a.id: a.orientation for a in self.assemblies},
@@ -437,7 +459,9 @@ class AssemblyManager:
         return assembly.position_history.copy()
 
     def apply_burnup_dependent_shuffle(
-        self, pattern: RefuelingPattern, burnup_thresholds: Optional[Dict[int, float]] = None
+        self,
+        pattern: RefuelingPattern,
+        burnup_thresholds: Optional[Dict[int, float]] = None,
     ):
         """
         Apply burnup-dependent shuffle (move high burnup assemblies outward).
@@ -451,7 +475,9 @@ class AssemblyManager:
 
         # Create position mapping based on distance from center
         positions_by_distance = sorted(
-            self.assemblies, key=lambda a: np.sqrt(a.position.x**2 + a.position.y**2), reverse=True
+            self.assemblies,
+            key=lambda a: np.sqrt(a.position.x**2 + a.position.y**2),
+            reverse=True,
         )
 
         # Apply shuffle: high burnup -> outer positions, low burnup -> inner positions
@@ -461,9 +487,13 @@ class AssemblyManager:
                 assembly.move_to(new_position, cycle=self.current_cycle + 1)
 
         # Now apply normal batch shuffle
-        self.shuffle_assemblies(pattern, shuffle_type="batch_only", apply_positions=False)
+        self.shuffle_assemblies(
+            pattern, shuffle_type="batch_only", apply_positions=False
+        )
 
-    def get_assemblies_by_orientation(self, orientation_range: Tuple[float, float]) -> List[Assembly]:
+    def get_assemblies_by_orientation(
+        self, orientation_range: Tuple[float, float]
+    ) -> List[Assembly]:
         """
         Get assemblies within specified orientation range.
 
@@ -475,7 +505,10 @@ class AssemblyManager:
         """
         min_angle, max_angle = orientation_range
         return [
-            a for a in self.assemblies if min_angle <= a.orientation <= max_angle or a.orientation % 360 in range(int(min_angle), int(max_angle) + 1)
+            a
+            for a in self.assemblies
+            if min_angle <= a.orientation <= max_angle
+            or a.orientation % 360 in range(int(min_angle), int(max_angle) + 1)
         ]
 
     def rotate_assembly(self, assembly_id: int, angle: float):
@@ -499,7 +532,11 @@ class AssemblyManager:
         Returns:
             Dictionary with statistics
         """
-        assemblies = self.get_assemblies_by_batch(batch) if batch is not None else self.assemblies
+        assemblies = (
+            self.get_assemblies_by_batch(batch)
+            if batch is not None
+            else self.assemblies
+        )
         if not assemblies:
             return {}
 
@@ -556,5 +593,6 @@ class AssemblyManager:
         if batch_fractions is None:
             batch_fractions = [1.0 / n_batches] * n_batches
 
-        return RefuelingPattern(name=name, n_batches=n_batches, batch_fractions=batch_fractions)
-
+        return RefuelingPattern(
+            name=name, n_batches=n_batches, batch_fractions=batch_fractions
+        )

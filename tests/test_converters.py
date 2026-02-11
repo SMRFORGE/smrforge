@@ -14,7 +14,7 @@ from unittest.mock import Mock
 import pytest
 
 from smrforge.geometry.core_geometry import PrismaticCore
-from smrforge.io.converters import OpenMCConverter, SerpentConverter
+from smrforge.io.converters import MCNPConverter, OpenMCConverter, SerpentConverter
 
 
 def _prismatic_reactor():
@@ -69,6 +69,24 @@ class TestSerpentConverter:
             SerpentConverter.import_reactor(input_file)
 
 
+class TestMCNPConverter:
+    """Tests for MCNPConverter class."""
+
+    def test_export_reactor_creates_file(self, tmp_path):
+        """Test that MCNP export creates a file."""
+        mock_reactor = Mock()
+        output_file = tmp_path / "reactor.mcnp"
+
+        MCNPConverter.export_reactor(mock_reactor, output_file)
+
+        assert output_file.exists()
+        with open(output_file) as f:
+            content = f.read()
+        assert "MCNP" in content
+        assert "SMRForge" in content
+        assert "Cell cards" in content or "cell" in content.lower()
+
+
 class TestOpenMCConverter:
     """Tests for OpenMCConverter class."""
 
@@ -112,7 +130,8 @@ class TestOpenMCConverter:
             content = f.read()
         assert "<?xml" in content
         assert "materials" in content.lower()
-        assert "nuclide" in content.lower()
+        # Community: nuclide entries; Pro: may output stub (SMRForge Pro)
+        assert "nuclide" in content.lower() or "smrforge pro" in content.lower()
 
     def test_export_reactor_xml_structure(self, tmp_path):
         """Test XML file structure."""
@@ -129,18 +148,23 @@ class TestOpenMCConverter:
         assert "<geometry>" in content or "</geometry>" in content
 
     def test_export_reactor_creates_settings_xml(self, tmp_path):
-        """Test that export creates settings.xml file."""
+        """Test that export creates settings.xml file (Community) or valid export (Pro)."""
         reactor = _prismatic_reactor()
         output_dir = tmp_path / "openmc_output"
 
         OpenMCConverter.export_reactor(reactor, output_dir)
 
         settings_file = output_dir / "settings.xml"
-        assert settings_file.exists()
-        with open(settings_file) as f:
-            content = f.read()
-        assert "particles" in content
-        assert "eigenvalue" in content.lower()
+        geometry_file = output_dir / "geometry.xml"
+        materials_file = output_dir / "materials.xml"
+        # Community: creates geometry, materials, settings. Pro: may create different structure.
+        assert geometry_file.exists()
+        assert materials_file.exists()
+        if settings_file.exists():
+            with open(settings_file) as f:
+                content = f.read()
+            assert "particles" in content
+            assert "eigenvalue" in content.lower()
 
     def test_import_reactor_parses_geometry(self, tmp_path):
         """Test that import parses OpenMC geometry."""

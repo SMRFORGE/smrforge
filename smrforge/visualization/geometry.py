@@ -154,7 +154,9 @@ def _plot_prismatic_layout(
                     fontsize=8,
                 )
 
-    collection = PatchCollection(patches, facecolors=colors, edgecolors="black", linewidths=0.5)
+    collection = PatchCollection(
+        patches, facecolors=colors, edgecolors="black", linewidths=0.5
+    )
     ax.add_collection(collection)
 
     # Ensure reasonable axes limits (matplotlib does not auto-scale for collections).
@@ -339,4 +341,3 @@ def plot_temperature_distribution(
 
     kwargs.setdefault("cmap", "coolwarm")
     return plot_flux_on_geometry(temperature, geometry, view, ax, **kwargs)
-

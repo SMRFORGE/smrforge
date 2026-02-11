@@ -1,5 +1,5 @@
-smrforge.convenience module
-===========================
+smrforge.convenience package
+============================
 
 .. automodule:: smrforge.convenience
    :members:

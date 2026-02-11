@@ -72,7 +72,7 @@ class TestSolverCoverageGaps:
         solver = MultiGroupDiffusion(simple_geometry, simple_xs_data, options)
         # Manually set invalid method by accessing internal attribute
         # Bypass Pydantic validation by setting the underlying dict
-        solver.options.__dict__['eigen_method'] = "invalid_method"
+        solver.options.__dict__["eigen_method"] = "invalid_method"
 
         # The ValueError is wrapped in RuntimeError
         with pytest.raises(RuntimeError, match="Solver failed"):
@@ -145,4 +145,3 @@ class TestSolverCoverageGaps:
         assert power.shape == (solver.nz, solver.nr)
         # Should be all zeros
         assert np.allclose(power, 0.0)
-

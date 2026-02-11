@@ -2,8 +2,8 @@
 Tests for adjoint flux weighting in multi-group collapse.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
     from smrforge.core.multigroup_advanced import collapse_with_adjoint_weighting

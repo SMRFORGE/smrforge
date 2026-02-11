@@ -2,9 +2,10 @@
 Tests for data_validation module.
 """
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
-from types import SimpleNamespace
 
 from smrforge.validation.data_validation import (
     ConsistencyValidator,
@@ -268,11 +269,15 @@ class TestGeometryValidator:
 
     def test_validate_dimensions_extremes_and_aspect_ratio(self):
         # Very small height/diameter -> warnings
-        r = GeometryValidator.validate_dimensions(0.5, 0.5, min_size=1.0, max_size=2000.0)
+        r = GeometryValidator.validate_dimensions(
+            0.5, 0.5, min_size=1.0, max_size=2000.0
+        )
         assert any(i.level == ValidationLevel.WARNING for i in r.issues)
 
         # Very large -> warnings
-        r2 = GeometryValidator.validate_dimensions(3000.0, 3000.0, min_size=1.0, max_size=2000.0)
+        r2 = GeometryValidator.validate_dimensions(
+            3000.0, 3000.0, min_size=1.0, max_size=2000.0
+        )
         assert any(i.level == ValidationLevel.WARNING for i in r2.issues)
 
         # Flat core aspect ratio warning
@@ -426,7 +431,11 @@ class TestDataValidator:
 
     def test_validate_reactor_spec_valid(self):
         """Test validate_reactor_spec with valid specification."""
-        from smrforge.validation.models import FuelType, ReactorSpecification, ReactorType
+        from smrforge.validation.models import (
+            FuelType,
+            ReactorSpecification,
+            ReactorType,
+        )
 
         spec = ReactorSpecification(
             name="Test-Reactor",
@@ -517,7 +526,7 @@ def test_validate_cross_sections_additional_branches():
     xs = SimpleNamespace(
         sigma_t=np.array([[1.0, 1.0]]),
         sigma_a=np.array([[-0.1, 0.5]]),  # negative absorption
-        sigma_f=np.array([[0.6, 0.6]]),   # fission > absorption for second group
+        sigma_f=np.array([[0.6, 0.6]]),  # fission > absorption for second group
         D=np.array([[1.0, 1.0]]),
         chi=np.array([[0.5, 0.5]]),
     )
@@ -529,4 +538,3 @@ def test_validate_flux_high_flux_warning():
     flux = np.ones((1, 1, 1)) * 1e17
     r = NeutronicsValidator.validate_flux(flux, 10e6)
     assert any(i.level == ValidationLevel.WARNING for i in r.issues)
-

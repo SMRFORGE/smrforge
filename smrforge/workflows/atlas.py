@@ -6,11 +6,12 @@ power class, coolant, pass/fail, and paths to design_point and safety_report,
 so users can filter and compare.
 """
 
-from dataclasses import asdict, dataclass, field
 import json
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from ..utils.exception_handling import reraise_if_system
 from ..utils.logging import get_logger
 
 logger = get_logger("smrforge.workflows.atlas")
@@ -19,6 +20,7 @@ logger = get_logger("smrforge.workflows.atlas")
 @dataclass
 class AtlasEntry:
     """Single design entry in the atlas."""
+
     design_id: str  # preset name or variant name
     power_mw: float = 0.0
     coolant: str = ""
@@ -54,19 +56,24 @@ def build_atlas(
 
     if create_reactor is None:
         from ..convenience import create_reactor as _cr
+
         create_reactor = _cr
     if get_design_point is None:
         from ..convenience import get_design_point as _gdp
+
         get_design_point = _gdp
     if safety_margin_report_fn is None:
         from ..validation.safety_report import safety_margin_report as _smr
+
         safety_margin_report_fn = _smr
 
     if presets is None:
         try:
             from ..convenience import list_presets
+
             presets = list(list_presets())
-        except Exception:  # pragma: no cover
+        except Exception as e:  # pragma: no cover
+            reraise_if_system(e)
             presets = []
 
     entries: List[AtlasEntry] = []
@@ -76,8 +83,13 @@ def build_atlas(
             point = get_design_point(reactor)
             report = safety_margin_report_fn(reactor)
         except Exception as e:  # pragma: no cover
+            reraise_if_system(e)
             logger.warning("Atlas: failed for %s: %s", design_id, e)
-            entries.append(AtlasEntry(design_id=design_id, passed=False, metrics_summary={"error": str(e)}))
+            entries.append(
+                AtlasEntry(
+                    design_id=design_id, passed=False, metrics_summary={"error": str(e)}
+                )
+            )
             continue
         power_mw = point.get("power_thermal_mw", 0.0)
         coolant = getattr(getattr(reactor, "spec", None), "coolant", "") or ""
@@ -86,16 +98,20 @@ def build_atlas(
         sr_path = output_dir / f"safety_report_{design_id.replace('/', '_')}.json"
         dp_path.write_text(json.dumps(point, indent=2), encoding="utf-8")
         sr_path.write_text(json.dumps(report.to_dict(), indent=2), encoding="utf-8")
-        entries.append(AtlasEntry(
-            design_id=design_id,
-            power_mw=power_mw,
-            coolant=coolant,
-            reactor_type=reactor_type,
-            passed=report.passed,
-            design_point_path=str(dp_path),
-            safety_report_path=str(sr_path),
-            metrics_summary={k: v for k, v in point.items() if isinstance(v, (int, float))},
-        ))
+        entries.append(
+            AtlasEntry(
+                design_id=design_id,
+                power_mw=power_mw,
+                coolant=coolant,
+                reactor_type=reactor_type,
+                passed=report.passed,
+                design_point_path=str(dp_path),
+                safety_report_path=str(sr_path),
+                metrics_summary={
+                    k: v for k, v in point.items() if isinstance(v, (int, float))
+                },
+            )
+        )
     index_path = output_dir / "atlas_index.json"
     index_data = {
         "atlas_entries": [asdict(e) for e in entries],

@@ -16,20 +16,22 @@ This test suite covers:
 Uses real mock ENDF files from tests/data/ to exercise actual code paths.
 """
 
-import numpy as np
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import numpy as np
+import pytest
 
 # Check if pytest-asyncio is available
 try:
     import pytest_asyncio
+
     ASYNC_AVAILABLE = True
 except ImportError:
     ASYNC_AVAILABLE = False
 
-from smrforge.core.reactor_core import NuclearDataCache, Nuclide, Library
+from smrforge.core.reactor_core import Library, NuclearDataCache, Nuclide
 
 
 @pytest.fixture
@@ -131,7 +133,10 @@ class TestGetCrossSectionAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 # Memory cache and zarr cache both empty, should call _fetch_and_cache_async
                 result_energy, result_xs = await cache.get_cross_section_async(
@@ -187,7 +192,10 @@ class TestFetchAndCacheAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 energy, xs = await cache._fetch_and_cache_async(
                     u235, "total", 293.6, Library.ENDF_B_VIII, key
@@ -226,7 +234,9 @@ class TestFetchAndCacheAsync:
         mock_xs_array = Mock()
         mock_xs_array.values = np.array([10.0, 12.0, 15.0])
         mock_data = Mock()
-        mock_data.__getitem__ = Mock(side_effect=lambda k: mock_e_array if k == "E" else mock_xs_array)
+        mock_data.__getitem__ = Mock(
+            side_effect=lambda k: mock_e_array if k == "E" else mock_xs_array
+        )
         mock_mf3.data = mock_data
 
         mock_endf6 = Mock()
@@ -244,7 +254,10 @@ class TestFetchAndCacheAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 energy, xs = await cache._fetch_and_cache_async(
                     u235, "total", 293.6, Library.ENDF_B_VIII, key
@@ -295,7 +308,10 @@ class TestFetchAndCacheAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 with patch(
                     "smrforge.core.endf_parser.ENDFCompatibility",
@@ -339,7 +355,10 @@ class TestFetchAndCacheAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 with patch.object(
                     cache,
@@ -402,7 +421,10 @@ class TestFetchAndCacheAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 with patch.object(cache, "_doppler_broaden") as mock_doppler:
                     mock_doppler.return_value = np.array([10.5, 12.5, 15.5])
@@ -457,7 +479,10 @@ class TestFetchAndCacheAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 with patch.object(cache, "_doppler_broaden") as mock_doppler:
                     energy, xs = await cache._fetch_and_cache_async(
@@ -496,7 +521,10 @@ class TestFetchAndCacheAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 with patch.object(
                     cache,
@@ -551,10 +579,17 @@ class TestFetchAndCacheAsync:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
-                with patch.object(cache, "_simple_endf_parse", return_value=(None, None)):
-                    with pytest.raises(ImportError, match="No suitable backend available"):
+                with patch.object(
+                    cache, "_simple_endf_parse", return_value=(None, None)
+                ):
+                    with pytest.raises(
+                        ImportError, match="No suitable backend available"
+                    ):
                         await cache._fetch_and_cache_async(
                             u235, "total", 293.6, Library.ENDF_B_VIII, key
                         )

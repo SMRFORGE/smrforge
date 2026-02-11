@@ -77,7 +77,7 @@ The CI workflow requires:
 
 - OpenMC installation is optional - the build continues even if OpenMC fails to install
 - Coverage is uploaded to Codecov (requires Codecov token in repository settings). To enable PR comments with coverage diff, add a `codecov.yml` in the repo root with a `comment:` section (see [Codecov docs](https://docs.codecov.com/docs/pull-request-comments)).
-- Linting checks are set to `continue-on-error: true` to avoid blocking merges while code is being improved
+- Black, isort, and flake8 are blocking; mypy is advisory (`continue-on-error: true`)
 - **Release:** set `PYPI_API_TOKEN` (or use a `pypi` environment) for publishing. Create the `pypi` environment in repo Settings → Environments if using the release workflow.
 - **Docker:** images are pushed to GitHub Container Registry (ghcr.io). Enable Packages write for the repo if needed.
 

@@ -4,17 +4,17 @@ Interactive help system for SMRForge.
 Provides comprehensive help and documentation for functions, classes, and features.
 """
 
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 if TYPE_CHECKING:  # pragma: no cover
     from rich.console import Console
 
 try:
+    from rich import box
     from rich.console import Console
     from rich.markdown import Markdown
     from rich.panel import Panel
     from rich.table import Table
-    from rich import box
 
     _RICH_AVAILABLE = True
 except ImportError:  # pragma: no cover
@@ -29,10 +29,10 @@ _smr_module: Optional[Any] = None
 def _get_smr_module() -> Optional[Any]:
     """
     Lazy import of smrforge module.
-    
+
     Performs lazy import of the smrforge module to avoid circular dependencies.
     The import is cached after the first call.
-    
+
     Returns:
         The smrforge module if available, None otherwise.
     """
@@ -40,6 +40,7 @@ def _get_smr_module() -> Optional[Any]:
     if _CORE_AVAILABLE is None:
         try:
             import smrforge as smr
+
             _smr_module = smr
             _CORE_AVAILABLE = True
         except ImportError:  # pragma: no cover
@@ -51,7 +52,7 @@ def _get_smr_module() -> Optional[Any]:
 def _is_core_available() -> bool:
     """
     Check if core modules are available.
-    
+
     Returns:
         True if smrforge core modules can be imported, False otherwise.
     """
@@ -66,9 +67,9 @@ def help(
 ) -> None:
     """
     Interactive help system for SMRForge.
-    
+
     Provides comprehensive help for functions, classes, features, and workflows.
-    
+
     Args:
         topic: Topic to get help on. Can be:
             - Function/class name (string)
@@ -77,7 +78,7 @@ def help(
             - None (shows main help menu)
         category: Optional category filter
         show_examples: Whether to show usage examples
-    
+
     Examples:
         >>> import smrforge as smr
         >>> smr.help()  # Show main help menu
@@ -88,9 +89,9 @@ def help(
     if not _RICH_AVAILABLE:
         _print_help_plain(topic, category, show_examples)
         return
-    
+
     console = Console()
-    
+
     if topic is None:
         _show_main_menu(console)
     elif isinstance(topic, str):
@@ -103,13 +104,13 @@ def help(
 def _show_main_menu(console: "Console") -> None:
     """Show main help menu."""
     console.print("\n[bold cyan]SMRForge Help System[/bold cyan]\n")
-    
+
     # Categories table
     table = Table(title="Available Help Categories", box=box.ROUNDED)
     table.add_column("Category", style="cyan", no_wrap=True)
     table.add_column("Description", style="white")
     table.add_column("Example", style="dim")
-    
+
     categories = [
         ("geometry", "Geometry creation and manipulation", "smr.help('geometry')"),
         ("neutronics", "Neutronics solvers and calculations", "smr.help('neutronics')"),
@@ -120,21 +121,29 @@ def _show_main_menu(console: "Console") -> None:
         ("visualization", "3D visualization and plotting", "smr.help('visualization')"),
         ("materials", "Material database and properties", "smr.help('materials')"),
         ("nuclides", "Nuclide operations", "smr.help('nuclides')"),
-        ("convenience", "Convenience functions and shortcuts", "smr.help('convenience')"),
+        (
+            "convenience",
+            "Convenience functions and shortcuts",
+            "smr.help('convenience')",
+        ),
         ("presets", "Preset reactor designs", "smr.help('presets')"),
     ]
-    
+
     for cat, desc, example in categories:
         table.add_row(cat, desc, example)
-    
+
     console.print(table)
-    
+
     # Quick start
     console.print("\n[bold]Quick Start:[/bold]")
-    console.print("  [cyan]smr.help('create_reactor')[/cyan] - Get help on creating reactors")
-    console.print("  [cyan]smr.help('quick_keff')[/cyan] - Get help on quick k-eff calculation")
+    console.print(
+        "  [cyan]smr.help('create_reactor')[/cyan] - Get help on creating reactors"
+    )
+    console.print(
+        "  [cyan]smr.help('quick_keff')[/cyan] - Get help on quick k-eff calculation"
+    )
     console.print("  [cyan]smr.help('geometry')[/cyan] - Get help on geometry features")
-    
+
     # Common functions
     console.print("\n[bold]Common Functions:[/bold]")
     common_funcs = [
@@ -148,7 +157,7 @@ def _show_main_menu(console: "Console") -> None:
         "list_presets",
         "list_materials",
     ]
-    
+
     for func in common_funcs:
         console.print(f"  [cyan]smr.help('{func}')[/cyan]")
 
@@ -156,13 +165,24 @@ def _show_main_menu(console: "Console") -> None:
 def _show_topic_help(console: "Console", topic: str, show_examples: bool) -> None:
     """Show help for a specific topic."""
     topic_lower = topic.lower()
-    
+
     # Category help
-    if topic_lower in ["geometry", "neutronics", "burnup", "thermal", "decay", "gamma", 
-                       "visualization", "materials", "nuclides", "convenience", "presets"]:
+    if topic_lower in [
+        "geometry",
+        "neutronics",
+        "burnup",
+        "thermal",
+        "decay",
+        "gamma",
+        "visualization",
+        "materials",
+        "nuclides",
+        "convenience",
+        "presets",
+    ]:
         _show_category_help(console, topic_lower, show_examples)
         return
-    
+
     # Function/class help
     smr = _get_smr_module()
     if smr is not None:
@@ -171,7 +191,7 @@ def _show_topic_help(console: "Console", topic: str, show_examples: bool) -> Non
             obj = getattr(smr, topic)
             _show_object_help(console, obj, show_examples)
             return
-    
+
     # Built-in help topics
     help_topics = {
         "getting_started": _help_getting_started,
@@ -179,7 +199,7 @@ def _show_topic_help(console: "Console", topic: str, show_examples: bool) -> Non
         "workflows": _help_workflows,
         "troubleshooting": _help_troubleshooting,
     }
-    
+
     if topic_lower in help_topics:
         help_topics[topic_lower](console, show_examples)
     else:
@@ -204,7 +224,7 @@ def _show_category_help(console: "Console", category: str, show_examples: bool) 
         "convenience": _help_convenience,
         "presets": _help_presets,
     }
-    
+
     if category in category_help:
         category_help[category](console, show_examples)
     else:
@@ -214,9 +234,9 @@ def _show_category_help(console: "Console", category: str, show_examples: bool) 
 def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
     """Show help for a function or class object."""
     import inspect
-    
+
     obj_name = obj.__name__ if hasattr(obj, "__name__") else str(obj)
-    
+
     # Get docstring
     doc = inspect.getdoc(obj)
     if doc:
@@ -224,13 +244,13 @@ def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
         console.print(Panel(Markdown(doc), title=obj_name, border_style="cyan"))
     else:
         console.print(f"[yellow]No documentation available for {obj_name}[/yellow]")
-    
+
     # Get signature
     try:
         sig = inspect.signature(obj)
         console.print(f"\n[bold]Signature:[/bold]")
         console.print(f"  [cyan]{obj_name}{sig}[/cyan]")
-        
+
         # Show parameter details
         params = sig.parameters
         if params:
@@ -239,17 +259,29 @@ def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
                 param_info = f"  [cyan]{param_name}[/cyan]"
                 if param.annotation != inspect.Parameter.empty:
                     # Handle built-in types directly
-                    if param.annotation in (str, int, float, bool, list, dict, tuple, set):
+                    if param.annotation in (
+                        str,
+                        int,
+                        float,
+                        bool,
+                        list,
+                        dict,
+                        tuple,
+                        set,
+                    ):
                         ann = param.annotation.__name__
                     else:
                         ann = str(param.annotation)
                         # Simplify type hints - only for complex types
                         if "." in ann or "<" in ann:
                             import re
+
                             # Replace typing. and smrforge. module prefixes
                             ann = re.sub(r"typing\.", "", ann)
                             # Only replace smrforge. if it's a full module path
-                            ann = re.sub(r"smrforge\.core\.reactor_core\.", "core.", ann)
+                            ann = re.sub(
+                                r"smrforge\.core\.reactor_core\.", "core.", ann
+                            )
                             ann = re.sub(r"smrforge\.geometry\.", "geometry.", ann)
                             ann = re.sub(r"smrforge\.", "", ann)
                             # Remove <class '...'> wrapper
@@ -264,7 +296,7 @@ def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
                 console.print(param_info)
     except (ValueError, TypeError):  # pragma: no cover
         pass
-    
+
     # Show return type if available
     try:
         sig = inspect.signature(obj)
@@ -274,6 +306,7 @@ def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
             # Simple types (str, int, float, etc.) are left as-is
             if "." in ret_ann or "<" in ret_ann:
                 import re
+
                 # Remove <class '...'> wrapper first
                 if ret_ann.startswith("<class '") and ret_ann.endswith("'>"):
                     ret_ann = ret_ann[9:-2]
@@ -281,16 +314,20 @@ def _show_object_help(console: Any, obj: Any, show_examples: bool) -> None:
                 ret_ann = re.sub(r"typing\.", "", ret_ann)
                 # Replace specific smrforge module paths
                 ret_ann = re.sub(r"smrforge\.core\.reactor_core\.", "core.", ret_ann)
-                ret_ann = re.sub(r"smrforge\.geometry\.core_geometry\.", "geometry.", ret_ann)
+                ret_ann = re.sub(
+                    r"smrforge\.geometry\.core_geometry\.", "geometry.", ret_ann
+                )
                 ret_ann = re.sub(r"smrforge\.geometry\.", "geometry.", ret_ann)
                 # Replace smrforge.module.Class with module.Class
-                ret_ann = re.sub(r"smrforge\.([a-z_]+)\.([A-Z][a-zA-Z0-9_]*)", r"\1.\2", ret_ann)
+                ret_ann = re.sub(
+                    r"smrforge\.([a-z_]+)\.([A-Z][a-zA-Z0-9_]*)", r"\1.\2", ret_ann
+                )
                 # Remove remaining smrforge. prefix
                 ret_ann = re.sub(r"^smrforge\.", "", ret_ann)
             console.print(f"\n[bold]Returns:[/bold] [cyan]{ret_ann}[/cyan]")
     except (ValueError, TypeError):  # pragma: no cover
         pass
-    
+
     # Show examples if available
     if show_examples:
         _show_examples_for_object(console, obj)
@@ -300,7 +337,7 @@ def _show_examples_for_object(console: Any, obj: Any) -> None:
     """Show examples for an object."""
     examples = _get_examples()
     obj_name = obj.__name__ if hasattr(obj, "__name__") else str(obj)
-    
+
     if obj_name in examples:
         console.print("\n[bold]Examples:[/bold]")
         for example in examples[obj_name]:
@@ -310,8 +347,10 @@ def _show_examples_for_object(console: Any, obj: Any) -> None:
 
 def _help_getting_started(console: "Console", show_examples: bool) -> None:
     """Help for getting started."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Getting Started with SMRForge
 
 ## Quick Start
@@ -339,16 +378,20 @@ def _help_getting_started(console: "Console", show_examples: bool) -> None:
 - Run `smr.help('examples')` to see more examples
 - Run `smr.help('workflows')` to see common workflows
 - Check out the examples/ directory for complete examples
-        """),
-        title="Getting Started",
-        border_style="green"
-    ))
+        """
+            ),
+            title="Getting Started",
+            border_style="green",
+        )
+    )
 
 
 def _help_examples(console: "Console", show_examples: bool) -> None:
     """Help for examples."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # SMRForge Examples
 
 ## Basic Examples
@@ -386,16 +429,20 @@ See the `examples/` directory for:
 - `gamma_transport_example.py` - Gamma transport
 - `mesh_3d_example.py` - 3D mesh extraction
 - `visualization_3d_example.py` - 3D visualization
-        """),
-        title="Examples",
-        border_style="blue"
-    ))
+        """
+            ),
+            title="Examples",
+            border_style="blue",
+        )
+    )
 
 
 def _help_workflows(console: "Console", show_examples: bool) -> None:
     """Help for common workflows."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Common Workflows
 
 ## 1. Reactor Analysis Workflow
@@ -443,16 +490,20 @@ mesh = quick_mesh_extraction(core, mesh_type="volume")
 # Visualize
 quick_plot_mesh(mesh, color_by="material")
 ```
-        """),
-        title="Common Workflows",
-        border_style="magenta"
-    ))
+        """
+            ),
+            title="Common Workflows",
+            border_style="magenta",
+        )
+    )
 
 
 def _help_geometry(console: "Console", show_examples: bool) -> None:
     """Help for geometry features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Geometry Features
 
 ## Core Classes
@@ -479,16 +530,20 @@ core = create_simple_core(n_rings=3, pitch=40.0)
 # Extract mesh
 mesh = quick_mesh_extraction(core, mesh_type="volume")
 ```
-        """),
-        title="Geometry",
-        border_style="cyan"
-    ))
+        """
+            ),
+            title="Geometry",
+            border_style="cyan",
+        )
+    )
 
 
 def _help_neutronics(console: "Console", show_examples: bool) -> None:
     """Help for neutronics features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Neutronics Features
 
 ## Core Classes
@@ -514,16 +569,20 @@ k_eff, flux = quick_keff_calculation()
 solver = create_simple_solver()
 k_eff, flux = solver.solve_steady_state()
 ```
-        """),
-        title="Neutronics",
-        border_style="blue"
-    ))
+        """
+            ),
+            title="Neutronics",
+            border_style="blue",
+        )
+    )
 
 
 def _help_burnup(console: "Console", show_examples: bool) -> None:
     """Help for burnup features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Burnup Features
 
 ## Core Classes
@@ -551,16 +610,20 @@ burnup = create_simple_burnup_solver(
 # Solve
 inventory = burnup.solve()
 ```
-        """),
-        title="Burnup",
-        border_style="yellow"
-    ))
+        """
+            ),
+            title="Burnup",
+            border_style="yellow",
+        )
+    )
 
 
 def _help_thermal(console: "Console", show_examples: bool) -> None:
     """Help for thermal features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Thermal-Hydraulics Features
 
 ## Core Classes
@@ -580,16 +643,20 @@ geometry = ChannelGeometry(radius=0.5, length=200)
 # Create solver
 thermal = ChannelThermalHydraulics(geometry)
 ```
-        """),
-        title="Thermal-Hydraulics",
-        border_style="red"
-    ))
+        """
+            ),
+            title="Thermal-Hydraulics",
+            border_style="red",
+        )
+    )
 
 
 def _help_decay(console: "Console", show_examples: bool) -> None:
     """Help for decay heat features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Decay Heat Features
 
 ## Core Classes
@@ -612,16 +679,20 @@ heat = quick_decay_heat(
     time_seconds=86400.0
 )
 ```
-        """),
-        title="Decay Heat",
-        border_style="green"
-    ))
+        """
+            ),
+            title="Decay Heat",
+            border_style="green",
+        )
+    )
 
 
 def _help_gamma(console: "Console", show_examples: bool) -> None:
     """Help for gamma transport features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Gamma Transport Features
 
 ## Core Classes
@@ -641,16 +712,20 @@ solver = GammaTransportSolver(geometry, options)
 # Solve
 flux = solver.solve(source)
 ```
-        """),
-        title="Gamma Transport",
-        border_style="magenta"
-    ))
+        """
+            ),
+            title="Gamma Transport",
+            border_style="magenta",
+        )
+    )
 
 
 def _help_visualization(console: "Console", show_examples: bool) -> None:
     """Help for visualization features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Visualization Features
 
 ## Key Functions
@@ -680,16 +755,20 @@ For 3D visualization, install:
 ```bash
 pip install smrforge[viz]
 ```
-        """),
-        title="Visualization",
-        border_style="cyan"
-    ))
+        """
+            ),
+            title="Visualization",
+            border_style="cyan",
+        )
+    )
 
 
 def _help_materials(console: "Console", show_examples: bool) -> None:
     """Help for material features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Material Features
 
 ## Key Functions
@@ -717,16 +796,20 @@ k = graphite.thermal_conductivity(1200.0)
 materials = list_materials()
 moderators = list_materials(category="moderator")
 ```
-        """),
-        title="Materials",
-        border_style="yellow"
-    ))
+        """
+            ),
+            title="Materials",
+            border_style="yellow",
+        )
+    )
 
 
 def _help_nuclides(console: "Console", show_examples: bool) -> None:
     """Help for nuclide features."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Nuclide Features
 
 ## Key Functions
@@ -746,16 +829,20 @@ print(u235.zam)  # 922350
 # Multiple nuclides
 nuclides = create_nuclide_list(["U235", "U238", "Pu239"])
 ```
-        """),
-        title="Nuclides",
-        border_style="blue"
-    ))
+        """
+            ),
+            title="Nuclides",
+            border_style="blue",
+        )
+    )
 
 
 def _help_convenience(console: "Console", show_examples: bool) -> None:
     """Help for convenience functions."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Convenience Functions
 
 ## Quick Creation Functions
@@ -818,16 +905,20 @@ mesh = quick_mesh_extraction(core, mesh_type="volume")
 # Complete analysis
 results = run_complete_analysis(power_mw=10.0)
 ```
-        """),
-        title="Convenience Functions",
-        border_style="green"
-    ))
+        """
+            ),
+            title="Convenience Functions",
+            border_style="green",
+        )
+    )
 
 
 def _help_presets(console: "Console", show_examples: bool) -> None:
     """Help for preset designs."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Preset Reactor Designs
 
 ## Available Presets
@@ -863,16 +954,20 @@ reactor = create_reactor("valar-10")
 results = reactor.solve()
 print(f"k-eff: {results['k_eff']:.6f}")
 ```
-        """),
-        title="Preset Designs",
-        border_style="cyan"
-    ))
+        """
+            ),
+            title="Preset Designs",
+            border_style="cyan",
+        )
+    )
 
 
 def _help_troubleshooting(console: "Console", show_examples: bool) -> None:
     """Help for troubleshooting."""
-    console.print(Panel(
-        Markdown("""
+    console.print(
+        Panel(
+            Markdown(
+                """
 # Troubleshooting
 
 ## Common Issues
@@ -898,16 +993,16 @@ def _help_troubleshooting(console: "Console", show_examples: bool) -> None:
 - Check examples in `examples/` directory
 - Review documentation files
 - Run `smr.help('topic')` for specific help
-        """),
-        title="Troubleshooting",
-        border_style="red"
-    ))
+        """
+            ),
+            title="Troubleshooting",
+            border_style="red",
+        )
+    )
 
 
 def _print_help_plain(
-    topic: Optional[Union[str, Any]], 
-    category: Optional[str], 
-    show_examples: bool
+    topic: Optional[Union[str, Any]], category: Optional[str], show_examples: bool
 ) -> None:
     """Print help without rich formatting."""
     print("\nSMRForge Help System\n")
@@ -925,13 +1020,13 @@ def _print_help_plain(
 def _format_docstring(doc: str) -> str:
     """
     Format docstring for better markdown display.
-    
+
     Processes a docstring to ensure proper markdown formatting, particularly
     for Python code examples that should be in code blocks.
-    
+
     Args:
         doc: Raw docstring text.
-    
+
     Returns:
         Formatted docstring with proper markdown code block formatting.
     """
@@ -939,7 +1034,7 @@ def _format_docstring(doc: str) -> str:
     lines = doc.split("\n")
     formatted = []
     in_code_block = False
-    
+
     for line in lines:
         # Detect code blocks
         if line.strip().startswith("```"):
@@ -960,20 +1055,20 @@ def _format_docstring(doc: str) -> str:
             formatted.append(line)
         else:
             formatted.append(line)
-    
+
     if in_code_block:
         formatted.append("```")
-    
+
     return "\n".join(formatted)
 
 
 def _get_examples() -> Dict[str, List[Dict[str, str]]]:
     """
     Get examples for various objects.
-    
+
     Returns a dictionary mapping object names to lists of example dictionaries.
     Each example dictionary contains 'description' and 'code' keys.
-    
+
     Returns:
         Dictionary mapping object names to their example code snippets.
     """
@@ -1029,4 +1124,3 @@ def _get_examples() -> Dict[str, List[Dict[str, str]]]:
 
 # Make help available as a module-level function
 __all__ = ["help"]
-

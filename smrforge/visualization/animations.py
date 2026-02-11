@@ -56,7 +56,9 @@ from ..geometry.mesh_3d import Mesh3D
 from .geometry import plot_core_layout
 
 if matplotlib is not None:
-    Writer = animation.writers["ffmpeg"] if "ffmpeg" in animation.writers.list() else None
+    Writer = (
+        animation.writers["ffmpeg"] if "ffmpeg" in animation.writers.list() else None
+    )
 else:
     Writer = None
 
@@ -127,7 +129,12 @@ def animate_transient_matplotlib(
             cmap=kwargs.get("cmap", "viridis"),
         )
     else:
-        im = ax.imshow(data, origin="lower", interpolation="bilinear", cmap=kwargs.get("cmap", "viridis"))
+        im = ax.imshow(
+            data,
+            origin="lower",
+            interpolation="bilinear",
+            cmap=kwargs.get("cmap", "viridis"),
+        )
         ax.set_xlabel("X (cm)" if view in ["xy", "xz"] else "Y (cm)")
         ax.set_ylabel("Y (cm)" if view == "xy" else "Z (cm)")
 
@@ -162,7 +169,9 @@ def animate_transient_matplotlib(
 
         return [im]
 
-    anim = animation.FuncAnimation(fig, update, frames=len(times), interval=interval, blit=True)
+    anim = animation.FuncAnimation(
+        fig, update, frames=len(times), interval=interval, blit=True
+    )
 
     # Save if path provided
     if save_path:
@@ -233,7 +242,9 @@ def animate_3d_transient_plotly(
     frames = []
     for t in times:
         mesh = mesh_func(t)
-        frame_fig = plot_mesh3d_plotly(mesh, color_by=field_name, title=f"{title} - t = {t:.2f} s", **kwargs)
+        frame_fig = plot_mesh3d_plotly(
+            mesh, color_by=field_name, title=f"{title} - t = {t:.2f} s", **kwargs
+        )
 
         # Extract trace data
         frame_data = frame_fig.data[0]
@@ -271,7 +282,13 @@ def animate_3d_transient_plotly(
                     {
                         "label": "Pause",
                         "method": "animate",
-                        "args": [[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}],
+                        "args": [
+                            [None],
+                            {
+                                "frame": {"duration": 0, "redraw": False},
+                                "mode": "immediate",
+                            },
+                        ],
                     },
                 ],
             }
@@ -314,21 +331,23 @@ def animate_3d_transient_plotly(
     return fig
 
 
-def _save_gif_matplotlib(anim: "animation.FuncAnimation", save_path: Path, fps: int = 10) -> None:
+def _save_gif_matplotlib(
+    anim: "animation.FuncAnimation", save_path: Path, fps: int = 10
+) -> None:
     """
     Save matplotlib animation as GIF file.
-    
+
     Extracts frames from a matplotlib FuncAnimation object and saves them
     as a GIF using imageio. Requires imageio package to be installed.
-    
+
     Args:
         anim: Matplotlib FuncAnimation object.
         save_path: Path where GIF file should be saved.
         fps: Frames per second for the GIF. Defaults to 10.
-    
+
     Raises:
         ImportError: If imageio is not available.
-    
+
     Example:
         >>> import matplotlib.animation as animation
         >>> anim = animation.FuncAnimation(fig, animate, frames=100)
@@ -417,7 +436,12 @@ def create_comparison_animation(
     for i, name in enumerate(design_names):
         ax = axes[i]
         data = data_dict[name][times[0]]
-        im = ax.imshow(data, origin="lower", interpolation="bilinear", cmap=kwargs.get("cmap", "viridis"))
+        im = ax.imshow(
+            data,
+            origin="lower",
+            interpolation="bilinear",
+            cmap=kwargs.get("cmap", "viridis"),
+        )
         ax.set_title(f"{name} - t = {times[0]:.2f} s")
         ax.set_xlabel("X (cm)")
         ax.set_ylabel("Y (cm)")
@@ -440,7 +464,9 @@ def create_comparison_animation(
 
         return images
 
-    anim = animation.FuncAnimation(fig, update, frames=len(times), interval=interval, blit=True)
+    anim = animation.FuncAnimation(
+        fig, update, frames=len(times), interval=interval, blit=True
+    )
 
     # Save if path provided
     if save_path:
@@ -457,4 +483,3 @@ def create_comparison_animation(
             anim.save(save_path, writer=writer)
 
     return anim
-

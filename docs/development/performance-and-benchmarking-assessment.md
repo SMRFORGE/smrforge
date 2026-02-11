@@ -122,7 +122,7 @@ When you intentionally change performance or memory behavior:
 | CPU + memory profile (keff) | `python scripts/profile_performance.py --function keff --mode both` |
 | Profile monte_carlo | `python scripts/profile_performance.py --function monte_carlo --mode both` |
 | Memory-only profile (keff) | `python scripts/profile_performance.py --function keff --mode memory` |
-| Save reports | `... --output report` → `report_cpu.txt`, `report_memory.txt` |
+| Save reports | Scripts default to `output/profiling/report` → `report_cpu.txt`, `report_memory.txt`; override with `--Output`/`--output` |
 | Run performance benchmarks | `pytest tests/performance/test_performance_benchmarks.py --run-performance -v --override-ini "addopts=-v --strict-markers --tb=short -ra"`; or use CI workflow `performance.yml` (schedule / manual) |
 | Memory-only benchmarks | Same as above, add `-k memory` |
 | Update baselines | `python scripts/update_performance_baselines.py` then edit test file and re-run benchmarks |

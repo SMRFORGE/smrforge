@@ -5,9 +5,9 @@ Reference reactor designs and presets
 try:
     from smrforge.presets.htgr import (
         BWRX300,
-        CAREM32MWe,
         GTMHR350,
         HTRPM200,
+        CAREM32MWe,
         DesignLibrary,
         MicroHTGR,
         NuScalePWR77MWe,

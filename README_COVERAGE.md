@@ -2,50 +2,26 @@
 
 ## Single Source of Truth
 
-**📌 [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md)** - Main coverage tracking document with current status, module breakdowns, test statistics, and coverage generation instructions.
+**📌 [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md)** — Main coverage tracking document: current status, module breakdowns, test statistics, coverage generation instructions.
 
-## Historical Documentation
+## Entry Point
 
-The following documents contain historical information and detailed implementation notes:
+**📌 [coverage/README.md](coverage/README.md)** — How to run coverage, where output goes, scripts, and config.
 
-- **`coverage/archive/docs/`** - Archived historical coverage notes (kept for context)
-- **`coverage/archive/docs/COVERAGE_SURVEY_REPORT.md`** - Historical survey report (deprecated, see COVERAGE_TRACKING.md)
-- **`docs/archive/coverage-inventory-archived-2026-01-29.md`** - Archived; see COVERAGE_TRACKING.md for current status
-- **`docs/development/coverage-exclusions.md`** - Explanation of intentional exclusions
-- **`docs/archive/coverage-improvements-2026-01.md`** - Historical improvements log
+## Related
 
-## Coverage Files
-
-**Historical Coverage JSON Files (archived):**
-The repository keeps older coverage snapshots under `coverage/archive/json/` (useful for forensic comparisons, but often stale).
-
-**⚠️ Important:** Generate fresh coverage for the current state. Recommended output location:
-```bash
-pytest tests/ --cov=smrforge --cov-report=json:coverage/generated/coverage.json
-```
+- **`docs/development/COVERAGE_100_PLAN.md`** — Path to 100% in-scope coverage
+- **`docs/development/coverage-exclusions.md`** — Explanation of intentional exclusions
+- **`coverage/archive/`** — Historical JSON snapshot and consolidated docs (reference only)
 
 ## Quick Start
 
-1. **Check Current Coverage:**
-   ```bash
-   pytest tests/ --cov=smrforge --cov-report=term-missing -n auto
-   ```
+```bash
+# Quick check (fast)
+.\scripts\coverage_quick.ps1
 
-2. **Generate Detailed Report:**
-   ```bash
-    pytest tests/ --cov=smrforge --cov-report=html:coverage/generated/htmlcov
-    open coverage/generated/htmlcov/index.html
-   ```
+# Full report (HTML + JSON)
+.\scripts\coverage_full.ps1
+```
 
-3. **View Coverage Status:**
-   - See `COVERAGE_TRACKING.md` for current status
-   - See `COVERAGE_TRACKING.md` for detailed history
-   - On Windows/OneDrive, see `docs/development/testing-and-coverage.md` for a coverage workaround that avoids `pytest-cov` file-lock issues.
-
-## Coverage Targets
-
-- **Priority Modules:** 75-80% coverage
-- **Overall Project:** ~89.7% with standard exclusions (Jan 29 run) — **Target: 90%**
-- **Core Modules:** 80-97% coverage ✅ **TARGET EXCEEDED**
-
-For more details, see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md).
+Output: `coverage/generated/` (gitignored). See [coverage/README.md](coverage/README.md) for details.

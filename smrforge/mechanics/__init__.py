@@ -20,13 +20,13 @@ Classes:
 """
 
 from smrforge.mechanics.fuel_rod import (
+    CreepModel,
     FuelRodMechanics,
     FuelSwelling,
+    MaterialDegradation,
     PelletCladdingInteraction,
     StressStrain,
     ThermalExpansion,
-    CreepModel,
-    MaterialDegradation,
 )
 
 __all__ = [

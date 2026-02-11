@@ -198,4 +198,3 @@ class TestLogCacheOperation:
         """Test log_cache_operation for write operation."""
         log_cache_operation("write", "test/key/path")
         # Function should execute without error
-

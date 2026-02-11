@@ -17,7 +17,9 @@ from typing import Any, Dict, Optional
 def ensure_plotly_available(is_available: bool) -> None:
     """Raise a clear ImportError if Plotly isn't installed."""
     if not is_available:
-        raise ImportError("plotly is required for this visualization. Install with: pip install plotly")
+        raise ImportError(
+            "plotly is required for this visualization. Install with: pip install plotly"
+        )
 
 
 def ensure_matplotlib_available(is_available: bool) -> None:
@@ -56,4 +58,3 @@ def as_plotly_dict(fig: Any, *, title: Optional[str] = None) -> Dict[str, Any]:
 
     # Last-resort: return an empty figure payload rather than crashing a dashboard.
     return {"data": [], "layout": {"title": title or "Unsupported figure type"}}
-

@@ -21,7 +21,7 @@ from .reactor_core import Nuclide
 @dataclass
 class GammaProductionSpectrum:
     """Gamma production spectrum for a specific reaction."""
-    
+
     reaction: str  # Reaction name (e.g., "fission", "capture")
     energy: np.ndarray  # Gamma energy [MeV]
     intensity: np.ndarray  # Production intensity [gammas/reaction]
@@ -32,19 +32,19 @@ class GammaProductionSpectrum:
 @dataclass
 class GammaProductionData:
     """Gamma production data for a nuclide."""
-    
+
     nuclide: Nuclide
     prompt_spectra: Dict[str, GammaProductionSpectrum]  # Reaction -> prompt spectrum
     delayed_spectra: Dict[str, GammaProductionSpectrum]  # Reaction -> delayed spectrum
-    
+
     def get_total_gamma_yield(self, reaction: str, prompt: bool = True) -> float:
         """
         Get total gamma yield for a reaction.
-        
+
         Args:
             reaction: Reaction name (e.g., "fission", "capture").
             prompt: If True, return prompt yield; otherwise delayed yield.
-        
+
         Returns:
             Total gamma yield [gammas/reaction], or 0.0 if not found.
         """
@@ -52,15 +52,17 @@ class GammaProductionData:
         if reaction not in spectra:
             return 0.0
         return spectra[reaction].total_yield
-    
-    def get_gamma_spectrum(self, reaction: str, prompt: bool = True) -> Optional[GammaProductionSpectrum]:
+
+    def get_gamma_spectrum(
+        self, reaction: str, prompt: bool = True
+    ) -> Optional[GammaProductionSpectrum]:
         """
         Get gamma production spectrum for a reaction.
-        
+
         Args:
             reaction: Reaction name (e.g., "fission", "capture").
             prompt: If True, return prompt spectrum; otherwise delayed spectrum.
-        
+
         Returns:
             GammaProductionSpectrum or None if not found.
         """
@@ -71,20 +73,20 @@ class GammaProductionData:
 class ENDFGammaProductionParser:
     """
     Parser for ENDF gamma production data files (MF=12, 13, 14).
-    
+
     Parses gamma production data from ENDF-6 format files, extracting:
     - Prompt gamma production (MF=12)
     - Delayed gamma production (MF=13, 14)
     - Gamma energy spectra
     - Production yields
-    
+
     Usage:
         >>> parser = ENDFGammaProductionParser()
         >>> gamma_data = parser.parse_file(Path("gammas-092_U_235.endf"))
         >>> yield_fission = gamma_data.get_total_gamma_yield("fission", prompt=True)
         >>> print(f"Prompt gamma yield per fission: {yield_fission:.2f}")
     """
-    
+
     def __init__(self):
         """Initialize the gamma production parser."""
         self.reaction_mt_map = {
@@ -93,50 +95,51 @@ class ENDFGammaProductionParser:
             2: "elastic",
             1: "total",
         }
-    
+
     def parse_file(self, filepath: Path) -> Optional[GammaProductionData]:
         """
         Parse gamma production data from an ENDF file.
-        
+
         Args:
             filepath: Path to ENDF gamma production file (e.g., "gammas-092_U_235.endf").
-        
+
         Returns:
             GammaProductionData instance or None if parsing fails.
         """
         if not filepath.exists():
             return None
-        
+
         # Extract nuclide from filename
         nuclide = self._parse_filename(filepath.name)
         if nuclide is None:
             return None
-        
+
         try:
             with open(filepath, "r") as f:
                 lines = f.readlines()
-            
+
             # Parse MF=12 (prompt gamma production)
             prompt_spectra = self._parse_mf12(lines)
-            
+
             # Parse MF=13, 14 (delayed gamma production)
             delayed_spectra = self._parse_mf13_14(lines)
-            
+
             return GammaProductionData(
                 nuclide=nuclide,
                 prompt_spectra=prompt_spectra,
                 delayed_spectra=delayed_spectra,
             )
-        
+
         except Exception as e:
             import warnings
+
             warnings.warn(f"Failed to parse gamma production data from {filepath}: {e}")
             return None
-    
+
     def _parse_filename(self, filename: str) -> Optional[Nuclide]:
         """
         Parse nuclide from gamma production filename.
-        
+
         Format: gammas-ZZZ_Element_AAA.endf or similar
         """
         # Try various patterns
@@ -145,7 +148,7 @@ class ENDFGammaProductionParser:
             r"^gamma-(\d+)_([A-Z][a-z]?)_(\d+)([mM]\d?)?\.endf$",
             r"^(\d+)_([A-Z][a-z]?)_(\d+)([mM]\d?)?\.endf$",  # Alternative format
         ]
-        
+
         for pattern in patterns:
             match = re.match(pattern, filename)
             if match:
@@ -160,23 +163,23 @@ class ENDFGammaProductionParser:
                     return Nuclide(Z=Z, A=A, m=m)
                 except (ValueError, KeyError):
                     continue
-        
+
         return None
-    
+
     def _parse_mf12(self, lines: List[str]) -> Dict[str, GammaProductionSpectrum]:
         """
         Parse MF=12 (prompt gamma production) sections.
-        
+
         Returns:
             Dictionary mapping reaction -> GammaProductionSpectrum.
         """
         spectra = {}
-        
+
         # Look for MF=12 sections
         for i, line in enumerate(lines):
             if len(line) < 75:
                 continue
-            
+
             # ENDF format: MF at columns 71-72 (0-indexed: 70-72), MT at columns 73-75 (0-indexed: 72-75)
             # Some files may have "12 18" as a single string, need to split
             mf = line[70:72].strip()
@@ -188,10 +191,10 @@ class ENDFGammaProductionParser:
                     parts = mf_section.strip().split()
                     if len(parts) >= 2:
                         mf = parts[0] if parts[0] == "12" else ""
-            
+
             if mf != "12":
                 continue
-            
+
             mt_str = line[72:75].strip()
             if not mt_str and len(line) > 75:
                 # Try alternative position or extract from context
@@ -199,15 +202,15 @@ class ENDFGammaProductionParser:
                 parts = mf_section.strip().split()
                 if len(parts) >= 2:
                     mt_str = parts[1]
-            
+
             try:
                 mt = int(mt_str) if mt_str else 0
             except ValueError:
                 continue
-            
+
             # Map MT to reaction name
             reaction = self.reaction_mt_map.get(mt, f"mt{mt}")
-            
+
             # Parse gamma spectrum
             spectrum = self._parse_gamma_spectrum_section(lines, i, mt)
             if spectrum:
@@ -218,37 +221,37 @@ class ENDFGammaProductionParser:
                     total_yield=np.sum(spectrum[1]),
                     prompt=True,
                 )
-        
+
         return spectra
-    
+
     def _parse_mf13_14(self, lines: List[str]) -> Dict[str, GammaProductionSpectrum]:
         """
         Parse MF=13, 14 (delayed gamma production) sections.
-        
+
         Returns:
             Dictionary mapping reaction -> GammaProductionSpectrum.
         """
         spectra = {}
-        
+
         # Look for MF=13 and MF=14 sections
         for mf_num in [13, 14]:
             for i, line in enumerate(lines):
                 if len(line) < 75:
                     continue
-                
+
                 mf = line[70:72].strip()
                 if mf != str(mf_num):
                     continue
-                
+
                 mt_str = line[72:75].strip()
                 try:
                     mt = int(mt_str)
                 except ValueError:
                     continue
-                
+
                 # Map MT to reaction name
                 reaction = self.reaction_mt_map.get(mt, f"mt{mt}")
-                
+
                 # Parse gamma spectrum
                 spectrum = self._parse_gamma_spectrum_section(lines, i, mt)
                 if spectrum:
@@ -259,33 +262,33 @@ class ENDFGammaProductionParser:
                         total_yield=np.sum(spectrum[1]),
                         prompt=False,
                     )
-        
+
         return spectra
-    
+
     def _parse_gamma_spectrum_section(
         self, lines: List[str], start_idx: int, mt: int
     ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         """
         Parse gamma spectrum from a specific section.
-        
+
         Args:
             lines: List of file lines.
             start_idx: Starting line index of the section.
             mt: Material table number.
-        
+
         Returns:
             Tuple of (energy, intensity) arrays or None if not found.
         """
         energy_list = []
         intensity_list = []
-        
+
         j = start_idx + 1
         while j < len(lines):
             data_line = lines[j]
             if len(data_line) < 75:
                 j += 1
                 continue
-            
+
             # Check for end of section
             # On continuation lines, MF/MT might be at non-standard positions
             # Check if this is a new section header (different MF)
@@ -293,12 +296,16 @@ class ENDFGammaProductionParser:
                 # Try standard ENDF positions first
                 mf_check = data_line[70:72].strip()
                 mt_check = data_line[72:75].strip() if len(data_line) > 75 else ""
-                
+
                 # If standard position is empty or has unexpected value, try alternative positions
                 # Some files have "MF MT" as a space-separated pair around position 66-73
                 if not mf_check or mf_check not in ["12", "13", "14", ""]:
                     # Check if "12" or "13" or "14" appears near the end of the line
-                    line_end = data_line[66:78].strip() if len(data_line) > 78 else data_line[66:].strip()
+                    line_end = (
+                        data_line[66:78].strip()
+                        if len(data_line) > 78
+                        else data_line[66:].strip()
+                    )
                     parts = line_end.split()
                     if len(parts) >= 2:
                         # Check if first part is MF number
@@ -306,12 +313,12 @@ class ENDFGammaProductionParser:
                             mf_check = parts[0]
                             if len(parts) >= 2:
                                 mt_check = parts[1]
-                
+
                 # Break if we encounter a different MF (not continuation of current MF)
                 # But allow empty MF (continuation lines may not have MF field)
                 if mf_check and mf_check not in ["12", "13", "14", ""]:
                     break
-                
+
                 # Check if this looks like a new section header (MF/MT header line)
                 # Section headers have ZAID (large number > 1e3) in first field
                 # and AWR in second field
@@ -321,7 +328,10 @@ class ENDFGammaProductionParser:
                         first_field = data_line[0:11].strip()
                         if first_field:
                             import re
-                            first_field_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', first_field)
+
+                            first_field_clean = re.sub(
+                                r"([\d.]+)([+-])", r"\1E\2", first_field
+                            )
                             first_val = float(first_field_clean)
                             # If first field is large (> 1e3) and we're past the control record,
                             # this is likely a new section header
@@ -329,7 +339,9 @@ class ENDFGammaProductionParser:
                                 # Also check second field is reasonable AWR
                                 second_field = data_line[11:22].strip()
                                 if second_field:
-                                    second_field_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', second_field)
+                                    second_field_clean = re.sub(
+                                        r"([\d.]+)([+-])", r"\1E\2", second_field
+                                    )
                                     second_val = float(second_field_clean)
                                     # AWR is typically between 0.5 and 250
                                     if 0.5 <= second_val <= 250:
@@ -337,39 +349,43 @@ class ENDFGammaProductionParser:
                                         break
                     except (ValueError, IndexError):
                         pass
-            
+
             # Check for end marker
             if data_line.strip().endswith("-1"):
                 break
-            
+
             # Parse data (energy, intensity pairs)
             try:
                 for k in range(0, 6, 2):
                     if k * 11 + 11 <= len(data_line):
-                        energy_str = data_line[k * 11:(k + 1) * 11].strip()
-                        intensity_str = data_line[(k + 1) * 11:(k + 2) * 11].strip()
-                        
+                        energy_str = data_line[k * 11 : (k + 1) * 11].strip()
+                        intensity_str = data_line[(k + 1) * 11 : (k + 2) * 11].strip()
+
                         if energy_str and intensity_str:
                             # Handle ENDF scientific notation (e.g., "1.000000+2" -> "1.000000E+2")
                             # Replace "+" or "-" that comes after digits (scientific notation marker)
                             import re
-                            energy_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', energy_str)
-                            intensity_str_clean = re.sub(r'([\d.]+)([+-])', r'\1E\2', intensity_str)
-                            
+
+                            energy_str_clean = re.sub(
+                                r"([\d.]+)([+-])", r"\1E\2", energy_str
+                            )
+                            intensity_str_clean = re.sub(
+                                r"([\d.]+)([+-])", r"\1E\2", intensity_str
+                            )
+
                             energy = float(energy_str_clean)  # MeV
                             intensity = float(intensity_str_clean)  # gammas/reaction
-                            
+
                             if energy > 0:
                                 energy_list.append(energy)
                                 intensity_list.append(intensity)
             except (ValueError, IndexError) as e:
                 # Continue parsing even if one pair fails
                 pass
-            
+
             j += 1
-        
+
         if energy_list:
             return np.array(energy_list), np.array(intensity_list)
-        
-        return None
 
+        return None

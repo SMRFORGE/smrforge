@@ -27,7 +27,7 @@ def test_format_memory_report_contains_expected_sections():
         "peak_mb": 12.3456,
         "current_mb": 1.2345,
         "top_allocations": [
-            {"size_mb": 0.5, "count": 2, "traceback": "File \"x.py\", line 1"},
+            {"size_mb": 0.5, "count": 2, "traceback": 'File "x.py", line 1'},
         ],
     }
     text = format_memory_report(report)
@@ -35,4 +35,3 @@ def test_format_memory_report_contains_expected_sections():
     assert "Peak traced memory" in text
     assert "Top allocations" in text
     assert re.search(r"12\.35", text)  # rounded to 2 decimals
-

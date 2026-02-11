@@ -4,19 +4,33 @@ surrogate, scenario design, constraint builder, requirements parser, margin narr
 """
 
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import Mock
 
-from smrforge.workflows.sensitivity import one_at_a_time_from_sweep, SensitivityRanking
-from smrforge.workflows.sobol_indices import sobol_indices_from_sweep_results
-from smrforge.workflows.pareto_report import pareto_knee_point, pareto_summary_report
-from smrforge.workflows.audit_log import append_run, RunRecord
-from smrforge.workflows.surrogate import fit_surrogate, surrogate_from_sweep_results
-from smrforge.workflows.scenario_design import run_scenario_design, ScenarioResult, scenario_comparison_report
+import pytest
+
 from smrforge.validation.constraint_builder import constraint_set_from_design
 from smrforge.validation.requirements_parser import parse_requirements_to_constraint_set
-from smrforge.validation.safety_report import margin_narrative, SafetyMarginReport, MarginEntry
+from smrforge.validation.safety_report import (
+    MarginEntry,
+    SafetyMarginReport,
+    margin_narrative,
+)
+from smrforge.workflows.audit_log import RunRecord, append_run
+from smrforge.workflows.pareto_report import pareto_knee_point, pareto_summary_report
+from smrforge.workflows.scenario_design import (
+    ScenarioResult,
+    run_scenario_design,
+    scenario_comparison_report,
+)
+from smrforge.workflows.sensitivity import SensitivityRanking, one_at_a_time_from_sweep
+from smrforge.workflows.sobol_indices import sobol_indices_from_sweep_results
+from smrforge.workflows.plugin_registry import (
+    get_surrogate,
+    register_surrogate,
+    unregister_surrogate,
+)
+from smrforge.workflows.surrogate import fit_surrogate, surrogate_from_sweep_results
 
 
 class TestSensitivityOAT:
@@ -36,12 +50,19 @@ class TestSensitivityOAT:
 class TestSobolFromSweep:
     def test_sobol_indices_from_sweep_results(self):
         import numpy as np
+
         np.random.seed(42)
         results = [
-            {"parameters": {"a": 0.1 * i, "b": 0.2 * j}, "k_eff": 1.0 + 0.01 * i + 0.02 * j}
-            for i in range(5) for j in range(5)
+            {
+                "parameters": {"a": 0.1 * i, "b": 0.2 * j},
+                "k_eff": 1.0 + 0.01 * i + 0.02 * j,
+            }
+            for i in range(5)
+            for j in range(5)
         ]
-        si = sobol_indices_from_sweep_results(results, ["a", "b"], output_metric="k_eff")
+        si = sobol_indices_from_sweep_results(
+            results, ["a", "b"], output_metric="k_eff"
+        )
         assert "Y0" in si
         assert "S1" in si["Y0"]
         assert "ST" in si["Y0"]
@@ -51,6 +72,7 @@ class TestSobolFromSweep:
 class TestParetoReport:
     def test_pareto_knee_point(self):
         import numpy as np
+
         x = np.array([1.0, 2.0, 3.0])
         y = np.array([3.0, 2.0, 1.0])
         idx = pareto_knee_point(x, y, maximize_x=True, maximize_y=True)
@@ -59,11 +81,13 @@ class TestParetoReport:
 
     def test_pareto_knee_point_empty_or_mismatch(self):
         import numpy as np
+
         assert pareto_knee_point(np.array([]), np.array([])) is None
         assert pareto_knee_point(np.array([1.0]), np.array([1.0, 2.0])) is None
 
     def test_pareto_knee_point_constant_x(self):
         import numpy as np
+
         x = np.array([5.0, 5.0, 5.0])
         y = np.array([1.0, 2.0, 3.0])
         idx = pareto_knee_point(x, y, maximize_x=True, maximize_y=True)
@@ -71,6 +95,7 @@ class TestParetoReport:
 
     def test_pareto_knee_point_minimize_x(self):
         import numpy as np
+
         x = np.array([3.0, 2.0, 1.0])
         y = np.array([1.0, 2.0, 3.0])
         idx = pareto_knee_point(x, y, maximize_x=False, maximize_y=True)
@@ -78,6 +103,7 @@ class TestParetoReport:
 
     def test_pareto_knee_point_constant_y(self):
         import numpy as np
+
         x = np.array([1.0, 2.0, 3.0])
         y = np.array([2.0, 2.0, 2.0])
         idx = pareto_knee_point(x, y, maximize_x=True, maximize_y=True)
@@ -88,7 +114,9 @@ class TestParetoReport:
             {"parameters": {"p": 1}, "k_eff": 1.0, "cost": 100},
             {"parameters": {"p": 2}, "k_eff": 1.1, "cost": 120},
         ]
-        report = pareto_summary_report(points, "k_eff", "cost", maximize_x=True, maximize_y=False)
+        report = pareto_summary_report(
+            points, "k_eff", "cost", maximize_x=True, maximize_y=False
+        )
         assert report["n_pareto"] == 2
         assert "trade_off_summary" in report
 
@@ -103,7 +131,9 @@ class TestParetoReport:
             {"parameters": {"p": 1}, "k_eff": 1.0, "cost": 100},
             {"parameters": {"p": 2}, "k_eff": "bad", "cost": 120},
         ]
-        report = pareto_summary_report(points, "k_eff", "cost", maximize_x=True, maximize_y=False)
+        report = pareto_summary_report(
+            points, "k_eff", "cost", maximize_x=True, maximize_y=False
+        )
         assert report["n_pareto"] == 2
         assert "extremes" in report
         assert "best_x" in report["extremes"]
@@ -136,7 +166,12 @@ class TestParetoReport:
 class TestAuditLog:
     def test_append_run(self, tmp_path):
         log_path = tmp_path / "runs.json"
-        append_run("design-study", args_summary={"reactor": "valar-10"}, passed=True, log_path=log_path)
+        append_run(
+            "design-study",
+            args_summary={"reactor": "valar-10"},
+            passed=True,
+            log_path=log_path,
+        )
         assert log_path.exists()
         data = json.loads(log_path.read_text())
         assert isinstance(data, list)
@@ -148,6 +183,7 @@ class TestAuditLog:
 class TestSurrogate:
     def test_fit_surrogate_linear(self):
         import numpy as np
+
         X = np.array([[0, 0], [1, 0], [0, 1], [1, 1]])
         y = np.array([0.0, 1.0, 1.0, 2.0])
         sur = fit_surrogate(X, y, method="linear")
@@ -161,9 +197,34 @@ class TestSurrogate:
             {"parameters": {"x": 0.5}, "k_eff": 1.05},
             {"parameters": {"x": 1.0}, "k_eff": 1.1},
         ]
-        sur = surrogate_from_sweep_results(results, ["x"], output_metric="k_eff", method="linear")
+        sur = surrogate_from_sweep_results(
+            results, ["x"], output_metric="k_eff", method="linear"
+        )
         assert sur.n_samples == 3
         assert sur.predict([[0.25]])[0] >= 1.0
+
+    def test_fit_surrogate_uses_registry(self):
+        """Pro/Enterprise can add ML models via register_surrogate without forking."""
+        import numpy as np
+
+        def dummy_factory(X, y, param_names=None, output_name="output", **kwargs):
+            class DummySurrogate:
+                def predict(self, x):
+                    return np.full(len(np.asarray(x).reshape(-1, X.shape[1])), y.mean())
+
+            return DummySurrogate()
+
+        register_surrogate("dummy_ml", dummy_factory)
+        try:
+            X = np.array([[0, 0], [1, 1]])
+            y = np.array([1.0, 2.0])
+            sur = fit_surrogate(X, y, method="dummy_ml")
+            assert sur.method == "dummy_ml"
+            pred = sur.predict(np.array([[0.5, 0.5]]))
+            assert pred.shape == (1,)
+            assert pred[0] == 1.5  # mean of [1, 2]
+        finally:
+            unregister_surrogate("dummy_ml")
 
 
 class TestScenarioDesign:
@@ -178,7 +239,11 @@ class TestScenarioDesign:
 
     def test_scenario_comparison_report(self):
         from smrforge.workflows.scenario_design import ScenarioResult
-        results = {"s1": ScenarioResult("s1", True, {"k_eff": 1.0}, [], {}), "s2": ScenarioResult("s2", False, {}, ["v1"], {})}
+
+        results = {
+            "s1": ScenarioResult("s1", True, {"k_eff": 1.0}, [], {}),
+            "s2": ScenarioResult("s2", False, {}, ["v1"], {}),
+        }
         text = scenario_comparison_report(results)
         assert "s1" in text and "s2" in text
         assert "PASS" in text and "FAIL" in text
@@ -189,7 +254,9 @@ class TestConstraintBuilder:
         design_point = {"k_eff": 1.05, "power_thermal_mw": 50.0}
         target_margins = {"min_k_eff": 0.02, "power_thermal_mw": 5.0}
         cs = constraint_set_from_design(design_point, target_margins)
-        assert "min_k_eff" in cs.constraints or any("k_eff" in str(k) for k in cs.constraints)
+        assert "min_k_eff" in cs.constraints or any(
+            "k_eff" in str(k) for k in cs.constraints
+        )
 
 
 class TestRequirementsParser:
@@ -205,7 +272,10 @@ class TestRequirementsParser:
 
     def test_parse_requirements_yaml_file(self, tmp_path):
         yaml_file = tmp_path / "req.yaml"
-        yaml_file.write_text("requirements:\n  - name: k_eff\n    limit: 1.0\n    type: min\n", encoding="utf-8")
+        yaml_file.write_text(
+            "requirements:\n  - name: k_eff\n    limit: 1.0\n    type: min\n",
+            encoding="utf-8",
+        )
         try:
             cs = parse_requirements_to_constraint_set(yaml_file)
             assert len(cs.constraints) >= 1
@@ -226,6 +296,11 @@ class TestMarginNarrative:
         assert "min_k_eff" in text or "1.02" in text
 
     def test_margin_narrative_failed(self):
-        report = SafetyMarginReport(passed=False, margins=[], metrics={}, violations=["min_k_eff: 0.98 (limit 1.0)"])
+        report = SafetyMarginReport(
+            passed=False,
+            margins=[],
+            metrics={},
+            violations=["min_k_eff: 0.98 (limit 1.0)"],
+        )
         text = margin_narrative(report)
         assert "failed" in text.lower() or "Violations" in text

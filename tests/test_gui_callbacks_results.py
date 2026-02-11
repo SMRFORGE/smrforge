@@ -74,7 +74,11 @@ def test_results_callbacks_cover_branches(tmp_path, monkeypatch):
     for k_eff in [0.90, 0.97, 1.00, 1.05]:
         out = update_results_summary(
             {
-                "neutronics": {"k_eff": k_eff, "status": "success", "warning": "validation"},
+                "neutronics": {
+                    "k_eff": k_eff,
+                    "status": "success",
+                    "warning": "validation",
+                },
                 "burnup": {"message": "burn ok"},
                 "safety": {"message": "safe ok"},
             }
@@ -87,19 +91,35 @@ def test_results_callbacks_cover_branches(tmp_path, monkeypatch):
     # Flux plot: no neutronics
     assert isinstance(update_flux_plot({}), dbc.Alert)
     # Flux plot: with sample
-    g = update_flux_plot({"neutronics": {"flux": {"sample": [1, 2, 3], "max": 3.0, "mean": 2.0, "min": 1.0}}})
+    g = update_flux_plot(
+        {
+            "neutronics": {
+                "flux": {"sample": [1, 2, 3], "max": 3.0, "mean": 2.0, "min": 1.0}
+            }
+        }
+    )
     assert g is not None
     # Flux plot: without sample but with stats
-    g = update_flux_plot({"neutronics": {"flux": {"max": 3.0, "mean": 2.0, "min": 1.0}}})
+    g = update_flux_plot(
+        {"neutronics": {"flux": {"max": 3.0, "mean": 2.0, "min": 1.0}}}
+    )
     assert g is not None
 
     # Power plot: no neutronics
     assert isinstance(update_power_plot({}), dbc.Alert)
     # Power plot: with sample
-    g = update_power_plot({"neutronics": {"power": {"sample": [1, 2, 3], "max": 3.0, "mean": 2.0, "min": 1.0}}})
+    g = update_power_plot(
+        {
+            "neutronics": {
+                "power": {"sample": [1, 2, 3], "max": 3.0, "mean": 2.0, "min": 1.0}
+            }
+        }
+    )
     assert g is not None
     # Power plot: without sample but with stats
-    g = update_power_plot({"neutronics": {"power": {"max": 3.0, "mean": 2.0, "min": 1.0}}})
+    g = update_power_plot(
+        {"neutronics": {"power": {"max": 3.0, "mean": 2.0, "min": 1.0}}}
+    )
     assert g is not None
 
     # 3D plot: no reactor spec
@@ -122,7 +142,10 @@ def test_results_callbacks_cover_branches(tmp_path, monkeypatch):
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
         patch("smrforge.create_reactor", return_value=dummy_reactor),
-        patch("smrforge.visualization.advanced.plot_ray_traced_geometry", return_value=res.go.Figure()),
+        patch(
+            "smrforge.visualization.advanced.plot_ray_traced_geometry",
+            return_value=res.go.Figure(),
+        ),
     ):
         g = update_3d_plot({}, {"name": "R"})
         assert g is not None
@@ -130,7 +153,10 @@ def test_results_callbacks_cover_branches(tmp_path, monkeypatch):
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
         patch("smrforge.create_reactor", return_value=dummy_reactor),
-        patch("smrforge.visualization.advanced.plot_ray_traced_geometry", side_effect=RuntimeError("nope")),
+        patch(
+            "smrforge.visualization.advanced.plot_ray_traced_geometry",
+            side_effect=RuntimeError("nope"),
+        ),
     ):
         out = update_3d_plot({}, {"name": "R"})
         assert isinstance(out, dbc.Alert)
@@ -138,15 +164,46 @@ def test_results_callbacks_cover_branches(tmp_path, monkeypatch):
     # Transient plot: no results
     assert isinstance(update_transient_plot(None), dbc.Alert)
     # No transient series found
-    assert isinstance(update_transient_plot({"neutronics": {"status": "success"}}), dbc.Alert)
+    assert isinstance(
+        update_transient_plot({"neutronics": {"status": "success"}}), dbc.Alert
+    )
     # Safety preferred
-    out = update_transient_plot({"safety": {"status": "success", "time": [0, 1], "power": [1, 2], "T_fuel": [10, 11], "T_moderator": [9, 10], "reactivity": [0.0, 0.1]}})
+    out = update_transient_plot(
+        {
+            "safety": {
+                "status": "success",
+                "time": [0, 1],
+                "power": [1, 2],
+                "T_fuel": [10, 11],
+                "T_moderator": [9, 10],
+                "reactivity": [0.0, 0.1],
+            }
+        }
+    )
     assert out is not None
     # Quick transient
-    out = update_transient_plot({"quick_transient": {"status": "success", "time": [0, 1], "power": [1, 2], "T_fuel": [10, 11], "T_mod": [9, 10], "reactivity": [0.0, 0.1]}})
+    out = update_transient_plot(
+        {
+            "quick_transient": {
+                "status": "success",
+                "time": [0, 1],
+                "power": [1, 2],
+                "T_fuel": [10, 11],
+                "T_mod": [9, 10],
+                "reactivity": [0.0, 0.1],
+            }
+        }
+    )
     assert out is not None
     # Lumped thermal
-    out = update_transient_plot({"lumped_thermal": {"status": "success", "result": {"time": [0, 1], "T_fuel": [1, 2], "T_moderator": [3, 4]}}})
+    out = update_transient_plot(
+        {
+            "lumped_thermal": {
+                "status": "success",
+                "result": {"time": [0, 1], "T_fuel": [1, 2], "T_moderator": [3, 4]},
+            }
+        }
+    )
     assert out is not None
 
     # Export: no ctx.triggered
@@ -155,45 +212,88 @@ def test_results_callbacks_cover_branches(tmp_path, monkeypatch):
             export_results(None, None, None, {}, {})
 
     # Export: no results
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "export-json-button.n_clicks"}])):
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "export-json-button.n_clicks"}]),
+    ):
         out = export_results(1, None, None, {}, {})
         assert isinstance(out, dbc.Alert)
 
     # Export: JSON success
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "export-json-button.n_clicks"}])):
-        out = export_results(1, None, None, {"neutronics": {"k_eff": 1.0}}, {"name": "R"})
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "export-json-button.n_clicks"}]),
+    ):
+        out = export_results(
+            1, None, None, {"neutronics": {"k_eff": 1.0}}, {"name": "R"}
+        )
         assert isinstance(out, dbc.Alert)
         # a JSON file should exist
-        assert any(p.name.startswith("smrforge_results_") and p.suffix == ".json" for p in tmp_path.iterdir())
+        assert any(
+            p.name.startswith("smrforge_results_") and p.suffix == ".json"
+            for p in tmp_path.iterdir()
+        )
 
     # Export: JSON error
     with (
-        patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "export-json-button.n_clicks"}])),
+        patch.object(
+            dash,
+            "callback_context",
+            SimpleNamespace(triggered=[{"prop_id": "export-json-button.n_clicks"}]),
+        ),
         patch("builtins.open", side_effect=OSError("no write")),
     ):
-        out = export_results(2, None, None, {"neutronics": {"k_eff": 1.0}}, {"name": "R"})
+        out = export_results(
+            2, None, None, {"neutronics": {"k_eff": 1.0}}, {"name": "R"}
+        )
         assert isinstance(out, dbc.Alert)
 
     # Export: CSV success
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "export-csv-button.n_clicks"}])):
-        out = export_results(None, 1, None, {"neutronics": {"k_eff": 1.0, "flux": {"max": 1, "mean": 0.5, "min": 0.1}}}, {"name": "R"})
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "export-csv-button.n_clicks"}]),
+    ):
+        out = export_results(
+            None,
+            1,
+            None,
+            {"neutronics": {"k_eff": 1.0, "flux": {"max": 1, "mean": 0.5, "min": 0.1}}},
+            {"name": "R"},
+        )
         assert isinstance(out, dbc.Alert)
-        assert any(p.name.startswith("smrforge_results_") and p.suffix == ".csv" for p in tmp_path.iterdir())
+        assert any(
+            p.name.startswith("smrforge_results_") and p.suffix == ".csv"
+            for p in tmp_path.iterdir()
+        )
 
     # Export: CSV no rows
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "export-csv-button.n_clicks"}])):
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "export-csv-button.n_clicks"}]),
+    ):
         out = export_results(None, 2, None, {"x": 1}, None)
         assert isinstance(out, dbc.Alert)
 
     # Export: plots placeholder
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "export-plots-button.n_clicks"}])):
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "export-plots-button.n_clicks"}]),
+    ):
         out = export_results(None, None, 1, {"neutronics": {"k_eff": 1.0}}, None)
         assert isinstance(out, dbc.Alert)
 
     # Export: unknown => PreventUpdate
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "export-unknown.n_clicks"}])):
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "export-unknown.n_clicks"}]),
+    ):
         # Note: PreventUpdate is caught by the function's broad exception handler,
         # which returns a danger Alert.
         out = export_results(1, 1, 1, {"neutronics": {"k_eff": 1.0}}, None)
         assert isinstance(out, dbc.Alert)
-

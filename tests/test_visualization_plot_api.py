@@ -72,7 +72,9 @@ def test_plot_slice_axis_position_and_output_save(monkeypatch):
     )
 
     saved = {"n": 0}
-    monkeypatch.setattr(p, "_save_figure", lambda fig, out: saved.__setitem__("n", saved["n"] + 1))
+    monkeypatch.setattr(
+        p, "_save_figure", lambda fig, out: saved.__setitem__("n", saved["n"] + 1)
+    )
 
     fig = p.plot(geometry=object(), data=None, field_name=None)
     assert fig == "slice-fig"
@@ -98,7 +100,9 @@ def test_plot_voxel_importerror_and_success(monkeypatch):
         if (
             name.endswith("smrforge.visualization.voxel_plots")
             or name.endswith("visualization.voxel_plots")
-            or (level == 1 and name == "voxel_plots" and pkg == "smrforge.visualization")
+            or (
+                level == 1 and name == "voxel_plots" and pkg == "smrforge.visualization"
+            )
         ):
             raise ImportError("forced")
         return orig_import(name, globals, locals, fromlist, level)
@@ -114,7 +118,9 @@ def test_plot_voxel_importerror_and_success(monkeypatch):
     vox.plot_voxel = lambda *args, **kwargs: "vox-fig"  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "smrforge.visualization.voxel_plots", vox)
 
-    fig = api.Plot(plot_type="voxel").plot(geometry=object(), data=np.array([1.0]), field_name="f")
+    fig = api.Plot(plot_type="voxel").plot(
+        geometry=object(), data=np.array([1.0]), field_name="f"
+    )
     assert fig == "vox-fig"
 
 
@@ -201,4 +207,3 @@ def test_plot_unstructured_paths_and_save_figure(monkeypatch):
     f2 = DummyMplFig()
     p_mpl._save_figure(f2, "out2.png")
     assert "out2.png" in f2.saved
-

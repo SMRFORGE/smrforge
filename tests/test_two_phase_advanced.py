@@ -20,7 +20,7 @@ class TestDriftFluxModel:
     def test_zuber_findlay_model(self):
         """Test Zuber-Findlay drift-flux model."""
         model = DriftFluxModel(model_type="zuber_findlay")
-        
+
         void_fraction = model.calculate_void_fraction(
             quality=0.5,
             mass_flux=1000.0,  # kg/(m²·s)
@@ -28,40 +28,40 @@ class TestDriftFluxModel:
             diameter=0.01,  # m
             flow_direction="vertical",
         )
-        
+
         assert 0.0 <= void_fraction <= 1.0
         assert void_fraction > 0.5  # Void fraction > quality (vapor less dense)
 
     def test_chexal_lellouche_model(self):
         """Test Chexal-Lellouche drift-flux model."""
         model = DriftFluxModel(model_type="chexal_lellouche")
-        
+
         void_fraction = model.calculate_void_fraction(
             quality=0.3,
             mass_flux=1500.0,
             pressure=7e6,
             diameter=0.01,
         )
-        
+
         assert 0.0 <= void_fraction <= 1.0
 
     def test_ishii_mishima_model(self):
         """Test Ishii-Mishima drift-flux model."""
         model = DriftFluxModel(model_type="ishii_mishima")
-        
+
         void_fraction = model.calculate_void_fraction(
             quality=0.4,
             mass_flux=1200.0,
             pressure=7e6,
             diameter=0.01,
         )
-        
+
         assert 0.0 <= void_fraction <= 1.0
 
     def test_distribution_parameter(self):
         """Test distribution parameter calculation."""
         model = DriftFluxModel(model_type="chexal_lellouche")
-        
+
         C0 = model._calculate_distribution_parameter(
             quality=0.5,
             mass_flux=1000.0,
@@ -69,13 +69,13 @@ class TestDriftFluxModel:
             diameter=0.01,
             flow_direction="vertical",
         )
-        
+
         assert C0 > 1.0  # Should be > 1.0 for vertical flow
 
     def test_drift_velocity(self):
         """Test drift velocity calculation."""
         model = DriftFluxModel(model_type="zuber_findlay")
-        
+
         Vgj = model._calculate_drift_velocity(
             quality=0.5,
             mass_flux=1000.0,
@@ -83,37 +83,78 @@ class TestDriftFluxModel:
             diameter=0.01,
             flow_direction="vertical",
         )
-        
+
         assert Vgj > 0.0  # Should be positive
 
     def test_void_fraction_quality_bounds_and_zero_mass_flux(self, monkeypatch):
         model = DriftFluxModel(model_type="chexal_lellouche")
 
-        assert model.calculate_void_fraction(quality=0.0, mass_flux=1000.0, pressure=7e6, diameter=0.01) == 0.0
-        assert model.calculate_void_fraction(quality=1.0, mass_flux=1000.0, pressure=7e6, diameter=0.01) == 1.0
+        assert (
+            model.calculate_void_fraction(
+                quality=0.0, mass_flux=1000.0, pressure=7e6, diameter=0.01
+            )
+            == 0.0
+        )
+        assert (
+            model.calculate_void_fraction(
+                quality=1.0, mass_flux=1000.0, pressure=7e6, diameter=0.01
+            )
+            == 1.0
+        )
 
         # Force invalid saturation densities -> returns 0.
-        monkeypatch.setattr(model, "_get_saturation_properties", lambda pressure: (0.0, 0.0, 1.0))
-        assert model.calculate_void_fraction(quality=0.5, mass_flux=1000.0, pressure=7e6, diameter=0.01) == 0.0
+        monkeypatch.setattr(
+            model, "_get_saturation_properties", lambda pressure: (0.0, 0.0, 1.0)
+        )
+        assert (
+            model.calculate_void_fraction(
+                quality=0.5, mass_flux=1000.0, pressure=7e6, diameter=0.01
+            )
+            == 0.0
+        )
 
         # j == 0 -> returns 0.
-        monkeypatch.setattr(model, "_get_saturation_properties", lambda pressure: (740.0, 36.5, 1.5e6))
-        assert model.calculate_void_fraction(quality=0.5, mass_flux=0.0, pressure=7e6, diameter=0.01) == 0.0
+        monkeypatch.setattr(
+            model, "_get_saturation_properties", lambda pressure: (740.0, 36.5, 1.5e6)
+        )
+        assert (
+            model.calculate_void_fraction(
+                quality=0.5, mass_flux=0.0, pressure=7e6, diameter=0.01
+            )
+            == 0.0
+        )
 
-    def test_distribution_parameter_and_drift_velocity_overrides_and_unknown_model(self):
+    def test_distribution_parameter_and_drift_velocity_overrides_and_unknown_model(
+        self,
+    ):
         # Explicit overrides should be returned.
-        model = DriftFluxModel(model_type="zuber_findlay", distribution_parameter=2.0, drift_velocity=3.0)
-        assert model._calculate_distribution_parameter(0.5, 1000.0, 7e6, 0.01, "vertical") == 2.0
-        assert model._calculate_drift_velocity(0.5, 1000.0, 7e6, 0.01, "vertical") == 3.0
+        model = DriftFluxModel(
+            model_type="zuber_findlay", distribution_parameter=2.0, drift_velocity=3.0
+        )
+        assert (
+            model._calculate_distribution_parameter(0.5, 1000.0, 7e6, 0.01, "vertical")
+            == 2.0
+        )
+        assert (
+            model._calculate_drift_velocity(0.5, 1000.0, 7e6, 0.01, "vertical") == 3.0
+        )
 
         # Horizontal flow -> no drift.
         model2 = DriftFluxModel(model_type="zuber_findlay")
-        assert model2._calculate_drift_velocity(0.5, 1000.0, 7e6, 0.01, "horizontal") == 0.0
+        assert (
+            model2._calculate_drift_velocity(0.5, 1000.0, 7e6, 0.01, "horizontal")
+            == 0.0
+        )
 
         # Unknown model_type -> defaults.
         model3 = DriftFluxModel(model_type="unknown")
-        assert model3._calculate_distribution_parameter(0.5, 1000.0, 7e6, 0.01, "vertical") == 1.0
-        assert model3._calculate_drift_velocity(0.5, 1000.0, 7e6, 0.01, "vertical") == 0.0
+        assert (
+            model3._calculate_distribution_parameter(0.5, 1000.0, 7e6, 0.01, "vertical")
+            == 1.0
+        )
+        assert (
+            model3._calculate_drift_velocity(0.5, 1000.0, 7e6, 0.01, "vertical") == 0.0
+        )
 
     def test_saturation_properties_scaling_paths(self):
         model = DriftFluxModel(model_type="chexal_lellouche")
@@ -134,12 +175,12 @@ class TestTwoFluidModel:
             diameter=0.01,
             length=4.0,
         )
-        
+
         result = model.solve_two_fluid(
             heat_flux=500000.0,  # W/m²
             inlet_quality=0.0,
         )
-        
+
         assert "void_fraction" in result
         assert "pressure_drop" in result
         assert "liquid_velocity" in result
@@ -157,7 +198,7 @@ class TestTwoFluidModel:
             diameter=0.01,
             length=4.0,
         )
-        
+
         dp = model._calculate_pressure_drop(
             void_fraction=0.5,
             liquid_velocity=1.0,
@@ -165,7 +206,7 @@ class TestTwoFluidModel:
             rho_l=740.0,
             rho_v=36.5,
         )
-        
+
         assert dp > 0.0
 
     def test_two_fluid_saturation_property_scaling(self):
@@ -192,14 +233,14 @@ class TestBoilingHeatTransfer:
             quality=0.3,
             diameter=0.01,
         )
-        
+
         htc = boiling.calculate_heat_transfer_coefficient(
             heat_flux=500000.0,
             wall_temperature=568.15,  # 10K superheat
             bulk_temperature=558.15,
             correlation="chen",
         )
-        
+
         assert htc > 0.0
         assert htc > 1000.0  # Boiling HTC should be high
 
@@ -211,14 +252,14 @@ class TestBoilingHeatTransfer:
             quality=0.2,
             diameter=0.01,
         )
-        
+
         htc = boiling.calculate_heat_transfer_coefficient(
             heat_flux=400000.0,
             wall_temperature=563.15,
             bulk_temperature=558.15,
             correlation="forster_zuber",
         )
-        
+
         assert htc > 0.0
 
     def test_gorenflo_correlation_and_default_fallback(self):
@@ -246,7 +287,9 @@ class TestBoilingHeatTransfer:
         assert htc2 > 0.0
 
     def test_heat_transfer_coefficient_delta_t_nonpositive(self):
-        boiling = BoilingHeatTransfer(pressure=7e6, mass_flux=1000.0, quality=0.2, diameter=0.01)
+        boiling = BoilingHeatTransfer(
+            pressure=7e6, mass_flux=1000.0, quality=0.2, diameter=0.01
+        )
         htc = boiling.calculate_heat_transfer_coefficient(
             heat_flux=400000.0,
             wall_temperature=500.0,
@@ -262,9 +305,9 @@ class TestBoilingHeatTransfer:
             quality=0.3,
             diameter=0.01,
         )
-        
+
         chf = boiling.calculate_critical_heat_flux(correlation="bowring")
-        
+
         assert chf > 0.0
         assert chf >= 1e6  # Should be >= 1 MW/m² (minimum enforced)
 
@@ -276,18 +319,22 @@ class TestBoilingHeatTransfer:
             quality=0.2,
             diameter=0.01,
         )
-        
+
         chf = boiling.calculate_critical_heat_flux(correlation="biasi")
-        
+
         assert chf > 0.0
 
     def test_chf_groeneveld_and_default(self):
-        boiling = BoilingHeatTransfer(pressure=9e6, mass_flux=1000.0, quality=0.3, diameter=0.01)
+        boiling = BoilingHeatTransfer(
+            pressure=9e6, mass_flux=1000.0, quality=0.3, diameter=0.01
+        )
         assert boiling.calculate_critical_heat_flux(correlation="groeneveld") > 0.0
         assert boiling.calculate_critical_heat_flux(correlation="unknown") > 0.0
 
     def test_boiling_saturation_property_scaling(self):
-        boiling = BoilingHeatTransfer(pressure=9e6, mass_flux=1000.0, quality=0.3, diameter=0.01)
+        boiling = BoilingHeatTransfer(
+            pressure=9e6, mass_flux=1000.0, quality=0.3, diameter=0.01
+        )
         rho_l, rho_v, h_fg = boiling._get_saturation_properties(pressure=9e6)
         assert rho_l > 0 and rho_v > 0 and h_fg > 0
 
@@ -403,13 +450,13 @@ class TestTwoPhaseThermalHydraulics:
             length=4.0,
             heat_flux=500000.0,
         )
-        
+
         result = solver.solve(
             inlet_temperature=558.15,
             inlet_quality=0.0,
             model_type="drift_flux",
         )
-        
+
         assert "void_fraction" in result
         assert "outlet_quality" in result
         assert "pressure_drop" in result
@@ -427,13 +474,13 @@ class TestTwoPhaseThermalHydraulics:
             length=4.0,
             heat_flux=500000.0,
         )
-        
+
         result = solver.solve(
             inlet_temperature=558.15,
             inlet_quality=0.0,
             model_type="two_fluid",
         )
-        
+
         assert "void_fraction" in result
         assert "pressure_drop" in result
         assert result["pressure_drop"] > 0.0
@@ -447,9 +494,9 @@ class TestTwoPhaseThermalHydraulics:
             length=4.0,
             heat_flux=500000.0,  # Low heat flux
         )
-        
+
         result = solver.solve(inlet_temperature=558.15, inlet_quality=0.0)
-        
+
         assert "chf_margin" in result
         assert result["chf_margin"] > 0.0  # Should have positive margin
 
@@ -462,9 +509,9 @@ class TestTwoPhaseThermalHydraulics:
             length=4.0,
             heat_flux=500000.0,
         )
-        
+
         result = solver.solve(inlet_temperature=558.15, inlet_quality=0.0)
-        
+
         assert "flow_regime" in result
         assert result["flow_regime"] in ["bubbly", "slug", "churn", "annular", "mist"]
 

@@ -13,7 +13,12 @@ from typing import Optional
 
 import numpy as np
 
-from ..validation.models import CrossSectionData, FuelType, ReactorSpecification, ReactorType
+from ..validation.models import (
+    CrossSectionData,
+    FuelType,
+    ReactorSpecification,
+    ReactorType,
+)
 
 
 @dataclass
@@ -41,7 +46,9 @@ class CylindricalDiffusionCore:
     def __post_init__(self) -> None:
         self.build_mesh()
 
-    def build_mesh(self, n_radial: int = 30, n_axial: int = 50) -> "CylindricalDiffusionCore":
+    def build_mesh(
+        self, n_radial: int = 30, n_axial: int = 50
+    ) -> "CylindricalDiffusionCore":
         r_max = self.core_diameter / 2 + max(0.0, self.reflector_thickness)
         self.radial_mesh = np.linspace(0.0, r_max, n_radial + 1)
         self.axial_mesh = np.linspace(0.0, self.core_height, n_axial + 1)
@@ -281,4 +288,3 @@ class BWRX300:
 
     def get_cross_sections(self) -> CrossSectionData:
         return _make_lwr_2g_xs()
-

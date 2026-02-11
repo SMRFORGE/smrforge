@@ -29,10 +29,10 @@ class FastReactorType(Enum):
 class WireWrapSpacer:
     """
     Wire-wrap spacer for fast reactor fuel pins.
-    
+
     Wire-wrap spacers are helical wires wrapped around fuel pins to maintain
     spacing and enhance heat transfer in liquid metal-cooled fast reactors.
-    
+
     Attributes:
         id: Unique identifier
         wire_diameter: Wire diameter [cm]
@@ -40,32 +40,32 @@ class WireWrapSpacer:
         wire_material: Wire material (typically stainless steel)
         height: Height of wire-wrap region [cm]
     """
-    
+
     id: int
     wire_diameter: float  # cm
     wire_pitch: float  # cm (helical pitch)
     wire_material: str = "StainlessSteel-316"
     height: float = 0.0  # cm
-    
+
     def wire_length(self, pin_height: float) -> float:
         """
         Calculate total wire length for a given pin height.
-        
+
         Args:
             pin_height: Fuel pin height [cm]
-        
+
         Returns:
             Total wire length [cm]
         """
         if self.wire_pitch <= 0:
             return 0.0
-        
+
         # Number of turns
         n_turns = pin_height / self.wire_pitch
-        
+
         # Circumference per turn (approximate)
         circumference = np.pi * 0.96  # Assume ~0.96 cm pin diameter
-        
+
         # Total length
         return n_turns * np.sqrt(circumference**2 + self.wire_pitch**2)
 
@@ -74,10 +74,10 @@ class WireWrapSpacer:
 class FastReactorFuelPin:
     """
     Fuel pin for fast reactor SMR assemblies.
-    
+
     Fast reactor pins are similar to LWR pins but optimized for fast neutron
     spectrum. Typically use MOX (mixed oxide) or metal fuel.
-    
+
     Attributes:
         id: Unique identifier
         position: Center position relative to assembly origin
@@ -89,7 +89,7 @@ class FastReactorFuelPin:
         wire_wrap: Optional wire-wrap spacer
         enrichment: Pu-239 enrichment fraction (for MOX)
     """
-    
+
     id: int
     position: Point3D
     fuel_radius: float  # cm
@@ -99,11 +99,11 @@ class FastReactorFuelPin:
     material_clad: MaterialRegion
     wire_wrap: Optional[WireWrapSpacer] = None
     enrichment: float = 0.0  # Pu-239 fraction for MOX
-    
+
     def fuel_volume(self) -> float:
         """Fuel volume [cm³]."""
         return np.pi * self.fuel_radius**2 * self.height
-    
+
     def clad_volume(self) -> float:
         """Cladding volume [cm³]."""
         inner_radius = self.fuel_radius + 0.0082  # Gap
@@ -114,10 +114,10 @@ class FastReactorFuelPin:
 class FastReactorAssembly:
     """
     Hexagonal fuel assembly for fast reactor SMRs.
-    
+
     Fast reactor assemblies use hexagonal geometry (different from HTGR hexagons)
     with wire-wrap spacers. Used in sodium-cooled fast reactors like Natrium and PRISM.
-    
+
     Attributes:
         id: Unique identifier
         position: Center position in core
@@ -129,7 +129,7 @@ class FastReactorAssembly:
         wire_wrap_pitch: Wire-wrap helical pitch [cm]
         coolant_material: Coolant material (sodium, lead, etc.)
     """
-    
+
     id: int
     position: Point3D
     flat_to_flat: float  # cm
@@ -139,7 +139,7 @@ class FastReactorAssembly:
     fuel_pins: List[FastReactorFuelPin] = field(default_factory=list)
     wire_wrap_pitch: float = 30.0  # cm (typical for SFR)
     coolant_material: MaterialRegion = None
-    
+
     def build_hexagonal_lattice(
         self,
         fuel_pin_params: Dict,
@@ -147,25 +147,25 @@ class FastReactorAssembly:
     ):
         """
         Build hexagonal lattice of fuel pins with wire-wrap spacers.
-        
+
         Args:
             fuel_pin_params: Dictionary with fuel pin parameters
             coolant_material: Coolant material (sodium, lead, etc.)
         """
         self.coolant_material = coolant_material
-        
+
         # Calculate number of rings
         # For hexagonal lattice: n_pins = 3*N*(N+1) + 1 where N is number of rings
         n_rings = int(np.sqrt(self.n_pins / 3))
         if 3 * n_rings * (n_rings + 1) + 1 < self.n_pins:
             n_rings += 1
-        
+
         # Build pins in hexagonal pattern
         pin_id = 0
         for ring in range(n_rings):
             if pin_id >= self.n_pins:
                 break
-            
+
             if ring == 0:
                 # Center pin
                 pin = FastReactorFuelPin(
@@ -177,7 +177,7 @@ class FastReactorAssembly:
                     material_fuel=fuel_pin_params.get("material_fuel"),
                     material_clad=fuel_pin_params.get("material_clad"),
                 )
-                
+
                 # Add wire-wrap
                 if self.wire_wrap_pitch > 0:
                     wire_wrap = WireWrapSpacer(
@@ -187,7 +187,7 @@ class FastReactorAssembly:
                         height=self.height,
                     )
                     pin.wire_wrap = wire_wrap
-                
+
                 self.fuel_pins.append(pin)
                 pin_id += 1
             else:
@@ -195,15 +195,15 @@ class FastReactorAssembly:
                 n_pins_in_ring = 6 * ring
                 angle_step = 2 * np.pi / n_pins_in_ring
                 radius = ring * self.pin_pitch
-                
+
                 for i in range(n_pins_in_ring):
                     if pin_id >= self.n_pins:
                         break
-                    
+
                     angle = i * angle_step
                     x = radius * np.cos(angle)
                     y = radius * np.sin(angle)
-                    
+
                     pin = FastReactorFuelPin(
                         id=pin_id,
                         position=Point3D(x, y, self.height / 2),
@@ -213,7 +213,7 @@ class FastReactorAssembly:
                         material_fuel=fuel_pin_params.get("material_fuel"),
                         material_clad=fuel_pin_params.get("material_clad"),
                     )
-                    
+
                     # Add wire-wrap
                     if self.wire_wrap_pitch > 0:
                         wire_wrap = WireWrapSpacer(
@@ -223,14 +223,14 @@ class FastReactorAssembly:
                             height=self.height,
                         )
                         pin.wire_wrap = wire_wrap
-                    
+
                     self.fuel_pins.append(pin)
                     pin_id += 1
-    
+
     def total_fuel_volume(self) -> float:
         """Total fuel volume in assembly [cm³]."""
         return sum(pin.fuel_volume() for pin in self.fuel_pins)
-    
+
     def assembly_pitch(self) -> float:
         """Assembly pitch (center-to-center) [cm]."""
         return self.flat_to_flat * 1.1  # Approximate
@@ -240,9 +240,9 @@ class FastReactorAssembly:
 class LiquidMetalChannel:
     """
     Liquid metal coolant channel for fast reactors.
-    
+
     Represents sodium, lead, or other liquid metal coolant flow paths.
-    
+
     Attributes:
         id: Unique identifier
         position: Center position
@@ -252,7 +252,7 @@ class LiquidMetalChannel:
         mass_flow_rate: Mass flow rate [kg/s]
         coolant_type: Type of coolant ("sodium", "lead", "lead-bismuth")
     """
-    
+
     id: int
     position: Point3D
     flow_area: float  # cm²
@@ -265,10 +265,10 @@ class LiquidMetalChannel:
 class FastReactorSMRCore:
     """
     Fast reactor SMR core geometry.
-    
+
     Represents sodium-cooled fast reactor (SFR) SMR cores like Natrium and PRISM.
     Uses hexagonal fuel assemblies with wire-wrap spacers.
-    
+
     Attributes:
         name: Core name
         reactor_type: Type of fast reactor
@@ -278,8 +278,12 @@ class FastReactorSMRCore:
         assembly_pitch: Assembly pitch [cm]
         coolant_channels: List of liquid metal coolant channels
     """
-    
-    def __init__(self, name: str = "Fast-Reactor-SMR", reactor_type: FastReactorType = FastReactorType.SODIUM_COOLED):
+
+    def __init__(
+        self,
+        name: str = "Fast-Reactor-SMR",
+        reactor_type: FastReactorType = FastReactorType.SODIUM_COOLED,
+    ):
         self.name = name
         self.reactor_type = reactor_type
         self.assemblies: List[FastReactorAssembly] = []
@@ -287,7 +291,7 @@ class FastReactorSMRCore:
         self.core_diameter: float = 0.0  # cm
         self.assembly_pitch: float = 0.0  # cm
         self.coolant_channels: List[LiquidMetalChannel] = []
-    
+
     def build_hexagonal_core_lattice(
         self,
         n_rings: int,
@@ -301,7 +305,7 @@ class FastReactorSMRCore:
     ):
         """
         Build hexagonal lattice of fast reactor assemblies.
-        
+
         Args:
             n_rings: Number of hexagonal rings
             assembly_pitch: Assembly pitch [cm]
@@ -314,12 +318,12 @@ class FastReactorSMRCore:
         """
         self.assembly_pitch = assembly_pitch
         self.core_height = assembly_height
-        
+
         # Calculate core diameter
         self.core_diameter = 2 * n_rings * assembly_pitch
-        
+
         assembly_id = 0
-        
+
         # Build hexagonal lattice
         for ring in range(n_rings):
             if ring == 0:
@@ -340,12 +344,12 @@ class FastReactorSMRCore:
                 n_assemblies_in_ring = 6 * ring
                 angle_step = 2 * np.pi / n_assemblies_in_ring
                 radius = ring * assembly_pitch
-                
+
                 for i in range(n_assemblies_in_ring):
                     angle = i * angle_step
                     x = radius * np.cos(angle)
                     y = radius * np.sin(angle)
-                    
+
                     assembly = FastReactorAssembly(
                         id=assembly_id,
                         position=Point3D(x, y, assembly_height / 2),
@@ -357,11 +361,11 @@ class FastReactorSMRCore:
                     assembly.build_hexagonal_lattice(fuel_pin_params, coolant_material)
                     self.assemblies.append(assembly)
                     assembly_id += 1
-    
+
     def total_fuel_volume(self) -> float:
         """Total fuel volume in core [cm³]."""
         return sum(assembly.total_fuel_volume() for assembly in self.assemblies)
-    
+
     def n_assemblies(self) -> int:
         """Number of assemblies in core."""
         return len(self.assemblies)

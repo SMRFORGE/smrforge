@@ -158,8 +158,8 @@ try:
         ControlRodCluster,
         FuelAssembly,
         FuelRod,
-        InVesselSteamGenerator,
         IntegratedPrimarySystem,
+        InVesselSteamGenerator,
         Pressurizer,
         PWRSMRCore,
         SpacerGrid,
@@ -240,9 +240,9 @@ except ImportError as e:
 # Import SMR scram system if available
 try:
     from smrforge.geometry.smr_scram_system import (
+        ScramType,
         SMRScramSequence,
         SMRScramSystem,
-        ScramType,
         create_nuscale_scram_system,
     )
 
@@ -272,9 +272,9 @@ try:
     from smrforge.geometry.molten_salt_smr import (
         FreezePlug,
         GraphiteModeratorBlock,
+        MoltenSaltChannel,
         MSRSMRCore,
         MSRType,
-        MoltenSaltChannel,
         SaltCirculationLoop,
         create_liquid_fuel_msr_core,
         create_thermal_msr_core,

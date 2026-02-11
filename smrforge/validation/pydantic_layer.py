@@ -208,7 +208,7 @@ class ReactorSpecification(BaseModel):
             from ..utils.error_messages import format_validation_error
         except ImportError:
             format_validation_error = None
-        
+
         if self.inlet_temperature >= self.outlet_temperature:
             if format_validation_error:
                 msg = format_validation_error(
@@ -217,7 +217,7 @@ class ReactorSpecification(BaseModel):
                     error_type="temperature_order",
                     suggestions=[
                         f"Inlet ({self.inlet_temperature:.1f} K) should be < outlet ({self.outlet_temperature:.1f} K)"
-                    ]
+                    ],
                 )
             else:
                 msg = (
@@ -237,7 +237,7 @@ class ReactorSpecification(BaseModel):
                             f"Outlet temperature ({self.outlet_temperature:.1f} K) exceeds "
                             f"max fuel temperature ({self.max_fuel_temperature:.1f} K)"
                         )
-                    ]
+                    ],
                 )
             else:
                 msg = (
@@ -473,7 +473,9 @@ class CrossSectionData(BaseModel):
     sigma_s: PositiveArray = Field(description="Scattering matrix [1/cm]")
 
     # Fission spectrum [material, group]
-    chi: PositiveArray = Field(description="Fission spectrum (must sum to 1 per material)")
+    chi: PositiveArray = Field(
+        description="Fission spectrum (must sum to 1 per material)"
+    )
 
     # Diffusion coefficients [material, group]
     D: PositiveArray = Field(description="Diffusion coefficient [cm]")
@@ -507,7 +509,7 @@ class CrossSectionData(BaseModel):
             from ..utils.error_messages import format_cross_section_error
         except ImportError:
             format_cross_section_error = None
-        
+
         # Check sigma_a <= sigma_t
         if np.any(self.sigma_a > self.sigma_t):
             bad_mask = self.sigma_a > self.sigma_t
@@ -520,7 +522,7 @@ class CrossSectionData(BaseModel):
                         sigma_a=self.sigma_a[mat_id, group_id],
                         sigma_t=self.sigma_t[mat_id, group_id],
                         material_id=mat_id,
-                        group=group_id
+                        group=group_id,
                     )
                 else:
                     msg = "Absorption XS cannot exceed total XS (non-physical)"
@@ -546,7 +548,9 @@ class CrossSectionData(BaseModel):
                     msg = "Fission XS cannot exceed absorption XS (non-physical)"
                 raise ValueError(msg)
             else:
-                raise ValueError("Fission XS cannot exceed absorption XS (non-physical)")
+                raise ValueError(
+                    "Fission XS cannot exceed absorption XS (non-physical)"
+                )
 
         # Check reasonable diffusion coefficient
         if np.any(self.D > 20):
@@ -594,9 +598,7 @@ class SolverOptions(BaseModel):
     skip_solution_validation: bool = Field(
         default=False, description="Skip solution validation (for testing)"
     )
-    parallel: bool = Field(
-        default=True, description="Enable parallel execution"
-    )
+    parallel: bool = Field(default=True, description="Enable parallel execution")
     parallel_group_solve: bool = Field(
         default=True, description="Parallel energy group solve"
     )
@@ -606,9 +608,7 @@ class SolverOptions(BaseModel):
     num_threads: Optional[int] = Field(
         default=None, ge=1, description="Number of threads (None = auto)"
     )
-    use_mpi: bool = Field(
-        default=False, description="Use MPI for distributed memory"
-    )
+    use_mpi: bool = Field(default=False, description="Use MPI for distributed memory")
 
     @field_validator("tolerance")
     @classmethod
@@ -697,6 +697,54 @@ class TransientConditions(BaseModel):
             raise ValueError("trigger_time must be within [t_start, t_end]")
 
         return self
+
+    model_config = ConfigDict(validate_assignment=True)
+
+
+# ============================================================================
+# Result Models (safety-critical output validation)
+# ============================================================================
+
+
+class KeffResult(BaseModel):
+    """
+    Validated k-eff solver result.
+
+    Use to wrap (k_eff, flux) at boundary for NaN/Inf rejection and serialization.
+    Optional; solvers may continue to return tuples.
+    """
+
+    k_eff: float = Field(gt=0, le=2.0, description="Effective multiplication factor")
+    flux: PositiveArray = Field(description="Neutron flux distribution")
+
+    @field_validator("k_eff")
+    @classmethod
+    def k_eff_finite(cls, v: float) -> float:
+        if not np.isfinite(v):
+            raise ValueError("k_eff must be finite (no NaN/Inf)")
+        return v
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class BurnupResultSummary(BaseModel):
+    """
+    Validated burnup result summary (key outputs only).
+
+    Use to wrap burnup completion data for audit/export.
+    """
+
+    final_k_eff: float = Field(gt=0, le=2.0, description="Final k-eff")
+    burnup_mwd_kg: float = Field(ge=0, description="Total burnup [MWd/kgU]")
+    n_nuclides: int = Field(ge=0, description="Number of tracked nuclides")
+    n_time_steps: int = Field(ge=1, description="Number of time steps")
+
+    @field_validator("final_k_eff")
+    @classmethod
+    def k_eff_finite(cls, v: float) -> float:
+        if not np.isfinite(v):
+            raise ValueError("final_k_eff must be finite (no NaN/Inf)")
+        return v
 
     model_config = ConfigDict(validate_assignment=True)
 

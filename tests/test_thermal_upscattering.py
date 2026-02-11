@@ -5,8 +5,8 @@ Tests that thermal neutrons can gain energy through collisions with
 thermally moving nuclei, which is critical for accurate thermal reactor physics.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
     from smrforge.core.endf_extractors import compute_improved_scattering_matrix
@@ -50,10 +50,10 @@ class TestThermalUpscattering:
         # Check that thermal group (group 3, lowest energy) has upscattering
         # Upscattering means scattering to higher energy groups (lower indices)
         thermal_group = 3  # Lowest energy group
-        
+
         # Should have scattering to higher energy groups (upscattering)
         upscatter_terms = sigma_s[thermal_group, :thermal_group]  # Groups 0, 1, 2
-        
+
         # At least some upscattering should occur
         # Note: May be small, but should be non-zero
         assert np.any(upscatter_terms > 0) or np.sum(upscatter_terms) >= 0
@@ -113,7 +113,7 @@ class TestThermalUpscattering:
         if thermal_group > 0:
             upscatter_low = sigma_s_low[thermal_group, thermal_group - 1]
             upscatter_high = sigma_s_high[thermal_group, thermal_group - 1]
-            
+
             # Higher temperature should have more upscattering
             # (or at least non-zero)
             assert upscatter_high >= upscatter_low
@@ -165,7 +165,7 @@ class TestThermalUpscattering:
                 upscatter = sigma_s[g, g - 1]
                 # Should be non-negative
                 assert upscatter >= 0
-                
+
                 # Downscattering to lower energy group
                 if g < n_groups - 1:
                     downscatter = sigma_s[g, g + 1]

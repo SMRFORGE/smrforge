@@ -15,10 +15,10 @@ import pytest
 from smrforge.geometry.mesh_3d import (
     Mesh3D,
     Surface,
-    extract_hexagonal_prism_mesh,
-    extract_cylinder_mesh,
-    extract_sphere_mesh,
     combine_meshes,
+    extract_cylinder_mesh,
+    extract_hexagonal_prism_mesh,
+    extract_sphere_mesh,
 )
 
 
@@ -103,7 +103,7 @@ class TestMesh3D:
         vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells = np.array([[0, 1, 2, 3]])
         mesh = Mesh3D(vertices=vertices, cells=cells)
-        
+
         data = np.array([1.0])
         mesh.add_cell_data("flux", data)
         assert "flux" in mesh.cell_data
@@ -113,7 +113,7 @@ class TestMesh3D:
         """Test adding cell data when no cells exist."""
         vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
         mesh = Mesh3D(vertices=vertices)
-        
+
         with pytest.raises(ValueError, match="No cells defined"):
             mesh.add_cell_data("flux", np.array([1.0]))
 
@@ -122,7 +122,7 @@ class TestMesh3D:
         vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells = np.array([[0, 1, 2, 3]])
         mesh = Mesh3D(vertices=vertices, cells=cells)
-        
+
         with pytest.raises(ValueError, match="Data length"):
             mesh.add_cell_data("flux", np.array([1.0, 2.0]))
 
@@ -131,7 +131,7 @@ class TestMesh3D:
         vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         faces = np.array([[0, 1, 2], [0, 1, 3]])
         mesh = Mesh3D(vertices=vertices, faces=faces)
-        
+
         data = np.array([1.0, 2.0])
         mesh.add_face_data("heat_flux", data)
         assert "heat_flux" in mesh.face_data
@@ -141,7 +141,7 @@ class TestMesh3D:
         """Test adding face data when no faces exist."""
         vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
         mesh = Mesh3D(vertices=vertices)
-        
+
         with pytest.raises(ValueError, match="No faces defined"):
             mesh.add_face_data("heat_flux", np.array([1.0]))
 
@@ -150,35 +150,39 @@ class TestMesh3D:
         vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         faces = np.array([[0, 1, 2]])
         mesh = Mesh3D(vertices=vertices, faces=faces)
-        
+
         with pytest.raises(ValueError, match="Data length"):
             mesh.add_face_data("heat_flux", np.array([1.0, 2.0]))
 
     def test_mesh3d_get_bounds(self):
         """Test getting mesh bounds."""
-        vertices = np.array([
-            [0, 0, 0],
-            [1, 2, 3],
-            [-1, -2, -3],
-            [0.5, 1.5, 2.5],
-        ])
+        vertices = np.array(
+            [
+                [0, 0, 0],
+                [1, 2, 3],
+                [-1, -2, -3],
+                [0.5, 1.5, 2.5],
+            ]
+        )
         mesh = Mesh3D(vertices=vertices)
         min_bounds, max_bounds = mesh.get_bounds()
-        
+
         assert np.allclose(min_bounds, [-1, -2, -3])
         assert np.allclose(max_bounds, [1, 2, 3])
 
     def test_mesh3d_get_center(self):
         """Test getting mesh center."""
-        vertices = np.array([
-            [0, 0, 0],
-            [2, 0, 0],
-            [0, 2, 0],
-            [0, 0, 2],
-        ])
+        vertices = np.array(
+            [
+                [0, 0, 0],
+                [2, 0, 0],
+                [0, 2, 0],
+                [0, 0, 2],
+            ]
+        )
         mesh = Mesh3D(vertices=vertices)
         center = mesh.get_center()
-        
+
         assert np.allclose(center, [0.5, 0.5, 0.5])
 
 
@@ -227,7 +231,7 @@ class TestSurface:
         faces = np.array([[0, 1, 2]])
         surface = Surface(vertices=vertices, faces=faces, material_id="fuel")
         mesh = surface.to_mesh3d()
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices == 3
         assert mesh.n_faces == 1
@@ -240,7 +244,7 @@ class TestSurface:
         faces = np.array([[0, 1, 2]])
         surface = Surface(vertices=vertices, faces=faces)
         mesh = surface.to_mesh3d()
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.cell_materials is None
 
@@ -251,8 +255,10 @@ class TestMeshGeneration:
     def test_extract_hexagonal_prism_mesh(self):
         """Test extracting hexagonal prism mesh."""
         center = np.array([0, 0, 0])
-        mesh = extract_hexagonal_prism_mesh(center=center, flat_to_flat=36.0, height=80.0)
-        
+        mesh = extract_hexagonal_prism_mesh(
+            center=center, flat_to_flat=36.0, height=80.0
+        )
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
         assert mesh.n_faces > 0
@@ -267,7 +273,7 @@ class TestMeshGeneration:
             height=100.0,
             n_segments=8,
         )
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
 
@@ -275,7 +281,7 @@ class TestMeshGeneration:
         """Test extracting cylinder mesh."""
         center = np.array([0, 0, 0])
         mesh = extract_cylinder_mesh(center=center, radius=5.0, height=100.0)
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
         assert mesh.n_faces > 0
@@ -290,7 +296,7 @@ class TestMeshGeneration:
             height=50.0,
             n_segments=32,
         )
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
 
@@ -298,7 +304,7 @@ class TestMeshGeneration:
         """Test extracting sphere mesh."""
         center = np.array([0, 0, 0])
         mesh = extract_sphere_mesh(center=center, radius=2.5)
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
         assert mesh.n_faces > 0
@@ -309,7 +315,7 @@ class TestMeshGeneration:
         """Test extracting sphere mesh with custom segments."""
         center = np.array([1, 2, 3])
         mesh = extract_sphere_mesh(center=center, radius=1.0, n_segments=20)
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
 
@@ -322,7 +328,7 @@ class TestMeshCombination:
         vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells = np.array([[0, 1, 2, 3]])
         mesh1 = Mesh3D(vertices=vertices, cells=cells)
-        
+
         combined = combine_meshes([mesh1])
         assert isinstance(combined, Mesh3D)
         assert combined.n_vertices == 4
@@ -334,12 +340,12 @@ class TestMeshCombination:
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells1 = np.array([[0, 1, 2, 3]])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1)
-        
+
         # Second mesh (offset)
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert isinstance(combined, Mesh3D)
         assert combined.n_vertices == 8
@@ -352,13 +358,13 @@ class TestMeshCombination:
         cells1 = np.array([[0, 1, 2, 3]])
         materials1 = np.array(["fuel"])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1, cell_materials=materials1)
-        
+
         # Second mesh
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         materials2 = np.array(["reflector"])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2, cell_materials=materials2)
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert combined.cell_materials is not None
         assert len(combined.cell_materials) == 2
@@ -372,13 +378,13 @@ class TestMeshCombination:
         cells1 = np.array([[0, 1, 2, 3]])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1)
         mesh1.add_cell_data("flux", np.array([1.0]))
-        
+
         # Second mesh
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)
         mesh2.add_cell_data("flux", np.array([2.0]))
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert "flux" in combined.cell_data
         assert len(combined.cell_data["flux"]) == 2
@@ -389,119 +395,119 @@ class TestMeshCombination:
         """Test combining empty list of meshes."""
         with pytest.raises(ValueError, match="No meshes to combine"):
             combine_meshes([])
-    
+
     def test_combine_meshes_without_faces(self):
         """Test combining meshes without faces."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells1 = np.array([[0, 1, 2, 3]])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1)  # No faces
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)  # No faces
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert combined.n_faces == 0
         assert combined.faces is None
-    
+
     def test_combine_meshes_without_cells(self):
         """Test combining meshes without cells."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
         faces1 = np.array([[0, 1, 2]])
         mesh1 = Mesh3D(vertices=vertices1, faces=faces1)  # No cells
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0]])
         faces2 = np.array([[0, 1, 2]])
         mesh2 = Mesh3D(vertices=vertices2, faces=faces2)  # No cells
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert combined.n_cells == 0
         assert combined.cells is None
-    
+
     def test_combine_meshes_without_materials(self):
         """Test combining meshes without materials."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells1 = np.array([[0, 1, 2, 3]])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1)  # No materials
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)  # No materials
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert combined.cell_materials is None
-    
+
     def test_combine_meshes_without_cell_data(self):
         """Test combining meshes without cell data."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells1 = np.array([[0, 1, 2, 3]])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1)  # No cell_data
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)  # No cell_data
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert len(combined.cell_data) == 0
-    
+
     def test_combine_meshes_mixed_faces_and_no_faces(self):
         """Test combining meshes where some have faces and some don't."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
         faces1 = np.array([[0, 1, 2]])
         mesh1 = Mesh3D(vertices=vertices1, faces=faces1)
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)  # No faces
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert combined.n_faces == 1  # Only from mesh1
-    
+
     def test_combine_meshes_mixed_cells_and_no_cells(self):
         """Test combining meshes where some have cells and some don't."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells1 = np.array([[0, 1, 2, 3]])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1)
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0]])
         faces2 = np.array([[0, 1, 2]])
         mesh2 = Mesh3D(vertices=vertices2, faces=faces2)  # No cells
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert combined.n_cells == 1  # Only from mesh1
-    
+
     def test_combine_meshes_partial_materials(self):
         """Test combining meshes where only some have materials."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells1 = np.array([[0, 1, 2, 3]])
         materials1 = np.array(["fuel"])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1, cell_materials=materials1)
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)  # No materials
-        
+
         combined = combine_meshes([mesh1, mesh2])
         # When mixing meshes with and without materials, result may have materials
         # depending on implementation - just verify it doesn't crash
         assert combined is not None
-    
+
     def test_combine_meshes_partial_cell_data(self):
         """Test combining meshes where only some have cell data."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
         cells1 = np.array([[0, 1, 2, 3]])
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1)
         mesh1.add_cell_data("flux", np.array([1.0]))
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)  # No cell_data
-        
+
         combined = combine_meshes([mesh1, mesh2])
         # When mixing meshes with and without cell_data, only data from mesh1 should be present
         # But since mesh2 has no data for "flux", this might cause issues - implementation dependent
         assert combined is not None
-    
+
     def test_combine_meshes_multiple_cell_data_fields(self):
         """Test combining meshes with multiple cell data fields."""
         vertices1 = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
@@ -509,13 +515,13 @@ class TestMeshCombination:
         mesh1 = Mesh3D(vertices=vertices1, cells=cells1)
         mesh1.add_cell_data("flux", np.array([1.0]))
         mesh1.add_cell_data("power", np.array([2.0]))
-        
+
         vertices2 = np.array([[2, 0, 0], [3, 0, 0], [2, 1, 0], [2, 0, 1]])
         cells2 = np.array([[0, 1, 2, 3]])
         mesh2 = Mesh3D(vertices=vertices2, cells=cells2)
         mesh2.add_cell_data("flux", np.array([3.0]))
         mesh2.add_cell_data("power", np.array([4.0]))
-        
+
         combined = combine_meshes([mesh1, mesh2])
         assert "flux" in combined.cell_data
         assert "power" in combined.cell_data
@@ -525,83 +531,106 @@ class TestMeshCombination:
 
 class TestMeshGenerationEdgeCases:
     """Test edge cases in mesh generation functions."""
-    
+
     def test_extract_hexagonal_prism_mesh_zero_height(self):
         """Test hexagonal prism with zero height."""
         center = np.array([0, 0, 0])
-        mesh = extract_hexagonal_prism_mesh(center=center, flat_to_flat=36.0, height=0.0)
-        
+        mesh = extract_hexagonal_prism_mesh(
+            center=center, flat_to_flat=36.0, height=0.0
+        )
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
-    
+
     def test_extract_cylinder_mesh_zero_height(self):
         """Test cylinder with zero height."""
         center = np.array([0, 0, 0])
         mesh = extract_cylinder_mesh(center=center, radius=5.0, height=0.0)
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
-    
+
     def test_extract_cylinder_mesh_zero_radius(self):
         """Test cylinder with zero radius."""
         center = np.array([0, 0, 0])
         mesh = extract_cylinder_mesh(center=center, radius=0.0, height=100.0)
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
-    
+
     def test_extract_sphere_mesh_zero_radius(self):
         """Test sphere with zero radius."""
         center = np.array([0, 0, 0])
         mesh = extract_sphere_mesh(center=center, radius=0.0)
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
-    
+
     def test_extract_sphere_mesh_single_segment(self):
         """Test sphere with minimal segments."""
         center = np.array([0, 0, 0])
         mesh = extract_sphere_mesh(center=center, radius=1.0, n_segments=1)
-        
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
-    
+
     def test_extract_cylinder_mesh_single_segment(self):
         """Test cylinder with minimal segments."""
         center = np.array([0, 0, 0])
-        mesh = extract_cylinder_mesh(center=center, radius=1.0, height=10.0, n_segments=1)
-        
+        mesh = extract_cylinder_mesh(
+            center=center, radius=1.0, height=10.0, n_segments=1
+        )
+
         assert isinstance(mesh, Mesh3D)
         assert mesh.n_vertices > 0
-    
+
     def test_mesh3d_init_with_quad_faces(self):
         """Test Mesh3D initialization with quad faces (4 vertices)."""
-        vertices = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
-                             [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]])
+        vertices = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+                [0, 1, 1],
+            ]
+        )
         faces = np.array([[0, 1, 2, 3], [4, 5, 6, 7]])  # Quad faces
         mesh = Mesh3D(vertices=vertices, faces=faces)
-        
+
         assert mesh.n_faces == 2
         assert mesh.faces.shape[1] == 4
-    
+
     def test_mesh3d_init_with_hex_cells(self):
         """Test Mesh3D initialization with hex cells (8 vertices)."""
-        vertices = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
-                             [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]])
+        vertices = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+                [0, 1, 1],
+            ]
+        )
         cells = np.array([[0, 1, 2, 3, 4, 5, 6, 7]])  # Hex cell
         mesh = Mesh3D(vertices=vertices, cells=cells)
-        
+
         assert mesh.n_cells == 1
         assert mesh.cells.shape[1] == 8
-    
+
     def test_surface_to_mesh3d_multiple_faces(self):
         """Test converting Surface with multiple faces to Mesh3D."""
         vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]])
         faces = np.array([[0, 1, 2], [1, 3, 2]])
         surface = Surface(vertices=vertices, faces=faces, material_id="fuel")
         mesh = surface.to_mesh3d()
-        
+
         assert mesh.n_faces == 2
         assert len(mesh.cell_materials) == 2
         assert all(m == "fuel" for m in mesh.cell_materials)
-

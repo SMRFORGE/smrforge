@@ -2,11 +2,12 @@
 Tests for cross-section temperature interpolation.
 """
 
-import pytest
-import numpy as np
 import importlib
 import sys
 import typing
+
+import numpy as np
+import pytest
 
 try:
     from smrforge.core.temperature_interpolation import (
@@ -48,9 +49,7 @@ class TestCrossSectionTemperatureInterpolator:
         temperatures = np.array([293.6, 600.0, 900.0, 1200.0])
         energies = np.logspace(-5, 7, 10)
         # Cross-section increases with temperature
-        cross_sections = np.array(
-            [[5.0 + i * 0.1] * 10 for i in range(4)]
-        )  # [4, 10]
+        cross_sections = np.array([[5.0 + i * 0.1] * 10 for i in range(4)])  # [4, 10]
 
         interpolator = CrossSectionTemperatureInterpolator(
             temperatures=temperatures,
@@ -153,7 +152,9 @@ class TestCrossSectionTemperatureInterpolator:
         energies = np.logspace(-5, 7, 10)
         cross_sections = np.array([[5.0] * 10, [6.0] * 10, [7.0] * 10])
 
-        interpolator = CrossSectionTemperatureInterpolator(temperatures, energies, cross_sections)
+        interpolator = CrossSectionTemperatureInterpolator(
+            temperatures, energies, cross_sections
+        )
 
         xs_low = interpolator.interpolate(1.0)  # below minimum
         assert xs_low.shape == (10,)
@@ -170,7 +171,9 @@ class TestCrossSectionTemperatureInterpolator:
         energies = np.logspace(-5, 7, 10)
         cross_sections = np.array([[5.0] * 10, [6.0] * 10, [7.0] * 10])
 
-        interpolator = CrossSectionTemperatureInterpolator(temperatures, energies, cross_sections)
+        interpolator = CrossSectionTemperatureInterpolator(
+            temperatures, energies, cross_sections
+        )
         interpolator.method = "nope"
         with pytest.raises(ValueError, match="Unknown interpolation method"):
             interpolator.interpolate(750.0)
@@ -197,7 +200,10 @@ class TestCrossSectionTemperatureInterpolator:
         # abs(log_temp_high - log_temp_low) < 1e-10 branch.
         temperatures_close = np.array([300.0, 300.0 + 1e-8, 600.0])
         interp_log = CrossSectionTemperatureInterpolator(
-            temperatures_close, energies, cross_sections, method=InterpolationMethod.LOG_LOG
+            temperatures_close,
+            energies,
+            cross_sections,
+            method=InterpolationMethod.LOG_LOG,
         )
         xs2 = interp_log._interpolate_log_log(300.0)
         assert xs2.shape == (2,)
@@ -251,7 +257,11 @@ class TestInterpolationMethods:
         cross_sections = np.array([[5.0] * 11, [6.0] * 11, [7.0] * 11, [8.0] * 11])
 
         # 2D spline failure -> per-energy fallback
-        monkeypatch.setattr(ti, "RectBivariateSpline", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setattr(
+            ti,
+            "RectBivariateSpline",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
         interpolator = CrossSectionTemperatureInterpolator(
             temperatures=temperatures,
             energies=energies,
@@ -262,7 +272,11 @@ class TestInterpolationMethods:
         assert xs_interp.shape == (11,)
 
         # Per-energy spline failure -> linear fallback per energy
-        monkeypatch.setattr(ti, "UnivariateSpline", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setattr(
+            ti,
+            "UnivariateSpline",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
         energies2 = np.logspace(-5, 7, 10)  # small enough to skip 2D path
         cross_sections2 = np.array([[5.0] * 10, [6.0] * 10, [7.0] * 10, [8.0] * 10])
         interpolator2 = CrossSectionTemperatureInterpolator(
@@ -294,7 +308,10 @@ class TestInterpolateCrossSectionTemperature:
             self.calls.append((float(temperature), library))
             if float(temperature) in self.fail_temps:
                 raise RuntimeError("no data")
-            return self.energy_by_temp[float(temperature)], self.xs_by_temp[float(temperature)]
+            return (
+                self.energy_by_temp[float(temperature)],
+                self.xs_by_temp[float(temperature)],
+            )
 
     def test_default_temperatures_and_library_and_skip_failures(self):
         nuclide = self._Nuclide()
@@ -327,7 +344,10 @@ class TestInterpolateCrossSectionTemperature:
         e1 = np.array([1.0, 2.5, 3.0])
         cache = self._Cache(
             energy_by_temp={300.0: e0, 600.0: e1},
-            xs_by_temp={300.0: np.array([1.0, 2.0, 3.0]), 600.0: np.array([2.0, 4.0, 6.0])},
+            xs_by_temp={
+                300.0: np.array([1.0, 2.0, 3.0]),
+                600.0: np.array([2.0, 4.0, 6.0]),
+            },
         )
 
         e_out, xs_out = interpolate_cross_section_temperature(

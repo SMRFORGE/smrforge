@@ -65,6 +65,8 @@ data/*
 !data/.gitkeep
 output/*
 !output/.gitkeep
+# Explicit: validation reports (also covered by output/*)
+output/validation*
 results/*
 !results/.gitkeep
 
@@ -88,6 +90,12 @@ coverage_run_output*.txt
 coverage_run_output*.errors*
 coverage_after_dedup.json
 coverage-full.json
+coverage-fullnext*.json
+# Coverage artifacts in output/ (output/* also ignores most; these are explicit)
+output/.coverage
+output/.coverage*
+output/coverage_*
+output/coverage-fullnext*
 
 # Coverage/session helper scripts (local or one-off; session .md files archived in docs/archive/root-session/)
 check_coverage_progress.ps1
@@ -141,11 +149,14 @@ docker-compose.override.yml
 # Zarr data files
 *.zarr
 *.zarr.zip
+test*.zarr
+test_zarr*
 
 # Runtime / generated artifacts (root)
 .smrforge_runs.json
 /results.json
 /sweep_results.json
+/sweep_results.csv
 /smrforge_project.json
 testing_results.txt
 /design_report.md

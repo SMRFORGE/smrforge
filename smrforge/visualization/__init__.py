@@ -218,12 +218,12 @@ except ImportError:
 
 try:
     from smrforge.visualization.design_study_plots import (
-        plot_sensitivity_ranking,
-        plot_sobol_workflow,
+        plot_atlas_designs,
         plot_pareto_with_knee,
         plot_safety_margins,
         plot_scenario_comparison,
-        plot_atlas_designs,
+        plot_sensitivity_ranking,
+        plot_sobol_workflow,
     )
 
     _DESIGN_STUDY_PLOTS_AVAILABLE = True

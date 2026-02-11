@@ -4,16 +4,16 @@ Tests for SMR-specific fuel management.
 Tests long-cycle fuel management, batch refueling patterns, and compact core shuffling.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
+    from smrforge.geometry.assembly import Assembly
+    from smrforge.geometry.core_geometry import Point3D
     from smrforge.geometry.smr_fuel_management import (
         SMRFuelManager,
         SMRRefuelingPattern,
     )
-    from smrforge.geometry.assembly import Assembly
-    from smrforge.geometry.core_geometry import Point3D
 
     _SMR_FUEL_MANAGEMENT_AVAILABLE = True
 except ImportError:
@@ -116,9 +116,15 @@ class TestSMRFuelManager:
 
         # Create assemblies in a pattern
         positions = [
-            (0, 0), (10, 0), (-10, 0),
-            (0, 10), (0, -10), (7, 7),
-            (-7, 7), (7, -7), (-7, -7),
+            (0, 0),
+            (10, 0),
+            (-10, 0),
+            (0, 10),
+            (0, -10),
+            (7, 7),
+            (-7, 7),
+            (7, -7),
+            (-7, -7),
         ]
 
         for i, (x, y) in enumerate(positions):

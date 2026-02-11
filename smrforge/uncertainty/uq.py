@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 import seaborn as sns
+
 try:
     import plotly.graph_objects as go
 except ImportError:
@@ -23,9 +24,11 @@ from rich.table import Table
 # Optional dependencies for sensitivity analysis
 try:
     from SALib.analyze import fast, morris, sobol
-    from SALib.sample import latin, saltelli
-    from SALib.sample import sobol as sobol_sample
+    from SALib.sample import latin
     from SALib.sample import morris as morris_sample
+    from SALib.sample import saltelli
+    from SALib.sample import sobol as sobol_sample
+
     _SALIB_AVAILABLE = True
 except ImportError:
     _SALIB_AVAILABLE = False
@@ -391,7 +394,9 @@ class UncertaintyPropagation:
 
         for i, name in enumerate(output_names):
             if not isinstance(name, str) or len(name) == 0:
-                raise ValueError(f"output_names[{i}] must be non-empty string, got {name}")
+                raise ValueError(
+                    f"output_names[{i}] must be non-empty string, got {name}"
+                )
 
         self.parameters = parameters
         self.model = model
@@ -478,9 +483,7 @@ class UncertaintyPropagation:
                     # Check all output names are present
                     missing = [name for name in self.output_names if name not in result]
                     if missing:
-                        raise RuntimeError(
-                            f"Model result missing outputs: {missing}"
-                        )
+                        raise RuntimeError(f"Model result missing outputs: {missing}")
                     outputs[i, :] = [result[name] for name in self.output_names]
                 else:
                     # Assume result is array-like
@@ -666,9 +669,7 @@ class SensitivityAnalysis:
                 if isinstance(result, dict):
                     missing = [name for name in self.output_names if name not in result]
                     if missing:
-                        raise RuntimeError(
-                            f"Model result missing outputs: {missing}"
-                        )
+                        raise RuntimeError(f"Model result missing outputs: {missing}")
                     Y[i, :] = [result[name] for name in self.output_names]
                 else:
                     result_array = np.array(result)
@@ -792,7 +793,9 @@ class SensitivityAnalysis:
         }
 
         # Generate Morris samples
-        param_samples = morris_sample.sample(problem, n_trajectories, num_levels=n_levels)
+        param_samples = morris_sample.sample(
+            problem, n_trajectories, num_levels=n_levels
+        )
 
         n_evals = param_samples.shape[0]
         self.console.print(f"Total evaluations: {n_evals}")
@@ -818,9 +821,7 @@ class SensitivityAnalysis:
                 if isinstance(result, dict):
                     missing = [name for name in self.output_names if name not in result]
                     if missing:
-                        raise RuntimeError(
-                            f"Model result missing outputs: {missing}"
-                        )
+                        raise RuntimeError(f"Model result missing outputs: {missing}")
                     Y[i, :] = [result[name] for name in self.output_names]
                 else:
                     result_array = np.array(result)
@@ -935,7 +936,9 @@ class VisualizationTools:
             raise ValueError("results.output_samples is empty")
 
         if results.mean is None or results.percentiles is None:
-            raise ValueError("results must have computed statistics (mean, percentiles)")
+            raise ValueError(
+                "results must have computed statistics (mean, percentiles)"
+            )
 
         fig, axes = plt.subplots(2, 2, figsize=figsize)
 
@@ -1083,7 +1086,9 @@ class VisualizationTools:
                 f"Sobol results for '{output_name}' must contain 'S1' and 'ST' keys"
             )
 
-        if len(Si["S1"]) != len(parameter_names) or len(Si["ST"]) != len(parameter_names):
+        if len(Si["S1"]) != len(parameter_names) or len(Si["ST"]) != len(
+            parameter_names
+        ):
             raise ValueError(
                 f"Length mismatch: parameter_names has {len(parameter_names)} elements, "
                 f"but Sobol indices have {len(Si['S1'])} elements"
@@ -1118,10 +1123,14 @@ class VisualizationTools:
         This is a lightweight wrapper around `smrforge.uncertainty.visualization`.
         """
         if go is None:
-            raise ImportError("plotly is required for plot_distribution_plotly. Install with: pip install plotly")
+            raise ImportError(
+                "plotly is required for plot_distribution_plotly. Install with: pip install plotly"
+            )
         from smrforge.uncertainty.visualization import plot_uq_distribution
 
-        return plot_uq_distribution(results, output_idx=output_idx, bins=bins, backend="plotly")
+        return plot_uq_distribution(
+            results, output_idx=output_idx, bins=bins, backend="plotly"
+        )
 
     @staticmethod
     def plot_correlation_matrix(
@@ -1132,7 +1141,9 @@ class VisualizationTools:
         """Correlation matrix for UQ (plotly or matplotlib)."""
         from smrforge.uncertainty.visualization import plot_uq_correlation_matrix
 
-        return plot_uq_correlation_matrix(results, include_outputs=include_outputs, backend=backend)
+        return plot_uq_correlation_matrix(
+            results, include_outputs=include_outputs, backend=backend
+        )
 
     @staticmethod
     def plot_sobol_indices_plotly(
@@ -1142,7 +1153,9 @@ class VisualizationTools:
     ):
         """Plotly Sobol indices for dashboards."""
         if go is None:
-            raise ImportError("plotly is required for plot_sobol_indices_plotly. Install with: pip install plotly")
+            raise ImportError(
+                "plotly is required for plot_sobol_indices_plotly. Install with: pip install plotly"
+            )
         from smrforge.uncertainty.visualization import plot_uq_sobol_indices
 
         return plot_uq_sobol_indices(

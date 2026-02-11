@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from ..utils.exception_handling import reraise_if_system
 from ..utils.logging import get_logger
 
 logger = get_logger("smrforge.workflows.audit_log")
@@ -19,6 +20,7 @@ logger = get_logger("smrforge.workflows.audit_log")
 @dataclass
 class RunRecord:
     """Single run record for audit log."""
+
     workflow: str  # "design-study" | "optimize" | "uq" | "sensitivity" | ...
     timestamp: str  # ISO format
     args_summary: Dict[str, Any] = field(default_factory=dict)
@@ -37,7 +39,7 @@ def append_run(
     passed: Optional[bool] = None,
     error: Optional[str] = None,
     log_path: Optional[Path] = None,
-) -> None:
+) -> bool:
     """
     Append a run record to the audit log.
 
@@ -47,9 +49,12 @@ def append_run(
         results_summary: Key results (e.g. k_eff, n_iterations, n_pareto).
         passed: Whether the run passed validation or succeeded.
         error: If failed, error message.
-        log_path: Where to append. If None, uses log_path = Path(".smrforge_runs.json").
+        log_path: Where to append. If None, uses log_path = Path("output/.smrforge_runs.json").
+
+    Returns:
+        True if record was written successfully, False otherwise.
     """
-    log_path = log_path or Path(".smrforge_runs.json")
+    log_path = log_path or Path("output/.smrforge_runs.json")
     record = RunRecord(
         workflow=workflow,
         timestamp=datetime.now(timezone.utc).isoformat(),
@@ -72,6 +77,14 @@ def append_run(
         else:
             existing = []
         existing.append(data)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         log_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+        return True
     except Exception as e:  # pragma: no cover
-        logger.debug("Audit log append failed: %s", e)
+        reraise_if_system(e)
+        logger.warning(
+            "Audit log append failed (run record not persisted): %s. Path: %s",
+            e,
+            log_path,
+        )
+        return False

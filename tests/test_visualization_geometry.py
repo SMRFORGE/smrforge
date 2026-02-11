@@ -5,15 +5,16 @@ import pytest
 
 try:
     import matplotlib
-    matplotlib.use('Agg')  # Use non-interactive backend
+
+    matplotlib.use("Agg")  # Use non-interactive backend
     import matplotlib.pyplot as plt
+
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
 pytestmark = pytest.mark.skipif(
-    not MATPLOTLIB_AVAILABLE,
-    reason="matplotlib not available"
+    not MATPLOTLIB_AVAILABLE, reason="matplotlib not available"
 )
 
 from smrforge.geometry.core_geometry import PebbleBedCore, PrismaticCore
@@ -116,6 +117,7 @@ class TestPlotCoreLayout:
 
     def test_plot_unsupported_core_type(self):
         """Test plotting with unsupported core type."""
+
         class FakeCore:
             pass
 
@@ -215,4 +217,3 @@ class TestPlotTemperatureDistribution:
         assert fig is not None
         assert ax is not None
         plt.close(fig)
-

@@ -192,7 +192,9 @@ def test_animate_transient_matplotlib_import_required(monkeypatch):
 
     monkeypatch.setattr(an, "_MATPLOTLIB_AVAILABLE", False)
     with pytest.raises(ImportError):
-        an.animate_transient_matplotlib(np.array([0.0, 1.0]), lambda t: np.zeros((2, 2)))
+        an.animate_transient_matplotlib(
+            np.array([0.0, 1.0]), lambda t: np.zeros((2, 2))
+        )
 
 
 def test_animate_transient_matplotlib_basic_and_saving(monkeypatch, tmp_path):
@@ -203,13 +205,19 @@ def test_animate_transient_matplotlib_basic_and_saving(monkeypatch, tmp_path):
     monkeypatch.setattr(an, "animation", _DummyAnimationModule)
 
     calls = {"layout": 0}
-    monkeypatch.setattr(an, "plot_core_layout", lambda *a, **k: calls.__setitem__("layout", calls["layout"] + 1))
+    monkeypatch.setattr(
+        an,
+        "plot_core_layout",
+        lambda *a, **k: calls.__setitem__("layout", calls["layout"] + 1),
+    )
 
     times = np.array([0.0, 1.0])
     data_func = lambda t: np.full((2, 2), t, dtype=float)
 
     # No geometry_func path (labeling + set_array)
-    anim = an.animate_transient_matplotlib(times, data_func, geometry_func=None, view="xy")
+    anim = an.animate_transient_matplotlib(
+        times, data_func, geometry_func=None, view="xy"
+    )
     assert isinstance(anim, _DummyAnim)
     out = anim._update(1)
     assert isinstance(out, list)
@@ -237,11 +245,15 @@ def test_animate_transient_matplotlib_basic_and_saving(monkeypatch, tmp_path):
     # MP4 save with missing Writer raises
     monkeypatch.setattr(an, "Writer", None)
     with pytest.raises(ValueError, match="FFmpeg writer not available"):
-        an.animate_transient_matplotlib(times, data_func, save_path=tmp_path / "out.mp4")
+        an.animate_transient_matplotlib(
+            times, data_func, save_path=tmp_path / "out.mp4"
+        )
 
     # Unsupported suffix raises
     with pytest.raises(ValueError, match="Unsupported format"):
-        an.animate_transient_matplotlib(times, data_func, save_path=tmp_path / "out.xyz")
+        an.animate_transient_matplotlib(
+            times, data_func, save_path=tmp_path / "out.xyz"
+        )
 
     # MP4 save with available Writer calls anim.save
     class _W:
@@ -250,7 +262,9 @@ def test_animate_transient_matplotlib_basic_and_saving(monkeypatch, tmp_path):
             self.bitrate = bitrate
 
     monkeypatch.setattr(an, "Writer", _W)
-    anim3 = an.animate_transient_matplotlib(times, data_func, save_path=tmp_path / "out.mp4", fps=7)
+    anim3 = an.animate_transient_matplotlib(
+        times, data_func, save_path=tmp_path / "out.mp4", fps=7
+    )
     assert anim3.saved and anim3.saved[0][0].endswith("out.mp4")
     assert isinstance(anim3.saved[0][1], _W)
 
@@ -260,7 +274,10 @@ def test_save_gif_matplotlib_requires_imageio(monkeypatch, tmp_path):
 
     monkeypatch.setattr(an, "_IMAGEIO_AVAILABLE", False)
     with pytest.raises(ImportError):
-        an._save_gif_matplotlib(_DummyAnim(_DummyFig(), lambda f: [], frames=1, interval=1, blit=True), tmp_path / "a.gif")
+        an._save_gif_matplotlib(
+            _DummyAnim(_DummyFig(), lambda f: [], frames=1, interval=1, blit=True),
+            tmp_path / "a.gif",
+        )
 
 
 def test_save_gif_matplotlib_writes_frames(monkeypatch, tmp_path):
@@ -306,9 +323,13 @@ def test_animate_3d_transient_plotly(monkeypatch):
 
     # Patch plot_mesh3d_plotly import target
     mesh3d_mod = importlib.import_module("smrforge.visualization.mesh_3d")
-    monkeypatch.setattr(mesh3d_mod, "plot_mesh3d_plotly", lambda *a, **k: _DummyPlotlyFig())
+    monkeypatch.setattr(
+        mesh3d_mod, "plot_mesh3d_plotly", lambda *a, **k: _DummyPlotlyFig()
+    )
 
-    fig = an.animate_3d_transient_plotly(times, mesh_func=lambda t: object(), field_name="flux", interval=50, title="T")
+    fig = an.animate_3d_transient_plotly(
+        times, mesh_func=lambda t: object(), field_name="flux", interval=50, title="T"
+    )
     assert isinstance(fig, _DummyPlotlyFig)
     assert len(fig.frames) == len(times)
 
@@ -345,8 +366,14 @@ def test_create_comparison_animation_paths(monkeypatch, tmp_path):
 
     # Save as GIF path hits _save_gif_matplotlib
     saved = {"gif": 0}
-    monkeypatch.setattr(an, "_save_gif_matplotlib", lambda *a, **k: saved.__setitem__("gif", saved["gif"] + 1))
-    an.create_comparison_animation(data_dict, times, n_cols=2, save_path=tmp_path / "x.gif")
+    monkeypatch.setattr(
+        an,
+        "_save_gif_matplotlib",
+        lambda *a, **k: saved.__setitem__("gif", saved["gif"] + 1),
+    )
+    an.create_comparison_animation(
+        data_dict, times, n_cols=2, save_path=tmp_path / "x.gif"
+    )
     assert saved["gif"] == 1
 
     # MP4 with available Writer calls anim.save
@@ -356,7 +383,9 @@ def test_create_comparison_animation_paths(monkeypatch, tmp_path):
             self.bitrate = bitrate
 
     monkeypatch.setattr(an, "Writer", _W)
-    anim_mp4 = an.create_comparison_animation(data_dict, times, save_path=tmp_path / "x.mp4", fps=11)
+    anim_mp4 = an.create_comparison_animation(
+        data_dict, times, save_path=tmp_path / "x.mp4", fps=11
+    )
     assert anim_mp4.saved and anim_mp4.saved[0][0].endswith("x.mp4")
     assert isinstance(anim_mp4.saved[0][1], _W)
 
@@ -393,4 +422,3 @@ def test_animations_imageio_available_true_via_reload(monkeypatch):
 
     mod = importlib.import_module("smrforge.visualization.animations")
     assert mod._IMAGEIO_AVAILABLE is True
-

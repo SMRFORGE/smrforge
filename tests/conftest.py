@@ -407,9 +407,9 @@ def mock_endf_file(temp_dir, mock_endf_file_content):
 @pytest.fixture
 def mock_endf_file_generated(tmp_path):
     """Create a properly formatted mock ENDF file using the generator utility."""
-    from tests.test_utilities_endf import create_mock_endf_file_minimal
     from smrforge.core.reactor_core import Nuclide
-    
+    from tests.test_utilities_endf import create_mock_endf_file_minimal
+
     u235 = Nuclide(Z=92, A=235)
     return create_mock_endf_file_minimal(u235, "total", tmp_path)
 
@@ -418,7 +418,7 @@ def mock_endf_file_generated(tmp_path):
 def realistic_endf_file(temp_dir):
     """Create a realistic mock ENDF file with proper format for testing _simple_endf_parse."""
     endf_path = temp_dir / "U235_realistic.endf"
-    
+
     # Build ENDF file content with proper format
     # Using simpler format that matches the existing mock file style
     endf_content = """ 1.001000+3 9.991673-1          0          0          0          0 125 1451    1
@@ -511,9 +511,10 @@ def mock_endf_parserpy_unavailable(monkeypatch):
 @pytest.fixture
 def pre_populated_cache(temp_dir):
     """Create a NuclearDataCache with pre-populated test data."""
-    from smrforge.core.reactor_core import NuclearDataCache, Nuclide, Library
     import numpy as np
     import zarr
+
+    from smrforge.core.reactor_core import Library, NuclearDataCache, Nuclide
 
     cache = NuclearDataCache(cache_dir=temp_dir / "test_cache")
 
@@ -538,24 +539,31 @@ def cleanup_parallel_executors():
     yield
     # Force cleanup of any lingering executors
     import gc
-    import time
     import threading
-    
+    import time
+
     # Force garbage collection multiple times
     for _ in range(5):  # More aggressive cleanup
         gc.collect()
         time.sleep(0.1)  # Longer delay between GC passes on Windows
-    
+
     # Wait for all threads to finish (more time on Windows)
-    wait_time = 0.5 if sys.platform == 'win32' else 0.2
+    wait_time = 0.5 if sys.platform == "win32" else 0.2
     time.sleep(wait_time)
-    
+
     # Check for active threads (debugging)
-    active_threads = [t for t in threading.enumerate() if t.is_alive() and t != threading.main_thread()]
+    active_threads = [
+        t
+        for t in threading.enumerate()
+        if t.is_alive() and t != threading.main_thread()
+    ]
     if active_threads:
         import warnings
-        warnings.warn(f"Found {len(active_threads)} active threads after test session: {[t.name for t in active_threads[:5]]}")
-    
+
+        warnings.warn(
+            f"Found {len(active_threads)} active threads after test session: {[t.name for t in active_threads[:5]]}"
+        )
+
     # Final cleanup
     for _ in range(2):
         gc.collect()
@@ -577,10 +585,16 @@ def pytest_configure(config):
     )
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
-    config.addinivalue_line("markers", "network: marks tests that require network access")
-    config.addinivalue_line("markers", "parallel_batch: marks tests that use parallel batch processing (run serially)")
     config.addinivalue_line(
-        "markers", "performance: marks tests as performance benchmarks (deselect with '-m \"not performance\"'; use --run-performance to run)"
+        "markers", "network: marks tests that require network access"
+    )
+    config.addinivalue_line(
+        "markers",
+        "parallel_batch: marks tests that use parallel batch processing (run serially)",
+    )
+    config.addinivalue_line(
+        "markers",
+        "performance: marks tests as performance benchmarks (deselect with '-m \"not performance\"'; use --run-performance to run)",
     )
 
 
@@ -607,6 +621,7 @@ def pytest_collection_modifyitems(config, items):
     # Add serial marker to parallel_batch tests if pytest-xdist is being used
     try:
         from xdist import is_xdist_worker
+
         if is_xdist_worker(config):
             for item in items:
                 if item.get_closest_marker("parallel_batch"):

@@ -10,4 +10,3 @@ This module provides:
 from .calculator import DecayHeatCalculator, DecayHeatResult
 
 __all__ = ["DecayHeatCalculator", "DecayHeatResult"]
-

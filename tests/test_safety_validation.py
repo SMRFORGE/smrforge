@@ -37,7 +37,10 @@ class TestPointKineticsSolverValidation:
 
     def test_mismatched_beta_lambda_length(self):
         """Test that mismatched beta and lambda_d lengths raises ValueError."""
-        from smrforge.safety.transients import PointKineticsParameters, PointKineticsSolver
+        from smrforge.safety.transients import (
+            PointKineticsParameters,
+            PointKineticsSolver,
+        )
 
         params = PointKineticsParameters(
             beta=np.array([0.001, 0.002]),
@@ -54,7 +57,10 @@ class TestPointKineticsSolverValidation:
 
     def test_empty_beta(self):
         """Test that empty beta raises ValueError."""
-        from smrforge.safety.transients import PointKineticsParameters, PointKineticsSolver
+        from smrforge.safety.transients import (
+            PointKineticsParameters,
+            PointKineticsSolver,
+        )
 
         params = PointKineticsParameters(
             beta=np.array([]),  # Empty
@@ -66,12 +72,17 @@ class TestPointKineticsSolverValidation:
             moderator_heat_capacity=2e6,
         )
 
-        with pytest.raises(ValueError, match="params.beta must have at least one group"):
+        with pytest.raises(
+            ValueError, match="params.beta must have at least one group"
+        ):
             PointKineticsSolver(params=params)
 
     def test_invalid_lambda_negative(self, simple_kinetics_params):
         """Test that negative Lambda raises ValueError."""
-        from smrforge.safety.transients import PointKineticsParameters, PointKineticsSolver
+        from smrforge.safety.transients import (
+            PointKineticsParameters,
+            PointKineticsSolver,
+        )
 
         # Create params with negative Lambda
         params = PointKineticsParameters(
@@ -89,7 +100,10 @@ class TestPointKineticsSolverValidation:
 
     def test_invalid_fuel_heat_capacity(self, simple_kinetics_params):
         """Test that invalid fuel_heat_capacity raises ValueError."""
-        from smrforge.safety.transients import PointKineticsParameters, PointKineticsSolver
+        from smrforge.safety.transients import (
+            PointKineticsParameters,
+            PointKineticsSolver,
+        )
 
         params = PointKineticsParameters(
             beta=simple_kinetics_params.beta,
@@ -106,7 +120,10 @@ class TestPointKineticsSolverValidation:
 
     def test_invalid_moderator_heat_capacity(self, simple_kinetics_params):
         """Test that invalid moderator_heat_capacity raises ValueError."""
-        from smrforge.safety.transients import PointKineticsParameters, PointKineticsSolver
+        from smrforge.safety.transients import (
+            PointKineticsParameters,
+            PointKineticsSolver,
+        )
 
         params = PointKineticsParameters(
             beta=simple_kinetics_params.beta,
@@ -118,7 +135,9 @@ class TestPointKineticsSolverValidation:
             moderator_heat_capacity=-2e6,  # Negative
         )
 
-        with pytest.raises(ValueError, match="params.moderator_heat_capacity must be > 0"):
+        with pytest.raises(
+            ValueError, match="params.moderator_heat_capacity must be > 0"
+        ):
             PointKineticsSolver(params=params)
 
     def test_solve_transient_invalid_rho_external(self, simple_kinetics_params):
@@ -298,9 +317,9 @@ class TestTransientValidation:
     def mock_reactor_spec(self):
         """Create a mock reactor specification."""
         from smrforge.validation.pydantic_layer import (
+            FuelType,
             ReactorSpecification,
             ReactorType,
-            FuelType,
         )
 
         return ReactorSpecification(
@@ -328,6 +347,7 @@ class TestTransientValidation:
     @pytest.fixture
     def mock_geometry(self):
         """Create a mock geometry."""
+
         class MockGeometry:
             def __init__(self):
                 self.core_diameter = 200.0
@@ -360,7 +380,11 @@ class TestTransientValidation:
 
     def test_lofc_invalid_initial_power(self, mock_reactor_spec, mock_geometry):
         """Test that invalid initial_power raises ValueError."""
-        from smrforge.safety.transients import LOFCTransient, TransientConditions, TransientType
+        from smrforge.safety.transients import (
+            LOFCTransient,
+            TransientConditions,
+            TransientType,
+        )
 
         transient = LOFCTransient(mock_reactor_spec, mock_geometry)
 
@@ -391,4 +415,3 @@ class TestTransientValidation:
 
         with pytest.raises(ValueError, match="conditions must be TransientConditions"):
             transient.simulate(conditions="invalid")
-

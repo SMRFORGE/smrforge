@@ -170,9 +170,7 @@ class TestGeometry:
 
     def test_cylinder_is_inside(self):
         """Test Cylinder.is_inside."""
-        cylinder = Cylinder(
-            center=np.array([0.0, 0.0, 0.0]), radius=5.0, height=10.0
-        )
+        cylinder = Cylinder(center=np.array([0.0, 0.0, 0.0]), radius=5.0, height=10.0)
 
         # Inside
         assert cylinder.is_inside(np.array([0.0, 0.0, 0.0])) == True
@@ -185,9 +183,7 @@ class TestGeometry:
 
     def test_cylinder_distance_to_boundary(self):
         """Test Cylinder.distance_to_boundary."""
-        cylinder = Cylinder(
-            center=np.array([0.0, 0.0, 0.0]), radius=5.0, height=10.0
-        )
+        cylinder = Cylinder(center=np.array([0.0, 0.0, 0.0]), radius=5.0, height=10.0)
         pos = np.array([0.0, 0.0, 0.0])
         direction = np.array([1.0, 0.0, 0.0])
 
@@ -249,7 +245,9 @@ class TestMaterial:
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
 
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
 
         assert material.name == "U-235"
         assert material.density == 19.1
@@ -267,7 +265,9 @@ class TestMaterial:
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
 
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
 
         n_dens = material.number_density()
         assert n_dens > 0
@@ -289,7 +289,9 @@ class TestRegion:
             fission=np.array([2.5, 2.0, 1.5, 1.0]),
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
 
         region = Region(geometry=sphere, material=material, importance=1.0)
 
@@ -371,7 +373,9 @@ class TestTally:
             fission=np.array([2.5, 2.0, 1.5, 1.0]),
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
         region = Region(geometry=sphere, material=material)
 
         flux_tally = FluxTally(name="flux", region=region)
@@ -391,7 +395,9 @@ class TestTally:
             fission=np.array([2.5, 2.0, 1.5, 1.0]),
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
         region = Region(geometry=sphere, material=material)
         flux_tally = FluxTally(name="flux", region=region)
 
@@ -411,10 +417,14 @@ class TestTally:
             fission=np.array([2.5, 2.0, 1.5, 1.0]),
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
         region = Region(geometry=sphere, material=material)
 
-        reaction_tally = ReactionRateTally(name="reaction", region=region, reaction_type="fission")
+        reaction_tally = ReactionRateTally(
+            name="reaction", region=region, reaction_type="fission"
+        )
 
         assert reaction_tally.name == "reaction"
         assert reaction_tally.region == region
@@ -436,7 +446,9 @@ class TestVarianceReduction:
             fission=np.array([2.5, 2.0, 1.5, 1.0]),
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
         region = Region(geometry=sphere, material=material)
 
         # Region is not hashable, so we can't use it as a dict key in tests
@@ -463,7 +475,9 @@ class TestVarianceReduction:
             fission=np.array([2.5, 2.0, 1.5, 1.0]),
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
         region1 = Region(geometry=sphere1, material=material)
         region2 = Region(geometry=sphere2, material=material)
 
@@ -519,7 +533,9 @@ class TestMonteCarloEngine:
             fission=np.array([2.5, 2.0, 1.5, 1.0]),
             nu=np.array([2.5, 2.5, 2.5, 2.5]),
         )
-        material = Material(name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0)
+        material = Material(
+            name="U-235", density=19.1, cross_section=xs, atomic_mass=235.0
+        )
         region = Region(geometry=sphere, material=material)
 
         def source():
@@ -558,7 +574,9 @@ class TestMonteCarloEngine:
 
         try:
             importance_map = {region: 1.0}
-            engine.enable_variance_reduction(importance_map=importance_map, weight_window=True)
+            engine.enable_variance_reduction(
+                importance_map=importance_map, weight_window=True
+            )
 
             assert engine.importance_sampler is not None
             assert engine.weight_window is not None
@@ -769,7 +787,9 @@ class TestMonteCarloEngine:
             fission=np.array([0.0, 0.0, 0.0]),
             nu=np.array([0.0, 0.0, 0.0]),
         )
-        zero_material = Material(name="void", density=0.0, cross_section=xs, atomic_mass=1.0)
+        zero_material = Material(
+            name="void", density=0.0, cross_section=xs, atomic_mass=1.0
+        )
         zero_region = Region(geometry=region.geometry, material=zero_material)
 
         neutron = Neutron(
@@ -797,7 +817,9 @@ class TestMonteCarloEngine:
             fission=np.array([0.0, 0.0, 0.0]),
             nu=np.array([0.0, 0.0, 0.0]),
         )
-        zero_material = Material(name="void", density=0.0, cross_section=xs, atomic_mass=1.0)
+        zero_material = Material(
+            name="void", density=0.0, cross_section=xs, atomic_mass=1.0
+        )
         zero_region = Region(geometry=region.geometry, material=zero_material)
 
         neutron = Neutron(
@@ -832,4 +854,3 @@ class TestParallelMonteCarlo:
         # Should be a class
         assert hasattr(ParallelMonteCarlo, "run_parallel")
         assert callable(ParallelMonteCarlo.run_parallel)
-

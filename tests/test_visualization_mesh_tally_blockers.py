@@ -1,8 +1,9 @@
-import numpy as np
-import pytest
 import builtins
 import importlib
 import sys
+
+import numpy as np
+import pytest
 
 
 class _DummyTrace:
@@ -269,7 +270,9 @@ def test_plot_mesh_tally_plotly_cylindrical_with_uncertainty(monkeypatch):
         mesh_coords=(r, z),
         geometry_type="cylindrical",
     )
-    fig = mt.plot_mesh_tally(mesh, geometry=object(), backend="plotly", show_uncertainty=True)
+    fig = mt.plot_mesh_tally(
+        mesh, geometry=object(), backend="plotly", show_uncertainty=True
+    )
     assert isinstance(fig, _DummyFigure)
     assert len(fig.data) >= 2
 
@@ -291,7 +294,9 @@ def test_plot_mesh_tally_plotly_cylindrical_no_uncertainty(monkeypatch):
         mesh_coords=(r, z),
         geometry_type="cylindrical",
     )
-    fig = mt.plot_mesh_tally(mesh, geometry=object(), backend="plotly", show_uncertainty=False)
+    fig = mt.plot_mesh_tally(
+        mesh, geometry=object(), backend="plotly", show_uncertainty=False
+    )
     assert isinstance(fig, _DummyFigure)
 
 
@@ -369,7 +374,9 @@ def test_plot_mesh_tally_matplotlib_cylindrical_no_uncertainty(monkeypatch):
         mesh_coords=(r, z),
         geometry_type="cylindrical",
     )
-    fig_ax = mt.plot_mesh_tally(mesh_c, geometry=object(), backend="matplotlib", show_uncertainty=False)
+    fig_ax = mt.plot_mesh_tally(
+        mesh_c, geometry=object(), backend="matplotlib", show_uncertainty=False
+    )
     assert isinstance(fig_ax, tuple)
 
 
@@ -424,7 +431,9 @@ def test_plot_mesh_tally_matplotlib_cylindrical_and_cartesian(monkeypatch):
         mesh_coords=(r, z),
         geometry_type="cylindrical",
     )
-    fig_axes = mt.plot_mesh_tally(mesh_c, geometry=object(), backend="matplotlib", show_uncertainty=True)
+    fig_axes = mt.plot_mesh_tally(
+        mesh_c, geometry=object(), backend="matplotlib", show_uncertainty=True
+    )
     assert isinstance(fig_axes, tuple)
 
     # Cartesian 3D slice path
@@ -439,7 +448,9 @@ def test_plot_mesh_tally_matplotlib_cylindrical_and_cartesian(monkeypatch):
         mesh_coords=(x, y, z2),
         geometry_type="cartesian",
     )
-    fig_axes2 = mt.plot_mesh_tally(mesh_xyz, geometry=object(), backend="matplotlib", show_uncertainty=False)
+    fig_axes2 = mt.plot_mesh_tally(
+        mesh_xyz, geometry=object(), backend="matplotlib", show_uncertainty=False
+    )
     assert isinstance(fig_axes2, tuple)
 
     # energy_group path for 2D multi-group
@@ -451,7 +462,13 @@ def test_plot_mesh_tally_matplotlib_cylindrical_and_cartesian(monkeypatch):
         mesh_coords=(r, z),
         geometry_type="cylindrical",
     )
-    fig_axes3 = mt.plot_mesh_tally(mesh_mg, geometry=object(), backend="matplotlib", energy_group=1, show_uncertainty=False)
+    fig_axes3 = mt.plot_mesh_tally(
+        mesh_mg,
+        geometry=object(),
+        backend="matplotlib",
+        energy_group=1,
+        show_uncertainty=False,
+    )
     assert isinstance(fig_axes3, tuple)
 
 
@@ -500,7 +517,9 @@ def test_plot_mesh_tally_pyvista(monkeypatch):
         mesh_coords=(r, z),
         geometry_type="cylindrical",
     )
-    plotter3 = mt.plot_mesh_tally(mesh_mg, geometry=object(), backend="pyvista", energy_group=1)
+    plotter3 = mt.plot_mesh_tally(
+        mesh_mg, geometry=object(), backend="pyvista", energy_group=1
+    )
     assert isinstance(plotter3, _DummyPv.Plotter)
 
 
@@ -516,7 +535,10 @@ def test_plot_multi_group_mesh_tally_paths(monkeypatch):
         geometry_type="cylindrical",
     )
     monkeypatch.setattr(mt, "plot_mesh_tally", lambda *a, **k: "delegated")
-    assert mt.plot_multi_group_mesh_tally(mesh_single, geometry=object(), backend="plotly") == "delegated"
+    assert (
+        mt.plot_multi_group_mesh_tally(mesh_single, geometry=object(), backend="plotly")
+        == "delegated"
+    )
 
     # plotly subplots path
     monkeypatch.setattr(mt, "_PLOTLY_AVAILABLE", True)
@@ -544,7 +566,9 @@ def test_plot_multi_group_mesh_tally_paths(monkeypatch):
         return kwargs.get("energy_group")
 
     monkeypatch.setattr(mt, "plot_mesh_tally", _pm)
-    out = mt.plot_multi_group_mesh_tally(mesh_mg, geometry=object(), backend="matplotlib")
+    out = mt.plot_multi_group_mesh_tally(
+        mesh_mg, geometry=object(), backend="matplotlib"
+    )
     assert out == [0, 1, 2, 3]
     assert calls == [0, 1, 2, 3]
 
@@ -573,6 +597,7 @@ def test_mesh_tally_import_fallbacks(monkeypatch):
     assert mod._PYVISTA_AVAILABLE is False
 
     import smrforge.visualization.mesh_tally as mt
+
     importlib.reload(mt)
 
 
@@ -589,4 +614,3 @@ def test_plot_multi_group_mesh_tally_plotly_requires_plotly(monkeypatch):
     monkeypatch.setattr(mt, "_PLOTLY_AVAILABLE", False)
     with pytest.raises(ImportError):
         mt.plot_multi_group_mesh_tally(mesh_mg, geometry=object(), backend="plotly")
-

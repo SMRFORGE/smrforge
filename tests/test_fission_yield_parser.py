@@ -2,15 +2,16 @@
 Tests for fission yield parser.
 """
 
-import pytest
 from pathlib import Path
 
-from smrforge.core.reactor_core import Nuclide
+import pytest
+
 from smrforge.core.fission_yield_parser import (
     ENDFFissionYieldParser,
     FissionYield,
     FissionYieldData,
 )
+from smrforge.core.reactor_core import Nuclide
 
 
 class TestFissionYieldData:
@@ -20,7 +21,7 @@ class TestFissionYieldData:
         """Test creating FissionYieldData."""
         u235 = Nuclide(Z=92, A=235)
         cs137 = Nuclide(Z=55, A=137)
-        
+
         yields = {
             cs137: FissionYield(
                 product=cs137,
@@ -43,7 +44,7 @@ class TestFissionYieldData:
         """Test getting yield for a product."""
         u235 = Nuclide(Z=92, A=235)
         cs137 = Nuclide(Z=55, A=137)
-        
+
         yields = {
             cs137: FissionYield(
                 product=cs137,
@@ -67,7 +68,7 @@ class TestFissionYieldData:
         u235 = Nuclide(Z=92, A=235)
         cs137 = Nuclide(Z=55, A=137)
         sr90 = Nuclide(Z=38, A=90)
-        
+
         yields = {
             cs137: FissionYield(
                 product=cs137,
@@ -105,7 +106,7 @@ class TestENDFFissionYieldParser:
     def test_parse_filename(self):
         """Test filename parsing."""
         parser = ENDFFissionYieldParser()
-        
+
         # Test standard format
         nuclide = parser._parse_filename("nfy-092_U_235.endf")
         assert nuclide is not None
@@ -132,7 +133,6 @@ class TestFissionYieldIntegration:
         cache = NuclearDataCache()
         u235 = Nuclide(Z=92, A=235)
         yield_data = get_fission_yield_data(u235, cache=cache)
-        
+
         # Should return None if files not available, or FissionYieldData if available
         assert yield_data is None or isinstance(yield_data, FissionYieldData)
-

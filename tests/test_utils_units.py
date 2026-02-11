@@ -4,8 +4,9 @@ Tests for smrforge.utils.units module.
 Pint is a required dependency; tests that need Pint run when it is installed.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import patch, Mock
 
 # Require Pint so Pint-using tests run (required dependency)
 pytest.importorskip("pint")
@@ -13,88 +14,100 @@ pytest.importorskip("pint")
 
 class TestUnitsModule:
     """Test units module."""
-    
+
     def test_pint_available_flag(self):
         """Test that _PINT_AVAILABLE flag exists."""
         from smrforge.utils import units
-        assert hasattr(units, '_PINT_AVAILABLE')
+
+        assert hasattr(units, "_PINT_AVAILABLE")
         assert isinstance(units._PINT_AVAILABLE, bool)
-    
+
     def test_get_ureg_with_pint(self):
         """Test get_ureg when Pint is available."""
         from smrforge.utils.units import get_ureg
+
         ureg = get_ureg()
         assert ureg is not None
         power = 10 * ureg.megawatt
         assert power.magnitude == 10
-    
+
     def test_get_ureg_without_pint(self):
         """Test get_ureg when Pint is not available."""
-        with patch('smrforge.utils.units._PINT_AVAILABLE', False):
+        with patch("smrforge.utils.units._PINT_AVAILABLE", False):
             from smrforge.utils.units import get_ureg
+
             with pytest.raises(ImportError, match="Pint is required"):
                 get_ureg()
-    
+
     def test_check_units_without_pint(self):
         """Test check_units when Pint is not available."""
-        with patch('smrforge.utils.units._PINT_AVAILABLE', False):
-            from smrforge.utils.units import check_units
+        with patch("smrforge.utils.units._PINT_AVAILABLE", False):
             import warnings
+
+            from smrforge.utils.units import check_units
+
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 result = check_units(10.0, "megawatt", "power")
                 assert result == 10.0
                 assert len(w) == 1
                 assert "Pint not installed" in str(w[0].message)
-    
+
     def test_check_units_with_pint(self):
         """Test check_units when Pint is available."""
         from smrforge.utils.units import check_units, get_ureg
+
         ureg = get_ureg()
         power = check_units(10.0, "megawatt", "power")
         assert power.magnitude == 10.0
         temp = 500 * ureg.kelvin
         checked_temp = check_units(temp, ureg.kelvin, "temperature")
         assert checked_temp.magnitude == 500.0
-    
+
     def test_convert_units_without_pint(self):
         """Test convert_units when Pint is not available."""
-        with patch('smrforge.utils.units._PINT_AVAILABLE', False):
+        with patch("smrforge.utils.units._PINT_AVAILABLE", False):
             from smrforge.utils.units import convert_units
+
             result = convert_units(10.0, "watt")
             assert result == 10.0
-    
+
     def test_convert_units_with_pint(self):
         """Test convert_units when Pint is available."""
         from smrforge.utils.units import convert_units, get_ureg
+
         ureg = get_ureg()
         power_mw = 10 * ureg.megawatt
         power_w = convert_units(power_mw, "watt")
         assert power_w == 10000000.0
-    
+
     def test_with_units_without_pint(self):
         """Test with_units when Pint is not available."""
-        with patch('smrforge.utils.units._PINT_AVAILABLE', False):
-            from smrforge.utils.units import with_units
+        with patch("smrforge.utils.units._PINT_AVAILABLE", False):
             import warnings
+
+            from smrforge.utils.units import with_units
+
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 result = with_units(10.0, "megawatt")
                 assert result == 10.0
                 assert len(w) == 1
                 assert "Pint not installed" in str(w[0].message)
-    
+
     def test_with_units_with_pint(self):
         """Test with_units when Pint is available."""
         from smrforge.utils.units import with_units
+
         power = with_units(10.0, "megawatt")
         assert hasattr(power, "magnitude")
         assert power.magnitude == 10.0
         assert str(power.units) == "megawatt"
-    
+
     def test_define_reactor_units(self):
         """Test define_reactor_units."""
         from smrforge.utils.units import define_reactor_units, get_ureg
+
         ureg = define_reactor_units()
         assert ureg is not None
         reactivity = 0.001 * ureg.dollar
@@ -221,10 +234,11 @@ class TestUnitsModule:
 
 class TestUnitsEdgeCases:
     """Edge case tests for units.py to improve coverage to 60%+."""
-    
+
     def test_check_units_quantity_with_string_unit(self):
         """Test check_units with Quantity and string expected_unit."""
         from smrforge.utils.units import check_units, get_ureg
+
         ureg = get_ureg()
         temp = 500 * ureg.kelvin
         checked = check_units(temp, "kelvin", "temperature")
@@ -233,6 +247,7 @@ class TestUnitsEdgeCases:
     def test_check_units_quantity_with_quantity_unit(self):
         """Test check_units with Quantity and Quantity expected_unit."""
         from smrforge.utils.units import check_units, get_ureg
+
         ureg = get_ureg()
         temp = 500 * ureg.kelvin
         checked = check_units(temp, ureg.kelvin, "temperature")
@@ -240,8 +255,10 @@ class TestUnitsEdgeCases:
 
     def test_check_units_quantity_wrong_dimension(self):
         """Test check_units with Quantity having wrong dimensions."""
-        from smrforge.utils.units import check_units, get_ureg
         from pint.errors import DimensionalityError
+
+        from smrforge.utils.units import check_units, get_ureg
+
         ureg = get_ureg()
         power = 10 * ureg.megawatt
         with pytest.raises(DimensionalityError):
@@ -250,12 +267,14 @@ class TestUnitsEdgeCases:
     def test_check_units_plain_number_with_string_unit(self):
         """Test check_units with plain number and string expected_unit."""
         from smrforge.utils.units import check_units
+
         result = check_units(10.0, "megawatt", "power")
         assert hasattr(result, "magnitude") or isinstance(result, float)
 
     def test_check_units_plain_number_with_quantity_unit(self):
         """Test check_units with plain number and Quantity expected_unit."""
         from smrforge.utils.units import check_units, get_ureg
+
         ureg = get_ureg()
         result = check_units(10.0, ureg.megawatt, "power")
         assert hasattr(result, "magnitude") or isinstance(result, float)
@@ -263,6 +282,7 @@ class TestUnitsEdgeCases:
     def test_convert_units_quantity_with_string_target(self):
         """Test convert_units with Quantity and string target_unit."""
         from smrforge.utils.units import convert_units, get_ureg
+
         ureg = get_ureg()
         power_mw = 10 * ureg.megawatt
         power_w = convert_units(power_mw, "watt")
@@ -271,6 +291,7 @@ class TestUnitsEdgeCases:
     def test_convert_units_quantity_with_quantity_target(self):
         """Test convert_units with Quantity and Quantity target_unit."""
         from smrforge.utils.units import convert_units, get_ureg
+
         ureg = get_ureg()
         power_mw = 10 * ureg.megawatt
         power_w = convert_units(power_mw, ureg.watt)
@@ -279,19 +300,22 @@ class TestUnitsEdgeCases:
     def test_convert_units_plain_number(self):
         """Test convert_units with plain number (no conversion)."""
         from smrforge.utils.units import convert_units
+
         result = convert_units(10.0, "watt")
         assert result == 10.0
 
     def test_with_units_string_unit(self):
         """Test with_units with string unit."""
         from smrforge.utils.units import with_units
+
         power = with_units(10.0, "megawatt")
         assert hasattr(power, "magnitude")
         assert power.magnitude == 10.0
 
     def test_with_units_quantity_unit(self):
         """Test with_units with Quantity unit."""
-        from smrforge.utils.units import with_units, get_ureg
+        from smrforge.utils.units import get_ureg, with_units
+
         ureg = get_ureg()
         power = with_units(10.0, ureg.megawatt)
         assert power.magnitude == 10.0
@@ -299,6 +323,7 @@ class TestUnitsEdgeCases:
     def test_get_ureg_singleton(self):
         """Test that get_ureg returns same instance (singleton)."""
         from smrforge.utils.units import get_ureg
+
         ureg1 = get_ureg()
         ureg2 = get_ureg()
         assert ureg1 is ureg2
@@ -306,6 +331,7 @@ class TestUnitsEdgeCases:
     def test_define_reactor_units_reactivity_units(self):
         """Test that reactor units (dollar, pcm) are defined."""
         from smrforge.utils.units import define_reactor_units
+
         ureg = define_reactor_units()
         reactivity_dollar = 0.001 * ureg.dollar
         assert reactivity_dollar.magnitude == 0.001

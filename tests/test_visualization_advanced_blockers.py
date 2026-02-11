@@ -169,11 +169,15 @@ def test_plot_slice_plotly_cylindrical_total_and_group(monkeypatch):
     fig_total = adv.plot_slice(data, geom, axis="z", position=5.0, backend="plotly")
     assert isinstance(fig_total, _DummyFigure)
 
-    fig_g1 = adv.plot_slice(data, geom, axis="r", position=1.0, backend="plotly", energy_group=1)
+    fig_g1 = adv.plot_slice(
+        data, geom, axis="r", position=1.0, backend="plotly", energy_group=1
+    )
     assert isinstance(fig_g1, _DummyFigure)
 
     with pytest.raises(IndexError):
-        adv.plot_slice(data, geom, axis="z", position=0.0, backend="plotly", energy_group=99)
+        adv.plot_slice(
+            data, geom, axis="z", position=0.0, backend="plotly", energy_group=99
+        )
 
 
 def test_plot_slice_plotly_cylindrical_2d_transpose(monkeypatch):
@@ -219,7 +223,14 @@ def test_plot_slice_plotly_cartesian_coord_validation(monkeypatch):
 
     data = np.zeros((2, 3, 4), dtype=float)
     with pytest.raises(ValueError, match="x_coords must be a 1D array of length"):
-        adv.plot_slice(data, geometry=object(), axis="z", position=0.0, backend="plotly", x_coords=[0.0, 1.0, 2.0])
+        adv.plot_slice(
+            data,
+            geometry=object(),
+            axis="z",
+            position=0.0,
+            backend="plotly",
+            x_coords=[0.0, 1.0, 2.0],
+        )
 
 
 def test_plot_isosurface_plotly(monkeypatch):
@@ -236,11 +247,15 @@ def test_plot_isosurface_plotly(monkeypatch):
     x = np.array([0.0, 1.0])
     y = np.array([0.0, 1.0])
     z = np.array([0.0, 1.0])
-    fig2 = adv.plot_isosurface(data, geometry=object(), isovalue=3.0, backend="plotly", x=x, y=y, z=z)
+    fig2 = adv.plot_isosurface(
+        data, geometry=object(), isovalue=3.0, backend="plotly", x=x, y=y, z=z
+    )
     assert isinstance(fig2, _DummyFigure)
 
     with pytest.raises(ValueError, match="isovalue must be finite"):
-        adv.plot_isosurface(data, geometry=object(), isovalue=float("nan"), backend="plotly")
+        adv.plot_isosurface(
+            data, geometry=object(), isovalue=float("nan"), backend="plotly"
+        )
 
 
 def test_plot_isosurface_pyvista(monkeypatch):
@@ -250,7 +265,9 @@ def test_plot_isosurface_pyvista(monkeypatch):
     monkeypatch.setattr(adv, "pv", _DummyPv)
 
     data = np.arange(8, dtype=float).reshape(2, 2, 2)
-    plotter = adv.plot_isosurface(data, geometry=object(), isovalue=3.0, backend="pyvista")
+    plotter = adv.plot_isosurface(
+        data, geometry=object(), isovalue=3.0, backend="pyvista"
+    )
     assert isinstance(plotter, _DummyPv.Plotter)
     assert plotter.show_axes_called is True
 
@@ -268,7 +285,9 @@ def test_plot_vector_field_plotly_and_pyvista(monkeypatch):
 
     monkeypatch.setattr(adv, "_PYVISTA_AVAILABLE", True)
     monkeypatch.setattr(adv, "pv", _DummyPv)
-    plotter = adv.plot_vector_field(vectors, positions, geometry=object(), backend="pyvista")
+    plotter = adv.plot_vector_field(
+        vectors, positions, geometry=object(), backend="pyvista"
+    )
     assert isinstance(plotter, _DummyPv.Plotter)
 
 
@@ -278,7 +297,11 @@ def test_plot_material_boundaries_plotly(monkeypatch):
     monkeypatch.setattr(adv, "_PLOTLY_AVAILABLE", True)
     monkeypatch.setattr(adv, "go", _DummyGo)
 
-    geom = type("G", (), {"blocks": [_Block(1, material="fuel"), _Block(2, material="moderator")]})()
+    geom = type(
+        "G",
+        (),
+        {"blocks": [_Block(1, material="fuel"), _Block(2, material="moderator")]},
+    )()
     fig = adv.plot_material_boundaries(geom, backend="plotly")
     assert isinstance(fig, _DummyFigure)
 
@@ -349,11 +372,12 @@ def test_create_interactive_viewer_plotly_and_pyvista(monkeypatch):
 
     monkeypatch.setattr(adv, "_PLOTLY_AVAILABLE", True)
     monkeypatch.setattr(adv, "go", _DummyGo)
-    fig = adv.create_interactive_viewer(type("G", (), {"blocks": [_Block(1)]})(), backend="plotly")
+    fig = adv.create_interactive_viewer(
+        type("G", (), {"blocks": [_Block(1)]})(), backend="plotly"
+    )
     assert isinstance(fig, _DummyFigure)
 
     monkeypatch.setattr(adv, "_PYVISTA_AVAILABLE", True)
     monkeypatch.setattr(adv, "pv", _DummyPv)
     viewer = adv.create_interactive_viewer(object(), backend="pyvista")
     assert isinstance(viewer, _DummyPv.Plotter)
-

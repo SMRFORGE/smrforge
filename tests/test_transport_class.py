@@ -7,15 +7,15 @@ import pytest
 
 try:
     from smrforge.neutronics.transport import (
+        CrossSection,
         Cylinder,
+        FluxTally,
         Material,
         Neutron,
         Region,
         Sphere,
         Tally,
         Transport,
-        CrossSection,
-        FluxTally,
     )
 except ImportError:
     pytest.skip("Transport module not available", allow_module_level=True)
@@ -232,4 +232,3 @@ class TestTransportMethods:
 
         transport.run_batch(n_histories=5)
         assert transport.n_collisions >= 0
-

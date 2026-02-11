@@ -82,7 +82,10 @@ class TestEdgeCases:
     def test_track_particle_boundary_crossing(self, geometry_edge, xs_data_edge):
         """Test tracking particle that crosses boundary before collision."""
         solver = MonteCarloSolver(
-            geometry=geometry_edge, xs_data=xs_data_edge, n_particles=10, n_generations=5
+            geometry=geometry_edge,
+            xs_data=xs_data_edge,
+            n_particles=10,
+            n_generations=5,
         )
 
         # Create particle near boundary moving outward
@@ -116,7 +119,11 @@ class TestEdgeCases:
         """Test run_eigenvalue with tallies to cover tally update code."""
         # Need at least 20 generations to have active generations after inactive period
         solver = MonteCarloSolver(
-            geometry=geometry_edge, xs_data=xs_data_edge, n_particles=10, n_generations=20, seed=42
+            geometry=geometry_edge,
+            xs_data=xs_data_edge,
+            n_particles=10,
+            n_generations=20,
+            seed=42,
         )
 
         from smrforge.neutronics.monte_carlo import MCTally
@@ -160,4 +167,3 @@ class TestEdgeCases:
 
         xs_large = solver._get_total_xs(mat_id=100, energy=2e6)
         assert xs_large == 0.0
-

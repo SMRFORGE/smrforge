@@ -27,7 +27,10 @@ except ImportError:  # pragma: no cover
     _PLOTLY_AVAILABLE = False
     go = None  # type: ignore
 
-from smrforge.visualization._viz_common import ensure_matplotlib_available, ensure_plotly_available
+from smrforge.visualization._viz_common import (
+    ensure_matplotlib_available,
+    ensure_plotly_available,
+)
 
 
 def plot_capex_breakdown(
@@ -46,7 +49,11 @@ def plot_capex_breakdown(
         raise ValueError("breakdown must be a non-empty dict")
 
     total_key = "total_overnight_cost"
-    total = float(breakdown.get(total_key, sum(v for v in breakdown.values() if isinstance(v, (int, float)))))
+    total = float(
+        breakdown.get(
+            total_key, sum(v for v in breakdown.values() if isinstance(v, (int, float)))
+        )
+    )
 
     items = [(k, float(v)) for k, v in breakdown.items() if k != total_key]
     items = [(k, v) for k, v in items if v != 0.0]
@@ -71,8 +78,12 @@ def plot_capex_breakdown(
             fig.update_layout(title=plot_title, yaxis_title="USD")
             return fig
         if kind == "bar":
-            fig = go.Figure(data=go.Bar(x=values[::-1], y=labels[::-1], orientation="h"))
-            fig.update_layout(title=plot_title, xaxis_title="USD", yaxis_title="component")
+            fig = go.Figure(
+                data=go.Bar(x=values[::-1], y=labels[::-1], orientation="h")
+            )
+            fig.update_layout(
+                title=plot_title, xaxis_title="USD", yaxis_title="component"
+            )
             return fig
         raise ValueError("kind must be 'waterfall' or 'bar'")
 
@@ -154,4 +165,3 @@ __all__ = [
     "plot_capex_breakdown",
     "plot_lcoe_breakdown",
 ]
-

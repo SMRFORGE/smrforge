@@ -4,12 +4,6 @@ High-level convenience API.
 This package provides simplified "one-liner" entry points for common SMRForge
 tasks (reactor creation, quick k-eff, etc.) as well as optional transient
 helpers.
-
-Why this lives in a package:
-- The repository also contains a legacy `smrforge/convenience.py` file that is
-  used in a few coverage-focused tests via direct file loading.
-- Python prefers packages over modules for `import smrforge.convenience`, so the
-  public API must be implemented here.
 """
 
 from __future__ import annotations
@@ -61,6 +55,7 @@ except ImportError:
     class MicroHTGR:  # type: ignore[no-redef]
         pass
 
+
 # LWR presets (optional). These are registered in the design library when
 # available, so `create_reactor("<preset>")` must support them too.
 try:
@@ -95,7 +90,9 @@ def _get_library() -> DesignLibrary:
     """Lazy-load the preset design library."""
     global _design_library
     if not _PRESETS_AVAILABLE:
-        raise ImportError("Preset designs not available. Install required dependencies.")
+        raise ImportError(
+            "Preset designs not available. Install required dependencies."
+        )
     if _design_library is None:
         _design_library = DesignLibrary()
     return _design_library
@@ -229,7 +226,9 @@ def get_design_point(reactor: "SimpleReactor") -> Dict[str, float]:
     """Steady-state design point summary (power_thermal_mw, k_eff, power densities, etc.)."""
     results = reactor.solve()
     point: Dict[str, float] = {
-        "power_thermal_mw": results.get("power_thermal_mw", getattr(reactor.spec, "power_thermal", 0) / 1e6),
+        "power_thermal_mw": results.get(
+            "power_thermal_mw", getattr(reactor.spec, "power_thermal", 0) / 1e6
+        ),
         "k_eff": float(results.get("k_eff", 0.0)),
     }
     if "power_distribution" in results:
@@ -268,7 +267,9 @@ def save_variant(
 # checks to succeed after reload. Make the reloaded class a subclass of the prior
 # class (when present) to preserve `isinstance` behavior.
 _PreviousSimpleReactor = globals().get("SimpleReactor")
-_SimpleReactorBase = _PreviousSimpleReactor if isinstance(_PreviousSimpleReactor, type) else object
+_SimpleReactorBase = (
+    _PreviousSimpleReactor if isinstance(_PreviousSimpleReactor, type) else object
+)
 
 
 class SimpleReactor(_SimpleReactorBase):
@@ -297,7 +298,9 @@ class SimpleReactor(_SimpleReactorBase):
             "fuel_type": fuel_type,
             "inlet_temperature": kwargs.get("inlet_temperature", 823.15),  # 550°C
             "outlet_temperature": kwargs.get("outlet_temperature", 1023.15),  # 750°C
-            "max_fuel_temperature": kwargs.get("max_fuel_temperature", 1873.15),  # 1600°C
+            "max_fuel_temperature": kwargs.get(
+                "max_fuel_temperature", 1873.15
+            ),  # 1600°C
             "primary_pressure": kwargs.get("primary_pressure", 7.0e6),
             "reflector_thickness": kwargs.get("reflector_thickness", 30.0),
             "heavy_metal_loading": estimated_hm_loading,
@@ -375,7 +378,9 @@ class SimpleReactor(_SimpleReactorBase):
     def _get_solver(self) -> MultiGroupDiffusion:
         if self._solver is None:
             options = SolverOptions(max_iterations=1000, tolerance=1e-6, verbose=False)
-            self._solver = MultiGroupDiffusion(self._get_core(), self._get_xs_data(), options)
+            self._solver = MultiGroupDiffusion(
+                self._get_core(), self._get_xs_data(), options
+            )
         return self._solver
 
     def solve_keff(self) -> float:

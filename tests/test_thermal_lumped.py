@@ -2,9 +2,10 @@
 Tests for lumped-parameter thermal-hydraulics.
 """
 
+from unittest.mock import patch
+
 import numpy as np
 import pytest
-from unittest.mock import patch
 
 
 class TestThermalLump:

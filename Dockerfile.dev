@@ -6,6 +6,7 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
+# - Convenience API consolidated: Legacy smrforge/convenience.py removed; all in smrforge/convenience/ package. No API changes.
 # - Stable API (smrforge.api), AI audit (smrforge.ai), ML export (export_ml_dataset)
 # - Serpent round-trip (Community): run_serpent, parse_res_file, run_and_parse in smrforge.io.serpent_run.
 # - OpenMC integration (Community): Full export/import, subprocess runner, statepoint HDF5 parsing. See examples/openmc_export_example.py.
@@ -76,7 +77,7 @@
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
 # - Fixed dashboard preset loading and validation issues
-# - Fixed create_reactor and list_presets import resolution (convenience module conflict)
+# - Convenience API: create_reactor, list_presets from smrforge.convenience package (consolidated Feb 2026)
 # - Fixed dashboard State component initialization (all analysis options always in layout)
 # - Fixed LumpedThermalHydraulics parameter passing (adaptive/max_step moved to solve_transient)
 # - Improved validation warning messages (show actual validation details)

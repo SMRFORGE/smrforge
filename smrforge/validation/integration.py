@@ -18,29 +18,31 @@ from .validators import (
 )
 
 
-def validate_inputs(**validators: Callable[[Any], ValidationResult]) -> Callable[[Callable], Callable]:
+def validate_inputs(
+    **validators: Callable[[Any], ValidationResult],
+) -> Callable[[Callable], Callable]:
     """
     Decorator to validate function inputs automatically.
-    
+
     Applies validation functions to function arguments before the function
     is called. Raises ValueError if validation fails, or issues warnings
     for validation issues at the WARNING level.
-    
+
     Args:
         **validators: Keyword arguments mapping parameter names to validation
             functions. Each validator function should take the parameter value
             and return a ValidationResult object.
-    
+
     Returns:
         Decorated function with input validation enabled.
-    
+
     Raises:
         ValueError: If any parameter fails validation (ERROR or CRITICAL level).
         UserWarning: If any parameter has validation warnings (WARNING level).
-    
+
     Example:
         >>> from smrforge.validation.validators import PhysicalValidator
-        >>> 
+        >>>
         >>> @validate_inputs(
         ...     temperature=lambda T: PhysicalValidator.validate_temperature(T, min_T=273, max_T=3000),
         ...     pressure=lambda P: PhysicalValidator.validate_pressure(P, min_P=1e5, max_P=10e6)
@@ -48,10 +50,10 @@ def validate_inputs(**validators: Callable[[Any], ValidationResult]) -> Callable
         ... def calculate_density(temperature, pressure):
         ...     R = 2077.0  # Helium specific gas constant
         ...     return pressure / (R * temperature)
-        >>> 
+        >>>
         >>> # Valid call
         >>> rho = calculate_density(1000.0, 7e6)  # Returns density
-        >>> 
+        >>>
         >>> # Invalid call - raises ValueError
         >>> rho = calculate_density(-100.0, 7e6)  # Raises ValueError: temperature < min_T
     """
@@ -99,40 +101,42 @@ def validate_inputs(**validators: Callable[[Any], ValidationResult]) -> Callable
     return decorator
 
 
-def validate_outputs(**validators: Callable[[Any], ValidationResult]) -> Callable[[Callable], Callable]:
+def validate_outputs(
+    **validators: Callable[[Any], ValidationResult],
+) -> Callable[[Callable], Callable]:
     """
     Decorator to validate function outputs automatically.
-    
+
     Applies validation functions to function return values after the function
     executes. Supports dictionary returns (validate by key) and tuple returns
     (validate by position). Raises ValueError if validation fails.
-    
+
     Args:
         **validators: Keyword arguments mapping output names to validation
             functions. For dictionary returns, keys should match dictionary keys.
             For tuple returns, validators are applied in order.
             Each validator function should take the output value and return a
             ValidationResult object.
-    
+
     Returns:
         Decorated function with output validation enabled.
-    
+
     Raises:
         ValueError: If any output fails validation (ERROR or CRITICAL level).
-    
+
     Example:
         >>> from smrforge.validation.validators import PhysicalValidator
-        >>> 
+        >>>
         >>> @validate_outputs(
         ...     k_eff=lambda k: PhysicalValidator.validate_k_eff(k),
         ...     flux=lambda f: PhysicalValidator.validate_flux(f)
         ... )
         ... def solve_eigenvalue():
         ...     return {'k_eff': 1.05, 'flux': np.array([1e13, 2e13, ...])}
-        >>> 
+        >>>
         >>> # Valid output
         >>> result = solve_eigenvalue()  # Returns validated result
-        >>> 
+        >>>
         >>> # Invalid output - raises ValueError
         >>> @validate_outputs(k_eff=lambda k: PhysicalValidator.validate_k_eff(k))
         ... def bad_solver():
@@ -184,11 +188,11 @@ def validate_array(
 ) -> ValidationResult:
     """
     Validate numpy array properties.
-    
+
     Performs comprehensive validation checks on a NumPy array including
     type checking, emptiness, NaN/Inf detection, sign constraints, and
     value range constraints. Returns a ValidationResult with any issues found.
-    
+
     Args:
         arr: NumPy array to validate.
         name: Name of the array (used in error messages). Defaults to "array".
@@ -197,11 +201,11 @@ def validate_array(
         allow_inf: If False, raises error if any values are infinite.
         min_val: Optional minimum allowed value. Raises error if any value < min_val.
         max_val: Optional maximum allowed value. Raises error if any value > max_val.
-    
+
     Returns:
         ValidationResult object with valid=True if all checks pass, or
         valid=False with issues list if problems are found.
-    
+
     Example:
         >>> flux = np.array([1e13, 2e13, 1.5e13, 1.2e13, 8e12])
         >>> result = validate_array(
@@ -270,17 +274,17 @@ def validate_array(
 class ValidatedClass:
     """
     Base class for classes that need automatic validation.
-    
+
     Provides a framework for classes that require validation of their state.
     Subclasses should override the _validate() method to implement custom
     validation logic. Validation can be enabled/disabled and run manually
     or automatically (e.g., on object construction).
-    
+
     Attributes:
         _validation_enabled: Boolean flag controlling whether validation
             is active (can be toggled with enable_validation/disable_validation).
         _last_validation: Most recent ValidationResult from validate() call.
-    
+
     Example:
         >>> class ValidatedReactor(ValidatedClass):
         ...     def __init__(self, power, temperature):
@@ -289,7 +293,7 @@ class ValidatedClass:
         ...         self.temperature = temperature
         ...         if self._validation_enabled:
         ...             self.validate()
-        ...     
+        ...
         ...     def _validate(self) -> ValidationResult:
         ...         result = ValidationResult(valid=True)
         ...         if self.power < 0:
@@ -302,7 +306,7 @@ class ValidatedClass:
     def __init__(self):
         """
         Initialize validated class.
-        
+
         Sets up validation infrastructure with validation enabled by default.
         """
         self._validation_enabled = True
@@ -311,10 +315,10 @@ class ValidatedClass:
     def _validate(self) -> ValidationResult:
         """
         Override this method to define validation rules.
-        
+
         Subclasses should implement this method to perform validation checks
         on the object's state. This method is called by validate().
-        
+
         Returns:
             ValidationResult object indicating whether validation passed
             and listing any issues found.
@@ -324,21 +328,21 @@ class ValidatedClass:
     def validate(self, raise_on_error: bool = True) -> ValidationResult:
         """
         Run validation checks on the object.
-        
+
         Calls _validate() to perform validation and stores the result.
         Optionally raises ValueError if validation fails.
-        
+
         Args:
             raise_on_error: If True, raises ValueError if validation fails
                 (has errors at ERROR or CRITICAL level). If False, returns
                 result without raising.
-        
+
         Returns:
             ValidationResult object with validation status and any issues.
-        
+
         Raises:
             ValueError: If raise_on_error=True and validation fails.
-        
+
         Example:
             >>> obj = ValidatedClass()
             >>> result = obj.validate(raise_on_error=False)
@@ -356,11 +360,11 @@ class ValidatedClass:
     def disable_validation(self):
         """
         Disable automatic validation (use with caution!).
-        
+
         Turns off validation checks. Useful for performance-critical code
         or when constructing objects in a temporary invalid state that will
         be corrected before use.
-        
+
         Warning:
             Disabling validation can lead to runtime errors if invalid data
             is used. Only disable when absolutely necessary and re-enable
@@ -371,7 +375,7 @@ class ValidatedClass:
     def enable_validation(self):
         """
         Re-enable automatic validation.
-        
+
         Turns validation checks back on after disable_validation() has been
         called. Validation will be active for subsequent validate() calls.
         """
@@ -418,16 +422,16 @@ class ValidatedSolver(ValidatedClass):
     def solve_with_validation(self) -> tuple[float, np.ndarray, np.ndarray]:
         """
         Solve with automatic output validation.
-        
+
         Runs the internal solver and validates the results before returning.
         If validation is enabled and errors are found, raises ValueError.
-        
+
         Returns:
             Tuple containing:
                 - k_eff (float): Effective multiplication factor
                 - flux (np.ndarray): Neutron flux distribution
                 - power (np.ndarray): Power distribution
-        
+
         Raises:
             ValueError: If solution validation fails and validation is enabled.
         """
@@ -451,14 +455,14 @@ class ValidatedSolver(ValidatedClass):
 def check_positive(value: float, name: str = "value") -> None:
     """
     Check that a value is positive.
-    
+
     Args:
         value: The value to check.
         name: Name of the value (used in error message). Defaults to "value".
-    
+
     Raises:
         ValueError: If value is less than or equal to zero.
-    
+
     Example:
         >>> check_positive(5.0, "power")
         >>> check_positive(-1.0, "power")  # Raises ValueError
@@ -467,19 +471,21 @@ def check_positive(value: float, name: str = "value") -> None:
         raise ValueError(f"{name} must be positive, got {value}")
 
 
-def check_range(value: float, min_val: float, max_val: float, name: str = "value") -> None:
+def check_range(
+    value: float, min_val: float, max_val: float, name: str = "value"
+) -> None:
     """
     Check that a value is within a specified range.
-    
+
     Args:
         value: The value to check.
         min_val: Minimum allowed value (inclusive).
         max_val: Maximum allowed value (inclusive).
         name: Name of the value (used in error message). Defaults to "value".
-    
+
     Raises:
         ValueError: If value is outside the range [min_val, max_val].
-    
+
     Example:
         >>> check_range(0.5, 0.0, 1.0, "enrichment")
         >>> check_range(1.5, 0.0, 1.0, "enrichment")  # Raises ValueError
@@ -488,20 +494,22 @@ def check_range(value: float, min_val: float, max_val: float, name: str = "value
         raise ValueError(f"{name} must be in [{min_val}, {max_val}], got {value}")
 
 
-def check_normalized(arr: np.ndarray, tolerance: float = 1e-6, name: str = "array") -> None:
+def check_normalized(
+    arr: np.ndarray, tolerance: float = 1e-6, name: str = "array"
+) -> None:
     """
     Check that an array sums to 1.0 (within tolerance).
-    
+
     Useful for validating probability distributions, energy spectra, etc.
-    
+
     Args:
         arr: NumPy array to check.
         tolerance: Allowed deviation from 1.0. Defaults to 1e-6.
         name: Name of the array (used in error message). Defaults to "array".
-    
+
     Raises:
         ValueError: If array sum is not within tolerance of 1.0.
-    
+
     Example:
         >>> chi = np.array([0.6, 0.3, 0.08, 0.015, 0.004, 0.001])
         >>> check_normalized(chi, name="fission_spectrum")
@@ -516,18 +524,18 @@ def check_normalized(arr: np.ndarray, tolerance: float = 1e-6, name: str = "arra
 def check_physical_temperature(T: float, name: str = "temperature") -> None:
     """
     Check that a temperature is physically reasonable.
-    
+
     Validates that temperature is:
     - Above absolute zero (> 0 K)
     - Below reasonable upper limit (<= 4000 K)
-    
+
     Args:
         T: Temperature in Kelvin.
         name: Name of the temperature (used in error message). Defaults to "temperature".
-    
+
     Raises:
         ValueError: If temperature is invalid.
-    
+
     Example:
         >>> check_physical_temperature(1200.0, "core_temperature")
         >>> check_physical_temperature(-100.0, "temperature")  # Raises ValueError
@@ -543,11 +551,11 @@ def check_physical_temperature(T: float, name: str = "temperature") -> None:
 class ValidationContext:
     """
     Context manager to temporarily disable validation.
-    
+
     Allows temporarily disabling validation on a ValidatedClass instance,
     useful for performance-critical code or constructing objects in temporary
     invalid states that will be corrected before use.
-    
+
     Example:
         >>> obj = ValidatedReactor(power=1000.0, temp=800.0)
         >>> with ValidationContext(obj):
@@ -559,7 +567,7 @@ class ValidationContext:
     def __init__(self, obj: ValidatedClass) -> None:
         """
         Initialize validation context manager.
-        
+
         Args:
             obj: ValidatedClass instance to manage validation for.
         """
@@ -569,7 +577,7 @@ class ValidationContext:
     def __enter__(self) -> ValidatedClass:
         """
         Enter context and disable validation.
-        
+
         Returns:
             The ValidatedClass instance with validation disabled.
         """
@@ -578,14 +586,14 @@ class ValidationContext:
         return self.obj
 
     def __exit__(
-        self, 
-        exc_type: Optional[type[BaseException]], 
-        exc_val: Optional[BaseException], 
-        exc_tb: Optional[Any]
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[Any],
     ) -> None:
         """
         Exit context and restore validation state.
-        
+
         Args:
             exc_type: Exception type if exception occurred.
             exc_val: Exception value if exception occurred.

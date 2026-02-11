@@ -12,9 +12,10 @@ Classes:
     OutputWriter: Output file writers (JSON, CSV, YAML)
     SerpentConverter: Serpent format converter
     OpenMCConverter: OpenMC format converter
+    MCNPConverter: MCNP format converter
 """
 
-from smrforge.io.converters import OpenMCConverter, SerpentConverter
+from smrforge.io.converters import MCNPConverter, OpenMCConverter, SerpentConverter
 from smrforge.io.readers import InputReader, OutputWriter
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "OutputWriter",
     "SerpentConverter",
     "OpenMCConverter",
+    "MCNPConverter",
     "run_serpent",
     "parse_serpent_res",
 ]

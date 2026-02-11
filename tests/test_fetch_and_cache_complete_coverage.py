@@ -20,20 +20,22 @@ This test suite fills remaining coverage gaps:
    - Array creation failures at different stages
 """
 
-import numpy as np
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import numpy as np
+import pytest
 
 # Check if pytest-asyncio is available
 try:
     import pytest_asyncio
+
     ASYNC_AVAILABLE = True
 except ImportError:
     ASYNC_AVAILABLE = False
 
-from smrforge.core.reactor_core import NuclearDataCache, Nuclide, Library
+from smrforge.core.reactor_core import Library, NuclearDataCache, Nuclide
 
 
 @pytest.fixture
@@ -94,7 +96,9 @@ class TestFetchAndCacheMissingDataScenarios:
                     with patch.object(
                         cache, "_simple_endf_parse", return_value=(None, None)
                     ):
-                        with pytest.raises(ImportError, match="No suitable backend available"):
+                        with pytest.raises(
+                            ImportError, match="No suitable backend available"
+                        ):
                             cache._fetch_and_cache(
                                 u235, "total", 293.6, Library.ENDF_B_VIII, key
                             )
@@ -126,8 +130,14 @@ class TestFetchAndCacheMissingDataScenarios:
         # Return MF=3 with other reactions but not the requested one (MT=18 missing)
         mock_parser.parsefile.return_value = {
             3: {
-                1: {"E": np.array([1e5]), "XS": np.array([10.0])},  # MT=1 (total) exists
-                2: {"E": np.array([1e5]), "XS": np.array([8.0])},  # MT=2 (elastic) exists
+                1: {
+                    "E": np.array([1e5]),
+                    "XS": np.array([10.0]),
+                },  # MT=1 (total) exists
+                2: {
+                    "E": np.array([1e5]),
+                    "XS": np.array([8.0]),
+                },  # MT=2 (elastic) exists
                 # MT=18 (fission) is missing
             }
         }
@@ -200,9 +210,7 @@ class TestFetchAndCacheMissingDataScenarios:
 
         mock_parser = Mock()
         mock_parser.parsefile.return_value = {
-            3: {
-                1: {"invalid": "data"}  # Data that _extract_mf3_data can't parse
-            }
+            3: {1: {"invalid": "data"}}  # Data that _extract_mf3_data can't parse
         }
 
         cache._get_parser = Mock(return_value=mock_parser)
@@ -242,7 +250,9 @@ class TestFetchAndCacheMissingDataScenarios:
                         elif "sandy" in sys.modules:
                             del sys.modules["sandy"]
                         if original_endf_parser:
-                            sys.modules["smrforge.core.endf_parser"] = original_endf_parser
+                            sys.modules["smrforge.core.endf_parser"] = (
+                                original_endf_parser
+                            )
                         elif "smrforge.core.endf_parser" in sys.modules:
                             del sys.modules["smrforge.core.endf_parser"]
         finally:
@@ -262,9 +272,7 @@ class TestFetchAndCacheMissingDataScenarios:
 
         mock_parser = Mock()
         mock_parser.parsefile.return_value = {
-            3: {
-                1: {"E": np.array([]), "XS": np.array([])}  # Empty arrays
-            }
+            3: {1: {"E": np.array([]), "XS": np.array([])}}  # Empty arrays
         }
 
         cache._get_parser = Mock(return_value=mock_parser)
@@ -471,9 +479,7 @@ class TestFetchAndCacheAsyncMissingDataScenarios:
         key = f"{Library.ENDF_B_VIII.value}/{u235.name}/total/293.6K"
 
         mock_parser = Mock()
-        mock_parser.parsefile.return_value = {
-            1: {"Z": 92, "A": 235}  # No MF=3
-        }
+        mock_parser.parsefile.return_value = {1: {"Z": 92, "A": 235}}  # No MF=3
 
         cache._get_parser = Mock(return_value=mock_parser)
 
@@ -484,7 +490,10 @@ class TestFetchAndCacheAsyncMissingDataScenarios:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 # Block other backends
                 original_sandy = sys.modules.get("sandy")
@@ -526,9 +535,7 @@ class TestFetchAndCacheAsyncMissingDataScenarios:
         key = f"{Library.ENDF_B_VIII.value}/{u235.name}/total/293.6K"
 
         mock_parser = Mock()
-        mock_parser.parsefile.return_value = {
-            3: {1: {"invalid": "data"}}
-        }
+        mock_parser.parsefile.return_value = {3: {1: {"invalid": "data"}}}
 
         cache._get_parser = Mock(return_value=mock_parser)
 
@@ -539,7 +546,10 @@ class TestFetchAndCacheAsyncMissingDataScenarios:
 
         try:
             with patch.object(
-                cache, "_ensure_endf_file_async", new_callable=AsyncMock, return_value=real_mock_endf_u235
+                cache,
+                "_ensure_endf_file_async",
+                new_callable=AsyncMock,
+                return_value=real_mock_endf_u235,
             ):
                 with patch.object(
                     cache, "_extract_mf3_data", return_value=(None, None)
@@ -564,7 +574,9 @@ class TestFetchAndCacheAsyncMissingDataScenarios:
                         elif "sandy" in sys.modules:
                             del sys.modules["sandy"]
                         if original_endf_parser:
-                            sys.modules["smrforge.core.endf_parser"] = original_endf_parser
+                            sys.modules["smrforge.core.endf_parser"] = (
+                                original_endf_parser
+                            )
                         elif "smrforge.core.endf_parser" in sys.modules:
                             del sys.modules["smrforge.core.endf_parser"]
         finally:

@@ -12,13 +12,14 @@ Covers:
 """
 
 import types
-import numpy as np
-import pytest
 from unittest.mock import Mock, patch
 
-from smrforge.decay_heat import DecayHeatCalculator, DecayHeatResult
-from smrforge.core.reactor_core import Nuclide, NuclearDataCache
+import numpy as np
+import pytest
+
 from smrforge.core.decay_parser import DecayData, GammaSpectrum
+from smrforge.core.reactor_core import NuclearDataCache, Nuclide
+from smrforge.decay_heat import DecayHeatCalculator, DecayHeatResult
 
 
 def test_get_decay_heat_at_time_idx_beyond_last():
@@ -184,9 +185,7 @@ def test_get_gamma_energy_per_decay_fission_spectrum_path():
         total_yield=1.0,
         prompt=True,
     )
-    mock_gamma_prod = types.SimpleNamespace(
-        prompt_spectra={"fission": fission_spec}
-    )
+    mock_gamma_prod = types.SimpleNamespace(prompt_spectra={"fission": fission_spec})
     mock_cache = Mock(spec=NuclearDataCache)
     mock_cache.get_gamma_production_data.return_value = mock_gamma_prod
     u235 = Nuclide(Z=92, A=235)
@@ -269,9 +268,7 @@ def test_calculate_gamma_source_n0_zero_continue():
 
     calc = DecayHeatCalculator(cache=mock_cache)
     with patch.object(calc, "_get_decay_data", return_value=decay_data):
-        gamma_source = calc.calculate_gamma_source(
-            concentrations, times, energy_groups
-        )
+        gamma_source = calc.calculate_gamma_source(concentrations, times, energy_groups)
     assert gamma_source.shape == (2, 4)
     assert np.any(gamma_source > 0)  # u235 contributes; cs137 skipped
 
@@ -300,9 +297,7 @@ def test_calculate_gamma_source_lambda_decay_zero_continue():
 
     calc = DecayHeatCalculator(cache=mock_cache)
     with patch.object(calc, "_get_decay_data", side_effect=get_decay_data):
-        gamma_source = calc.calculate_gamma_source(
-            concentrations, times, energy_groups
-        )
+        gamma_source = calc.calculate_gamma_source(concentrations, times, energy_groups)
     assert gamma_source.shape == (2, 4)
     assert np.any(gamma_source > 0)
 
@@ -330,9 +325,7 @@ def test_calculate_gamma_source_decay_info_none_continue():
 
     calc = DecayHeatCalculator(cache=mock_cache)
     with patch.object(calc, "_get_decay_data", side_effect=get_decay_data):
-        gamma_source = calc.calculate_gamma_source(
-            concentrations, times, energy_groups
-        )
+        gamma_source = calc.calculate_gamma_source(concentrations, times, energy_groups)
     assert gamma_source.shape == (2, 4)
     assert np.any(gamma_source > 0)  # u235 contributes
 
@@ -349,9 +342,7 @@ def test_calculate_gamma_source_fission_spectrum_path():
         total_yield=1.0,
         prompt=True,
     )
-    mock_gamma_prod = types.SimpleNamespace(
-        prompt_spectra={"fission": fission_spec}
-    )
+    mock_gamma_prod = types.SimpleNamespace(prompt_spectra={"fission": fission_spec})
     mock_cache = Mock(spec=NuclearDataCache)
     mock_cache.get_gamma_production_data.return_value = mock_gamma_prod
 
@@ -367,9 +358,7 @@ def test_calculate_gamma_source_fission_spectrum_path():
     energy_groups = np.array([0.1, 0.5, 1.0, 1.5, 2.0])
 
     with patch.object(calc, "_get_decay_data", return_value=decay_data):
-        gamma_source = calc.calculate_gamma_source(
-            concentrations, times, energy_groups
-        )
+        gamma_source = calc.calculate_gamma_source(concentrations, times, energy_groups)
     assert gamma_source.shape == (2, 4)
     assert np.any(gamma_source > 0)
 
@@ -400,9 +389,7 @@ def test_calculate_gamma_source_get_gamma_production_exception_pass():
 
     calc = DecayHeatCalculator(cache=RaisingCache())
     with patch.object(calc, "_get_decay_data", return_value=decay_data):
-        gamma_source = calc.calculate_gamma_source(
-            concentrations, times, energy_groups
-        )
+        gamma_source = calc.calculate_gamma_source(concentrations, times, energy_groups)
     assert gamma_source.shape == (2, 4)
     assert np.any(gamma_source > 0)
 
@@ -425,8 +412,6 @@ def test_calculate_gamma_source_gamma_yield_zero_default():
 
     calc = DecayHeatCalculator(cache=mock_cache)
     with patch.object(calc, "_get_decay_data", return_value=decay_data):
-        gamma_source = calc.calculate_gamma_source(
-            concentrations, times, energy_groups
-        )
+        gamma_source = calc.calculate_gamma_source(concentrations, times, energy_groups)
     assert gamma_source.shape == (2, 4)
     assert np.any(gamma_source > 0)

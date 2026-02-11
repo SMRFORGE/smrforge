@@ -208,7 +208,9 @@ class TestGeometryImporter:
 """
         xml_file.write_text(xml_content)
 
-        with pytest.raises(NotImplementedError, match="Could not extract core dimensions"):
+        with pytest.raises(
+            NotImplementedError, match="Could not extract core dimensions"
+        ):
             GeometryImporter.from_openmc_xml(xml_file)
 
     def test_from_openmc_xml_invalid_xml(self, temp_dir):
@@ -263,11 +265,12 @@ surf 1 px 0.0
 """
         serpent_file.write_text(serpent_content)
 
-        with pytest.raises(NotImplementedError, match="Could not extract core dimensions"):
+        with pytest.raises(
+            NotImplementedError, match="Could not extract core dimensions"
+        ):
             GeometryImporter.from_serpent(serpent_file)
 
     def test_from_serpent_file_not_found(self):
         """Test Serpent import with non-existent file."""
         with pytest.raises(FileNotFoundError):
             GeometryImporter.from_serpent(Path("nonexistent.inp"))
-

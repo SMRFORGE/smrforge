@@ -80,6 +80,7 @@ def pareto_summary_report(
             "knee_point": None,
             "extremes": {},
         }
+
     def get_v(d: Dict, k: str) -> float:
         v = d.get(k)
         if v is None and "parameters" in d:
@@ -88,6 +89,7 @@ def pareto_summary_report(
             return float(v)
         except (TypeError, ValueError):
             return np.nan
+
     x_vals = [get_v(p, metric_x) for p in pareto_points]
     y_vals = [get_v(p, metric_y) for p in pareto_points]
     x_vals = [v for v in x_vals if np.isfinite(v)]
@@ -98,23 +100,45 @@ def pareto_summary_report(
     x_arr = np.array(x_vals)
     y_arr = np.array(y_vals)
     if knee_index is None and len(x_arr) > 0:
-        knee_index = pareto_knee_point(x_arr, y_arr, maximize_x=maximize_x, maximize_y=maximize_y)
-    knee_point = pareto_points[knee_index] if knee_index is not None and 0 <= knee_index < len(pareto_points) else None
+        knee_index = pareto_knee_point(
+            x_arr, y_arr, maximize_x=maximize_x, maximize_y=maximize_y
+        )
+    knee_point = (
+        pareto_points[knee_index]
+        if knee_index is not None and 0 <= knee_index < len(pareto_points)
+        else None
+    )
     trade = (
         f"Trade-off between {metric_x} and {metric_y}: "
         f"{len(pareto_points)} Pareto-optimal designs. "
     )
     if len(x_arr) >= 2:
-        trade += f"{metric_x} range [{float(x_arr.min()):.4g}, {float(x_arr.max()):.4g}]; "
-        trade += f"{metric_y} range [{float(y_arr.min()):.4g}, {float(y_arr.max()):.4g}]."
+        trade += (
+            f"{metric_x} range [{float(x_arr.min()):.4g}, {float(x_arr.max()):.4g}]; "
+        )
+        trade += (
+            f"{metric_y} range [{float(y_arr.min()):.4g}, {float(y_arr.max()):.4g}]."
+        )
     return {
         "n_pareto": len(pareto_points),
         "metric_x": metric_x,
         "metric_y": metric_y,
         "trade_off_summary": trade,
         "knee_point": knee_point,
-        "extremes": {
-            "best_x": pareto_points[int(np.argmax(x_arr))] if maximize_x else pareto_points[int(np.argmin(x_arr))],
-            "best_y": pareto_points[int(np.argmax(y_arr))] if maximize_y else pareto_points[int(np.argmin(y_arr))],
-        } if len(pareto_points) > 0 else {},
+        "extremes": (
+            {
+                "best_x": (
+                    pareto_points[int(np.argmax(x_arr))]
+                    if maximize_x
+                    else pareto_points[int(np.argmin(x_arr))]
+                ),
+                "best_y": (
+                    pareto_points[int(np.argmax(y_arr))]
+                    if maximize_y
+                    else pareto_points[int(np.argmin(y_arr))]
+                ),
+            }
+            if len(pareto_points) > 0
+            else {}
+        ),
     }

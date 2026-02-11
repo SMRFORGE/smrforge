@@ -1,8 +1,12 @@
 def test_integrate_two_phase_with_thermal_hydraulics_smoke():
     from smrforge.thermal.hydraulics import ChannelGeometry, ChannelThermalHydraulics
-    from smrforge.thermal.two_phase_integration import integrate_two_phase_with_thermal_hydraulics
+    from smrforge.thermal.two_phase_integration import (
+        integrate_two_phase_with_thermal_hydraulics,
+    )
 
-    geom = ChannelGeometry(length=100.0, diameter=2.0, flow_area=3.14159, heated_perimeter=6.28318)
+    geom = ChannelGeometry(
+        length=100.0, diameter=2.0, flow_area=3.14159, heated_perimeter=6.28318
+    )
     inlet = {"temperature": 600.0, "pressure": 7.0e6, "mass_flow_rate": 0.1}
     thermal = ChannelThermalHydraulics(geom, inlet)
 
@@ -26,4 +30,3 @@ def test_integrate_two_phase_with_thermal_hydraulics_smoke():
     assert "critical_heat_flux" in out
     assert "chf_margin" in out
     assert "flow_regime" in out
-

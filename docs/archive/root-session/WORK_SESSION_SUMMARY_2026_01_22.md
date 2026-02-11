@@ -13,9 +13,9 @@ This session focused on improving code coverage by:
 
 ### 1. Convenience Module Coverage Improvements
 
-**Added 13 new tests** to `tests/test_convenience.py`:
+**Added 13 new tests** to `tests/test_convenience package`:
 - `TestConvenienceMissingCoverage` class with comprehensive edge case tests
-- Covers missing lines in `convenience.py` (41.4% → expected 60%+)
+- Covers missing lines in `convenience package` (41.4% → expected 60%+)
 - All 13 new tests passing
 
 **Key Tests Added:**
@@ -25,7 +25,7 @@ This session focused on improving code coverage by:
 - Exception handling paths
 
 **Files Modified:**
-- `tests/test_convenience.py` - Added 13 new test methods
+- `tests/test_convenience package` - Added 13 new test methods
 
 ---
 
@@ -84,7 +84,7 @@ This session focused on improving code coverage by:
 | `test_parallel_batch_extended.py` | ✅ Fixed | 19/19 passing | 1.99s | Ready for coverage |
 | `test_parallel_batch.py` | ✅ Improved | Individual pass | - | Enhanced cleanup |
 | `test_optimization_utils.py` | ✅ Improved | 52/52 passing | 8.69s | Enhanced cleanup |
-| `test_convenience.py` | ✅ Enhanced | +13 new tests | - | Coverage improved |
+| `test_convenience package` | ✅ Enhanced | +13 new tests | - | Coverage improved |
 
 ---
 
@@ -108,7 +108,7 @@ This session focused on improving code coverage by:
      - NumPy error state reset
    - **Impact:** Better memory cleanup and resource management
 
-4. **`tests/test_convenience.py`**
+4. **`tests/test_convenience package`**
    - Added `TestConvenienceMissingCoverage` class with 13 new tests
    - Fixed imports to work with package structure
    - **Impact:** Improved coverage for convenience module
@@ -123,7 +123,7 @@ This session focused on improving code coverage by:
 Once excluded files are included in coverage runs:
 - **`utils/parallel_batch.py`**: Currently 17.19% → Expected 80%+ with tests
 - **`utils/optimization_utils.py`**: Currently 20.83% → Expected 80%+ with tests
-- **`convenience.py`**: Currently 41.4% → Expected 60%+ with new tests
+- **`convenience package`**: Currently 41.4% → Expected 60%+ with new tests
 
 **Estimated Overall Coverage Improvement:** ~1-2%
 
@@ -159,7 +159,7 @@ Once excluded files are included in coverage runs:
 - `smrforge/utils/parallel_batch.py` - Bug fixes
 - `tests/test_parallel_batch.py` - Cleanup fixture
 - `tests/test_optimization_utils.py` - Enhanced cleanup
-- `tests/test_convenience.py` - New tests added
+- `tests/test_convenience package` - New tests added
 - `Dockerfile` - Date updated
 - `COVERAGE_ANALYSIS_IMPLEMENTATION.md` - Updated with exclusions info
 

@@ -1,7 +1,7 @@
 import builtins
 import importlib
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -29,6 +29,7 @@ def test_help_importerror_path_and_formatting_and_signature_cleanup(monkeypatch)
         console = Console(file=None, record=True, width=120)
         h._show_object_help(console, fn, show_examples=False)
     else:
+
         class DummyConsole:
             def print(self, *args, **kwargs):
                 pass
@@ -78,4 +79,3 @@ def test_io_readers_yaml_importerror_branch(monkeypatch):
     # Restore module
     monkeypatch.setattr(builtins, "__import__", orig_import)
     importlib.reload(r2)
-

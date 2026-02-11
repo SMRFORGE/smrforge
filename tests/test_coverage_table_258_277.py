@@ -6,7 +6,7 @@ Covers:
 - core/decay_chain_utils.py: build_fission_product_chain max_depth=0 (Low)
 - geometry/validation.py: Gap severity, check_distances_and_clearances ImportError, ValidationReport (Medium)
 - geometry/advanced_import.py: _is_numeric, CSGSurface, CSGCell, Lattice, GeometryConverter (Medium)
-- convenience.py, convenience/__init__.py: wrapper/import paths, _get_library ImportError (Low)
+- convenience/__init__.py: wrapper/import paths, _get_library ImportError (Low)
 - economics.integration (import + estimate_costs_from_spec), burnup/fuel_management_integration: import/init paths (Low)
 - core/endf_setup.py: print_* helpers, validate_endf_setup(nonexistent + None→standard_dir) (Low)
 - control/integration.py: create_controlled_reactivity, create_load_following_reactivity (Low)
@@ -18,15 +18,16 @@ Covers:
 - neutronics/monte_carlo_optimized.py: ReactionType, ParticleBank init/add_particle/clear (Low)
 """
 
-import pytest
-import numpy as np
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import numpy as np
+import pytest
 
 # ---------------------------------------------------------------------------
 # geometry/advanced_import.py (Medium – Complex feature)
 # ---------------------------------------------------------------------------
+
 
 class TestAdvancedImportCoverage:
     """Coverage for geometry/advanced_import.py per table 258-277."""
@@ -34,6 +35,7 @@ class TestAdvancedImportCoverage:
     def test_is_numeric_true(self):
         """_is_numeric returns True for numeric strings."""
         from smrforge.geometry.advanced_import import _is_numeric
+
         assert _is_numeric("1.5") is True
         assert _is_numeric("0") is True
         assert _is_numeric("-2.3e-4") is True
@@ -41,6 +43,7 @@ class TestAdvancedImportCoverage:
     def test_is_numeric_false(self):
         """_is_numeric returns False for non-numeric strings."""
         from smrforge.geometry.advanced_import import _is_numeric
+
         assert _is_numeric("abc") is False
         assert _is_numeric("") is False
         assert _is_numeric("1.2.3") is False
@@ -48,7 +51,13 @@ class TestAdvancedImportCoverage:
     def test_csg_surface_dataclass(self):
         """CSGSurface can be constructed and has expected attributes."""
         from smrforge.geometry.advanced_import import CSGSurface
-        s = CSGSurface(id=1, surface_type="z-cylinder", coeffs=[0.0, 0.0, 10.0], boundary_type="vacuum")
+
+        s = CSGSurface(
+            id=1,
+            surface_type="z-cylinder",
+            coeffs=[0.0, 0.0, 10.0],
+            boundary_type="vacuum",
+        )
         assert s.id == 1
         assert s.surface_type == "z-cylinder"
         assert s.boundary_type == "vacuum"
@@ -56,6 +65,7 @@ class TestAdvancedImportCoverage:
     def test_csg_cell_dataclass(self):
         """CSGCell can be constructed with optional attributes."""
         from smrforge.geometry.advanced_import import CSGCell
+
         c = CSGCell(id=1, region="-1 & 2 & -3", material=1, fill=0)
         assert c.id == 1
         assert c.region == "-1 & 2 & -3"
@@ -65,8 +75,10 @@ class TestAdvancedImportCoverage:
     def test_lattice_dataclass(self):
         """Lattice can be constructed (requires Point3D-like or mock)."""
         from smrforge.geometry.advanced_import import Lattice
+
         try:
             from smrforge.geometry.core_geometry import Point3D
+
             p = Point3D(0, 0, 0)
         except ImportError:
             p = MagicMock()
@@ -86,6 +98,7 @@ class TestAdvancedImportCoverage:
     def test_geometry_converter_unsupported_input_format(self):
         """GeometryConverter.convert_format raises ValueError for unsupported input format."""
         from smrforge.geometry.advanced_import import GeometryConverter
+
         with pytest.raises(ValueError, match="Unsupported input format"):
             GeometryConverter.convert_format(
                 Path("/nonexistent.in"),
@@ -96,9 +109,15 @@ class TestAdvancedImportCoverage:
 
     def test_geometry_converter_unsupported_output_format(self):
         """GeometryConverter.convert_format raises ValueError for unsupported output format."""
-        from smrforge.geometry.advanced_import import GeometryConverter, AdvancedGeometryImporter
+        from smrforge.geometry.advanced_import import (
+            AdvancedGeometryImporter,
+            GeometryConverter,
+        )
+
         mock_core = MagicMock()
-        with patch.object(AdvancedGeometryImporter, "from_openmc_full", return_value=mock_core):
+        with patch.object(
+            AdvancedGeometryImporter, "from_openmc_full", return_value=mock_core
+        ):
             with pytest.raises(ValueError, match="Unsupported output format"):
                 GeometryConverter.convert_format(
                     Path("/x.xml"),
@@ -112,6 +131,7 @@ class TestAdvancedImportCoverage:
 # geometry/validation.py (Medium – Consider improvement)
 # ---------------------------------------------------------------------------
 
+
 class TestGeometryValidationCoverage:
     """Coverage for geometry/validation.py – Gap severity, check_distances_and_clearances."""
 
@@ -120,13 +140,17 @@ class TestGeometryValidationCoverage:
         try:
             from smrforge.geometry.core_geometry import Point3D
             from smrforge.geometry.validation import Gap
+
             p = Point3D(0, 0, 0)
         except ImportError:
             pytest.skip("Geometry module not available")
         g = Gap(
-            element1_id="a", element2_id="b",
-            distance=1.0, expected_distance=3.0,
-            gap_size=0.0, location=p,
+            element1_id="a",
+            element2_id="b",
+            distance=1.0,
+            expected_distance=3.0,
+            gap_size=0.0,
+            location=p,
         )
         assert g.gap_size == -2.0
         assert g.severity == "error"
@@ -136,13 +160,17 @@ class TestGeometryValidationCoverage:
         try:
             from smrforge.geometry.core_geometry import Point3D
             from smrforge.geometry.validation import Gap
+
             p = Point3D(0, 0, 0)
         except ImportError:
             pytest.skip("Geometry module not available")
         g = Gap(
-            element1_id="a", element2_id="b",
-            distance=2.0, expected_distance=2.5,
-            gap_size=0.0, location=p,
+            element1_id="a",
+            element2_id="b",
+            distance=2.0,
+            expected_distance=2.5,
+            gap_size=0.0,
+            location=p,
         )
         assert g.gap_size == -0.5
         assert g.severity == "warning"
@@ -152,13 +180,17 @@ class TestGeometryValidationCoverage:
         try:
             from smrforge.geometry.core_geometry import Point3D
             from smrforge.geometry.validation import Gap
+
             p = Point3D(0, 0, 0)
         except ImportError:
             pytest.skip("Geometry module not available")
         g = Gap(
-            element1_id="a", element2_id="b",
-            distance=20.0, expected_distance=10.0,
-            gap_size=0.0, location=p,
+            element1_id="a",
+            element2_id="b",
+            distance=20.0,
+            expected_distance=10.0,
+            gap_size=0.0,
+            location=p,
         )
         assert g.gap_size == 10.0
         assert g.severity == "warning"
@@ -168,13 +200,17 @@ class TestGeometryValidationCoverage:
         try:
             from smrforge.geometry.core_geometry import Point3D
             from smrforge.geometry.validation import Gap
+
             p = Point3D(0, 0, 0)
         except ImportError:
             pytest.skip("Geometry module not available")
         g = Gap(
-            element1_id="a", element2_id="b",
-            distance=3.0, expected_distance=2.0,
-            gap_size=0.0, location=p,
+            element1_id="a",
+            element2_id="b",
+            distance=3.0,
+            expected_distance=2.0,
+            gap_size=0.0,
+            location=p,
         )
         assert g.gap_size == 1.0
         assert g.severity == "info"
@@ -182,6 +218,7 @@ class TestGeometryValidationCoverage:
     def test_check_distances_and_clearances_import_error(self):
         """check_distances_and_clearances raises ImportError when geometry types unavailable."""
         from smrforge.geometry import validation as val
+
         with patch.object(val, "_GEOMETRY_TYPES_AVAILABLE", False):
             with pytest.raises(ImportError, match="Geometry module not available"):
                 val.check_distances_and_clearances(MagicMock())
@@ -190,6 +227,7 @@ class TestGeometryValidationCoverage:
 # ---------------------------------------------------------------------------
 # data_downloader.py (Medium – Helper functions tested)
 # ---------------------------------------------------------------------------
+
 
 class TestDataDownloaderHelperCoverage:
     """Additional helper coverage for data_downloader.py per table 258-277."""
@@ -262,9 +300,14 @@ class TestDataDownloaderHelperCoverage:
             pytest.skip("Data downloader or reactor_core not available")
         old = getattr(dd, "_source_cache", {}).copy()
         try:
-            dd._cache_successful_source("https://nds.iaea.org/exfor/endf/endfb8.0/", Library.ENDF_B_VIII)
+            dd._cache_successful_source(
+                "https://nds.iaea.org/exfor/endf/endfb8.0/", Library.ENDF_B_VIII
+            )
             assert dd._source_cache.get(Library.ENDF_B_VIII.value) == "iaea"
-            dd._cache_successful_source("https://www.nndc.bnl.gov/endf/b8.1/endf/U235.endf", Library.ENDF_B_VIII_1)
+            dd._cache_successful_source(
+                "https://www.nndc.bnl.gov/endf/b8.1/endf/U235.endf",
+                Library.ENDF_B_VIII_1,
+            )
             assert dd._source_cache.get(Library.ENDF_B_VIII_1.value) == "nndc"
         finally:
             dd._source_cache.clear()
@@ -338,16 +381,18 @@ class TestDataDownloaderHelperCoverage:
 
 
 # ---------------------------------------------------------------------------
-# convenience.py (Low – Convenience wrapper)
+# convenience/__init__.py (Low – Convenience wrapper)
 # ---------------------------------------------------------------------------
 
+
 class TestConvenienceCoverage:
-    """Minimal coverage for convenience.py wrapper paths."""
+    """Minimal coverage for convenience package."""
 
     def test_convenience_import_run_presets(self):
         """convenience.run_presets or similar is callable if exposed."""
         try:
             import smrforge.convenience as conv
+
             if hasattr(conv, "run_presets"):
                 assert callable(conv.run_presets)
         except ImportError:
@@ -357,6 +402,7 @@ class TestConvenienceCoverage:
         """convenience exposes expected high-level attributes."""
         try:
             import smrforge.convenience as conv
+
             assert hasattr(conv, "__name__")
         except ImportError:
             pytest.skip("Convenience module not available")
@@ -381,6 +427,7 @@ class TestConvenienceCoverage:
 # economics/integration.py (Low – Not critical, but move off 0%)
 # ---------------------------------------------------------------------------
 
+
 class TestEconomicsIntegrationCoverage:
     """Minimal coverage for economics/integration.py (0% -> nonzero)."""
 
@@ -388,6 +435,7 @@ class TestEconomicsIntegrationCoverage:
         """economics.integration can be imported and has expected content."""
         try:
             from smrforge.economics import integration as eco_int
+
             assert hasattr(eco_int, "__name__")
         except ImportError:
             pytest.skip("Economics integration not available")
@@ -397,9 +445,9 @@ class TestEconomicsIntegrationCoverage:
         try:
             from smrforge.economics.integration import estimate_costs_from_spec
             from smrforge.validation.pydantic_layer import (
+                FuelType,
                 ReactorSpecification,
                 ReactorType,
-                FuelType,
             )
         except ImportError:
             pytest.skip("economics.integration or pydantic_layer not available")
@@ -436,6 +484,7 @@ class TestEconomicsIntegrationCoverage:
 # convenience/__init__.py (Low – Import wrapper, ImportError path)
 # ---------------------------------------------------------------------------
 
+
 class TestConvenienceInitCoverage:
     """Coverage for convenience/__init__.py – _get_library ImportError path."""
 
@@ -454,6 +503,7 @@ class TestConvenienceInitCoverage:
 # ---------------------------------------------------------------------------
 # geometry/validation.py – ValidationReport methods
 # ---------------------------------------------------------------------------
+
 
 class TestValidationReportCoverage:
     """Coverage for ValidationReport.add_error, add_warning, add_info, summary."""
@@ -495,6 +545,7 @@ class TestValidationReportCoverage:
 # core/decay_chain_utils.py (Low – build_fission_product_chain max_depth=0)
 # ---------------------------------------------------------------------------
 
+
 class TestDecayChainUtilsCoverage:
     """Coverage for core/decay_chain_utils.build_fission_product_chain max_depth=0."""
 
@@ -515,13 +566,16 @@ class TestDecayChainUtilsCoverage:
 # burnup/fuel_management_integration.py (Low – Integration code)
 # ---------------------------------------------------------------------------
 
+
 class TestFuelManagementIntegrationCoverage:
     """Minimal coverage for burnup/fuel_management_integration.py."""
 
     def test_fuel_management_integration_import_and_init(self):
         """BurnupFuelManagerIntegration can be imported and constructed with mock."""
         try:
-            from smrforge.burnup.fuel_management_integration import BurnupFuelManagerIntegration
+            from smrforge.burnup.fuel_management_integration import (
+                BurnupFuelManagerIntegration,
+            )
         except ImportError:
             pytest.skip("burnup.fuel_management_integration not available")
         mock_fm = MagicMock()
@@ -535,6 +589,7 @@ class TestFuelManagementIntegrationCoverage:
 # ---------------------------------------------------------------------------
 # core/endf_setup.py (Low – Setup code)
 # ---------------------------------------------------------------------------
+
 
 class TestEndfSetupCoverage:
     """Minimal coverage for core/endf_setup.py."""
@@ -570,7 +625,10 @@ class TestEndfSetupCoverage:
             from smrforge.core.endf_setup import validate_endf_setup
         except ImportError:
             pytest.skip("endf_setup not available")
-        with patch("smrforge.core.endf_setup.get_standard_endf_directory", return_value=Path("/__nonexistent_std_endf__")):
+        with patch(
+            "smrforge.core.endf_setup.get_standard_endf_directory",
+            return_value=Path("/__nonexistent_std_endf__"),
+        ):
             valid, results = validate_endf_setup(None)
         assert valid is False
         assert results["directory_exists"] is False
@@ -579,6 +637,7 @@ class TestEndfSetupCoverage:
 # ---------------------------------------------------------------------------
 # control/integration.py (Low – Integration code)
 # ---------------------------------------------------------------------------
+
 
 class TestControlIntegrationCoverage:
     """Minimal coverage for control/integration.py."""
@@ -617,6 +676,7 @@ class TestControlIntegrationCoverage:
 # core/self_shielding_integration.py (Low – Integration code)
 # ---------------------------------------------------------------------------
 
+
 class TestSelfShieldingIntegrationCoverage:
     """Minimal coverage for core/self_shielding_integration.py."""
 
@@ -624,7 +684,7 @@ class TestSelfShieldingIntegrationCoverage:
         """get_cross_section_with_self_shielding uses cache when _RESONANCE_AVAILABLE is False."""
         try:
             import smrforge.core.self_shielding_integration as ssi_mod
-            from smrforge.core.reactor_core import Nuclide, NuclearDataCache
+            from smrforge.core.reactor_core import NuclearDataCache, Nuclide
         except ImportError:
             pytest.skip("self_shielding_integration or reactor_core not available")
         with patch.object(ssi_mod, "_RESONANCE_AVAILABLE", False):
@@ -644,6 +704,7 @@ class TestSelfShieldingIntegrationCoverage:
 # ---------------------------------------------------------------------------
 # core/multigroup_advanced.py (Low – Advanced feature)
 # ---------------------------------------------------------------------------
+
 
 class TestMultigroupAdvancedCoverage:
     """Minimal coverage for core/multigroup_advanced.py."""
@@ -678,6 +739,7 @@ class TestMultigroupAdvancedCoverage:
 # ---------------------------------------------------------------------------
 # neutronics/hybrid_solver.py, adaptive_sampling.py (Low – Advanced feature)
 # ---------------------------------------------------------------------------
+
 
 class TestNeutronicsAdvancedCoverage:
     """Minimal coverage for neutronics hybrid_solver and adaptive_sampling."""
@@ -718,6 +780,7 @@ class TestNeutronicsAdvancedCoverage:
 # neutronics/implicit_mc.py (Low – Advanced feature)
 # ---------------------------------------------------------------------------
 
+
 class TestImplicitMcCoverage:
     """Minimal coverage for neutronics/implicit_mc.py."""
 
@@ -749,7 +812,9 @@ class TestImplicitMcCoverage:
         except ImportError:
             pytest.skip("neutronics.implicit_mc not available")
         mock_mc = MagicMock()
-        solver = ImplicitMonteCarloSolver(mock_mc, dt_base=1.0, implicit=True, stability_factor=0.5)
+        solver = ImplicitMonteCarloSolver(
+            mock_mc, dt_base=1.0, implicit=True, stability_factor=0.5
+        )
         assert solver.mc_solver is mock_mc
         assert solver.dt_base == 1.0
         assert solver.current_time == 0.0
@@ -759,6 +824,7 @@ class TestImplicitMcCoverage:
 # ---------------------------------------------------------------------------
 # neutronics/monte_carlo_optimized.py (Low – Performance code)
 # ---------------------------------------------------------------------------
+
 
 class TestMonteCarloOptimizedCoverage:
     """Minimal coverage for neutronics/monte_carlo_optimized.py."""

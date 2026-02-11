@@ -45,7 +45,11 @@ def run_serpent(
         subprocess.TimeoutExpired: If timeout exceeded
     """
     work_dir = Path(work_dir)
-    input_path = work_dir / input_file if not Path(input_file).is_absolute() else Path(input_file)
+    input_path = (
+        work_dir / input_file
+        if not Path(input_file).is_absolute()
+        else Path(input_file)
+    )
     if not input_path.exists():
         raise FileNotFoundError(f"Serpent input file not found: {input_path}")
 
@@ -158,9 +162,7 @@ def run_and_parse(
     work_dir = Path(work_dir)
     input_path = Path(input_file)
     base = input_path.stem
-    proc = run_serpent(
-        work_dir, input_file, executable=executable, timeout=timeout
-    )
+    proc = run_serpent(work_dir, input_file, executable=executable, timeout=timeout)
 
     out: Dict[str, Any] = {
         "returncode": proc.returncode,

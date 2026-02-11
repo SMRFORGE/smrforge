@@ -87,7 +87,9 @@ def test_geometry_verification_import_fallbacks(monkeypatch):
             mp.setattr(builtins, "__import__", fake_import)
             sys.modules.pop("smrforge.visualization.geometry_verification", None)
             sys.modules.pop(prefix, None)
-            return importlib.import_module("smrforge.visualization.geometry_verification")
+            return importlib.import_module(
+                "smrforge.visualization.geometry_verification"
+            )
 
     mod = _reload_with_blocked("matplotlib")
     assert mod._MATPLOTLIB_AVAILABLE is False
@@ -109,23 +111,31 @@ def test_plot_overlap_detection_plotly_and_matplotlib(monkeypatch):
         def vertices(self):
             return list(self._verts)
 
-    overlaps_3d = [("A", "B", _Region([(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (1.0, 1.0, 0.0)]))]
+    overlaps_3d = [
+        ("A", "B", _Region([(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (1.0, 1.0, 0.0)]))
+    ]
     overlaps_2d = [("A", "B", _Region([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]))]
 
     # plotly path
     monkeypatch.setattr(gv, "_PLOTLY_AVAILABLE", True)
     monkeypatch.setattr(gv, "go", _DummyGo)
-    fig = gv.plot_overlap_detection(geometry=object(), overlaps=overlaps_3d, backend="plotly")
+    fig = gv.plot_overlap_detection(
+        geometry=object(), overlaps=overlaps_3d, backend="plotly"
+    )
     assert isinstance(fig, _DummyFigure)
     assert len(fig.traces) == 1
     assert fig.traces[0].kwargs["mode"] == "lines"
 
     # Exercise the (currently no-op) geometry.blocks loop
     geom_blocks = type("G", (), {"blocks": [object()]})()
-    fig_blocks = gv.plot_overlap_detection(geometry=geom_blocks, overlaps=overlaps_3d, backend="plotly")
+    fig_blocks = gv.plot_overlap_detection(
+        geometry=geom_blocks, overlaps=overlaps_3d, backend="plotly"
+    )
     assert isinstance(fig_blocks, _DummyFigure)
 
-    fig2 = gv.plot_overlap_detection(geometry=object(), overlaps=overlaps_2d, backend="plotly")
+    fig2 = gv.plot_overlap_detection(
+        geometry=object(), overlaps=overlaps_2d, backend="plotly"
+    )
     assert isinstance(fig2, _DummyFigure)
 
     # matplotlib path
@@ -138,19 +148,27 @@ def test_plot_overlap_detection_plotly_and_matplotlib(monkeypatch):
             return [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]
 
     geom = type("G", (), {"blocks": [_Block()]})()
-    fig_ax = gv.plot_overlap_detection(geometry=geom, overlaps=overlaps_2d, backend="matplotlib")
+    fig_ax = gv.plot_overlap_detection(
+        geometry=geom, overlaps=overlaps_2d, backend="matplotlib"
+    )
     assert isinstance(fig_ax, tuple)
 
     with pytest.raises(ValueError, match="Unknown backend"):
-        gv.plot_overlap_detection(geometry=object(), overlaps=overlaps_2d, backend="nope")
+        gv.plot_overlap_detection(
+            geometry=object(), overlaps=overlaps_2d, backend="nope"
+        )
 
     monkeypatch.setattr(gv, "_PLOTLY_AVAILABLE", False)
     with pytest.raises(ImportError):
-        gv.plot_overlap_detection(geometry=object(), overlaps=overlaps_2d, backend="plotly")
+        gv.plot_overlap_detection(
+            geometry=object(), overlaps=overlaps_2d, backend="plotly"
+        )
 
     monkeypatch.setattr(gv, "_MATPLOTLIB_AVAILABLE", False)
     with pytest.raises(ImportError):
-        gv.plot_overlap_detection(geometry=object(), overlaps=overlaps_2d, backend="matplotlib")
+        gv.plot_overlap_detection(
+            geometry=object(), overlaps=overlaps_2d, backend="matplotlib"
+        )
 
 
 def test_plot_geometry_consistency_plotly_and_matplotlib(monkeypatch):
@@ -176,7 +194,9 @@ def test_plot_geometry_consistency_plotly_and_matplotlib(monkeypatch):
     monkeypatch.setitem(sys.modules, "smrforge.visualization.geometry", geom_stub)
 
     monkeypatch.setattr(gv, "_MATPLOTLIB_AVAILABLE", True)
-    fig_ax = gv.plot_geometry_consistency(object(), {"ok": True}, ["note"], backend="matplotlib")
+    fig_ax = gv.plot_geometry_consistency(
+        object(), {"ok": True}, ["note"], backend="matplotlib"
+    )
     assert isinstance(fig_ax, tuple)
 
     with pytest.raises(ValueError, match="Unknown backend"):
@@ -206,8 +226,9 @@ def test_plot_material_assignment_delegates_to_advanced(monkeypatch):
     adv_stub.plot_material_boundaries = plot_material_boundaries
     monkeypatch.setitem(sys.modules, "smrforge.visualization.advanced", adv_stub)
 
-    out = gv.plot_material_assignment(object(), {"a": "m1", "b": "m2"}, backend="matplotlib")
+    out = gv.plot_material_assignment(
+        object(), {"a": "m1", "b": "m2"}, backend="matplotlib"
+    )
     assert out == "ok"
     assert called["materials"] == ["m1", "m2"]
     assert called["backend"] == "matplotlib"
-

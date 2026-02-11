@@ -1,7 +1,0 @@
-﻿docker : echo: -c: line 1: unexpected EOF while looking for matching `"'
-At C:\Users\cmwha\AppData\Local\Temp\ps-script-f4d5710f-7fc9-4e95-9b6f-cefdc67f7ae1.ps1:84 char:1
-+ docker compose exec smrforge-dev bash -c "cd /app/testing && for i in ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (echo: -c: line ...or matching `"':String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 

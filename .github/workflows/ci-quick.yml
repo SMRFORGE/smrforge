@@ -78,4 +78,3 @@ jobs:
         run: black --check --diff smrforge/ tests/
       - name: flake8
         run: flake8 smrforge/ tests/ --max-line-length=88 --extend-ignore=E203,W503
-        continue-on-error: true

@@ -31,8 +31,10 @@ from smrforge.core import constants
 
 # Expose key classes at package level
 try:
+    from smrforge.neutronics import (  # Alias defined in neutronics/__init__.py
+        NeutronicsSolver,
+    )
     from smrforge.neutronics.solver import MultiGroupDiffusion
-    from smrforge.neutronics import NeutronicsSolver  # Alias defined in neutronics/__init__.py
 
     _NEUTRONICS_AVAILABLE = True
 except ImportError as e:
@@ -59,63 +61,17 @@ except ImportError as e:
 
 # Convenience functions and classes for easy usage
 try:
-    # Try importing from convenience package (which re-exports from convenience.py file)
-    try:
-        from smrforge.convenience import (  # Factory functions; High-level class
-            SimpleReactor,
-            analyze_preset,
-            compare_designs,
-            create_reactor,
-            get_preset,
-            list_presets,
-            quick_keff,
-        )
-        _CONVENIENCE_AVAILABLE = True
-    except (ImportError, AttributeError) as e1:
-        # Fallback: import directly from convenience.py file module as a package submodule
-        # This properly handles relative imports by loading it as part of smrforge package
-        import importlib
-        import sys
-        from pathlib import Path
-        
-        # Use importlib to import convenience.py as smrforge.convenience_file module
-        # This allows relative imports to work correctly
-        convenience_file = Path(__file__).parent / "convenience.py"
-        if convenience_file.exists():
-            # Import as a proper package submodule using importlib
-            # This makes relative imports work
-            package_name = __name__  # Should be 'smrforge'
-            module_name = f"{package_name}.convenience_file"
-            
-            # Use importlib to load the module as a package member
-            loader = importlib.machinery.SourceFileLoader(module_name, str(convenience_file))
-            spec = importlib.util.spec_from_loader(module_name, loader)
-            convenience_mod = importlib.util.module_from_spec(spec)
-            
-            # Set __package__ to make relative imports work
-            convenience_mod.__package__ = package_name
-            convenience_mod.__name__ = module_name
-            
-            # Add parent to sys.modules so relative imports resolve correctly
-            sys.modules[module_name] = convenience_mod
-            
-            try:
-                spec.loader.exec_module(convenience_mod)
-                
-                SimpleReactor = convenience_mod.SimpleReactor
-                analyze_preset = convenience_mod.analyze_preset
-                compare_designs = convenience_mod.compare_designs
-                create_reactor = convenience_mod.create_reactor
-                get_preset = convenience_mod.get_preset
-                list_presets = convenience_mod.list_presets
-                quick_keff = convenience_mod.quick_keff
-                _CONVENIENCE_AVAILABLE = True
-            except Exception as e2:
-                # If that fails, raise the original error
-                raise e1 from e2
-        else:
-            raise ImportError(f"Could not find convenience.py file: {convenience_file}")
+    from smrforge.convenience import (  # Factory functions; High-level class
+        SimpleReactor,
+        analyze_preset,
+        compare_designs,
+        create_reactor,
+        get_preset,
+        list_presets,
+        quick_keff,
+    )
 
+    _CONVENIENCE_AVAILABLE = True
 except ImportError as e:
     import warnings
 
@@ -129,13 +85,13 @@ except ImportError as e:
 # Additional convenience utilities
 try:
     from smrforge.convenience_utils import (
+        create_nuclide_list,
+        create_simple_burnup_solver,
         create_simple_core,
         create_simple_solver,
         create_simple_xs_data,
-        create_simple_burnup_solver,
-        create_nuclide_list,
-        get_nuclide,
         get_material,
+        get_nuclide,
         list_materials,
         quick_burnup_calculation,
         quick_decay_heat,
@@ -154,9 +110,9 @@ except ImportError as e:
 # Transient convenience functions (optional - requires safety module)
 try:
     from smrforge.convenience.transients import (
+        decay_heat_removal,
         quick_transient,
         reactivity_insertion,
-        decay_heat_removal,
     )
 
     _TRANSIENT_CONVENIENCE_AVAILABLE = True
@@ -167,10 +123,11 @@ except ImportError as e:
 # Data downloader (optional - requires requests)
 try:
     from smrforge.data_downloader import (
+        COMMON_SMR_NUCLIDES,
         download_endf_data,
         download_preprocessed_library,
-        COMMON_SMR_NUCLIDES,
     )
+
     _DATA_DOWNLOADER_AVAILABLE = True
 except ImportError as e:
     _DATA_DOWNLOADER_AVAILABLE = False
@@ -259,7 +216,7 @@ if _TRANSIENT_CONVENIENCE_AVAILABLE:
 # Decay heat and gamma transport (always available)
 try:
     from smrforge.decay_heat import DecayHeatCalculator, DecayHeatResult
-    from smrforge.gamma_transport import GammaTransportSolver, GammaTransportOptions
+    from smrforge.gamma_transport import GammaTransportOptions, GammaTransportSolver
 
     __all__.extend(
         [
@@ -436,12 +393,12 @@ except ImportError as e:
 
 # Photon and gamma production parsers (always available)
 try:
-    from smrforge.core.photon_parser import ENDFPhotonParser, PhotonCrossSection
     from smrforge.core.gamma_production_parser import (
         ENDFGammaProductionParser,
         GammaProductionData,
         GammaProductionSpectrum,
     )
+    from smrforge.core.photon_parser import ENDFPhotonParser, PhotonCrossSection
 
     __all__.extend(
         [

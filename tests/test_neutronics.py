@@ -151,8 +151,10 @@ class TestSolverInitialization:
         """Test that invalid cross section data is rejected."""
         # Create invalid XS data (sigma_a > sigma_t) - validation happens at CrossSectionData creation
         from pydantic import ValidationError
-        
-        with pytest.raises(ValidationError, match="Absorption cross section cannot exceed total"):
+
+        with pytest.raises(
+            ValidationError, match="Absorption cross section cannot exceed total"
+        ):
             invalid_xs = CrossSectionData(
                 n_groups=2,
                 n_materials=1,
@@ -239,8 +241,10 @@ class TestSolverValidation:
         # Create XS with sigma_f > sigma_a (invalid)
         # This should be caught by Pydantic validation at CrossSectionData creation
         from pydantic import ValidationError
-        
-        with pytest.raises(ValidationError, match="Fission cross section cannot exceed absorption"):
+
+        with pytest.raises(
+            ValidationError, match="Fission cross section cannot exceed absorption"
+        ):
             invalid_xs = CrossSectionData(
                 n_groups=2,
                 n_materials=1,
@@ -374,7 +378,9 @@ class TestArnoldiMethod:
         """Test that Arnoldi method works (now implemented)."""
         # Change to Arnoldi method
         solver.options.eigen_method = "arnoldi"
-        solver.options.skip_solution_validation = True  # May have slightly different results
+        solver.options.skip_solution_validation = (
+            True  # May have slightly different results
+        )
 
         # Should not raise NotImplementedError anymore
         k_eff, flux = solver._arnoldi_method()

@@ -8,9 +8,9 @@ produces a ConstraintSet that can be saved and used for validation/optimization.
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
+from ..utils.logging import get_logger
 from .constraints import ConstraintSet
 from .safety_report import SafetyMarginReport
-from ..utils.logging import get_logger
 
 logger = get_logger("smrforge.validation.constraint_builder")
 

@@ -76,13 +76,13 @@ class GeometryImporter:
         Example:
             >>> from pathlib import Path
             >>> from smrforge.geometry.importers import GeometryImporter
-            >>> 
+            >>>
             >>> # Import a previously exported geometry
             >>> core = GeometryImporter.from_json(Path("my_reactor.json"))
             >>> print(f"Imported: {core.name}")
             >>> print(f"Blocks: {len(core.blocks)}")
             >>> print(f"Height: {core.core_height} cm")
-            >>> 
+            >>>
             >>> # Validate the imported geometry
             >>> validation = GeometryImporter.validate_imported_geometry(core)
             >>> if not validation["valid"]:
@@ -170,7 +170,7 @@ class GeometryImporter:
 
                 >>> from pathlib import Path
                 >>> from smrforge.geometry.importers import GeometryImporter
-                >>> 
+                >>>
                 >>> # Import from OpenMC geometry file
                 >>> core = GeometryImporter.from_openmc_xml(Path("geometry.xml"))
                 >>> print(f"Core diameter: {core.core_diameter} cm")
@@ -328,7 +328,7 @@ class GeometryImporter:
 
                 >>> from pathlib import Path
                 >>> from smrforge.geometry.importers import GeometryImporter
-                >>> 
+                >>>
                 >>> # Import from Serpent input file
                 >>> core = GeometryImporter.from_serpent(Path("geometry.inp"))
                 >>> print(f"Core diameter: {core.core_diameter} cm")
@@ -404,7 +404,10 @@ class GeometryImporter:
                                     # Extract apothem (flat-to-flat distance / 2)
                                     apothem = abs(float(surf_params[7]))
                                     radius_candidate = apothem * 2  # Approximate
-                                    if core_radius is None or radius_candidate > core_radius:
+                                    if (
+                                        core_radius is None
+                                        or radius_candidate > core_radius
+                                    ):
                                         core_radius = radius_candidate
                                     # Extract height if available
                                     height = abs(float(surf_params[6]))
@@ -469,7 +472,7 @@ class GeometryImporter:
 
     @staticmethod
     def validate_imported_geometry(
-        core: Union[PrismaticCore, PebbleBedCore]
+        core: Union[PrismaticCore, PebbleBedCore],
     ) -> Dict[str, Union[bool, List[str]]]:
         """
         Validate imported geometry for consistency.
@@ -488,20 +491,20 @@ class GeometryImporter:
 
         Example:
             >>> from smrforge.geometry.importers import GeometryImporter
-            >>> 
+            >>>
             >>> # Import geometry
             >>> core = GeometryImporter.from_json(Path("geometry.json"))
-            >>> 
+            >>>
             >>> # Validate
             >>> result = GeometryImporter.validate_imported_geometry(core)
-            >>> 
+            >>>
             >>> if result["valid"]:
             ...     print("Geometry is valid!")
             ... else:
             ...     print("Errors found:")
             ...     for error in result["errors"]:
             ...         print(f"  - {error}")
-            ... 
+            ...
             >>> if result["warnings"]:
             ...     print("Warnings:")
             ...     for warning in result["warnings"]:
@@ -549,4 +552,3 @@ class GeometryImporter:
             "errors": errors,
             "warnings": warnings,
         }
-

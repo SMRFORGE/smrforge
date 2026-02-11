@@ -12,6 +12,7 @@ import numpy as np
 try:
     import matplotlib.pyplot as plt
     from matplotlib import cm
+
     _MATPLOTLIB_AVAILABLE = True
 except ImportError:
     _MATPLOTLIB_AVAILABLE = False
@@ -21,6 +22,7 @@ except ImportError:
 try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
+
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
@@ -42,35 +44,37 @@ def plot_nuclide_concentration(
 ):
     """
     Plot nuclide concentration distribution.
-    
+
     Visualizes the spatial distribution of a specific nuclide's concentration
     in the reactor geometry.
-    
+
     Args:
         inventory: NuclideInventoryTracker instance
         nuclide: Nuclide to visualize
         geometry: Reactor geometry
         backend: Visualization backend
         **kwargs: Additional arguments
-    
+
     Returns:
         Figure object
-    
+
     Example:
         >>> from smrforge.visualization.material_composition import plot_nuclide_concentration
         >>> from smrforge.core.reactor_core import Nuclide
-        >>> 
+        >>>
         >>> u235 = Nuclide(Z=92, A=235)
         >>> fig = plot_nuclide_concentration(inventory, u235, core)
     """
     # Get concentration data
     concentration = inventory.get_atom_density(nuclide)
-    
+
     # Map to geometry (simplified - would need proper spatial mapping)
     if backend == "plotly":
         return _plot_concentration_plotly(geometry, nuclide, concentration, **kwargs)
     elif backend == "matplotlib":
-        return _plot_concentration_matplotlib(geometry, nuclide, concentration, **kwargs)
+        return _plot_concentration_matplotlib(
+            geometry, nuclide, concentration, **kwargs
+        )
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
@@ -79,17 +83,17 @@ def _plot_concentration_plotly(geometry, nuclide, concentration, **kwargs):
     """Plot concentration using plotly."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required")
-    
+
     from .advanced import plot_ray_traced_geometry
-    
+
     # Create base geometry plot
     fig = plot_ray_traced_geometry(geometry, backend="plotly", color_by="material")
-    
+
     # Add concentration overlay (simplified)
     fig.update_layout(
         title=f"{nuclide.name} Concentration Distribution",
     )
-    
+
     return fig
 
 
@@ -97,12 +101,12 @@ def _plot_concentration_matplotlib(geometry, nuclide, concentration, **kwargs):
     """Plot concentration using matplotlib."""
     if not _MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib is required")
-    
+
     from .geometry import plot_core_layout
-    
+
     fig, ax = plot_core_layout(geometry, view="xy", color_by="material")
     ax.set_title(f"{nuclide.name} Concentration Distribution")
-    
+
     return fig, ax
 
 
@@ -115,19 +119,19 @@ def plot_material_property(
 ):
     """
     Plot material property distribution.
-    
+
     Visualizes a material property (density, temperature, etc.) across the geometry.
-    
+
     Args:
         geometry: Reactor geometry
         property_map: Dictionary mapping material IDs to property values
         property_name: Name of the property (for labels)
         backend: Visualization backend
         **kwargs: Additional arguments
-    
+
     Returns:
         Figure object
-    
+
     Example:
         >>> density_map = {"fuel": 10.5, "moderator": 1.0, "reflector": 1.8}
         >>> fig = plot_material_property(core, density_map, "density")
@@ -135,7 +139,9 @@ def plot_material_property(
     if backend == "plotly":
         return _plot_property_plotly(geometry, property_map, property_name, **kwargs)
     elif backend == "matplotlib":
-        return _plot_property_matplotlib(geometry, property_map, property_name, **kwargs)
+        return _plot_property_matplotlib(
+            geometry, property_map, property_name, **kwargs
+        )
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
@@ -144,29 +150,31 @@ def _plot_property_plotly(geometry, property_map, property_name, **kwargs):
     """Plot property using plotly."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required")
-    
+
     from .advanced import plot_ray_traced_geometry
-    
+
     # Create custom colors based on property values
     colors = {}
     max_val = max(property_map.values())
     min_val = min(property_map.values())
-    
+
     for mat_id, value in property_map.items():
         # Normalize to 0-1 range
-        normalized = (value - min_val) / (max_val - min_val) if max_val > min_val else 0.5
+        normalized = (
+            (value - min_val) / (max_val - min_val) if max_val > min_val else 0.5
+        )
         # Create color (using viridis-like colormap)
         colors[mat_id] = f"hsl({240 - normalized * 240}, 100%, {50 + normalized * 30}%)"
-    
+
     fig = plot_ray_traced_geometry(
         geometry,
         backend="plotly",
         color_by="material",
         colors=colors,
     )
-    
+
     fig.update_layout(title=f"{property_name.capitalize()} Distribution")
-    
+
     return fig
 
 
@@ -174,12 +182,12 @@ def _plot_property_matplotlib(geometry, property_map, property_name, **kwargs):
     """Plot property using matplotlib."""
     if not _MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib is required")
-    
+
     from .geometry import plot_core_layout
-    
+
     fig, ax = plot_core_layout(geometry, view="xy", color_by="material")
     ax.set_title(f"{property_name.capitalize()} Distribution")
-    
+
     return fig, ax
 
 
@@ -192,26 +200,28 @@ def plot_burnup_composition(
 ):
     """
     Plot composition changes due to burnup.
-    
+
     Visualizes how nuclide concentrations change with burnup.
-    
+
     Args:
         inventory: NuclideInventoryTracker instance
         geometry: Reactor geometry
         nuclides: List of nuclides to plot (None for all)
         backend: Visualization backend
         **kwargs: Additional arguments
-    
+
     Returns:
         Figure object
     """
     if nuclides is None:
         nuclides = inventory.nuclides
-    
+
     if backend == "plotly":
         return _plot_burnup_composition_plotly(inventory, geometry, nuclides, **kwargs)
     elif backend == "matplotlib":
-        return _plot_burnup_composition_matplotlib(inventory, geometry, nuclides, **kwargs)
+        return _plot_burnup_composition_matplotlib(
+            inventory, geometry, nuclides, **kwargs
+        )
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
@@ -220,24 +230,26 @@ def _plot_burnup_composition_plotly(inventory, geometry, nuclides, **kwargs):
     """Plot burnup composition using plotly."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required")
-    
+
     # Create bar chart of concentrations
     nuclide_names = [n.name for n in nuclides]
     concentrations = [inventory.get_atom_density(n) for n in nuclides]
-    
-    fig = go.Figure(data=go.Bar(
-        x=nuclide_names,
-        y=concentrations,
-        marker_color="steelblue",
-    ))
-    
+
+    fig = go.Figure(
+        data=go.Bar(
+            x=nuclide_names,
+            y=concentrations,
+            marker_color="steelblue",
+        )
+    )
+
     fig.update_layout(
         title=f"Composition at Burnup: {inventory.burnup:.1f} MWd/kgU",
         xaxis_title="Nuclide",
         yaxis_title="Atom Density (atoms/barn-cm)",
         yaxis_type="log",
     )
-    
+
     return fig
 
 
@@ -245,10 +257,10 @@ def _plot_burnup_composition_matplotlib(inventory, geometry, nuclides, **kwargs)
     """Plot burnup composition using matplotlib."""
     if not _MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib is required")
-    
+
     nuclide_names = [n.name for n in nuclides]
     concentrations = [inventory.get_atom_density(n) for n in nuclides]
-    
+
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.bar(nuclide_names, concentrations, color="steelblue")
     ax.set_xlabel("Nuclide")
@@ -256,12 +268,14 @@ def _plot_burnup_composition_matplotlib(inventory, geometry, nuclides, **kwargs)
     ax.set_yscale("log")
     ax.set_title(f"Composition at Burnup: {inventory.burnup:.1f} MWd/kgU")
     plt.xticks(rotation=45, ha="right")
-    
+
     return fig, ax
 
 
 def _is_burnup_time_series_inventory(obj) -> bool:
-    return all(hasattr(obj, k) for k in ("nuclides", "concentrations", "times", "burnup"))
+    return all(
+        hasattr(obj, k) for k in ("nuclides", "concentrations", "times", "burnup")
+    )
 
 
 def _convert_time(times_s: np.ndarray, time_unit: str) -> Tuple[np.ndarray, str]:
@@ -302,7 +316,9 @@ def plot_nuclide_evolution(
     t, t_label = _convert_time(times_s, time_unit)
 
     if conc.ndim != 2 or conc.shape[0] != len(nuclides_all):
-        raise ValueError("inventory.concentrations must be shape [n_nuclides, n_time_steps]")
+        raise ValueError(
+            "inventory.concentrations must be shape [n_nuclides, n_time_steps]"
+        )
 
     if nuclides is None:
         # Default: top N by final concentration.
@@ -320,7 +336,9 @@ def plot_nuclide_evolution(
             raise ImportError("plotly is required")
         fig = go.Figure()
         for i in idxs:
-            fig.add_trace(go.Scatter(x=t, y=conc[i, :], mode="lines", name=nuclides_all[i].name))
+            fig.add_trace(
+                go.Scatter(x=t, y=conc[i, :], mode="lines", name=nuclides_all[i].name)
+            )
         fig.update_layout(
             title=plot_title,
             xaxis_title=f"Time ({t_label})",
@@ -402,7 +420,9 @@ def plot_composition_stacked_area(
             raise ImportError("plotly is required")
         fig = go.Figure()
         for name, vals in series.items():
-            fig.add_trace(go.Scatter(x=t, y=vals, mode="lines", name=name, stackgroup="one"))
+            fig.add_trace(
+                go.Scatter(x=t, y=vals, mode="lines", name=name, stackgroup="one")
+            )
         fig.update_layout(
             title=plot_title,
             xaxis_title=f"Time ({t_label})",
@@ -457,7 +477,11 @@ def plot_burnup_vs_time(
             raise ImportError("plotly is required")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=t, y=burnup, mode="lines+markers", name="burnup"))
-        fig.update_layout(title=plot_title, xaxis_title=f"Time ({t_label})", yaxis_title="Burnup (MWd/kgU)")
+        fig.update_layout(
+            title=plot_title,
+            xaxis_title=f"Time ({t_label})",
+            yaxis_title="Burnup (MWd/kgU)",
+        )
         return fig
 
     if backend == "matplotlib":
@@ -498,11 +522,21 @@ def plot_burnup_dashboard(
             raise ImportError("plotly is required")
         if make_subplots is None:
             raise ImportError("plotly.subplots is required")
-        fig = make_subplots(rows=2, cols=1, subplot_titles=("Burnup", "Composition (stacked)"), shared_xaxes=True)
+        fig = make_subplots(
+            rows=2,
+            cols=1,
+            subplot_titles=("Burnup", "Composition (stacked)"),
+            shared_xaxes=True,
+        )
         bfig = plot_burnup_vs_time(inventory, time_unit=time_unit, backend="plotly")
         for tr in bfig.data:
             fig.add_trace(tr, row=1, col=1)
-        cfig = plot_composition_stacked_area(inventory, time_unit=time_unit, backend="plotly", normalize=kwargs.get("normalize", False))
+        cfig = plot_composition_stacked_area(
+            inventory,
+            time_unit=time_unit,
+            backend="plotly",
+            normalize=kwargs.get("normalize", False),
+        )
         for tr in cfig.data:
             fig.add_trace(tr, row=2, col=1)
         fig.update_layout(title=plot_title, height=700, hovermode="x unified")
@@ -511,7 +545,9 @@ def plot_burnup_dashboard(
     if backend == "matplotlib":
         if not _MATPLOTLIB_AVAILABLE:
             raise ImportError("matplotlib is required")
-        fig, axes = plt.subplots(2, 1, figsize=kwargs.get("figsize", (10, 9)), sharex=True)
+        fig, axes = plt.subplots(
+            2, 1, figsize=kwargs.get("figsize", (10, 9)), sharex=True
+        )
 
         # Burnup curve
         times_s = np.asarray(inventory.times, dtype=float)
@@ -531,8 +567,12 @@ def plot_burnup_dashboard(
         act_idx = [i for i, n in enumerate(nuclides_all) if getattr(n, "Z", 0) >= 89]
         fp_idx = [i for i, n in enumerate(nuclides_all) if i not in act_idx]
         series: Dict[str, np.ndarray] = {
-            "Actinides": np.sum(conc[act_idx, :], axis=0) if act_idx else np.zeros(conc.shape[1]),
-            "Other/Fission products": np.sum(conc[fp_idx, :], axis=0) if fp_idx else np.zeros(conc.shape[1]),
+            "Actinides": (
+                np.sum(conc[act_idx, :], axis=0) if act_idx else np.zeros(conc.shape[1])
+            ),
+            "Other/Fission products": (
+                np.sum(conc[fp_idx, :], axis=0) if fp_idx else np.zeros(conc.shape[1])
+            ),
         }
         if normalize:
             total = np.sum(conc, axis=0)

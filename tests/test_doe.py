@@ -2,8 +2,8 @@
 Tests for Design of Experiments (DoE) workflow module.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from smrforge.workflows.doe import (
     full_factorial,
@@ -50,6 +50,7 @@ class TestLatinHypercube:
 
     def test_lhs_raises_without_scipy(self):
         import smrforge.workflows.doe as doe
+
         if doe._SCIPY_QMC:
             pytest.skip("scipy available")
         with pytest.raises(ImportError, match="scipy"):

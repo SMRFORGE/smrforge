@@ -21,20 +21,27 @@ This test suite fills remaining coverage gaps identified in COVERAGE_TRACKING.md
    - Partial failures in parallel fetching
 """
 
-import numpy as np
-import pytest
 import asyncio
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import numpy as np
 import polars as pl
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+import pytest
 
 # Check if pytest-asyncio is available
 try:
     import pytest_asyncio
+
     ASYNC_AVAILABLE = True
 except ImportError:
     ASYNC_AVAILABLE = False
 
-from smrforge.core.reactor_core import CrossSectionTable, NuclearDataCache, Nuclide, Library
+from smrforge.core.reactor_core import (
+    CrossSectionTable,
+    Library,
+    NuclearDataCache,
+    Nuclide,
+)
 
 
 @pytest.fixture
@@ -63,7 +70,9 @@ class TestGenerateMultigroupErrorPaths:
         group_structure = np.array([1e7, 1e6, 1e5])
 
         # Mock get_cross_section to raise ImportError
-        mock_cache.get_cross_section = Mock(side_effect=ImportError("Backend not available"))
+        mock_cache.get_cross_section = Mock(
+            side_effect=ImportError("Backend not available")
+        )
 
         # Should skip all reactions and return empty DataFrame
         df = table.generate_multigroup(
@@ -76,7 +85,12 @@ class TestGenerateMultigroupErrorPaths:
         # When all reactions fail (idx <= 0), implementation returns empty DataFrame
         assert df is not None
         assert len(df) == 0
-        assert "nuclide" in df.columns and "reaction" in df.columns and "group" in df.columns and "xs" in df.columns
+        assert (
+            "nuclide" in df.columns
+            and "reaction" in df.columns
+            and "group" in df.columns
+            and "xs" in df.columns
+        )
 
     def test_generate_multigroup_file_not_found_error_handling(
         self, temp_cache_dir, mock_cache
@@ -103,9 +117,7 @@ class TestGenerateMultigroupErrorPaths:
         assert len(df) == 0
         assert "nuclide" in df.columns and "reaction" in df.columns
 
-    def test_generate_multigroup_value_error_handling(
-        self, temp_cache_dir, mock_cache
-    ):
+    def test_generate_multigroup_value_error_handling(self, temp_cache_dir, mock_cache):
         """Test generate_multigroup handles ValueError from get_cross_section (line 2449)."""
         table = CrossSectionTable(cache=mock_cache)
         u235 = Nuclide(Z=92, A=235)
@@ -126,9 +138,7 @@ class TestGenerateMultigroupErrorPaths:
         assert len(df) == 0
         assert "nuclide" in df.columns and "xs" in df.columns
 
-    def test_generate_multigroup_none_data_handling(
-        self, temp_cache_dir, mock_cache
-    ):
+    def test_generate_multigroup_none_data_handling(self, temp_cache_dir, mock_cache):
         """Test generate_multigroup handles None data from get_cross_section (line 2459)."""
         table = CrossSectionTable(cache=mock_cache)
         u235 = Nuclide(Z=92, A=235)
@@ -148,9 +158,7 @@ class TestGenerateMultigroupErrorPaths:
         assert df is not None
         assert len(df) == 0
 
-    def test_generate_multigroup_empty_data_handling(
-        self, temp_cache_dir, mock_cache
-    ):
+    def test_generate_multigroup_empty_data_handling(self, temp_cache_dir, mock_cache):
         """Test generate_multigroup handles empty arrays from get_cross_section (line 2465)."""
         table = CrossSectionTable(cache=mock_cache)
         u235 = Nuclide(Z=92, A=235)
@@ -180,10 +188,15 @@ class TestGenerateMultigroupErrorPaths:
 
         # Mock get_cross_section to return mismatched lengths
         mock_cache.get_cross_section = Mock(
-            return_value=(np.array([1e5, 1e6, 1e7]), np.array([10.0, 20.0]))  # Different lengths
+            return_value=(
+                np.array([1e5, 1e6, 1e7]),
+                np.array([10.0, 20.0]),
+            )  # Different lengths
         )
 
-        with pytest.raises(ValueError, match="Mismatched energy and cross-section array lengths"):
+        with pytest.raises(
+            ValueError, match="Mismatched energy and cross-section array lengths"
+        ):
             table.generate_multigroup(
                 nuclides=[u235],
                 reactions=["total"],
@@ -239,7 +252,9 @@ class TestGenerateMultigroupErrorPaths:
         group_structure = np.array([1e7, 1e6, 1e5])
 
         # Mock all reactions to fail
-        mock_cache.get_cross_section = Mock(side_effect=ImportError("Backend not available"))
+        mock_cache.get_cross_section = Mock(
+            side_effect=ImportError("Backend not available")
+        )
 
         with patch("smrforge.core.reactor_core.logger") as mock_logger:
             df = table.generate_multigroup(
@@ -285,9 +300,7 @@ class TestGenerateMultigroupErrorPaths:
             assert len(df) == 1
             assert df["group"].unique().to_list() == [0]
 
-    def test_generate_multigroup_with_weighting_flux(
-        self, temp_cache_dir, mock_cache
-    ):
+    def test_generate_multigroup_with_weighting_flux(self, temp_cache_dir, mock_cache):
         """Test generate_multigroup with custom weighting flux."""
         table = CrossSectionTable(cache=mock_cache)
         u235 = Nuclide(Z=92, A=235)
@@ -315,9 +328,7 @@ class TestGenerateMultigroupErrorPaths:
             assert call_args[0][3] is not None  # weighting_flux was passed
             assert np.array_equal(call_args[0][3], weighting_flux)
 
-    def test_generate_multigroup_dataframe_structure(
-        self, temp_cache_dir, mock_cache
-    ):
+    def test_generate_multigroup_dataframe_structure(self, temp_cache_dir, mock_cache):
         """Test that generate_multigroup creates DataFrame with correct structure."""
         table = CrossSectionTable(cache=mock_cache)
         u235 = Nuclide(Z=92, A=235)
@@ -367,9 +378,7 @@ class TestGenerateMultigroupAsyncComplete:
     """Complete async tests for generate_multigroup_async."""
 
     @pytest.mark.asyncio
-    async def test_generate_multigroup_async_success(
-        self, temp_cache_dir, mock_cache
-    ):
+    async def test_generate_multigroup_async_success(self, temp_cache_dir, mock_cache):
         """Test generate_multigroup_async success path."""
         table = CrossSectionTable(cache=mock_cache)
         u235 = Nuclide(Z=92, A=235)
@@ -476,10 +485,16 @@ class TestGenerateMultigroupAsyncComplete:
         # This will raise a Numba TypingError (expected behavior - this is a code path that needs validation)
         try:
             import numba
-            exception_types = (AttributeError, TypeError, ValueError, numba.core.errors.TypingError)
+
+            exception_types = (
+                AttributeError,
+                TypeError,
+                ValueError,
+                numba.core.errors.TypingError,
+            )
         except ImportError:
             exception_types = (AttributeError, TypeError, ValueError, Exception)
-        
+
         with pytest.raises(exception_types):
             df = await table.generate_multigroup_async(
                 nuclides=[u235],

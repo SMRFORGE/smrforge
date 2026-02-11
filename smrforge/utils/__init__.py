@@ -32,6 +32,7 @@ __all__ = [
 # Parallel batch processing (optional import)
 try:
     from smrforge.utils.parallel_batch import batch_process, batch_solve_keff
+
     __all__.extend(["batch_process", "batch_solve_keff"])
 except ImportError:
     pass
@@ -42,7 +43,11 @@ except ImportError:
 # which requires that `smrforge.utils` refers to the exact module object stored in
 # `sys.modules["smrforge.utils"]`.
 import sys as _sys  # noqa: E402
-from .._import_compat import delete_attr_if_present, ensure_sys_modules_alias  # noqa: E402
+
+from .._import_compat import (  # noqa: E402
+    delete_attr_if_present,
+    ensure_sys_modules_alias,
+)
 
 # Ensure our own entry is present and canonical. Some test suites delete
 # `sys.modules["smrforge.utils"]` without clearing the attribute on `smrforge`,
@@ -58,21 +63,24 @@ delete_attr_if_present("smrforge", "utils")
 # Optimization utilities (optional import)
 try:
     from smrforge.utils.optimization_utils import (
+        batch_vectorized_operations,
         ensure_contiguous,
+        smart_array_copy,
         vectorized_cross_section_lookup,
         vectorized_normalize,
-        batch_vectorized_operations,
         zero_copy_slice,
-        smart_array_copy,
     )
-    __all__.extend([
-        "ensure_contiguous",
-        "vectorized_cross_section_lookup",
-        "vectorized_normalize",
-        "batch_vectorized_operations",
-        "zero_copy_slice",
-        "smart_array_copy",
-    ])
+
+    __all__.extend(
+        [
+            "ensure_contiguous",
+            "vectorized_cross_section_lookup",
+            "vectorized_normalize",
+            "batch_vectorized_operations",
+            "zero_copy_slice",
+            "smart_array_copy",
+        ]
+    )
 except ImportError:
     pass
 
@@ -84,15 +92,18 @@ try:
         load_memory_mapped_cross_sections,
     )
     from smrforge.utils.memory_pool import (
-        ParticleMemoryPool,
         MemoryPoolManager,
+        ParticleMemoryPool,
     )
-    __all__.extend([
-        "MemoryMappedArray",
-        "create_memory_mapped_cross_sections",
-        "load_memory_mapped_cross_sections",
-        "ParticleMemoryPool",
-        "MemoryPoolManager",
-    ])
+
+    __all__.extend(
+        [
+            "MemoryMappedArray",
+            "create_memory_mapped_cross_sections",
+            "load_memory_mapped_cross_sections",
+            "ParticleMemoryPool",
+            "MemoryPoolManager",
+        ]
+    )
 except ImportError:
     pass

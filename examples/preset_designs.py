@@ -90,9 +90,9 @@ def analyze_preset_design(design_name: str = "valar-10"):
     print("3. Validating design...")
     is_valid = library.validate_all_designs()
     if is_valid:
-        print("   ✓ Design validation passed")
+        print("   [OK] Design validation passed")
     else:
-        print("   ✗ Design validation failed")
+        print("   [FAIL] Design validation failed")
     print()
     
     print("=" * 60)

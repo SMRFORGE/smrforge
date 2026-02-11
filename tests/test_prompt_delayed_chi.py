@@ -2,8 +2,8 @@
 Tests for prompt/delayed chi separation.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
     from smrforge.core.endf_extractors import extract_chi_prompt_delayed

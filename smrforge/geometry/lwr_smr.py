@@ -32,10 +32,10 @@ class AssemblyType(Enum):
 class FuelRod:
     """
     Individual fuel rod for LWR SMR assemblies.
-    
+
     Represents a cylindrical fuel pin with fuel pellets, cladding, and gap.
     Used in square lattice fuel assemblies for PWR and BWR SMRs.
-    
+
     Attributes:
         id: Unique identifier for the fuel rod
         position: Center position of the rod (x, y, z)
@@ -82,9 +82,9 @@ class FuelRod:
 class SpacerGrid:
     """
     Spacer grid for fuel assembly support.
-    
+
     Provides structural support and maintains fuel rod spacing in LWR assemblies.
-    
+
     Attributes:
         id: Unique identifier
         z_position: Axial position [cm]
@@ -102,10 +102,10 @@ class SpacerGrid:
 class AssemblyNozzle:
     """
     Top or bottom nozzle for fuel assembly.
-    
+
     Structural component at the top or bottom of fuel assemblies that provides
     handling points, flow distribution, and structural support.
-    
+
     Attributes:
         id: Unique identifier
         position: Center position
@@ -115,7 +115,7 @@ class AssemblyNozzle:
         flow_area: Flow area through nozzle [cm²]
         material: Nozzle material (typically stainless steel)
     """
-    
+
     id: int
     position: Point3D
     nozzle_type: str  # "top" or "bottom"
@@ -123,25 +123,25 @@ class AssemblyNozzle:
     width: float  # cm (square cross-section)
     flow_area: float = 0.0  # cm² (calculated if 0)
     material: str = "stainless_steel"
-    
+
     def volume(self) -> float:
         """Calculate nozzle volume [cm³]."""
-        return self.width ** 2 * self.height
-    
+        return self.width**2 * self.height
+
     def calculate_flow_area(self, n_rods: int, rod_pitch: float) -> float:
         """
         Calculate flow area based on rod positions.
-        
+
         Args:
             n_rods: Number of fuel rods
             rod_pitch: Rod-to-rod pitch [cm]
-        
+
         Returns:
             Flow area [cm²]
         """
         # Approximate: total area minus rod areas
-        total_area = (n_rods ** 0.5 * rod_pitch) ** 2
-        rod_area = n_rods * np.pi * (0.4096 ** 2)  # Typical rod radius
+        total_area = (n_rods**0.5 * rod_pitch) ** 2
+        rod_area = n_rods * np.pi * (0.4096**2)  # Typical rod radius
         self.flow_area = max(0.0, total_area - rod_area)
         return self.flow_area
 
@@ -150,10 +150,10 @@ class AssemblyNozzle:
 class FuelAssembly:
     """
     Square lattice fuel assembly for LWR SMRs.
-    
+
     Represents a fuel assembly with square lattice arrangement of fuel rods.
     Used in PWR and BWR SMRs (e.g., NuScale 17x17, mPower 15x15).
-    
+
     Attributes:
         id: Unique identifier
         position: Center position of assembly (x, y, z)
@@ -206,7 +206,7 @@ class FuelAssembly:
     ):
         """
         Build square lattice of fuel rods in assembly.
-        
+
         Args:
             fuel_rod_radius: Outer radius of fuel rod [cm]
             cladding_thickness: Cladding wall thickness [cm]
@@ -264,16 +264,18 @@ class FuelAssembly:
                 n_rods=len(self.fuel_rods),
             )
             self.spacer_grids.append(grid)
-        
+
         # Add top and bottom nozzles
         self._add_nozzles()
-    
+
     def _add_nozzles(self):
         """Add top and bottom nozzles to assembly."""
         # Calculate nozzle dimensions based on assembly size
-        nozzle_width = self.lattice_size * self.pitch * 1.1  # Slightly larger than assembly
+        nozzle_width = (
+            self.lattice_size * self.pitch * 1.1
+        )  # Slightly larger than assembly
         nozzle_height = 10.0  # cm (typical nozzle height)
-        
+
         # Bottom nozzle
         bottom_z = self.position.z - self.height / 2 - nozzle_height / 2
         self.bottom_nozzle = AssemblyNozzle(
@@ -284,7 +286,7 @@ class FuelAssembly:
             width=nozzle_width,
         )
         self.bottom_nozzle.calculate_flow_area(len(self.fuel_rods), self.pitch)
-        
+
         # Top nozzle
         top_z = self.position.z + self.height / 2 + nozzle_height / 2
         self.top_nozzle = AssemblyNozzle(
@@ -301,10 +303,10 @@ class FuelAssembly:
 class Pressurizer:
     """
     Pressurizer for PWR SMR designs.
-    
+
     Maintains primary system pressure in PWR SMRs. Can be integrated
     in-vessel or separate.
-    
+
     Attributes:
         id: Unique identifier
         position: Center position
@@ -317,7 +319,7 @@ class Pressurizer:
         steam_volume: Steam volume [m³]
         integrated: True if integrated in reactor vessel
     """
-    
+
     id: int
     position: Point3D
     volume: float  # m³
@@ -328,7 +330,7 @@ class Pressurizer:
     water_volume: float = 0.0  # m³
     steam_volume: float = 0.0  # m³
     integrated: bool = True  # Integrated in vessel for SMRs
-    
+
     def water_level(self) -> float:
         """Water level as fraction of height (0-1)."""
         if self.volume == 0:
@@ -340,9 +342,9 @@ class Pressurizer:
 class SteamSeparator:
     """
     Steam separator for BWR SMR designs.
-    
+
     Separates steam from water in BWR SMRs. Located in upper plenum.
-    
+
     Attributes:
         id: Unique identifier
         position: Center position
@@ -352,7 +354,7 @@ class SteamSeparator:
         steam_quality_inlet: Inlet steam quality (0-1)
         steam_quality_outlet: Outlet steam quality (0-1)
     """
-    
+
     id: int
     position: Point3D
     diameter: float  # cm
@@ -360,7 +362,7 @@ class SteamSeparator:
     separation_efficiency: float = 0.99  # 99% typical
     steam_quality_inlet: float = 0.15  # 15% typical at core exit
     steam_quality_outlet: float = 0.99  # 99% after separation
-    
+
     def flow_area(self) -> float:
         """Flow area [cm²]."""
         return np.pi * (self.diameter / 2) ** 2
@@ -370,9 +372,9 @@ class SteamSeparator:
 class WaterChannel:
     """
     Water moderator/coolant channel for LWR SMRs.
-    
+
     Represents water flow paths in LWR cores (PWR or BWR).
-    
+
     Attributes:
         id: Unique identifier
         position: Center position
@@ -398,10 +400,10 @@ class WaterChannel:
 class ControlRodCluster:
     """
     Control rod cluster assembly (RCCA) for PWR SMRs.
-    
+
     Represents a cluster of control rods that insert together.
     Used in PWR designs (e.g., NuScale, mPower).
-    
+
     Attributes:
         id: Unique identifier
         position: Center position of cluster
@@ -425,9 +427,9 @@ class ControlRodCluster:
 class ControlBlade:
     """
     Control blade for BWR SMRs.
-    
+
     Represents a cruciform control blade used in BWR designs.
-    
+
     Attributes:
         id: Unique identifier
         position: Center position
@@ -450,10 +452,10 @@ class ControlBlade:
 class PWRSMRCore:
     """
     Pressurized Water Reactor (PWR) Small Modular Reactor core.
-    
+
     Represents a PWR-based SMR core with square lattice fuel assemblies.
     Suitable for modeling NuScale, mPower, CAREM, SMR-160, etc.
-    
+
     Attributes:
         name: Core name
         assemblies: List of fuel assemblies
@@ -493,7 +495,7 @@ class PWRSMRCore:
     ):
         """
         Build square lattice core of fuel assemblies.
-        
+
         Args:
             n_assemblies_x: Number of assemblies in x-direction
             n_assemblies_y: Number of assemblies in y-direction
@@ -580,10 +582,10 @@ class PWRSMRCore:
 class BWRSMRCore:
     """
     Boiling Water Reactor (BWR) Small Modular Reactor core.
-    
+
     Similar to PWR but with different control systems (control blades instead of clusters)
     and two-phase flow regions.
-    
+
     Attributes:
         name: Core name
         assemblies: List of fuel assemblies
@@ -624,11 +626,11 @@ class BWRSMRCore:
 class SteamGeneratorTube:
     """
     Individual steam generator tube for in-vessel steam generators.
-    
+
     Represents a U-tube or straight tube in an integral PWR steam generator.
     Primary coolant flows on the outside (shell side), secondary water/steam
     flows on the inside (tube side).
-    
+
     Attributes:
         id: Unique identifier
         position: Center position of tube
@@ -638,7 +640,7 @@ class SteamGeneratorTube:
         tube_type: "U-tube" or "straight"
         material: Tube material (typically Inconel-690 or Inconel-600)
     """
-    
+
     id: int
     position: Point3D
     outer_diameter: float  # cm
@@ -646,16 +648,16 @@ class SteamGeneratorTube:
     length: float  # cm
     tube_type: str = "U-tube"  # "U-tube" or "straight"
     material: str = "Inconel-690"
-    
+
     def flow_area_primary(self) -> float:
         """Flow area for primary coolant (shell side) [cm²]."""
         # Simplified: assume tube bundle arrangement
         return np.pi * (self.outer_diameter / 2) ** 2
-    
+
     def flow_area_secondary(self) -> float:
         """Flow area for secondary water/steam (tube side) [cm²]."""
         return np.pi * (self.inner_diameter / 2) ** 2
-    
+
     def heat_transfer_area(self) -> float:
         """Heat transfer surface area [cm²]."""
         return np.pi * self.outer_diameter * self.length
@@ -665,13 +667,13 @@ class SteamGeneratorTube:
 class InVesselSteamGenerator:
     """
     In-vessel steam generator for integral PWR SMR designs.
-    
+
     Represents a steam generator located inside the reactor pressure vessel,
     as used in integral PWR SMRs like CAREM, SMART, and NuScale.
-    
+
     Primary coolant (hot water from core) flows on shell side.
     Secondary water/steam flows on tube side.
-    
+
     Attributes:
         id: Unique identifier
         position: Center position in vessel
@@ -686,7 +688,7 @@ class InVesselSteamGenerator:
         secondary_outlet_temp: Secondary steam outlet temperature [K]
         heat_transfer_rate: Heat transfer rate [W]
     """
-    
+
     id: int
     position: Point3D
     n_tubes: int
@@ -699,11 +701,11 @@ class InVesselSteamGenerator:
     secondary_inlet_temp: float = 433.15  # K (160°C feedwater)
     secondary_outlet_temp: float = 553.15  # K (280°C steam)
     heat_transfer_rate: float = 0.0  # W
-    
+
     def total_heat_transfer_area(self) -> float:
         """Total heat transfer area of all tubes [cm²]."""
         return sum(tube.heat_transfer_area() for tube in self.tubes)
-    
+
     def build_tube_bundle(
         self,
         tube_outer_diameter: float = 1.9,  # cm (typical)
@@ -714,7 +716,7 @@ class InVesselSteamGenerator:
     ):
         """
         Build a tube bundle for the steam generator.
-        
+
         Args:
             tube_outer_diameter: Outer diameter of tubes [cm]
             tube_inner_diameter: Inner diameter of tubes [cm]
@@ -723,27 +725,27 @@ class InVesselSteamGenerator:
             tube_type: "U-tube" or "straight"
         """
         self.tubes = []
-        
+
         # Calculate number of tubes that fit in bundle
         # Simplified: assume square pitch arrangement
         n_tubes_per_row = int(self.tube_bundle_diameter / tube_pitch)
         n_rows = int(self.height / tube_pitch)
         max_tubes = n_tubes_per_row * n_rows
-        
+
         # Limit to specified number
         n_tubes_to_build = min(self.n_tubes, max_tubes)
-        
+
         tube_id = 0
         for row in range(n_rows):
             for col in range(n_tubes_per_row):
                 if tube_id >= n_tubes_to_build:
                     break
-                
+
                 # Calculate tube position (relative to bundle center)
                 x = (col - (n_tubes_per_row - 1) / 2) * tube_pitch
                 y = (row - (n_rows - 1) / 2) * tube_pitch
                 z = self.position.z
-                
+
                 tube = SteamGeneratorTube(
                     id=tube_id,
                     position=Point3D(
@@ -758,7 +760,7 @@ class InVesselSteamGenerator:
                 )
                 self.tubes.append(tube)
                 tube_id += 1
-        
+
         # Update actual number of tubes
         self.n_tubes = len(self.tubes)
 
@@ -767,11 +769,11 @@ class InVesselSteamGenerator:
 class IntegratedPrimarySystem:
     """
     Integrated primary system for integral PWR SMR designs.
-    
+
     Represents a complete primary system within a single pressure vessel,
     including core, steam generators, and pumps. Used in integral PWR SMRs
     like CAREM, SMART, and NuScale.
-    
+
     Attributes:
         name: System name
         vessel_diameter: Reactor pressure vessel diameter [cm]
@@ -782,7 +784,7 @@ class IntegratedPrimarySystem:
         pressurizer_volume: Pressurizer volume [m³] (if separate)
         integrated_pressurizer: True if pressurizer is integrated in vessel
     """
-    
+
     name: str
     vessel_diameter: float  # cm
     vessel_height: float  # cm
@@ -791,25 +793,21 @@ class IntegratedPrimarySystem:
     primary_pumps: int = 0
     pressurizer_volume: float = 0.0  # m³
     integrated_pressurizer: bool = True
-    
+
     def total_steam_generator_heat_transfer(self) -> float:
         """Total heat transfer rate from all steam generators [W]."""
         return sum(sg.heat_transfer_rate for sg in self.steam_generators)
-    
+
     def vessel_volume(self) -> float:
         """Total vessel volume [cm³]."""
         return np.pi * (self.vessel_diameter / 2) ** 2 * self.vessel_height
-    
+
     def add_steam_generator(self, sg: InVesselSteamGenerator):
         """Add a steam generator to the system."""
         self.steam_generators.append(sg)
-    
+
     def get_steam_generators_by_position(
         self, min_z: float, max_z: float
     ) -> List[InVesselSteamGenerator]:
         """Get steam generators within a z-range."""
-        return [
-            sg
-            for sg in self.steam_generators
-            if min_z <= sg.position.z <= max_z
-        ]
+        return [sg for sg in self.steam_generators if min_z <= sg.position.z <= max_z]

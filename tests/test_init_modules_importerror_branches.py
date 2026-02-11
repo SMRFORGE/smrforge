@@ -31,17 +31,22 @@ def test_core_init_importerror_branches_and_getattr():
     assert core._CONTROL_ROD_WORTH_AVAILABLE is False
 
     core = _reload_with_forced_importerror(
-        core, name_predicate=lambda n, *_: n.endswith("smrforge.core.multigroup_advanced")
+        core,
+        name_predicate=lambda n, *_: n.endswith("smrforge.core.multigroup_advanced"),
     )
     assert core._MULTIGROUP_ADVANCED_AVAILABLE is False
 
     core = _reload_with_forced_importerror(
-        core, name_predicate=lambda n, *_: n.endswith("smrforge.core.energy_angle_parser")
+        core,
+        name_predicate=lambda n, *_: n.endswith("smrforge.core.energy_angle_parser"),
     )
     assert core._ENERGY_ANGLE_PARSER_AVAILABLE is False
 
     core = _reload_with_forced_importerror(
-        core, name_predicate=lambda n, *_: n.endswith("smrforge.core.self_shielding_integration")
+        core,
+        name_predicate=lambda n, *_: n.endswith(
+            "smrforge.core.self_shielding_integration"
+        ),
     )
     assert core._SELF_SHIELDING_INTEGRATION_AVAILABLE is False
 
@@ -77,7 +82,8 @@ def test_thermal_init_importerror_branches():
 
     # Force two-phase advanced import failure branch
     th3 = _reload_with_forced_importerror(
-        th, name_predicate=lambda n, *_: n.endswith("smrforge.thermal.two_phase_advanced")
+        th,
+        name_predicate=lambda n, *_: n.endswith("smrforge.thermal.two_phase_advanced"),
     )
     assert th3._TWO_PHASE_ADVANCED_AVAILABLE is False
 
@@ -91,22 +97,14 @@ def test_smrforge_init_convenience_fallback_exec_module_failure():
 
     smrforge = importlib.reload(smrforge)
 
-    # Force the initial `from smrforge.convenience import ...` to fail, which triggers
-    # the fallback SourceFileLoader path, then force that exec_module() to fail so
-    # smrforge/__init__.py raises the original ImportError from the exec failure.
+    # Force `from smrforge.convenience import ...` to fail; __init__.py handles
+    # ImportError with warning and sets _CONVENIENCE_AVAILABLE=False.
     orig_import = builtins.__import__
-    orig_exec_module = importlib.machinery.SourceFileLoader.exec_module
 
     def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
         if name == "smrforge.convenience":
             raise ImportError("forced e1")
         return orig_import(name, globals, locals, fromlist, level)
-
-    def guarded_exec_module(self, module):
-        # Only fail the fallback-loaded convenience module, not the reload of smrforge itself.
-        if getattr(module, "__name__", "").endswith(".convenience_file"):
-            raise RuntimeError("forced e2")
-        return orig_exec_module(self, module)
 
     warn_calls = []
 
@@ -115,10 +113,8 @@ def test_smrforge_init_convenience_fallback_exec_module_failure():
 
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(builtins, "__import__", guarded_import)
-        mp.setattr(importlib.machinery.SourceFileLoader, "exec_module", guarded_exec_module)
         mp.setattr(warnings, "warn", fake_warn)
 
-        # Ensure the convenience import is attempted during reload.
         sys.modules.pop("smrforge.convenience", None)
         if hasattr(smrforge, "convenience"):
             delattr(smrforge, "convenience")
@@ -127,6 +123,4 @@ def test_smrforge_init_convenience_fallback_exec_module_failure():
         assert smrforge2._CONVENIENCE_AVAILABLE is False
         assert any("Could not import convenience functions" in m for m in warn_calls)
 
-    # Reload cleanly after the forced failure
     importlib.reload(smrforge)
-

@@ -47,19 +47,63 @@ def test_feature_lab_demo_functions_and_callback_dispatch():
     with (
         patch("smrforge.list_presets", return_value=["valar-10"]),
         patch("smrforge.create_reactor", return_value=dummy_reactor),
-        patch("smrforge.visualization.advanced.plot_ray_traced_geometry", return_value=go.Figure()),
-        patch("smrforge.convenience.transients.quick_transient", return_value={"time": [0, 1], "power": [1, 2], "T_fuel": [10, 11], "T_moderator": [9, 10]}),
-        patch("smrforge.visualization.material_composition.plot_burnup_dashboard", return_value=go.Figure()),
-        patch("smrforge.visualization.mesh_diagnostics.plot_mesh_verification_dashboard", return_value=go.Figure()),
-        patch("smrforge.visualization.validation_plots.plot_validation_summary", return_value=go.Figure()),
-        patch("smrforge.visualization.validation_plots.plot_validation_issues", return_value=go.Figure()),
-        patch("smrforge.visualization.economics_plots.plot_capex_breakdown", return_value=go.Figure()),
-        patch("smrforge.visualization.economics_plots.plot_lcoe_breakdown", return_value=go.Figure()),
-        patch("smrforge.visualization.optimization_plots.plot_optimization_trace", return_value=go.Figure()),
-        patch("smrforge.visualization.sweep_plots.plot_sweep_heatmap", return_value=go.Figure()),
-        patch("smrforge.visualization.sweep_plots.plot_sweep_tornado", return_value=go.Figure()),
-        patch("smrforge.uncertainty.visualization.plot_uq_distribution", return_value=go.Figure()),
-        patch("smrforge.uncertainty.visualization.plot_uq_correlation_matrix", return_value=go.Figure()),
+        patch(
+            "smrforge.visualization.advanced.plot_ray_traced_geometry",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.convenience.transients.quick_transient",
+            return_value={
+                "time": [0, 1],
+                "power": [1, 2],
+                "T_fuel": [10, 11],
+                "T_moderator": [9, 10],
+            },
+        ),
+        patch(
+            "smrforge.visualization.material_composition.plot_burnup_dashboard",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.visualization.mesh_diagnostics.plot_mesh_verification_dashboard",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.visualization.validation_plots.plot_validation_summary",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.visualization.validation_plots.plot_validation_issues",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.visualization.economics_plots.plot_capex_breakdown",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.visualization.economics_plots.plot_lcoe_breakdown",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.visualization.optimization_plots.plot_optimization_trace",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.visualization.sweep_plots.plot_sweep_heatmap",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.visualization.sweep_plots.plot_sweep_tornado",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.uncertainty.visualization.plot_uq_distribution",
+            return_value=go.Figure(),
+        ),
+        patch(
+            "smrforge.uncertainty.visualization.plot_uq_correlation_matrix",
+            return_value=go.Figure(),
+        ),
     ):
         # Execute each demo at least once
         for fn in [
@@ -90,7 +134,10 @@ def test_feature_lab_demo_functions_and_callback_dispatch():
             assert isinstance(fig, dict)
 
         # Cover branches inside quick/lumped demos when data arrays are empty
-        with patch("smrforge.convenience.transients.quick_transient", return_value={"time": [], "power": [], "T_fuel": [], "T_moderator": []}):
+        with patch(
+            "smrforge.convenience.transients.quick_transient",
+            return_value={"time": [], "power": [], "T_fuel": [], "T_moderator": []},
+        ):
             text, fig = fl._demo_quick_transient()
             assert "peak power: N/A" in text
 
@@ -104,7 +151,9 @@ def test_feature_lab_demo_functions_and_callback_dispatch():
         with (
             patch("smrforge.thermal.lumped.LumpedThermalHydraulics", DummyLumped),
             patch("smrforge.thermal.lumped.ThermalLump", lambda **kwargs: object()),
-            patch("smrforge.thermal.lumped.ThermalResistance", lambda **kwargs: object()),
+            patch(
+                "smrforge.thermal.lumped.ThermalResistance", lambda **kwargs: object()
+            ),
         ):
             text, fig = fl._demo_lumped_thermal()
             assert "final T_fuel: N/A" in text
@@ -158,7 +207,8 @@ def test_feature_lab_demo_functions_and_callback_dispatch():
         out = run_demo(1, "x")
         assert out[3] == "success"
 
-    with patch.dict(fl._DEMO_RUNNERS, {"boom": lambda: (_ for _ in ()).throw(RuntimeError("boom"))}):
+    with patch.dict(
+        fl._DEMO_RUNNERS, {"boom": lambda: (_ for _ in ()).throw(RuntimeError("boom"))}
+    ):
         out = run_demo(1, "boom")
         assert out[3] == "danger"
-

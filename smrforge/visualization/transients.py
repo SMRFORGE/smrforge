@@ -17,6 +17,7 @@ import numpy as np
 try:
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
+
     _MATPLOTLIB_AVAILABLE = True
 except ImportError:
     _MATPLOTLIB_AVAILABLE = False
@@ -25,6 +26,7 @@ except ImportError:
 try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
+
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
@@ -128,18 +130,38 @@ def plot_transient(
         if not _PLOTLY_AVAILABLE:
             raise ImportError("Plotly not available. Install with: pip install plotly")
         return _plot_transient_plotly(
-            time, power, T_fuel, T_mod, reactivity, precursors,
-            output=output, show_plot=show_plot, events=events, **kwargs
+            time,
+            power,
+            T_fuel,
+            T_mod,
+            reactivity,
+            precursors,
+            output=output,
+            show_plot=show_plot,
+            events=events,
+            **kwargs,
         )
     elif backend == "matplotlib":
         if not _MATPLOTLIB_AVAILABLE:
-            raise ImportError("Matplotlib not available. Install with: pip install matplotlib")
+            raise ImportError(
+                "Matplotlib not available. Install with: pip install matplotlib"
+            )
         return _plot_transient_matplotlib(
-            time, power, T_fuel, T_mod, reactivity, precursors,
-            output=output, show_plot=show_plot, events=events, **kwargs
+            time,
+            power,
+            T_fuel,
+            T_mod,
+            reactivity,
+            precursors,
+            output=output,
+            show_plot=show_plot,
+            events=events,
+            **kwargs,
         )
     else:
-        raise ValueError(f"Unknown backend: {backend}. Must be 'plotly' or 'matplotlib'")
+        raise ValueError(
+            f"Unknown backend: {backend}. Must be 'plotly' or 'matplotlib'"
+        )
 
 
 def _plot_transient_plotly(
@@ -164,11 +186,12 @@ def _plot_transient_plotly(
 
     # Create subplots
     fig = make_subplots(
-        rows=n_plots, cols=1,
+        rows=n_plots,
+        cols=1,
         subplot_titles=(
-            ["Power", "Temperature"] +
-            (["Reactivity"] if reactivity is not None else []) +
-            (["Delayed Neutron Precursors"] if precursors is not None else [])
+            ["Power", "Temperature"]
+            + (["Reactivity"] if reactivity is not None else [])
+            + (["Delayed Neutron Precursors"] if precursors is not None else [])
         ),
         vertical_spacing=0.08,
         shared_xaxes=True,
@@ -183,7 +206,8 @@ def _plot_transient_plotly(
             name="Power",
             line=dict(color="blue", width=2),
         ),
-        row=1, col=1,
+        row=1,
+        col=1,
     )
     fig.update_yaxes(title_text="Power [MWth]", row=1, col=1)
 
@@ -198,7 +222,8 @@ def _plot_transient_plotly(
                 name="Fuel Temperature",
                 line=dict(color="red", width=2),
             ),
-            row=row, col=1,
+            row=row,
+            col=1,
         )
     if T_mod is not None:
         fig.add_trace(
@@ -209,7 +234,8 @@ def _plot_transient_plotly(
                 name="Moderator Temperature",
                 line=dict(color="orange", width=2, dash="dash"),
             ),
-            row=row, col=1,
+            row=row,
+            col=1,
         )
     fig.update_yaxes(title_text="Temperature [°C]", row=row, col=1)
 
@@ -224,7 +250,8 @@ def _plot_transient_plotly(
                 name="Reactivity",
                 line=dict(color="green", width=2),
             ),
-            row=row, col=1,
+            row=row,
+            col=1,
         )
         fig.update_yaxes(title_text="Reactivity [m$]", row=row, col=1)
 
@@ -244,7 +271,8 @@ def _plot_transient_plotly(
                 name="Precursors (Group 1)",
                 line=dict(color="purple", width=2),
             ),
-            row=row, col=1,
+            row=row,
+            col=1,
         )
         fig.update_yaxes(title_text="Precursor Concentration", row=row, col=1)
 
@@ -264,9 +292,13 @@ def _plot_transient_plotly(
     # Optional event annotations
     if events:
         for t_evt, label, kind in events:
-            color = {"info": "blue", "warning": "orange", "danger": "red"}.get(kind, "gray")
+            color = {"info": "blue", "warning": "orange", "danger": "red"}.get(
+                kind, "gray"
+            )
             try:
-                fig.add_vline(x=float(t_evt), line_width=1, line_dash="dash", line_color=color)
+                fig.add_vline(
+                    x=float(t_evt), line_width=1, line_dash="dash", line_color=color
+                )
                 fig.add_annotation(
                     x=float(t_evt),
                     y=1.02,
@@ -314,7 +346,9 @@ def _plot_transient_matplotlib(
     if precursors is not None:
         n_plots += 1
 
-    fig, axes = plt.subplots(n_plots, 1, figsize=kwargs.get("figsize", (12, 3 * n_plots)), sharex=True)
+    fig, axes = plt.subplots(
+        n_plots, 1, figsize=kwargs.get("figsize", (12, 3 * n_plots)), sharex=True
+    )
 
     if n_plots == 1:
         axes = [axes]
@@ -329,9 +363,18 @@ def _plot_transient_matplotlib(
     # Plot temperature
     idx = 1
     if T_fuel is not None:
-        axes[idx].plot(time, T_fuel - 273.15, "r-", linewidth=2, label="Fuel Temperature")
+        axes[idx].plot(
+            time, T_fuel - 273.15, "r-", linewidth=2, label="Fuel Temperature"
+        )
     if T_mod is not None:
-        axes[idx].plot(time, T_mod - 273.15, "orange", linestyle="--", linewidth=2, label="Moderator Temperature")
+        axes[idx].plot(
+            time,
+            T_mod - 273.15,
+            "orange",
+            linestyle="--",
+            linewidth=2,
+            label="Moderator Temperature",
+        )
     axes[idx].set_ylabel("Temperature [°C]")
     axes[idx].grid(True, alpha=0.3)
     axes[idx].legend()
@@ -351,7 +394,9 @@ def _plot_transient_matplotlib(
             prec_data = precursors[0, :]  # First group
         else:
             prec_data = precursors
-        axes[idx].plot(time, prec_data, "purple", linewidth=2, label="Precursors (Group 1)")
+        axes[idx].plot(
+            time, prec_data, "purple", linewidth=2, label="Precursors (Group 1)"
+        )
         axes[idx].set_ylabel("Precursor Concentration")
         axes[idx].grid(True, alpha=0.3)
         axes[idx].legend()
@@ -362,10 +407,18 @@ def _plot_transient_matplotlib(
     # Optional event annotations (apply to all subplots)
     if events:
         for t_evt, label, kind in events:
-            color = {"info": "blue", "warning": "orange", "danger": "red"}.get(kind, "gray")
+            color = {"info": "blue", "warning": "orange", "danger": "red"}.get(
+                kind, "gray"
+            )
             for ax in axes:
                 try:
-                    ax.axvline(float(t_evt), linestyle="--", color=color, linewidth=1, alpha=0.8)
+                    ax.axvline(
+                        float(t_evt),
+                        linestyle="--",
+                        color=color,
+                        linewidth=1,
+                        alpha=0.8,
+                    )
                 except Exception:
                     pass
             try:
@@ -453,18 +506,20 @@ def plot_lumped_thermal(
         if not _PLOTLY_AVAILABLE:
             raise ImportError("Plotly not available. Install with: pip install plotly")
         return _plot_lumped_thermal_plotly(
-            time, T_data, Q_data,
-            output=output, show_plot=show_plot, **kwargs
+            time, T_data, Q_data, output=output, show_plot=show_plot, **kwargs
         )
     elif backend == "matplotlib":
         if not _MATPLOTLIB_AVAILABLE:
-            raise ImportError("Matplotlib not available. Install with: pip install matplotlib")
+            raise ImportError(
+                "Matplotlib not available. Install with: pip install matplotlib"
+            )
         return _plot_lumped_thermal_matplotlib(
-            time, T_data, Q_data,
-            output=output, show_plot=show_plot, **kwargs
+            time, T_data, Q_data, output=output, show_plot=show_plot, **kwargs
         )
     else:
-        raise ValueError(f"Unknown backend: {backend}. Must be 'plotly' or 'matplotlib'")
+        raise ValueError(
+            f"Unknown backend: {backend}. Must be 'plotly' or 'matplotlib'"
+        )
 
 
 def _plot_lumped_thermal_plotly(
@@ -480,7 +535,8 @@ def _plot_lumped_thermal_plotly(
     n_plots = 2 if Q_data else 1
 
     fig = make_subplots(
-        rows=n_plots, cols=1,
+        rows=n_plots,
+        cols=1,
         subplot_titles=(["Temperature"] + (["Heat Source"] if Q_data else [])),
         vertical_spacing=0.1,
         shared_xaxes=True,
@@ -498,7 +554,8 @@ def _plot_lumped_thermal_plotly(
                 name=f"{lump_name.capitalize()} Temperature",
                 line=dict(color=color, width=2),
             ),
-            row=1, col=1,
+            row=1,
+            col=1,
         )
     fig.update_yaxes(title_text="Temperature [°C]", row=1, col=1)
 
@@ -514,7 +571,8 @@ def _plot_lumped_thermal_plotly(
                     name=f"{lump_name.capitalize()} Heat Source",
                     line=dict(color=color, width=2, dash="dash"),
                 ),
-                row=2, col=1,
+                row=2,
+                col=1,
             )
         fig.update_yaxes(title_text="Heat Source [MW]", row=2, col=1)
 
@@ -556,7 +614,9 @@ def _plot_lumped_thermal_matplotlib(
     """Plot lumped thermal results using Matplotlib."""
     # Create subplots
     n_plots = 2 if Q_data else 1
-    fig, axes = plt.subplots(n_plots, 1, figsize=kwargs.get("figsize", (12, 4 * n_plots)), sharex=True)
+    fig, axes = plt.subplots(
+        n_plots, 1, figsize=kwargs.get("figsize", (12, 4 * n_plots)), sharex=True
+    )
 
     if n_plots == 1:
         axes = [axes]
@@ -566,7 +626,13 @@ def _plot_lumped_thermal_matplotlib(
     # Plot temperatures
     for i, (lump_name, T_values) in enumerate(T_data.items()):
         color = colors[i % len(colors)]
-        axes[0].plot(time, T_values - 273.15, color=color, linewidth=2, label=f"{lump_name.capitalize()}")
+        axes[0].plot(
+            time,
+            T_values - 273.15,
+            color=color,
+            linewidth=2,
+            label=f"{lump_name.capitalize()}",
+        )
     axes[0].set_ylabel("Temperature [°C]")
     axes[0].set_title("Lumped-Parameter Thermal-Hydraulics Results")
     axes[0].grid(True, alpha=0.3)
@@ -576,7 +642,14 @@ def _plot_lumped_thermal_matplotlib(
     if Q_data:
         for i, (lump_name, Q_values) in enumerate(Q_data.items()):
             color = colors[i % len(colors)]
-            axes[1].plot(time, Q_values / 1e6, color=color, linestyle="--", linewidth=2, label=f"{lump_name.capitalize()}")
+            axes[1].plot(
+                time,
+                Q_values / 1e6,
+                color=color,
+                linestyle="--",
+                linewidth=2,
+                label=f"{lump_name.capitalize()}",
+            )
         axes[1].set_ylabel("Heat Source [MW]")
         axes[1].grid(True, alpha=0.3)
         axes[1].legend()

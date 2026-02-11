@@ -4,17 +4,17 @@ Tests for SMR compact core layouts.
 Tests reduced assembly counts, compact reflectors, and SMR-specific arrangements.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
+    from smrforge.geometry.core_geometry import Point3D
     from smrforge.geometry.smr_compact_core import (
         CompactReflector,
         CompactSMRCore,
         create_mpower_compact_core,
         create_nuscale_compact_core,
     )
-    from smrforge.geometry.core_geometry import Point3D
 
     _SMR_COMPACT_CORE_AVAILABLE = True
 except ImportError:

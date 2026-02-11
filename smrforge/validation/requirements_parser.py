@@ -7,13 +7,14 @@ Minimal DSL: list of constraints with name, min/max, value or (min, max).
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from .constraints import ConstraintSet
 from ..utils.logging import get_logger
+from .constraints import ConstraintSet
 
 logger = get_logger("smrforge.validation.requirements_parser")
 
 try:
     import yaml
+
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -58,10 +59,13 @@ def parse_requirements_to_constraint_set(
         text = path.read_text(encoding="utf-8")
         if path.suffix.lower() in (".yaml", ".yml"):
             if not _YAML_AVAILABLE:
-                raise ImportError("PyYAML required for YAML requirements: pip install pyyaml")
+                raise ImportError(
+                    "PyYAML required for YAML requirements: pip install pyyaml"
+                )
             data = yaml.safe_load(text)
         else:
             import json
+
             data = json.loads(text)
         spec = data
         logger.info("Loaded requirements from %s", path)
@@ -85,10 +89,24 @@ def parse_requirements_to_constraint_set(
         elif "min" in r and "max" in r:
             # Create two constraints: min and max
             lo, hi = float(r["min"]), float(r["max"])
-            cs.add_constraint(f"min_{cname}" if cname != "k_eff" else "min_k_eff", lo, "min", unit, "")
+            cs.add_constraint(
+                f"min_{cname}" if cname != "k_eff" else "min_k_eff", lo, "min", unit, ""
+            )
             cs.add_constraint(f"max_{cname}", hi, "max", unit, "")
         elif "min" in r:
-            cs.add_constraint(cname if cname.startswith("min_") else f"min_{cname}", float(r["min"]), "min", unit, "")
+            cs.add_constraint(
+                cname if cname.startswith("min_") else f"min_{cname}",
+                float(r["min"]),
+                "min",
+                unit,
+                "",
+            )
         elif "max" in r:
-            cs.add_constraint(cname if cname.startswith("max_") else f"max_{cname}", float(r["max"]), "max", unit, "")
+            cs.add_constraint(
+                cname if cname.startswith("max_") else f"max_{cname}",
+                float(r["max"]),
+                "max",
+                unit,
+                "",
+            )
     return cs

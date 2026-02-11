@@ -10,12 +10,16 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from smrforge.economics.integration import estimate_costs_from_spec
-from smrforge.validation.pydantic_layer import ReactorSpecification, ReactorType, FuelType
+from smrforge.validation.pydantic_layer import (
+    FuelType,
+    ReactorSpecification,
+    ReactorType,
+)
 
 
 class TestEstimateCostsFromSpec:
     """Tests for estimate_costs_from_spec function."""
-    
+
     def test_basic_estimation_with_electric_power(self):
         """Test basic cost estimation with electric power specified."""
         reactor_spec = ReactorSpecification(
@@ -40,15 +44,15 @@ class TestEstimateCostsFromSpec:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result = estimate_costs_from_spec(reactor_spec)
-        
+
         assert isinstance(result, dict)
         assert "capital_costs" in result
         assert "operating_costs" in result
         assert "lcoe" in result
         assert "lcoe_breakdown" in result
-    
+
     def test_estimation_without_electric_power(self):
         """Test cost estimation when electric power is not specified (uses thermal)."""
         reactor_spec = ReactorSpecification(
@@ -73,13 +77,13 @@ class TestEstimateCostsFromSpec:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result = estimate_costs_from_spec(reactor_spec)
-        
+
         # Should estimate electric power from thermal (33% efficiency)
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_with_custom_parameters(self):
         """Test cost estimation with custom parameters."""
         reactor_spec = ReactorSpecification(
@@ -104,7 +108,7 @@ class TestEstimateCostsFromSpec:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result = estimate_costs_from_spec(
             reactor_spec,
             nth_of_a_kind=5,
@@ -113,10 +117,10 @@ class TestEstimateCostsFromSpec:
             plant_lifetime=80.0,
             fuel_cost_per_kg=2500.0,
         )
-        
+
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_with_spec_fuel_cost(self):
         """Test cost estimation using fuel_cost from reactor spec."""
         reactor_spec = ReactorSpecification(
@@ -142,12 +146,12 @@ class TestEstimateCostsFromSpec:
             shutdown_margin=0.05,
             fuel_cost=2200.0,  # Specified in reactor spec
         )
-        
+
         result = estimate_costs_from_spec(reactor_spec)
-        
+
         # Should use fuel_cost from spec
         assert isinstance(result, dict)
-    
+
     def test_estimation_without_fuel_cost(self):
         """Test cost estimation without fuel_cost (uses default)."""
         reactor_spec = ReactorSpecification(
@@ -173,12 +177,12 @@ class TestEstimateCostsFromSpec:
             shutdown_margin=0.05,
             fuel_cost=None,  # Not specified
         )
-        
+
         result = estimate_costs_from_spec(reactor_spec)
-        
+
         # Should use default fuel_cost (2000.0 USD/kg)
         assert isinstance(result, dict)
-    
+
     def test_estimation_override_fuel_cost(self):
         """Test that fuel_cost_per_kg parameter overrides spec fuel_cost."""
         reactor_spec = ReactorSpecification(
@@ -204,15 +208,15 @@ class TestEstimateCostsFromSpec:
             shutdown_margin=0.05,
             fuel_cost=2200.0,  # Specified in spec
         )
-        
+
         result = estimate_costs_from_spec(
             reactor_spec,
             fuel_cost_per_kg=3000.0,  # Should override spec value
         )
-        
+
         # Should use fuel_cost_per_kg parameter
         assert isinstance(result, dict)
-    
+
     def test_estimation_different_reactor_types(self):
         """Test cost estimation for different reactor types."""
         for reactor_type in [ReactorType.PRISMATIC, ReactorType.PEBBLE_BED]:
@@ -238,12 +242,12 @@ class TestEstimateCostsFromSpec:
                 doppler_coefficient=-3.5e-5,
                 shutdown_margin=0.05,
             )
-            
+
             result = estimate_costs_from_spec(reactor_spec)
-            
+
             assert isinstance(result, dict)
             assert "lcoe" in result
-    
+
     def test_estimation_nth_of_a_kind_effect(self):
         """Test that nth_of_a_kind affects cost estimates."""
         reactor_spec = ReactorSpecification(
@@ -268,14 +272,14 @@ class TestEstimateCostsFromSpec:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result_foak = estimate_costs_from_spec(reactor_spec, nth_of_a_kind=1)
         result_noak = estimate_costs_from_spec(reactor_spec, nth_of_a_kind=10)
-        
+
         # NOAK should have lower capital costs due to learning curve
         assert isinstance(result_foak, dict)
         assert isinstance(result_noak, dict)
-    
+
     def test_estimation_modularity_factor_effect(self):
         """Test that modularity_factor affects cost estimates."""
         reactor_spec = ReactorSpecification(
@@ -300,14 +304,18 @@ class TestEstimateCostsFromSpec:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
-        result_no_modularity = estimate_costs_from_spec(reactor_spec, modularity_factor=1.0)
-        result_with_modularity = estimate_costs_from_spec(reactor_spec, modularity_factor=0.85)
-        
+
+        result_no_modularity = estimate_costs_from_spec(
+            reactor_spec, modularity_factor=1.0
+        )
+        result_with_modularity = estimate_costs_from_spec(
+            reactor_spec, modularity_factor=0.85
+        )
+
         # Lower modularity factor should reduce costs
         assert isinstance(result_no_modularity, dict)
         assert isinstance(result_with_modularity, dict)
-    
+
     def test_estimation_discount_rate_effect(self):
         """Test that discount_rate affects LCOE."""
         reactor_spec = ReactorSpecification(
@@ -332,16 +340,18 @@ class TestEstimateCostsFromSpec:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result_low_discount = estimate_costs_from_spec(reactor_spec, discount_rate=0.03)
-        result_high_discount = estimate_costs_from_spec(reactor_spec, discount_rate=0.10)
-        
+        result_high_discount = estimate_costs_from_spec(
+            reactor_spec, discount_rate=0.10
+        )
+
         # Higher discount rate should increase LCOE
         assert isinstance(result_low_discount, dict)
         assert isinstance(result_high_discount, dict)
         assert "lcoe" in result_low_discount
         assert "lcoe" in result_high_discount
-    
+
     def test_estimation_plant_lifetime_effect(self):
         """Test that plant_lifetime affects LCOE."""
         reactor_spec = ReactorSpecification(
@@ -366,10 +376,14 @@ class TestEstimateCostsFromSpec:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
-        result_short_lifetime = estimate_costs_from_spec(reactor_spec, plant_lifetime=40.0)
-        result_long_lifetime = estimate_costs_from_spec(reactor_spec, plant_lifetime=80.0)
-        
+
+        result_short_lifetime = estimate_costs_from_spec(
+            reactor_spec, plant_lifetime=40.0
+        )
+        result_long_lifetime = estimate_costs_from_spec(
+            reactor_spec, plant_lifetime=80.0
+        )
+
         # Longer lifetime should reduce LCOE
         assert isinstance(result_short_lifetime, dict)
         assert isinstance(result_long_lifetime, dict)
@@ -379,10 +393,11 @@ class TestEstimateCostsFromSpec:
 
 class TestEconomicsIntegrationEdgeCases:
     """Edge case tests for economics integration to improve coverage to 60%+."""
-    
+
     def test_estimation_with_zero_electric_power(self):
         """Test cost estimation when electric power is near-zero (edge case).
-        ReactorSpecification requires power_electric > 0, so use minimal positive value."""
+        ReactorSpecification requires power_electric > 0, so use minimal positive value.
+        """
         reactor_spec = ReactorSpecification(
             name="Test Reactor",
             reactor_type=ReactorType.PRISMATIC,
@@ -405,12 +420,12 @@ class TestEconomicsIntegrationEdgeCases:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result = estimate_costs_from_spec(reactor_spec)
-        
+
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_with_very_small_electric_power(self):
         """Test cost estimation with very small electric power."""
         reactor_spec = ReactorSpecification(
@@ -435,12 +450,12 @@ class TestEconomicsIntegrationEdgeCases:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result = estimate_costs_from_spec(reactor_spec)
-        
+
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_thermal_power_estimates_electric(self):
         """Test that thermal power correctly estimates electric (33% efficiency)."""
         reactor_spec = ReactorSpecification(
@@ -465,12 +480,12 @@ class TestEconomicsIntegrationEdgeCases:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result = estimate_costs_from_spec(reactor_spec)
-        
+
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_fuel_cost_priority(self):
         """Test that fuel_cost_per_kg parameter has priority over spec fuel_cost."""
         reactor_spec = ReactorSpecification(
@@ -496,16 +511,15 @@ class TestEconomicsIntegrationEdgeCases:
             shutdown_margin=0.05,
             fuel_cost=1500.0,  # Spec value
         )
-        
+
         # fuel_cost_per_kg should override
         result = estimate_costs_from_spec(
-            reactor_spec,
-            fuel_cost_per_kg=3500.0  # Should use this, not 1500.0
+            reactor_spec, fuel_cost_per_kg=3500.0  # Should use this, not 1500.0
         )
-        
+
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_no_spec_fuel_cost_no_param(self):
         """Test estimation when neither spec nor param has fuel_cost (uses default)."""
         reactor_spec = ReactorSpecification(
@@ -531,14 +545,14 @@ class TestEconomicsIntegrationEdgeCases:
             shutdown_margin=0.05,
             fuel_cost=None,  # Not specified
         )
-        
+
         # Also no fuel_cost_per_kg parameter
         result = estimate_costs_from_spec(reactor_spec)
-        
+
         # Should use default (2000.0 USD/kg)
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_extreme_nth_of_a_kind(self):
         """Test estimation with extreme nth_of_a_kind values."""
         reactor_spec = ReactorSpecification(
@@ -563,13 +577,13 @@ class TestEconomicsIntegrationEdgeCases:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         # Test with very high nth_of_a_kind
         result = estimate_costs_from_spec(reactor_spec, nth_of_a_kind=100)
-        
+
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_extreme_modularity_factors(self):
         """Test estimation with extreme modularity factors."""
         reactor_spec = ReactorSpecification(
@@ -594,13 +608,13 @@ class TestEconomicsIntegrationEdgeCases:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         # Test with very low modularity factor
         result = estimate_costs_from_spec(reactor_spec, modularity_factor=0.5)
-        
+
         assert isinstance(result, dict)
         assert "lcoe" in result
-    
+
     def test_estimation_all_custom_parameters(self):
         """Test estimation with all parameters customized."""
         reactor_spec = ReactorSpecification(
@@ -625,7 +639,7 @@ class TestEconomicsIntegrationEdgeCases:
             doppler_coefficient=-3.5e-5,
             shutdown_margin=0.05,
         )
-        
+
         result = estimate_costs_from_spec(
             reactor_spec,
             nth_of_a_kind=3,
@@ -634,7 +648,7 @@ class TestEconomicsIntegrationEdgeCases:
             plant_lifetime=70.0,
             fuel_cost_per_kg=2750.0,
         )
-        
+
         assert isinstance(result, dict)
         assert "lcoe" in result
         assert "capital_costs" in result

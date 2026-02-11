@@ -66,11 +66,11 @@ class TestAdaptiveNuclideTracking:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         assert burnup is not None
         assert burnup.options.adaptive_tracking is True
-        assert hasattr(burnup, '_always_track')
-        assert hasattr(burnup, '_last_adaptive_update')
+        assert hasattr(burnup, "_always_track")
+        assert hasattr(burnup, "_last_adaptive_update")
         assert len(burnup.nuclides) > 0
 
     def test_adaptive_tracking_disabled(self, simple_neutronics):
@@ -81,7 +81,7 @@ class TestAdaptiveNuclideTracking:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         assert burnup.options.adaptive_tracking is False
         assert burnup._last_adaptive_update == -1
 
@@ -90,7 +90,7 @@ class TestAdaptiveNuclideTracking:
         u235 = Nuclide(Z=92, A=235)
         u238 = Nuclide(Z=92, A=238)
         pu239 = Nuclide(Z=94, A=239)
-        
+
         options = BurnupOptions(
             time_steps=[0, 30],
             initial_enrichment=0.195,
@@ -99,7 +99,7 @@ class TestAdaptiveNuclideTracking:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         # U-235 and U-238 should be in always_track (fissile/fertile)
         assert u235 in burnup._always_track
         assert u238 in burnup._always_track
@@ -116,18 +116,18 @@ class TestAdaptiveNuclideTracking:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         # Set some concentrations to low values
         time_index = 0
         u235 = Nuclide(Z=92, A=235)
         u238 = Nuclide(Z=92, A=238)
-        
+
         # U-235 and U-238 should not be removed (always tracked)
         nuclides_to_remove = burnup._identify_nuclides_to_remove(time_index)
-        
+
         assert u235 not in nuclides_to_remove
         assert u238 not in nuclides_to_remove
-        
+
         # The method should return a list
         assert isinstance(nuclides_to_remove, list)
 
@@ -141,10 +141,10 @@ class TestAdaptiveNuclideTracking:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         time_index = 0
         nuclides_to_add = burnup._identify_nuclides_to_add(time_index)
-        
+
         # Should return a list (may be empty if no yields available)
         assert isinstance(nuclides_to_add, list)
 
@@ -158,12 +158,12 @@ class TestAdaptiveNuclideTracking:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         # Should not update before interval
         initial_update = burnup._last_adaptive_update
         burnup._update_adaptive_nuclides(0)
         assert burnup._last_adaptive_update == initial_update
-        
+
         # Should update after interval
         burnup._update_adaptive_nuclides(2)
         assert burnup._last_adaptive_update == 2
@@ -180,7 +180,7 @@ class TestAdaptiveNuclideTracking:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         assert burnup.options.nuclide_threshold == 1e16
         assert burnup.options.nuclide_importance_threshold == 0.005
         assert burnup.options.adaptive_update_interval == 10
@@ -195,8 +195,8 @@ class TestAdaptiveNuclideTracking:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         # Verify initialization
         assert burnup.options.adaptive_tracking is True
-        assert hasattr(burnup, '_update_adaptive_nuclides')
+        assert hasattr(burnup, "_update_adaptive_nuclides")
         assert callable(burnup._update_adaptive_nuclides)

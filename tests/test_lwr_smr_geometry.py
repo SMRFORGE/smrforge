@@ -4,10 +4,11 @@ Tests for LWR SMR geometry classes.
 Tests square lattice fuel assemblies, fuel rods, and PWR SMR core geometry.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
+    from smrforge.geometry.core_geometry import MaterialRegion, Point3D
     from smrforge.geometry.lwr_smr import (
         AssemblyType,
         BWRSMRCore,
@@ -19,7 +20,6 @@ try:
         SpacerGrid,
         WaterChannel,
     )
-    from smrforge.geometry.core_geometry import Point3D, MaterialRegion
 
     _LWR_SMR_AVAILABLE = True
 except ImportError:

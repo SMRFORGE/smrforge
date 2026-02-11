@@ -166,7 +166,9 @@ class ENDFEvaluation:
                         za_str = za_line[0:11].strip()
                         # Normalize ENDF format (e.g., " 9.223500+4" -> "9.223500e+4")
                         # Same logic as in _parse_mf3_section
-                        if "E" not in za_str.upper() and ("+" in za_str or "-" in za_str[1:]):
+                        if "E" not in za_str.upper() and (
+                            "+" in za_str or "-" in za_str[1:]
+                        ):
                             # Find where the exponent starts (first + or - that's not at position 0)
                             for char_idx, char in enumerate(za_str[1:], 1):
                                 if char in "+-":
@@ -291,7 +293,9 @@ class ENDFEvaluation:
                             for char_idx, char in enumerate(val_str[1:], 1):
                                 if char in "+-":
                                     # Insert 'e' or 'E' before the sign
-                                    val_str = val_str[:char_idx] + "e" + val_str[char_idx:]
+                                    val_str = (
+                                        val_str[:char_idx] + "e" + val_str[char_idx:]
+                                    )
                                     break
 
                         # Convert to lowercase for Python's float parser

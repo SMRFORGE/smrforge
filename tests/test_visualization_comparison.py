@@ -69,7 +69,9 @@ def test_compare_designs_matplotlib_and_plotly_and_overlay(monkeypatch):
     monkeypatch.setattr(comp, "_PLOTLY_AVAILABLE", True)
     dummy_go = SimpleNamespace(Heatmap=lambda **kwargs: SimpleNamespace(kwargs=kwargs))
     monkeypatch.setattr(comp, "go", dummy_go, raising=False)
-    monkeypatch.setattr(comp, "make_subplots", lambda **kwargs: DummyPlotlyFigure(), raising=False)
+    monkeypatch.setattr(
+        comp, "make_subplots", lambda **kwargs: DummyPlotlyFigure(), raising=False
+    )
 
     figp = comp.compare_designs_plotly(
         {"A": {"geometry": geom, "data": data}, "B": {"geometry": geom, "data": data}},
@@ -107,5 +109,3 @@ def test_compare_designs_matplotlib_and_plotly_and_overlay(monkeypatch):
     )
     assert figo is not None
     assert axo is not None
-
-

@@ -9,7 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
-from smrforge.io import parse_serpent_res, run_serpent as io_run_serpent
+from smrforge.io import parse_serpent_res
+from smrforge.io import run_serpent as io_run_serpent
 from smrforge.io.serpent_run import parse_res_file, run_and_parse, run_serpent
 
 
@@ -18,7 +19,9 @@ class TestRunSerpent:
 
     def test_run_serpent_raises_when_input_missing(self, tmp_path):
         """Cover FileNotFoundError when input file not found."""
-        with pytest.raises(FileNotFoundError, match="input file not found|Serpent input file not found"):
+        with pytest.raises(
+            FileNotFoundError, match="input file not found|Serpent input file not found"
+        ):
             run_serpent(tmp_path, "nonexistent.sss")
 
     @patch("subprocess.run")
@@ -62,15 +65,16 @@ class TestParseResFile:
 
     def test_parse_res_file_not_found(self):
         """Cover FileNotFoundError when res file not found."""
-        with pytest.raises(FileNotFoundError, match="result file not found|Serpent result file not found"):
+        with pytest.raises(
+            FileNotFoundError,
+            match="result file not found|Serpent result file not found",
+        ):
             parse_res_file("/nonexistent/model_res.m")
 
     def test_parse_res_file_extracts_keff(self, tmp_path):
         """Cover parse_res_file with IMP_KEFF line."""
         res = tmp_path / "model_res.m"
-        res.write_text(
-            "IMP_KEFF (idx, [1: 2]) = [ 1.04349E+00 0.00189 ];\n"
-        )
+        res.write_text("IMP_KEFF (idx, [1: 2]) = [ 1.04349E+00 0.00189 ];\n")
         parsed = parse_res_file(res)
         assert parsed["k_eff"] == pytest.approx(1.04349, rel=1e-4)
         assert "k_eff_std" in parsed
@@ -90,8 +94,7 @@ class TestParseResFile:
         """Cover cycles extraction."""
         res = tmp_path / "model_res.m"
         res.write_text(
-            "CYCLES (idx, 1) = [ 600 ] ;\n"
-            "IMP_KEFF (idx, [1: 2]) = [ 1.04 0.001 ];\n"
+            "CYCLES (idx, 1) = [ 600 ] ;\n" "IMP_KEFF (idx, [1: 2]) = [ 1.04 0.001 ];\n"
         )
         parsed = parse_res_file(res)
         assert parsed["k_eff"] == 1.04

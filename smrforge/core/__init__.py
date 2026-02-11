@@ -14,9 +14,9 @@ try:
         Nuclide,
         NuclideInventoryTracker,
         get_fission_yield_data,
-        get_thermal_scattering_data,
         get_prompt_delayed_chi,
         get_standard_endf_directory,
+        get_thermal_scattering_data,
         organize_bulk_endf_downloads,
         scan_endf_directory,
     )
@@ -202,6 +202,7 @@ def __getattr__(name: str):
         setattr(sys.modules[__name__], name, mod)
         return mod
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
 
 if _CONTROL_ROD_WORTH_AVAILABLE:
     __all__.extend(

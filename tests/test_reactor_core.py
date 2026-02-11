@@ -193,7 +193,9 @@ class TestCrossSectionTable:
         group_bounds = np.array([1e7, 1e6, 1e5])  # Group 0: 1e6-1e7, Group 1: 1e5-1e6
 
         # Test without weighting flux (uses 1/E)
-        mg_xs = CrossSectionTable._collapse_to_multigroup(energy, xs, group_bounds, None)
+        mg_xs = CrossSectionTable._collapse_to_multigroup(
+            energy, xs, group_bounds, None
+        )
 
         assert len(mg_xs) == 2
         assert np.all(np.isfinite(mg_xs))
@@ -231,7 +233,9 @@ class TestCrossSectionTable:
         # 3-group structure where middle group has only one point
         group_bounds = np.array([5.0e6, 1.0e6, 1.5e5, 1.0e5])
 
-        mg_xs = CrossSectionTable._collapse_to_multigroup(energy, xs, group_bounds, None)
+        mg_xs = CrossSectionTable._collapse_to_multigroup(
+            energy, xs, group_bounds, None
+        )
 
         assert len(mg_xs) == 3
         assert np.all(np.isfinite(mg_xs))
@@ -253,7 +257,9 @@ class TestCrossSectionTable:
         # Let's use [1e7, 1e6, 1e5, 1e3] to ensure clean separation
         group_bounds = np.array([1e7, 1e6, 1e5, 1e3])
 
-        mg_xs = CrossSectionTable._collapse_to_multigroup(energy, xs, group_bounds, None)
+        mg_xs = CrossSectionTable._collapse_to_multigroup(
+            energy, xs, group_bounds, None
+        )
 
         assert len(mg_xs) == 3
         assert np.all(np.isfinite(mg_xs))
@@ -266,6 +272,7 @@ class TestCrossSectionTable:
     def test_pivot_for_solver(self):
         """Test pivot_for_solver method."""
         import polars as pl
+
         from smrforge.core.reactor_core import CrossSectionTable
 
         # Create a sample DataFrame with proper structure
@@ -275,7 +282,14 @@ class TestCrossSectionTable:
             for reaction in ["fission", "capture"]:
                 for group in [0, 1]:
                     xs_val = 1.0 if nuclide == "U235" else 0.5
-                    records.append({"nuclide": nuclide, "reaction": reaction, "group": group, "xs": xs_val})
+                    records.append(
+                        {
+                            "nuclide": nuclide,
+                            "reaction": reaction,
+                            "group": group,
+                            "xs": xs_val,
+                        }
+                    )
 
         data = pl.DataFrame(records)
 
@@ -283,7 +297,9 @@ class TestCrossSectionTable:
         table.data = data
 
         # Pivot for solver
-        result = table.pivot_for_solver(nuclides=["U235", "U238"], reactions=["fission", "capture"])
+        result = table.pivot_for_solver(
+            nuclides=["U235", "U238"], reactions=["fission", "capture"]
+        )
 
         # Result should be numpy array
         assert isinstance(result, np.ndarray)
@@ -507,6 +523,7 @@ class TestNuclearDataCacheAdditional:
     def test_get_cross_section_zarr_cache_hit(self, temp_dir):
         """Test get_cross_section returns data from zarr cache."""
         import zarr
+
         from smrforge.core.reactor_core import Library, NuclearDataCache, Nuclide
 
         cache = NuclearDataCache(cache_dir=temp_dir / "test_cache")
@@ -519,7 +536,9 @@ class TestNuclearDataCacheAdditional:
         cache._save_to_cache(key, energy, xs)
 
         # Now get_cross_section should find it in zarr cache
-        cached_energy, cached_xs = cache.get_cross_section(nuc, "total", temperature=293.6, library=Library.ENDF_B_VIII)
+        cached_energy, cached_xs = cache.get_cross_section(
+            nuc, "total", temperature=293.6, library=Library.ENDF_B_VIII
+        )
 
         assert np.allclose(cached_energy, energy)
         assert np.allclose(cached_xs, xs)
@@ -538,7 +557,9 @@ class TestNuclearDataCacheAdditional:
         cache._memory_cache[key] = (energy, xs)
 
         # Now get_cross_section should find it in memory cache
-        cached_energy, cached_xs = cache.get_cross_section(nuc, "total", temperature=293.6, library=Library.ENDF_B_VIII)
+        cached_energy, cached_xs = cache.get_cross_section(
+            nuc, "total", temperature=293.6, library=Library.ENDF_B_VIII
+        )
 
         assert np.allclose(cached_energy, energy)
         assert np.allclose(cached_xs, xs)
@@ -584,4 +605,3 @@ class TestNuclearDataCacheAdditional:
         cached_energy, cached_xs = cache._memory_cache[key]
         assert np.allclose(cached_energy, energy)
         assert np.allclose(cached_xs, xs)
-

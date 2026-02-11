@@ -69,7 +69,7 @@ class TestReactionToMt:
             "n,2n": 16,
             "n,alpha": 107,
         }
-        
+
         for reaction, expected_mt in reactions.items():
             # Test lowercase
             assert NuclearDataCache._reaction_to_mt(reaction.lower()) == expected_mt
@@ -84,7 +84,9 @@ class TestReactionToMt:
         """Test _reaction_to_mt handles whitespace (should not trim, but .lower() handles it)."""
         # Note: The method uses .lower() but doesn't strip, so whitespace will still be in the key
         # This means "total " won't match "total", so it should default to 1
-        assert NuclearDataCache._reaction_to_mt("total ") == 1  # Whitespace causes mismatch
+        assert (
+            NuclearDataCache._reaction_to_mt("total ") == 1
+        )  # Whitespace causes mismatch
         assert NuclearDataCache._reaction_to_mt(" total") == 1
         assert NuclearDataCache._reaction_to_mt("total\t") == 1
 
@@ -99,10 +101,12 @@ class TestReactionToMt:
             "n,2n": 16,
             "n,alpha": 107,
         }
-        
+
         for reaction, expected_mt in reaction_mt_map.items():
             result = NuclearDataCache._reaction_to_mt(reaction)
-            assert result == expected_mt, f"Reaction '{reaction}' should map to MT={expected_mt}, got MT={result}"
+            assert (
+                result == expected_mt
+            ), f"Reaction '{reaction}' should map to MT={expected_mt}, got MT={result}"
 
     def test_reaction_to_mt_empty_string(self):
         """Test _reaction_to_mt with empty string defaults to MT=1."""
@@ -111,7 +115,9 @@ class TestReactionToMt:
     def test_reaction_to_mt_numeric_string(self):
         """Test _reaction_to_mt with numeric string defaults to MT=1."""
         assert NuclearDataCache._reaction_to_mt("123") == 1
-        assert NuclearDataCache._reaction_to_mt("18") == 1  # Even if it matches an MT number
+        assert (
+            NuclearDataCache._reaction_to_mt("18") == 1
+        )  # Even if it matches an MT number
 
     def test_reaction_to_mt_special_characters(self):
         """Test _reaction_to_mt with special characters defaults to MT=1."""
@@ -125,7 +131,9 @@ class TestReactionToMt:
 
     def test_reaction_to_mt_capture_and_n_gamma_equivalent(self):
         """Test that 'capture' and 'n,gamma' both map to MT=102."""
-        assert NuclearDataCache._reaction_to_mt("capture") == NuclearDataCache._reaction_to_mt("n,gamma")
+        assert NuclearDataCache._reaction_to_mt(
+            "capture"
+        ) == NuclearDataCache._reaction_to_mt("n,gamma")
         assert NuclearDataCache._reaction_to_mt("capture") == 102
         assert NuclearDataCache._reaction_to_mt("n,gamma") == 102
 
@@ -134,10 +142,11 @@ class TestReactionToMt:
         # These variations should still default to MT=1 since they're not exact matches
         assert NuclearDataCache._reaction_to_mt("fissions") == 1  # Plural
         assert NuclearDataCache._reaction_to_mt("total_xs") == 1  # With suffix
-        assert NuclearDataCache._reaction_to_mt("elastic_scattering") == 1  # Extended name
+        assert (
+            NuclearDataCache._reaction_to_mt("elastic_scattering") == 1
+        )  # Extended name
 
     def test_reaction_to_mt_none_input(self):
         """Test _reaction_to_mt with None input raises AttributeError."""
         with pytest.raises(AttributeError):
             NuclearDataCache._reaction_to_mt(None)
-

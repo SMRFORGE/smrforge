@@ -3,23 +3,24 @@ Coverage-focused tests for workflows (atlas), validation (constraint_builder, sa
 """
 
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
 
 from smrforge.validation.constraint_builder import (
     constraint_set_from_design,
     constraint_set_from_safety_report,
 )
 from smrforge.validation.constraints import ConstraintSet
+from smrforge.validation.requirements_parser import parse_requirements_to_constraint_set
 from smrforge.validation.safety_report import (
+    MarginEntry,
+    SafetyMarginReport,
     margin_narrative,
     safety_margin_report,
-    SafetyMarginReport,
-    MarginEntry,
 )
-from smrforge.validation.requirements_parser import parse_requirements_to_constraint_set
-from smrforge.workflows.atlas import build_atlas, filter_atlas, AtlasEntry
+from smrforge.workflows.atlas import AtlasEntry, build_atlas, filter_atlas
 
 
 class TestConstraintBuilderCoverage:
@@ -104,7 +105,11 @@ class TestSafetyReportCoverage:
         report = safety_margin_report(
             reactor,
             constraint_set=cs,
-            analysis_results={"k_eff": 1.0, "power_thermal_mw": 10.0, "extra_metric": 42.0},
+            analysis_results={
+                "k_eff": 1.0,
+                "power_thermal_mw": 10.0,
+                "extra_metric": 42.0,
+            },
         )
         assert report.metrics.get("k_eff") == 1.0
         assert report.metrics.get("power_thermal_mw") == 10.0
@@ -137,7 +142,9 @@ class TestRequirementsParserCoverage:
             ]
         }
         cs = parse_requirements_to_constraint_set(spec)
-        assert "k_eff" in cs.constraints or any("k_eff" in str(c) for c in cs.constraints)
+        assert "k_eff" in cs.constraints or any(
+            "k_eff" in str(c) for c in cs.constraints
+        )
 
     def test_parse_from_dict_constraints_key(self):
         spec = {
@@ -174,14 +181,18 @@ class TestRequirementsParserCoverage:
 
     def test_parse_json_file(self, tmp_path):
         path = tmp_path / "reqs.json"
-        path.write_text(json.dumps({"requirements": [{"name": "k_eff", "max": 1.05, "unit": ""}]}))
+        path.write_text(
+            json.dumps({"requirements": [{"name": "k_eff", "max": 1.05, "unit": ""}]})
+        )
         cs = parse_requirements_to_constraint_set(path)
         assert len(cs.constraints) >= 1
 
     def test_parse_yaml_file(self, tmp_path):
         pytest.importorskip("yaml")
         path = tmp_path / "reqs.yaml"
-        path.write_text("requirements:\n  - name: k_eff\n    limit: 1.05\n    type: max\n    unit: ''\n    description: k_eff cap\n")
+        path.write_text(
+            "requirements:\n  - name: k_eff\n    limit: 1.05\n    type: max\n    unit: ''\n    description: k_eff cap\n"
+        )
         cs = parse_requirements_to_constraint_set(path)
         assert len(cs.constraints) >= 1
 
@@ -221,7 +232,9 @@ class TestAtlasCoverage:
             presets=["bad-preset"],
             create_reactor=mock_create,
             get_design_point=lambda r: {},
-            safety_margin_report_fn=lambda r: SafetyMarginReport(passed=False, margins=[]),
+            safety_margin_report_fn=lambda r: SafetyMarginReport(
+                passed=False, margins=[]
+            ),
         )
         assert len(entries) == 1
         assert entries[0].passed is False
@@ -233,31 +246,43 @@ class TestAtlasCoverage:
             AtlasEntry("b", power_mw=15.0, passed=True, metrics_summary={}),
             AtlasEntry("c", power_mw=25.0, passed=False, metrics_summary={}),
         ]
-        filtered = filter_atlas(entries, power_min=10.0, power_max=20.0, passed_only=True)
+        filtered = filter_atlas(
+            entries, power_min=10.0, power_max=20.0, passed_only=True
+        )
         assert len(filtered) == 1
         assert filtered[0].design_id == "b"
 
     def test_filter_atlas_coolant(self):
         entries = [
-            AtlasEntry("a", power_mw=10.0, coolant="helium", passed=True, metrics_summary={}),
-            AtlasEntry("b", power_mw=10.0, coolant="water", passed=True, metrics_summary={}),
+            AtlasEntry(
+                "a", power_mw=10.0, coolant="helium", passed=True, metrics_summary={}
+            ),
+            AtlasEntry(
+                "b", power_mw=10.0, coolant="water", passed=True, metrics_summary={}
+            ),
         ]
         filtered = filter_atlas(entries, coolant="water")
         assert len(filtered) == 1
         assert filtered[0].coolant == "water"
 
     def test_build_atlas_presets_none_uses_list_presets(self, tmp_path):
-        with patch("smrforge.convenience.list_presets", return_value=["valar-10"]) as mock_list:
+        with patch(
+            "smrforge.convenience.list_presets", return_value=["valar-10"]
+        ) as mock_list:
+
             def mock_create(name):
                 r = Mock()
                 r.spec = Mock(coolant="he", reactor_type="htgr")
                 return r
+
             entries = build_atlas(
                 tmp_path,
                 presets=None,
                 create_reactor=mock_create,
                 get_design_point=lambda r: {"k_eff": 1.0, "power_thermal_mw": 10.0},
-                safety_margin_report_fn=lambda r, **kw: SafetyMarginReport(passed=True, margins=[], metrics={}),
+                safety_margin_report_fn=lambda r, **kw: SafetyMarginReport(
+                    passed=True, margins=[], metrics={}
+                ),
             )
             mock_list.assert_called_once()
             assert len(entries) == 1

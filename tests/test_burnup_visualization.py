@@ -66,7 +66,9 @@ def _patch_plotly_backend(monkeypatch, viz):
     monkeypatch.setattr(viz, "go", dummy_go, raising=False)
 
     # make_subplots is imported as a name
-    monkeypatch.setattr(viz, "make_subplots", lambda **kwargs: DummyFigure(), raising=False)
+    monkeypatch.setattr(
+        viz, "make_subplots", lambda **kwargs: DummyFigure(), raising=False
+    )
 
 
 def _patch_matplotlib_backend(monkeypatch, viz):
@@ -174,12 +176,16 @@ def test_plot_control_rod_effects_plotly_and_matplotlib(monkeypatch):
     assert isinstance(fig2, DummyFigure)
 
     _patch_matplotlib_backend(monkeypatch, viz)
-    fig3, ax3 = viz.plot_control_rod_effects(inv_with, inv_without, backend="matplotlib")
+    fig3, ax3 = viz.plot_control_rod_effects(
+        inv_with, inv_without, backend="matplotlib"
+    )
     assert isinstance(fig3, DummyMplFig)
     assert isinstance(ax3, DummyAx)
 
     # Cover dict-based path for matplotlib too
-    fig4, ax4 = viz.plot_control_rod_effects({"inventory": inv_with}, {"inventory": inv_without}, backend="matplotlib")
+    fig4, ax4 = viz.plot_control_rod_effects(
+        {"inventory": inv_with}, {"inventory": inv_without}, backend="matplotlib"
+    )
     assert isinstance(fig4, DummyMplFig)
     assert isinstance(ax4, DummyAx)
 
@@ -199,7 +205,11 @@ def test_plot_burnup_dashboard_enhanced_returns_base_and_enhanced(monkeypatch):
     def fake_plot_burnup_dashboard(*args, **kwargs):
         base = DummyFigure()
         # mimic a burnup trace and two composition traces
-        base.data = [DummyTrace(name="burnup"), DummyTrace(name="comp1"), DummyTrace(name="comp2")]
+        base.data = [
+            DummyTrace(name="burnup"),
+            DummyTrace(name="comp1"),
+            DummyTrace(name="comp2"),
+        ]
         return base
 
     monkeypatch.setattr(mc, "plot_burnup_dashboard", fake_plot_burnup_dashboard)
@@ -207,7 +217,9 @@ def test_plot_burnup_dashboard_enhanced_returns_base_and_enhanced(monkeypatch):
     inv = DummyInventory(times_s=[0.0], burnup=[0.0])
 
     # No batches -> should return base fig
-    base = viz.plot_burnup_dashboard_enhanced(inv, batch_inventories=None, backend="plotly")
+    base = viz.plot_burnup_dashboard_enhanced(
+        inv, batch_inventories=None, backend="plotly"
+    )
     assert isinstance(base, DummyFigure)
     assert len(base.data) == 3
 
@@ -240,4 +252,3 @@ def test_module_import_flags_for_missing_plotly_and_matplotlib(monkeypatch):
 
     monkeypatch.setattr(builtins, "__import__", orig_import)
     importlib.reload(viz2)
-

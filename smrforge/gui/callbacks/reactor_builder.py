@@ -3,9 +3,10 @@ Reactor builder callbacks.
 """
 
 try:
+    import dash_bootstrap_components as dbc
     from dash import Input, Output, State, html
     from dash.exceptions import PreventUpdate
-    import dash_bootstrap_components as dbc
+
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False
@@ -19,203 +20,209 @@ def register_reactor_builder_callbacks(app):
     """Register reactor builder callbacks."""
     if not _DASH_AVAILABLE:
         return
-    
+
     @app.callback(
-        Output('preset-dropdown', 'options'),
-        Input('reactor-spec-store', 'data'),
-        prevent_initial_call=False
+        Output("preset-dropdown", "options"),
+        Input("reactor-spec-store", "data"),
+        prevent_initial_call=False,
     )
     def load_presets(_):
         """Load available presets for dropdown."""
         try:
             # Try multiple import strategies
             presets = None
-            
+
             # Strategy 1: Try from top-level smrforge module
             try:
                 import smrforge as smr
-                if hasattr(smr, 'list_presets'):
+
+                if hasattr(smr, "list_presets"):
                     presets = smr.list_presets()
                     logger.info(f"Loaded presets from smrforge module: {presets}")
             except Exception as e1:
                 logger.debug(f"Failed to load from smrforge module: {e1}")
-            
+
             # Strategy 2: Try importing convenience module directly
             if presets is None:
                 try:
-                    from smrforge import convenience as conv_mod
-                    # Check if it's the file or the directory
-                    import inspect
-                    if hasattr(conv_mod, 'list_presets'):
-                        presets = conv_mod.list_presets()
-                        logger.info(f"Loaded presets from convenience module: {presets}")
-                    else:
-                        # It's the directory package, try to get the file module
-                        import importlib
-                        import sys
-                        # Force reload the file module
-                        if 'smrforge.convenience' in sys.modules:
-                            del sys.modules['smrforge.convenience']
-                        # Import as a package submodule
-                        import smrforge.convenience as conv_file
-                        if hasattr(conv_file, 'list_presets'):
-                            presets = conv_file.list_presets()
+                    from smrforge.convenience import list_presets as _list_presets
+
+                    presets = _list_presets()
+                    logger.info(
+                        f"Loaded presets from convenience module: {presets}"
+                    )
                 except Exception as e2:
                     logger.debug(f"Failed to load from convenience module: {e2}")
-            
+
             # Strategy 3: Try using the DesignLibrary directly
             if presets is None:
                 try:
                     from smrforge.presets.htgr import DesignLibrary
+
                     library = DesignLibrary()
                     presets = library.list_designs()
                     logger.info(f"Loaded presets from DesignLibrary: {presets}")
                 except Exception as e3:
                     logger.debug(f"Failed to load from DesignLibrary: {e3}")
-            
+
             if presets is None or len(presets) == 0:
                 logger.warning("No presets found - preset list is empty")
                 # Return empty list with a placeholder
-                return [{"label": "No presets available", "value": None, "disabled": True}]
-            
+                return [
+                    {"label": "No presets available", "value": None, "disabled": True}
+                ]
+
             options = [{"label": p, "value": p} for p in presets]
             logger.info(f"Successfully loaded {len(options)} presets: {presets}")
             return options
-            
+
         except Exception as e:
             logger.warning(f"Failed to load presets: {e}", exc_info=True)
             # Return empty list if presets can't be loaded
             import traceback
+
             logger.debug(f"Preset loading error traceback: {traceback.format_exc()}")
             return [{"label": "Error loading presets", "value": None, "disabled": True}]
-    
+
     @app.callback(
-        Output('reactor-spec-store', 'data'),
-        Output('reactor-builder-feedback', 'children'),
-        Input('create-reactor-button', 'n_clicks'),
-        Input('load-preset-button', 'n_clicks'),
-        State('preset-dropdown', 'value'),
-        State('reactor-name-input', 'value'),
-        State('reactor-type-dropdown', 'value'),
-        State('power-input', 'value'),
-        State('core-height-input', 'value'),
-        State('core-diameter-input', 'value'),
-        State('enrichment-input', 'value'),
-        State('inlet-temp-input', 'value'),
-        State('outlet-temp-input', 'value'),
-        State('pressure-input', 'value'),
-        State('hm-loading-input', 'value'),
-        prevent_initial_call=True
+        Output("reactor-spec-store", "data"),
+        Output("reactor-builder-feedback", "children"),
+        Input("create-reactor-button", "n_clicks"),
+        Input("load-preset-button", "n_clicks"),
+        State("preset-dropdown", "value"),
+        State("reactor-name-input", "value"),
+        State("reactor-type-dropdown", "value"),
+        State("power-input", "value"),
+        State("core-height-input", "value"),
+        State("core-diameter-input", "value"),
+        State("enrichment-input", "value"),
+        State("inlet-temp-input", "value"),
+        State("outlet-temp-input", "value"),
+        State("pressure-input", "value"),
+        State("hm-loading-input", "value"),
+        prevent_initial_call=True,
     )
-    def create_reactor(n_create, n_load, preset, name, rtype, power, height, 
-                       diameter, enrichment, inlet_temp, outlet_temp, pressure, hm_loading):
+    def create_reactor(
+        n_create,
+        n_load,
+        preset,
+        name,
+        rtype,
+        power,
+        height,
+        diameter,
+        enrichment,
+        inlet_temp,
+        outlet_temp,
+        pressure,
+        hm_loading,
+    ):
         """Create reactor specification."""
         from dash import callback_context as ctx
+
         if not ctx.triggered:
             raise PreventUpdate
-        
-        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        
+
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
         try:
             import smrforge as smr
-            
-            if button_id == 'load-preset-button' and preset:
+
+            if button_id == "load-preset-button" and preset:
                 logger.info(f"Loading preset: {preset}")
                 # Load preset
                 reactor = smr.create_reactor(preset)
                 spec_data = reactor.spec.model_dump()
-                
+
                 # Validate that all required fields are present
                 from smrforge.validation.models import ReactorSpecification
+
                 try:
                     # Re-validate to ensure completeness
                     validated_spec = ReactorSpecification(**spec_data)
                     spec_data = validated_spec.model_dump()
                     feedback = dbc.Alert(
-                        f"✓ Preset '{preset}' loaded successfully!",
-                        color="success"
+                        f"✓ Preset '{preset}' loaded successfully!", color="success"
                     )
                     return spec_data, feedback
                 except Exception as e:
                     feedback = dbc.Alert(
-                        f"✗ Error loading preset '{preset}': {str(e)}",
-                        color="danger"
+                        f"✗ Error loading preset '{preset}': {str(e)}", color="danger"
                     )
                     return {}, feedback
-            
-            elif button_id == 'create-reactor-button':
+
+            elif button_id == "create-reactor-button":
                 logger.info("Creating custom reactor")
                 # Create custom reactor with all required fields
                 # Use sensible defaults for fields not provided in the form
                 power_thermal = (power or 10.0) * 1e6  # Convert MW to W
                 inlet_temp = inlet_temp or 823.15
                 outlet_temp = outlet_temp or 1023.15
-                
+
                 spec_data = {
-                    'name': name or 'Custom-Reactor',
-                    'reactor_type': rtype or 'prismatic',
-                    'power_thermal': power_thermal,
-                    'power_electric': None,  # Optional, will be calculated if needed
-                    'core_height': height or 200.0,
-                    'core_diameter': diameter or 100.0,
-                    'enrichment': enrichment or 0.195,
-                    'inlet_temperature': inlet_temp,
-                    'outlet_temperature': outlet_temp,
-                    'max_fuel_temperature': outlet_temp + 500.0,  # Reasonable default: outlet + 500K
-                    'primary_pressure': pressure or 7.0e6,
-                    'reflector_thickness': 30.0,  # Default 30 cm
-                    'fuel_type': 'UCO',  # Default fuel type
-                    'heavy_metal_loading': hm_loading or 150.0,
-                    'coolant_flow_rate': 8.0,  # Default 8 kg/s
-                    'cycle_length': 3650.0,  # Default 10 years
-                    'capacity_factor': 0.95,  # Default 95%
-                    'target_burnup': 150.0,  # Default 150 MWd/kg
-                    'doppler_coefficient': -3.5e-5,  # Default for HTGR
-                    'shutdown_margin': 0.05,  # Default 5% shutdown margin
+                    "name": name or "Custom-Reactor",
+                    "reactor_type": rtype or "prismatic",
+                    "power_thermal": power_thermal,
+                    "power_electric": None,  # Optional, will be calculated if needed
+                    "core_height": height or 200.0,
+                    "core_diameter": diameter or 100.0,
+                    "enrichment": enrichment or 0.195,
+                    "inlet_temperature": inlet_temp,
+                    "outlet_temperature": outlet_temp,
+                    "max_fuel_temperature": outlet_temp
+                    + 500.0,  # Reasonable default: outlet + 500K
+                    "primary_pressure": pressure or 7.0e6,
+                    "reflector_thickness": 30.0,  # Default 30 cm
+                    "fuel_type": "UCO",  # Default fuel type
+                    "heavy_metal_loading": hm_loading or 150.0,
+                    "coolant_flow_rate": 8.0,  # Default 8 kg/s
+                    "cycle_length": 3650.0,  # Default 10 years
+                    "capacity_factor": 0.95,  # Default 95%
+                    "target_burnup": 150.0,  # Default 150 MWd/kg
+                    "doppler_coefficient": -3.5e-5,  # Default for HTGR
+                    "shutdown_margin": 0.05,  # Default 5% shutdown margin
                 }
-                
+
                 # Validate using Pydantic
                 from smrforge.validation.models import ReactorSpecification
+
                 try:
                     spec = ReactorSpecification(**spec_data)
                     feedback = dbc.Alert(
-                        "✓ Reactor created successfully!",
-                        color="success"
+                        "✓ Reactor created successfully!", color="success"
                     )
                     return spec.model_dump(), feedback
                 except Exception as e:
-                    logger.error(f"Validation error creating reactor: {e}", exc_info=True)
+                    logger.error(
+                        f"Validation error creating reactor: {e}", exc_info=True
+                    )
                     # Extract more detailed error message if it's a Pydantic validation error
                     error_msg = str(e)
                     if "validation error" in error_msg.lower():
                         # Try to extract field-specific errors
                         error_msg = f"Validation failed: {error_msg[:200]}"
                     feedback = dbc.Alert(
-                        f"✗ Validation error: {error_msg}",
-                        color="danger"
+                        f"✗ Validation error: {error_msg}", color="danger"
                     )
                     return {}, feedback
-        
+
         except Exception as e:
             logger.error(f"Error in create_reactor callback: {e}", exc_info=True)
-            feedback = dbc.Alert(
-                f"✗ Error: {str(e)}",
-                color="danger"
-            )
+            feedback = dbc.Alert(f"✗ Error: {str(e)}", color="danger")
             return {}, feedback
-        
+
         raise PreventUpdate
-    
+
     @app.callback(
-        Output('reactor-spec-display', 'children'),
-        Input('reactor-spec-store', 'data'),
-        prevent_initial_call=True
+        Output("reactor-spec-display", "children"),
+        Input("reactor-spec-store", "data"),
+        prevent_initial_call=True,
     )
     def display_reactor_spec(spec_data):
         """Display reactor specification."""
         if not spec_data:
             return ""
-        
+
         # Format values for better display
         def format_value(key, value):
             """Format values for display."""
@@ -232,12 +239,22 @@ def register_reactor_builder_callbacks(app):
                 else:
                     return f"{value:.2f}"
             return str(value)
-        
+
         # Group parameters by category for better organization
         categories = {
-            "Identification": ["name", "reactor_type", "description", "design_reference", "maturity_level"],
+            "Identification": [
+                "name",
+                "reactor_type",
+                "description",
+                "design_reference",
+                "maturity_level",
+            ],
             "Power": ["power_thermal", "power_electric"],
-            "Temperatures": ["inlet_temperature", "outlet_temperature", "max_fuel_temperature"],
+            "Temperatures": [
+                "inlet_temperature",
+                "outlet_temperature",
+                "max_fuel_temperature",
+            ],
             "Geometry": ["core_height", "core_diameter", "reflector_thickness"],
             "Fuel": ["fuel_type", "enrichment", "heavy_metal_loading"],
             "Operating Conditions": ["primary_pressure", "coolant_flow_rate"],
@@ -245,7 +262,7 @@ def register_reactor_builder_callbacks(app):
             "Safety": ["doppler_coefficient", "shutdown_margin"],
             "Economics": ["capital_cost", "fuel_cost"],
         }
-        
+
         rows = []
         for category, fields in categories.items():
             category_rows = []
@@ -262,22 +279,47 @@ def register_reactor_builder_callbacks(app):
                         )
                     )
             if category_rows:
-                rows.append(html.Tr([
-                    html.Td(html.Strong(category), colSpan=2, style={"backgroundColor": "#f8f9fa", "fontSize": "1.1em"})
-                ]))
+                rows.append(
+                    html.Tr(
+                        [
+                            html.Td(
+                                html.Strong(category),
+                                colSpan=2,
+                                style={
+                                    "backgroundColor": "#f8f9fa",
+                                    "fontSize": "1.1em",
+                                },
+                            )
+                        ]
+                    )
+                )
                 rows.extend(category_rows)
-        
-        return dbc.Card([
-            dbc.CardHeader("Current Reactor Specification"),
-            dbc.CardBody([
-                dbc.Table([
-                    html.Thead([
-                        html.Tr([
-                            html.Th("Parameter"),
-                            html.Th("Value"),
-                        ])
-                    ]),
-                    html.Tbody(rows)
-                ], bordered=True, hover=True, responsive=True, size="sm")
-            ])
-        ])
+
+        return dbc.Card(
+            [
+                dbc.CardHeader("Current Reactor Specification"),
+                dbc.CardBody(
+                    [
+                        dbc.Table(
+                            [
+                                html.Thead(
+                                    [
+                                        html.Tr(
+                                            [
+                                                html.Th("Parameter"),
+                                                html.Th("Value"),
+                                            ]
+                                        )
+                                    ]
+                                ),
+                                html.Tbody(rows),
+                            ],
+                            bordered=True,
+                            hover=True,
+                            responsive=True,
+                            size="sm",
+                        )
+                    ]
+                ),
+            ]
+        )

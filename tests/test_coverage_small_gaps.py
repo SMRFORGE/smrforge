@@ -21,7 +21,12 @@ def test_cost_modeling_present_value_annuity_zero_discount_rate():
 
 
 def test_assembly_manager_shuffle_batch_only_sets_fresh_to_batch1():
-    from smrforge.geometry.assembly import Assembly, AssemblyManager, Point3D, RefuelingPattern
+    from smrforge.geometry.assembly import (
+        Assembly,
+        AssemblyManager,
+        Point3D,
+        RefuelingPattern,
+    )
 
     mgr = AssemblyManager()
     mgr.add_assembly(Assembly(id=1, position=Point3D(0.0, 0.0, 0.0), batch=0))
@@ -133,4 +138,3 @@ def test_hybrid_solver_flux_gradient_identification_accepts_2d_flux():
     flux_2d = np.ones((DummyGeom.n_axial, DummyGeom.n_radial))
     part = hs._identify_complex_regions_from_flux(flux_2d)
     assert part.diffusion_mask.shape == (DummyGeom.n_axial, DummyGeom.n_radial)
-

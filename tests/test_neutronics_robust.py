@@ -29,9 +29,10 @@ class TestParametricVariations:
         k_eff, flux = solver.solve_steady_state()
 
         assert_solution_reasonable(
-            k_eff, flux, 
+            k_eff,
+            flux,
             k_eff_range=(0.5, 2.5),  # Allow wider range for test data
-            check_flux_shape=(solver.nz, solver.nr, n_groups)
+            check_flux_shape=(solver.nz, solver.nr, n_groups),
         )
 
     @pytest.mark.parametrize(
@@ -73,9 +74,10 @@ class TestParametricVariations:
         k_eff, flux = solver.solve_steady_state()
 
         assert_solution_reasonable(
-            k_eff, flux, 
+            k_eff,
+            flux,
             k_eff_range=(0.5, 2.5),  # Allow wider range for test data
-            check_flux_shape=(n_axial - 1, n_radial - 1, 2)
+            check_flux_shape=(n_axial - 1, n_radial - 1, 2),
         )
 
 

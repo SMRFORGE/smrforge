@@ -199,12 +199,10 @@ jobs:
       - name: Check import sorting with isort
         run: |
           isort --check-only --diff smrforge/ tests/
-        continue-on-error: true
-      
+
       - name: Run flake8
         run: |
           flake8 smrforge/ tests/ --max-line-length=88 --extend-ignore=E203,W503
-        continue-on-error: true
       
       - name: Run mypy type checking
         run: |

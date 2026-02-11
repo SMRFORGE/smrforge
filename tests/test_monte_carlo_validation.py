@@ -222,7 +222,9 @@ class TestMonteCarloValidation:
         with pytest.raises(RuntimeError, match="All.*generations were inactive"):
             solver.run_eigenvalue()
 
-    def test_run_eigenvalue_success_with_enough_generations(self, simple_geometry, simple_xs_data):
+    def test_run_eigenvalue_success_with_enough_generations(
+        self, simple_geometry, simple_xs_data
+    ):
         """Test that eigenvalue calculation succeeds with enough generations."""
         solver = MonteCarloSolver(
             geometry=simple_geometry,
@@ -240,4 +242,3 @@ class TestMonteCarloValidation:
         assert "tallies" in results
         assert np.isfinite(results["k_eff"])
         assert np.isfinite(results["k_std"])
-

@@ -174,12 +174,12 @@ class ChannelThermalHydraulics:
             f"mdot={self.mdot:.4f} kg/s"
         )
 
-    def _validate_inputs(self, geometry: ChannelGeometry, inlet_conditions: Dict) -> None:
+    def _validate_inputs(
+        self, geometry: ChannelGeometry, inlet_conditions: Dict
+    ) -> None:
         """Validate input parameters."""
         if not isinstance(geometry, ChannelGeometry):
-            raise ValueError(
-                f"geometry must be ChannelGeometry, got {type(geometry)}"
-            )
+            raise ValueError(f"geometry must be ChannelGeometry, got {type(geometry)}")
 
         if not isinstance(inlet_conditions, dict):
             raise ValueError(
@@ -190,7 +190,9 @@ class ChannelThermalHydraulics:
         if geometry.length <= 0:
             raise ValueError(f"geometry.length must be > 0, got {geometry.length}")
         if geometry.flow_area <= 0:
-            raise ValueError(f"geometry.flow_area must be > 0, got {geometry.flow_area}")
+            raise ValueError(
+                f"geometry.flow_area must be > 0, got {geometry.flow_area}"
+            )
         if geometry.heated_perimeter <= 0:
             raise ValueError(
                 f"geometry.heated_perimeter must be > 0, got {geometry.heated_perimeter}"
@@ -474,7 +476,9 @@ class FuelRodThermal:
         # Temperature profile
         self.T = np.zeros(n_nodes + 1)
 
-        logger.debug(f"FuelRodThermal initialized: radius={radius:.3f} cm, n_nodes={n_nodes}")
+        logger.debug(
+            f"FuelRodThermal initialized: radius={radius:.3f} cm, n_nodes={n_nodes}"
+        )
 
     def solve_steady_conduction(
         self, q_vol: float, k_fuel: float, T_surface: float
@@ -763,17 +767,17 @@ def solve_tridiagonal_fast(
     """
     Fast tridiagonal solver using Thomas algorithm (Numba-accelerated).
     Solves: a[i]*x[i-1] + b[i]*x[i] + c[i]*x[i+1] = d[i]
-    
+
     Note: This function is excluded from coverage reporting because Numba JIT
     compilation makes line-by-line coverage tracking unreliable. This function
     is tested in tests/test_thermal.py.
-    
+
     Args:
         a: Lower diagonal (a[0] is ignored, a[1..n-1] used)
         b: Main diagonal
         c: Upper diagonal (c[n-1] is ignored, c[0..n-2] used)
         d: Right-hand side vector
-    
+
     Returns:
         Solution vector x
     """

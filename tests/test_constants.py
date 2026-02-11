@@ -8,13 +8,13 @@ import pytest
 from smrforge.core.constants import (
     ATOMIC_MASSES,
     DELAYED_NEUTRON_DATA,
+    ELEMENT_SYMBOLS,
     FAST_FLUX_THRESHOLD,
     FISSION_SPECTRUM_PARAMS,
     GROUP_STRUCTURES,
     HTGR_CONSTANTS,
     Q_VALUES,
     RESONANCE_INTEGRALS,
-    ELEMENT_SYMBOLS,
     SYMBOL_TO_Z,
     parse_nuclide_string,
     watt_spectrum,
@@ -266,4 +266,3 @@ class TestDelayedNeutronData:
         assert len(data["lambda"]) == 6
         assert np.all(data["beta"] > 0)
         assert np.all(data["lambda"] > 0)
-

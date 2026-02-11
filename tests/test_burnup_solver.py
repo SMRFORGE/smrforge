@@ -62,7 +62,7 @@ class TestBurnupSolver:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         assert burnup is not None
         assert len(burnup.nuclides) > 0
         assert burnup.concentrations.shape[0] == len(burnup.nuclides)
@@ -75,11 +75,11 @@ class TestBurnupSolver:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         # Should have U-235 and U-238 at minimum
         u235 = Nuclide(Z=92, A=235)
         u238 = Nuclide(Z=92, A=238)
-        
+
         assert u235 in burnup.nuclides
         assert u238 in burnup.nuclides
 
@@ -91,13 +91,13 @@ class TestBurnupSolver:
         )
 
         burnup = BurnupSolver(simple_neutronics, options)
-        
+
         u235 = Nuclide(Z=92, A=235)
         u238 = Nuclide(Z=92, A=238)
-        
+
         idx_u235 = burnup.nuclides.index(u235)
         idx_u238 = burnup.nuclides.index(u238)
-        
+
         # U-235 should have non-zero initial concentration
         assert burnup.concentrations[idx_u235, 0] > 0
         # U-238 should have non-zero initial concentration
@@ -197,4 +197,3 @@ class TestBurnupOptions:
         assert options.power_density == 1e6  # Default
         assert options.initial_enrichment == 0.195  # Default
         assert len(options.fissile_nuclides) > 0  # Should have defaults
-

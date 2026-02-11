@@ -26,8 +26,8 @@ python scripts/run_validation.py --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VII
 # Run with verbose output (see detailed progress)
 python scripts/run_validation.py --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" --verbose
 
-# Run with custom output file
-python scripts/run_validation.py --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" --output validation_report.txt
+# Run with custom output file (recommended: use output/validation/ to keep reports organized)
+python scripts/run_validation.py --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" --output output/validation/validation_report.txt --json-output output/validation/validation_report.json
 
 # Run specific test files only
 python scripts/run_validation.py --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" --tests tests/test_validation_comprehensive.py
@@ -177,6 +177,26 @@ After running validation tests:
 - **Full Guide**: `docs/validation/validation-execution-guide.md` - Complete validation guide
 - **Test Documentation**: `docs/validation/endf-workflow-validation.md` - Test structure details
 - **Validation Summary**: `docs/validation/validation-summary.md` - Overall validation status
+
+---
+
+## Validation Report Output
+
+Validation reports are generated artifacts (not tracked in git). Recommended locations:
+
+| Location | Use case |
+|----------|----------|
+| `output/validation/` | Keep reports organized (create directory first: `mkdir output\validation`) |
+| `output/` | General output directory |
+| Project root | Simple one-off runs (e.g. `validation_report.txt`) |
+
+**Example with organized output:**
+```powershell
+mkdir -Force output\validation | Out-Null
+python scripts/run_validation.py --endf-dir "C:\Users\cmwha\Downloads\ENDF-B-VIII.1" `
+  --output output/validation/validation_report.txt `
+  --json-output output/validation/validation_report.json
+```
 
 ---
 

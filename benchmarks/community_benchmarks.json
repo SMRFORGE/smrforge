@@ -1,0 +1,50 @@
+{
+  "neutronics_benchmarks": {
+    "quick_keff_default": {
+      "test_case": "quick_keff_default",
+      "description": "Quick k-eff with default parameters (power_mw=10, enrichment=0.195)",
+      "call": "quick_keff",
+      "kwargs": {"power_mw": 10.0, "enrichment": 0.195},
+      "expected_key": "k_eff",
+      "reference_value": 0.88,
+      "reference_source": "SMRForge Community regression baseline",
+      "tolerance_rel": 0.10,
+      "notes": "Regression baseline; validates convenience API stability."
+    },
+    "quick_keff_calculation": {
+      "test_case": "quick_keff_calculation",
+      "description": "2-group diffusion via quick_keff_calculation()",
+      "call": "quick_keff_calculation",
+      "kwargs": {},
+      "expected_key": "k_eff",
+      "reference_value": 0.88,
+      "reference_source": "SMRForge Community regression baseline",
+      "tolerance_rel": 0.10,
+      "notes": "Regression baseline for 2-group diffusion solver."
+    },
+    "valar10_preset": {
+      "test_case": "valar10_preset",
+      "description": "Full analysis of Valar-10 preset design",
+      "call": "analyze_preset",
+      "kwargs": {"design_name": "valar-10"},
+      "expected_key": "k_eff",
+      "reference_value": 2.03,
+      "reference_source": "SMRForge Community regression baseline",
+      "tolerance_rel": 0.10,
+      "notes": "Regression baseline for preset analysis."
+    },
+    "gt_mhr_preset": {"test_case": "gt_mhr_preset", "description": "GT-MHR-350 preset", "call": "analyze_preset", "kwargs": {"design_name": "gt-mhr-350"}, "expected_key": "k_eff", "reference_value": 1.0, "reference_source": "SMRForge regression", "tolerance_rel": 0.15, "notes": "Large prismatic core."},
+    "htr_pm_preset": {"test_case": "htr_pm_preset", "description": "HTR-PM-200 pebble bed", "call": "analyze_preset", "kwargs": {"design_name": "htr-pm-200"}, "expected_key": "k_eff", "reference_value": 1.0, "reference_source": "SMRForge regression", "tolerance_rel": 0.15, "notes": "Pebble bed baseline."},
+    "micro_htgr_preset": {"test_case": "micro_htgr_preset", "description": "Micro-HTGR-1 preset", "call": "analyze_preset", "kwargs": {"design_name": "micro-htgr-1"}, "expected_key": "k_eff", "reference_value": 1.5, "reference_source": "SMRForge regression", "tolerance_rel": 0.15, "notes": "Compact core baseline."}
+  },
+  "decay_heat_benchmarks": {
+    "u235_decay": {"test_case": "u235_decay", "description": "U-235 decay heat", "reference_source": "ANSI/ANS-5.1", "tolerance_rel": 0.2},
+    "pu239_decay": {"test_case": "pu239_decay", "description": "Pu-239 decay heat", "reference_source": "ANSI/ANS-5.1", "tolerance_rel": 0.2}
+  },
+  "gamma_transport_benchmarks": {
+    "simple_geometry": {"test_case": "simple_geometry", "description": "Gamma transport baseline", "reference_source": "MCNP", "tolerance_rel": 0.25}
+  },
+  "burnup_benchmarks": {
+    "single_step": {"test_case": "single_step", "description": "Single burnup step", "reference_source": "SMRForge", "tolerance_rel": 0.15}
+  }
+}

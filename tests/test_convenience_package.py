@@ -13,7 +13,9 @@ def test_convenience_package_importerror_and_branch_coverage():
     orig_import = builtins.__import__
 
     def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name.endswith("smrforge.presets.smr_lwr") or name.endswith("presets.smr_lwr"):
+        if name.endswith("smrforge.presets.smr_lwr") or name.endswith(
+            "presets.smr_lwr"
+        ):
             raise ImportError("forced")
         return orig_import(name, globals, locals, fromlist, level)
 
@@ -30,7 +32,9 @@ def test_convenience_package_importerror_and_branch_coverage():
     # Cover create_reactor() preset_names exception fallback (lines 139-140)
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(c, "_PRESETS_AVAILABLE", True)
-        mp.setattr(c, "list_presets", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+        mp.setattr(
+            c, "list_presets", lambda: (_ for _ in ()).throw(RuntimeError("boom"))
+        )
         with pytest.raises(ValueError):
             c.create_reactor("valar-10")
 
@@ -44,4 +48,3 @@ def test_convenience_package_importerror_and_branch_coverage():
     # Cover SimpleReactor kwargs pass-through for recognized fields (line 280)
     r = c.create_reactor(power_mw=10.0, description="hello")
     assert getattr(r.spec, "description", None) == "hello"
-

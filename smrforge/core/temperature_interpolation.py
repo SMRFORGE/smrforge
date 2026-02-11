@@ -10,7 +10,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
-from scipy.interpolate import interp1d, UnivariateSpline, RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline, UnivariateSpline, interp1d
 
 from ..utils.logging import get_logger
 
@@ -31,10 +31,10 @@ class InterpolationMethod(Enum):
 class CrossSectionTemperatureInterpolator:
     """
     Interpolate cross-sections at different temperatures.
-    
+
     Supports interpolation between multiple temperature points using
     various interpolation methods (linear, log-log, spline).
-    
+
     Attributes:
         temperatures: Array of available temperatures [K]
         energies: Energy grid [eV] (same for all temperatures)
@@ -51,7 +51,7 @@ class CrossSectionTemperatureInterpolator:
     ):
         """
         Initialize temperature interpolator.
-        
+
         Args:
             temperatures: Available temperatures [K] [n_temps]
             energies: Energy grid [eV] [n_energies]
@@ -84,11 +84,11 @@ class CrossSectionTemperatureInterpolator:
     ) -> np.ndarray:
         """
         Interpolate cross-section at requested temperature.
-        
+
         Args:
             temperature: Requested temperature [K]
             energy: Optional energy point [eV]. If None, returns full energy grid.
-        
+
         Returns:
             Interpolated cross-section [barn]
             - If energy is None: array of shape [n_energies]
@@ -185,9 +185,7 @@ class CrossSectionTemperatureInterpolator:
         if abs(log_temp_high - log_temp_low) < 1e-10:
             log_xs = log_xs_low
         else:
-            log_temp_frac = (log_temp - log_temp_low) / (
-                log_temp_high - log_temp_low
-            )
+            log_temp_frac = (log_temp - log_temp_low) / (log_temp_high - log_temp_low)
             log_xs = log_xs_low + log_temp_frac * (log_xs_high - log_xs_low)
 
         # Convert back to linear space
@@ -202,14 +200,14 @@ class CrossSectionTemperatureInterpolator:
     def _interpolate_spline(self, temperature: float) -> np.ndarray:
         """
         Cubic spline interpolation in temperature.
-        
+
         Optimized: Uses 2D interpolation (RectBivariateSpline) for better performance
         when interpolating over many energy points. Falls back to per-energy splines
         if 2D interpolation fails or for small datasets.
         """
         n_energies = len(self.energies)
         n_temps = len(self.temperatures)
-        
+
         # Use 2D interpolation for better performance when we have enough data points
         # RectBivariateSpline is ~10-50x faster than looping over energy points
         if n_temps >= 3 and n_energies > 10:
@@ -223,15 +221,17 @@ class CrossSectionTemperatureInterpolator:
                     self.cross_sections,
                     kx=min(3, n_temps - 1),
                     ky=min(3, n_energies - 1),
-                    s=0  # No smoothing
+                    s=0,  # No smoothing
                 )
                 # Interpolate at requested temperature for all energies
                 xs_interp = spline_2d(temperature, self.energies, grid=False)
                 return xs_interp
             except Exception as e:
                 # Fallback to per-energy splines if 2D interpolation fails
-                logger.debug(f"2D spline interpolation failed: {e}, using per-energy splines")
-        
+                logger.debug(
+                    f"2D spline interpolation failed: {e}, using per-energy splines"
+                )
+
         # Fallback: Interpolate each energy point separately (original method)
         # This is still needed for small datasets or when 2D interpolation fails
         xs_interp = np.zeros(n_energies)
@@ -241,14 +241,15 @@ class CrossSectionTemperatureInterpolator:
             # Create spline interpolator
             try:
                 spline = UnivariateSpline(
-                    self.temperatures, xs_at_energy, s=0, k=min(3, len(self.temperatures) - 1)
+                    self.temperatures,
+                    xs_at_energy,
+                    s=0,
+                    k=min(3, len(self.temperatures) - 1),
                 )
                 xs_interp[i] = spline(temperature)
             except Exception:
                 # Fallback to linear if spline fails
-                xs_interp[i] = np.interp(
-                    temperature, self.temperatures, xs_at_energy
-                )
+                xs_interp[i] = np.interp(temperature, self.temperatures, xs_at_energy)
 
         return xs_interp
 
@@ -264,10 +265,10 @@ def interpolate_cross_section_temperature(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Interpolate cross-section at target temperature using multi-temperature data.
-    
+
     If multiple temperatures are available, interpolates between them.
     Otherwise, uses Doppler broadening from nearest temperature.
-    
+
     Args:
         cache: NuclearDataCache instance
         nuclide: Nuclide instance
@@ -277,10 +278,10 @@ def interpolate_cross_section_temperature(
             If None, will use default temperatures [293.6, 600.0, 900.0, 1200.0] K
         method: Interpolation method (default: LINEAR)
         library: Optional nuclear data library name (e.g., "endfb8.0")
-    
+
     Returns:
         Tuple of (energy [eV], cross_section [barn]) arrays at target temperature
-    
+
     Raises:
         ValueError: If cross-sections cannot be retrieved at any temperature
 
@@ -311,9 +312,7 @@ def interpolate_cross_section_temperature(
     for temp in available_temperatures:
         try:
             if library is not None:
-                energy, xs = cache.get_cross_section(
-                    nuclide, reaction, temp, library
-                )
+                energy, xs = cache.get_cross_section(nuclide, reaction, temp, library)
             else:
                 energy, xs = cache.get_cross_section(nuclide, reaction, temp)
 

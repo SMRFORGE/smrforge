@@ -65,7 +65,9 @@ class TestSimpleEndfParse:
         assert len(energy) > 0
         assert len(xs) == len(energy)
 
-    def test_simple_endf_parse_nonexistent_reaction(self, temp_dir, realistic_endf_file):
+    def test_simple_endf_parse_nonexistent_reaction(
+        self, temp_dir, realistic_endf_file
+    ):
         """Test _simple_endf_parse returns None for non-existent reaction."""
         from smrforge.core.reactor_core import NuclearDataCache, Nuclide
 
@@ -90,4 +92,3 @@ class TestSimpleEndfParse:
 
         assert energy is None
         assert xs is None
-

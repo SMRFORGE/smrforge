@@ -145,4 +145,3 @@ def create_feature_lab():
         ],
         fluid=True,
     )
-

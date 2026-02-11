@@ -10,24 +10,25 @@ Tests cover:
 - Error handling and edge cases
 """
 
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
+
 import numpy as np
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 
 from smrforge.convenience_utils import (
+    create_nuclide_list,
+    create_simple_burnup_solver,
     create_simple_core,
-    quick_mesh_extraction,
     create_simple_solver,
     create_simple_xs_data,
-    quick_keff_calculation,
-    create_simple_burnup_solver,
+    get_material,
+    get_nuclide,
+    list_materials,
     quick_burnup_calculation,
     quick_decay_heat,
-    get_nuclide,
-    create_nuclide_list,
-    get_material,
-    list_materials,
+    quick_keff_calculation,
+    quick_mesh_extraction,
     quick_plot_core,
     quick_plot_mesh,
     run_complete_analysis,
@@ -38,6 +39,7 @@ from smrforge.convenience_utils import (
 def mock_core():
     """Create a mock PrismaticCore."""
     from smrforge.geometry.core_geometry import PrismaticCore
+
     core = PrismaticCore(name="TestCore")
     core.core_height = 100.0
     core.core_diameter = 50.0
@@ -49,6 +51,7 @@ def mock_core():
 def mock_xs_data():
     """Create mock cross-section data."""
     from smrforge.validation.models import CrossSectionData
+
     return CrossSectionData(
         n_groups=2,
         n_materials=2,
@@ -88,7 +91,7 @@ class TestGeometryConvenienceFunctions:
 
     def test_create_simple_core_import_error(self):
         """Test create_simple_core when geometry module is not available."""
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             with pytest.raises(ImportError, match="Geometry module not available"):
                 create_simple_core()
 
@@ -96,8 +99,8 @@ class TestGeometryConvenienceFunctions:
         """Test quick_mesh_extraction with volume mesh."""
         mesh = quick_mesh_extraction(mock_core, mesh_type="volume")
         assert mesh is not None
-        assert hasattr(mesh, 'vertices')
-        assert hasattr(mesh, 'n_vertices')
+        assert hasattr(mesh, "vertices")
+        assert hasattr(mesh, "n_vertices")
 
     def test_quick_mesh_extraction_surface(self, mock_core):
         """Test quick_mesh_extraction with surface mesh."""
@@ -106,7 +109,9 @@ class TestGeometryConvenienceFunctions:
 
     def test_quick_mesh_extraction_with_channels(self, mock_core):
         """Test quick_mesh_extraction with channels included."""
-        mesh = quick_mesh_extraction(mock_core, mesh_type="volume", include_channels=True)
+        mesh = quick_mesh_extraction(
+            mock_core, mesh_type="volume", include_channels=True
+        )
         assert mesh is not None
 
     def test_quick_mesh_extraction_invalid_type(self, mock_core):
@@ -116,7 +121,7 @@ class TestGeometryConvenienceFunctions:
 
     def test_quick_mesh_extraction_import_error(self):
         """Test quick_mesh_extraction when geometry module is not available."""
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             with pytest.raises(ImportError, match="Geometry module not available"):
                 quick_mesh_extraction(Mock(), mesh_type="volume")
 
@@ -128,7 +133,7 @@ class TestNeutronicsConvenienceFunctions:
         """Test create_simple_solver with default parameters."""
         solver = create_simple_solver()
         assert solver is not None
-        assert hasattr(solver, 'solve_steady_state')
+        assert hasattr(solver, "solve_steady_state")
 
     def test_create_simple_solver_with_core(self, mock_core):
         """Test create_simple_solver with provided core."""
@@ -145,6 +150,7 @@ class TestNeutronicsConvenienceFunctions:
         # Note: n_groups=4 will fail because create_simple_xs_data only supports 2 groups
         # So we need to provide xs_data directly
         from smrforge.validation.models import CrossSectionData
+
         xs_data = CrossSectionData(
             n_groups=4,
             n_materials=2,
@@ -152,8 +158,22 @@ class TestNeutronicsConvenienceFunctions:
             sigma_a=np.array([[0.008, 0.12, 0.15, 0.18], [0.002, 0.025, 0.03, 0.035]]),
             sigma_f=np.array([[0.006, 0.10, 0.12, 0.14], [0.0, 0.0, 0.0, 0.0]]),
             nu_sigma_f=np.array([[0.008, 0.10, 0.12, 0.14], [0.0, 0.0, 0.0, 0.0]]),
-            sigma_s=np.array([[[0.29, 0.01, 0.0, 0.0], [0.0, 0.78, 0.01, 0.0], [0.0, 0.0, 0.80, 0.01], [0.0, 0.0, 0.0, 0.85]], 
-                              [[0.28, 0.0, 0.0, 0.0], [0.0, 0.73, 0.0, 0.0], [0.0, 0.0, 0.75, 0.0], [0.0, 0.0, 0.0, 0.78]]]),
+            sigma_s=np.array(
+                [
+                    [
+                        [0.29, 0.01, 0.0, 0.0],
+                        [0.0, 0.78, 0.01, 0.0],
+                        [0.0, 0.0, 0.80, 0.01],
+                        [0.0, 0.0, 0.0, 0.85],
+                    ],
+                    [
+                        [0.28, 0.0, 0.0, 0.0],
+                        [0.0, 0.73, 0.0, 0.0],
+                        [0.0, 0.0, 0.75, 0.0],
+                        [0.0, 0.0, 0.0, 0.78],
+                    ],
+                ]
+            ),
             chi=np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]),
             D=np.array([[1.0, 0.4, 0.3, 0.2], [1.2, 0.5, 0.4, 0.3]]),
         )
@@ -170,7 +190,7 @@ class TestNeutronicsConvenienceFunctions:
 
     def test_create_simple_solver_import_error(self):
         """Test create_simple_solver when neutronics module is not available."""
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             with pytest.raises(ImportError, match="Neutronics module not available"):
                 create_simple_solver()
 
@@ -203,12 +223,14 @@ class TestNeutronicsConvenienceFunctions:
 
     def test_create_simple_xs_data_invalid_groups(self):
         """Test create_simple_xs_data with invalid number of groups."""
-        with pytest.raises(ValueError, match="Simple cross-sections only available for 2 groups"):
+        with pytest.raises(
+            ValueError, match="Simple cross-sections only available for 2 groups"
+        ):
             create_simple_xs_data(n_groups=4)
 
     def test_create_simple_xs_data_import_error(self):
         """Test create_simple_xs_data when validation module is not available."""
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             with pytest.raises(ImportError, match="Validation module not available"):
                 create_simple_xs_data(n_groups=2)
 
@@ -259,7 +281,7 @@ class TestBurnupConvenienceFunctions:
         try:
             solver = create_simple_burnup_solver()
             assert solver is not None
-            assert hasattr(solver, 'solve')
+            assert hasattr(solver, "solve")
         except (AttributeError, TypeError) as e:
             pytest.skip(f"BurnupSolver API issue: {e}")
 
@@ -333,7 +355,9 @@ class TestDecayHeatConvenienceFunctions:
     def test_quick_decay_heat_custom_time(self):
         """Test quick_decay_heat with custom time."""
         try:
-            heat = quick_decay_heat({"U235": 1e20, "Cs137": 1e19}, time_seconds=172800.0)
+            heat = quick_decay_heat(
+                {"U235": 1e20, "Cs137": 1e19}, time_seconds=172800.0
+            )
             assert isinstance(heat, (float, np.floating))
             assert heat >= 0
         except (TypeError, AttributeError, ValueError, KeyError) as e:
@@ -342,6 +366,7 @@ class TestDecayHeatConvenienceFunctions:
     def test_quick_decay_heat_with_cache(self):
         """Test quick_decay_heat with provided cache."""
         from smrforge.core.reactor_core import NuclearDataCache
+
         cache = NuclearDataCache()
         try:
             heat = quick_decay_heat({"U235": 1e20}, time_seconds=86400.0, cache=cache)
@@ -351,7 +376,7 @@ class TestDecayHeatConvenienceFunctions:
 
     def test_quick_decay_heat_import_error(self):
         """Test quick_decay_heat when decay heat module is not available."""
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             with pytest.raises(ImportError, match="Decay heat module not available"):
                 quick_decay_heat({"U235": 1e20}, time_seconds=86400.0)
 
@@ -378,7 +403,7 @@ class TestNuclearDataConvenienceFunctions:
 
     def test_get_nuclide_import_error(self):
         """Test get_nuclide when core module is not available."""
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             with pytest.raises(ImportError, match="Core module not available"):
                 get_nuclide("U235")
 
@@ -436,7 +461,7 @@ class TestMaterialConvenienceFunctions:
 
     def test_get_material_import_error(self):
         """Test get_material when materials module is not available."""
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             with pytest.raises(ImportError, match="Materials module not available"):
                 get_material("graphite_IG-110")
 
@@ -447,7 +472,7 @@ class TestMaterialConvenienceFunctions:
             # list_materials returns a polars DataFrame, not a list
             assert materials is not None
             # Check if it's a DataFrame-like object (has shape attribute)
-            assert hasattr(materials, 'shape') or isinstance(materials, list)
+            assert hasattr(materials, "shape") or isinstance(materials, list)
         except ImportError:
             pytest.skip("Materials module not available")
 
@@ -458,7 +483,7 @@ class TestMaterialConvenienceFunctions:
             # list_materials returns a polars DataFrame, not a list
             assert materials is not None
             # Check if it's a DataFrame-like object (has shape attribute)
-            assert hasattr(materials, 'shape') or isinstance(materials, list)
+            assert hasattr(materials, "shape") or isinstance(materials, list)
         except ImportError:
             pytest.skip("Materials module not available")
 
@@ -468,12 +493,12 @@ class TestVisualizationConvenienceFunctions:
 
     def test_quick_plot_core_defaults(self, mock_core):
         """Test quick_plot_core with default parameters."""
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', True):
-            with patch('smrforge.convenience_utils.plot_core_layout') as mock_plot:
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", True):
+            with patch("smrforge.convenience_utils.plot_core_layout") as mock_plot:
                 mock_fig = Mock()
                 mock_ax = Mock()
                 mock_plot.return_value = (mock_fig, mock_ax)
-                with patch('matplotlib.pyplot.show'):
+                with patch("matplotlib.pyplot.show"):
                     fig, ax = quick_plot_core(mock_core, show=False)
                     assert fig == mock_fig
                     assert ax == mock_ax
@@ -481,26 +506,26 @@ class TestVisualizationConvenienceFunctions:
 
     def test_quick_plot_core_custom_view(self, mock_core):
         """Test quick_plot_core with custom view."""
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', True):
-            with patch('smrforge.convenience_utils.plot_core_layout') as mock_plot:
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", True):
+            with patch("smrforge.convenience_utils.plot_core_layout") as mock_plot:
                 mock_fig = Mock()
                 mock_ax = Mock()
                 mock_plot.return_value = (mock_fig, mock_ax)
-                with patch('matplotlib.pyplot.show'):
+                with patch("matplotlib.pyplot.show"):
                     fig, ax = quick_plot_core(mock_core, view="xz", show=False)
                     mock_plot.assert_called_once_with(mock_core, view="xz")
 
     def test_quick_plot_core_import_error(self, mock_core):
         """Test quick_plot_core when visualization module is not available."""
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", False):
             with pytest.raises(ImportError, match="Visualization module not available"):
                 quick_plot_core(mock_core, show=False)
 
     def test_quick_plot_mesh_defaults(self, mock_core):
         """Test quick_plot_mesh with default parameters."""
         mesh = quick_mesh_extraction(mock_core, mesh_type="volume")
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', True):
-            with patch('smrforge.convenience_utils.plot_mesh3d_plotly') as mock_plot:
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", True):
+            with patch("smrforge.convenience_utils.plot_mesh3d_plotly") as mock_plot:
                 mock_fig = Mock()
                 mock_fig.show = Mock()
                 mock_plot.return_value = mock_fig
@@ -511,8 +536,8 @@ class TestVisualizationConvenienceFunctions:
     def test_quick_plot_mesh_color_by(self, mock_core):
         """Test quick_plot_mesh with color_by parameter."""
         mesh = quick_mesh_extraction(mock_core, mesh_type="volume")
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', True):
-            with patch('smrforge.convenience_utils.plot_mesh3d_plotly') as mock_plot:
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", True):
+            with patch("smrforge.convenience_utils.plot_mesh3d_plotly") as mock_plot:
                 mock_fig = Mock()
                 mock_fig.show = Mock()
                 mock_plot.return_value = mock_fig
@@ -522,7 +547,7 @@ class TestVisualizationConvenienceFunctions:
     def test_quick_plot_mesh_import_error(self, mock_core):
         """Test quick_plot_mesh when visualization module is not available."""
         mesh = quick_mesh_extraction(mock_core, mesh_type="volume")
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", False):
             with pytest.raises(ImportError, match="Visualization module not available"):
                 quick_plot_mesh(mesh, show=False)
 
@@ -565,7 +590,9 @@ class TestCompleteWorkflowFunctions:
     def test_run_complete_analysis_with_core(self, mock_core):
         """Test run_complete_analysis with provided core."""
         try:
-            results = run_complete_analysis(core=mock_core, power_mw=10.0, include_burnup=False)
+            results = run_complete_analysis(
+                core=mock_core, power_mw=10.0, include_burnup=False
+            )
             assert isinstance(results, dict)
             assert "k_eff" in results
         except (AttributeError, TypeError) as e:
@@ -573,7 +600,7 @@ class TestCompleteWorkflowFunctions:
 
     def test_run_complete_analysis_import_error(self):
         """Test run_complete_analysis when core module is not available."""
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             with pytest.raises(ImportError, match="Core modules not available"):
                 run_complete_analysis(power_mw=10.0)
 
@@ -584,6 +611,7 @@ class TestConvenienceMethods:
     def test_prismatic_core_quick_setup(self):
         """Test PrismaticCore.quick_setup convenience method."""
         from smrforge.geometry.core_geometry import PrismaticCore
+
         core = PrismaticCore(name="TestCore")
         core.quick_setup(n_rings=2, pitch=40.0, block_height=80.0, n_axial=1)
         assert len(core.blocks) > 0
@@ -614,34 +642,40 @@ class TestConvenienceMethods:
 
 class TestEdgeCases:
     """Test edge cases and additional code paths."""
-    
+
     def test_quick_keff_calculation_with_options(self):
         """Test quick_keff_calculation with options already provided."""
         # Test when solver_kwargs contains options
         from smrforge.validation.models import SolverOptions
-        options = SolverOptions(max_iterations=100, tolerance=1e-5, verbose=False, skip_solution_validation=True)
-        
+
+        options = SolverOptions(
+            max_iterations=100,
+            tolerance=1e-5,
+            verbose=False,
+            skip_solution_validation=True,
+        )
+
         # This should work even with options provided
         k_eff, flux = quick_keff_calculation()
         assert isinstance(k_eff, (float, np.floating))
         assert isinstance(flux, np.ndarray)
-    
+
     def test_quick_keff_calculation_skip_validation_true(self):
         """Test quick_keff_calculation with skip_validation=True explicitly."""
         k_eff, flux = quick_keff_calculation(skip_validation=True)
         assert isinstance(k_eff, (float, np.floating))
         assert isinstance(flux, np.ndarray)
-    
+
     def test_create_simple_xs_data_n_materials_edge_cases(self):
         """Test create_simple_xs_data with edge case n_materials values."""
         # Test with n_materials=1 (already tested, but verify edge case)
         xs_data = create_simple_xs_data(n_groups=2, n_materials=1)
         assert xs_data.n_materials == 1
-        
+
         # Test with n_materials=2 (default)
         xs_data = create_simple_xs_data(n_groups=2, n_materials=2)
         assert xs_data.n_materials == 2
-    
+
     def test_get_nuclide_whitespace_stripping(self):
         """Test get_nuclide handles whitespace correctly."""
         # Test with leading/trailing whitespace
@@ -649,7 +683,7 @@ class TestEdgeCases:
         u235_2 = get_nuclide("U235")
         assert u235_1.Z == u235_2.Z
         assert u235_1.A == u235_2.A
-    
+
     def test_get_nuclide_metastable_m0(self):
         """Test get_nuclide with metastable state m0 (ground state)."""
         # Test that m0 is handled correctly (should default to 0)
@@ -659,26 +693,29 @@ class TestEdgeCases:
         assert pu239m0.A == pu239.A
         # m0 should be treated as 0
         assert pu239m0.m == 0
-    
+
     def test_quick_mesh_extraction_pebble_bed_core(self):
         """Test quick_mesh_extraction with PebbleBedCore."""
         try:
             from smrforge.geometry.core_geometry import PebbleBedCore
+
             # Create a simple pebble bed core if possible
             # This might require specific initialization
             pytest.skip("PebbleBedCore extraction testing requires more setup")
         except (ImportError, AttributeError):
             pytest.skip("PebbleBedCore not available or requires setup")
-    
+
     def test_run_complete_analysis_with_xs_data(self, mock_xs_data):
         """Test run_complete_analysis with provided xs_data."""
         try:
-            results = run_complete_analysis(xs_data=mock_xs_data, power_mw=10.0, include_burnup=False)
+            results = run_complete_analysis(
+                xs_data=mock_xs_data, power_mw=10.0, include_burnup=False
+            )
             assert isinstance(results, dict)
             assert "k_eff" in results
         except (AttributeError, TypeError) as e:
             pytest.skip(f"Complete analysis API issue: {e}")
-    
+
     def test_run_complete_analysis_custom_power(self):
         """Test run_complete_analysis with custom power values."""
         try:
@@ -688,89 +725,93 @@ class TestEdgeCases:
             assert results.get("avg_power_density") is not None
         except (AttributeError, TypeError) as e:
             pytest.skip(f"Complete analysis API issue: {e}")
-    
+
     def test_quick_plot_core_no_show(self, mock_core):
         """Test quick_plot_core with show=False."""
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', True):
-            with patch('smrforge.convenience_utils.plot_core_layout') as mock_plot:
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", True):
+            with patch("smrforge.convenience_utils.plot_core_layout") as mock_plot:
                 mock_fig = Mock()
                 mock_ax = Mock()
                 mock_plot.return_value = (mock_fig, mock_ax)
                 # When show=False, plt.show() should not be called
-                with patch('matplotlib.pyplot.show') as mock_show:
+                with patch("matplotlib.pyplot.show") as mock_show:
                     fig, ax = quick_plot_core(mock_core, show=False)
                     mock_show.assert_not_called()
-    
+
     def test_quick_plot_mesh_no_show(self, mock_core):
         """Test quick_plot_mesh with show=False."""
         mesh = quick_mesh_extraction(mock_core, mesh_type="volume")
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', True):
-            with patch('smrforge.convenience_utils.plot_mesh3d_plotly') as mock_plot:
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", True):
+            with patch("smrforge.convenience_utils.plot_mesh3d_plotly") as mock_plot:
                 mock_fig = Mock()
                 mock_fig.show = Mock()
                 mock_plot.return_value = mock_fig
                 fig = quick_plot_mesh(mesh, show=False)
                 # When show=False, fig.show() should not be called
                 mock_fig.show.assert_not_called()
-    
+
     def test_quick_plot_mesh_with_kwargs(self, mock_core):
         """Test quick_plot_mesh with additional kwargs."""
         mesh = quick_mesh_extraction(mock_core, mesh_type="volume")
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', True):
-            with patch('smrforge.convenience_utils.plot_mesh3d_plotly') as mock_plot:
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", True):
+            with patch("smrforge.convenience_utils.plot_mesh3d_plotly") as mock_plot:
                 mock_fig = Mock()
                 mock_fig.show = Mock()
                 mock_plot.return_value = mock_fig
-                fig = quick_plot_mesh(mesh, color_by="material", opacity=0.8, show=False)
+                fig = quick_plot_mesh(
+                    mesh, color_by="material", opacity=0.8, show=False
+                )
                 # Check that kwargs were passed through
                 mock_plot.assert_called_once()
                 call_kwargs = mock_plot.call_args[1]
                 assert call_kwargs.get("opacity") == 0.8
-    
+
     def test_quick_plot_core_with_kwargs(self, mock_core):
         """Test quick_plot_core with additional kwargs."""
-        with patch('smrforge.convenience_utils._VIZ_AVAILABLE', True):
-            with patch('smrforge.convenience_utils.plot_core_layout') as mock_plot:
+        with patch("smrforge.convenience_utils._VIZ_AVAILABLE", True):
+            with patch("smrforge.convenience_utils.plot_core_layout") as mock_plot:
                 mock_fig = Mock()
                 mock_ax = Mock()
                 mock_plot.return_value = (mock_fig, mock_ax)
-                with patch('matplotlib.pyplot.show'):
-                    fig, ax = quick_plot_core(mock_core, view="xy", color="red", show=False)
+                with patch("matplotlib.pyplot.show"):
+                    fig, ax = quick_plot_core(
+                        mock_core, view="xy", color="red", show=False
+                    )
                     # Check that kwargs were passed through
                     mock_plot.assert_called_once()
                     call_kwargs = mock_plot.call_args[1]
                     assert call_kwargs.get("color") == "red"
-    
+
     def test_add_convenience_methods_idempotent(self):
         """Test that _add_convenience_methods is idempotent (can be called multiple times)."""
         from smrforge.convenience_utils import _add_convenience_methods
         from smrforge.geometry.core_geometry import PrismaticCore
         from smrforge.neutronics.solver import MultiGroupDiffusion
-        
+
         # Call multiple times - should not raise errors
         _add_convenience_methods()
         _add_convenience_methods()
         _add_convenience_methods()
-        
+
         # Methods should still be available
         assert hasattr(PrismaticCore, "quick_setup")
         assert hasattr(MultiGroupDiffusion, "quick_solve")
-    
+
     def test_add_convenience_methods_core_not_available(self):
         """Test _add_convenience_methods when core is not available."""
         from smrforge.convenience_utils import _add_convenience_methods
-        
-        with patch('smrforge.convenience_utils._CORE_AVAILABLE', False):
+
+        with patch("smrforge.convenience_utils._CORE_AVAILABLE", False):
             # Should return early without raising
             _add_convenience_methods()
-    
+
     def test_quick_solve_no_power_attribute(self):
         """Test quick_solve when geometry.spec.power_thermal doesn't exist."""
         solver = create_simple_solver()
         # Create a mock spec without power_thermal
         mock_spec = Mock()
         # Don't set power_thermal attribute
-        if hasattr(solver, 'geometry') and hasattr(solver.geometry, 'spec'):
+        if hasattr(solver, "geometry") and hasattr(solver.geometry, "spec"):
             # Temporarily remove power_thermal if it exists
             original_spec = solver.geometry.spec
             solver.geometry.spec = mock_spec
@@ -781,7 +822,9 @@ class TestEdgeCases:
                 assert "power" in results
             except (AttributeError, TypeError):
                 # Might fail if compute_power_distribution requires specific attributes
-                pytest.skip("quick_solve power calculation requires specific geometry setup")
+                pytest.skip(
+                    "quick_solve power calculation requires specific geometry setup"
+                )
             finally:
                 solver.geometry.spec = original_spec
         else:
@@ -791,16 +834,17 @@ class TestEdgeCases:
                 assert isinstance(results, dict)
                 assert "power" in results
             except (AttributeError, TypeError):
-                pytest.skip("quick_solve power calculation requires specific geometry setup")
-    
+                pytest.skip(
+                    "quick_solve power calculation requires specific geometry setup"
+                )
+
     def test_get_nuclide_single_char_element(self):
         """Test get_nuclide with single-character element (edge case for parsing)."""
         # Test elements that are single characters and might cause parsing issues
         h1 = get_nuclide("H1")
         assert h1.Z == 1
         assert h1.A == 1
-        
+
         c12 = get_nuclide("C12")
         assert c12.Z == 6
         assert c12.A == 12
-

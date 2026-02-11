@@ -50,8 +50,9 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
     import dash
     import dash_bootstrap_components as dbc
 
-    # Work in an isolated directory (module uses ./smrforge_project.json)
+    # Work in an isolated directory (module uses output/smrforge_project.json)
     monkeypatch.chdir(tmp_path)
+    proj_path = tmp_path / "output" / "smrforge_project.json"
 
     from smrforge.gui.callbacks import projects as proj
 
@@ -68,7 +69,11 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
             handle_project(None, None, {}, {})
 
     # Save with empty reactor spec => warning
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-save-project.n_clicks"}])):
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "nav-save-project.n_clicks"}]),
+    ):
         project_store, feedback, rs, ars = handle_project(1, None, {}, {})
         assert project_store["status"] == "error"
         assert isinstance(feedback, dbc.Alert)
@@ -77,17 +82,27 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
 
     # Save success
     reactor_spec = {"name": "R1", "reactor_type": "prismatic", "power_thermal": 1.0e6}
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-save-project.n_clicks"}])):
-        project_store, feedback, rs, ars = handle_project(2, None, reactor_spec, {"k_eff": 1.05})
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "nav-save-project.n_clicks"}]),
+    ):
+        project_store, feedback, rs, ars = handle_project(
+            2, None, reactor_spec, {"k_eff": 1.05}
+        )
         assert project_store["status"] == "success"
         assert isinstance(feedback, dbc.Alert)
         assert rs == {}
         assert ars == {}
-        assert (tmp_path / "smrforge_project.json").exists()
+        assert proj_path.exists()
 
     # Open when file missing
-    (tmp_path / "smrforge_project.json").unlink()
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}])):
+    proj_path.unlink(missing_ok=True)
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}]),
+    ):
         project_store, feedback, rs, ars = handle_project(None, 1, reactor_spec, {})
         assert project_store["status"] == "error"
         assert isinstance(feedback, dbc.Alert)
@@ -95,8 +110,13 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
         assert ars == {}
 
     # Open with invalid JSON
-    (tmp_path / "smrforge_project.json").write_text("{not json", encoding="utf-8")
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}])):
+    proj_path.parent.mkdir(parents=True, exist_ok=True)
+    proj_path.write_text("{not json", encoding="utf-8")
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}]),
+    ):
         project_store, feedback, rs, ars = handle_project(None, 2, reactor_spec, {})
         assert project_store["status"] == "error"
         assert isinstance(feedback, dbc.Alert)
@@ -104,8 +124,14 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
         assert ars == {}
 
     # Open with empty reactor_spec in file
-    (tmp_path / "smrforge_project.json").write_text(json.dumps({"reactor_spec": {}, "results": {}}), encoding="utf-8")
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}])):
+    proj_path.write_text(
+        json.dumps({"reactor_spec": {}, "results": {}}), encoding="utf-8"
+    )
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}]),
+    ):
         project_store, feedback, rs, ars = handle_project(None, 3, reactor_spec, {})
         assert project_store["status"] == "error"
         assert isinstance(feedback, dbc.Alert)
@@ -114,8 +140,12 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
 
     # Open success
     file_data = {"reactor_spec": reactor_spec, "results": {"k_eff": 1.01}}
-    (tmp_path / "smrforge_project.json").write_text(json.dumps(file_data), encoding="utf-8")
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}])):
+    proj_path.write_text(json.dumps(file_data), encoding="utf-8")
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}]),
+    ):
         project_store, feedback, rs, ars = handle_project(None, 4, reactor_spec, {})
         assert project_store["status"] == "success"
         assert isinstance(feedback, dbc.Alert)
@@ -124,7 +154,11 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
 
     # Open generic exception branch (open() fails)
     with (
-        patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}])),
+        patch.object(
+            dash,
+            "callback_context",
+            SimpleNamespace(triggered=[{"prop_id": "nav-open-project.n_clicks"}]),
+        ),
         patch("builtins.open", side_effect=OSError("cannot read")),
     ):
         project_store, feedback, rs, ars = handle_project(None, 5, reactor_spec, {})
@@ -134,13 +168,21 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
         assert ars == {}
 
     # Unknown button id => PreventUpdate
-    with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-unknown.n_clicks"}])):
+    with patch.object(
+        dash,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "nav-unknown.n_clicks"}]),
+    ):
         with pytest.raises(dash.exceptions.PreventUpdate):
             handle_project(1, 1, reactor_spec, {})
 
     # Save exception branch: make open() fail
     with (
-        patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": "nav-save-project.n_clicks"}])),
+        patch.object(
+            dash,
+            "callback_context",
+            SimpleNamespace(triggered=[{"prop_id": "nav-save-project.n_clicks"}]),
+        ),
         patch("builtins.open", side_effect=OSError("nope")),
     ):
         project_store, feedback, rs, ars = handle_project(99, None, reactor_spec, {})
@@ -148,4 +190,3 @@ def test_project_callbacks_save_and_open_paths(tmp_path, monkeypatch):
         assert isinstance(feedback, dbc.Alert)
         assert rs == {}
         assert ars == {}
-

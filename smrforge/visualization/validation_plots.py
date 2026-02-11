@@ -26,7 +26,10 @@ except ImportError:  # pragma: no cover
     _PLOTLY_AVAILABLE = False
     go = None  # type: ignore
 
-from smrforge.visualization._viz_common import ensure_matplotlib_available, ensure_plotly_available
+from smrforge.visualization._viz_common import (
+    ensure_matplotlib_available,
+    ensure_plotly_available,
+)
 
 
 def _summary_counts(result: Any) -> Dict[str, int]:
@@ -48,7 +51,9 @@ def _summary_counts(result: Any) -> Dict[str, int]:
             "info": 0,
         }
 
-    raise ValueError("Unsupported validation result type (no summary(), no violations/warnings)")
+    raise ValueError(
+        "Unsupported validation result type (no summary(), no violations/warnings)"
+    )
 
 
 def plot_validation_summary(
@@ -70,7 +75,9 @@ def plot_validation_summary(
     if backend == "plotly":
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=vals, y=levels, orientation="h", marker=dict(color=colors)))
+        fig.add_trace(
+            go.Bar(x=vals, y=levels, orientation="h", marker=dict(color=colors))
+        )
         fig.update_layout(title=plot_title, xaxis_title="count", yaxis_title="level")
         return fig
 
@@ -108,15 +115,24 @@ def plot_validation_issues(
         for i in issues:
             param = getattr(i, "parameter", "unknown")
             counts[str(param)] = counts.get(str(param), 0) + 1
-        items = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[: max_items]
+        items = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:max_items]
         labels = [k for k, _ in items]
         vals = [v for _, v in items]
 
         if backend == "plotly":
             ensure_plotly_available(_PLOTLY_AVAILABLE)
             fig = go.Figure()
-            fig.add_trace(go.Bar(x=vals[::-1], y=labels[::-1], orientation="h", marker=dict(color="steelblue")))
-            fig.update_layout(title=plot_title, xaxis_title="count", yaxis_title="parameter")
+            fig.add_trace(
+                go.Bar(
+                    x=vals[::-1],
+                    y=labels[::-1],
+                    orientation="h",
+                    marker=dict(color="steelblue"),
+                )
+            )
+            fig.update_layout(
+                title=plot_title, xaxis_title="count", yaxis_title="parameter"
+            )
             return fig
 
         if backend == "matplotlib":
@@ -132,13 +148,15 @@ def plot_validation_issues(
         raise ValueError(f"Unknown backend: {backend}")
 
     # constraints.ValidationResult
-    violations = list(getattr(result, "violations", []) or []) + list(getattr(result, "warnings", []) or [])
+    violations = list(getattr(result, "violations", []) or []) + list(
+        getattr(result, "warnings", []) or []
+    )
     if not violations:
         raise ValueError("No violations/warnings found to plot.")
 
     # Score by absolute distance to limit, show sign too.
     rows: List[Tuple[str, float, str]] = []
-    for v in violations[: max_items]:
+    for v in violations[:max_items]:
         name = str(getattr(v, "constraint_name", "constraint"))
         value = float(getattr(v, "value", 0.0))
         limit = float(getattr(v, "limit", 0.0))
@@ -154,7 +172,14 @@ def plot_validation_issues(
     if backend == "plotly":
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=deltas[::-1], y=labels[::-1], orientation="h", marker=dict(color=colors[::-1])))
+        fig.add_trace(
+            go.Bar(
+                x=deltas[::-1],
+                y=labels[::-1],
+                orientation="h",
+                marker=dict(color=colors[::-1]),
+            )
+        )
         fig.update_layout(
             title=plot_title,
             xaxis_title="value - limit",
@@ -180,4 +205,3 @@ __all__ = [
     "plot_validation_summary",
     "plot_validation_issues",
 ]
-

@@ -48,7 +48,13 @@ from smrforge.geometry.mesh_generation import AdvancedMeshGenerator, MeshType
 class StructuredMesh3D:
     """3D structured mesh (regular grid)."""
 
-    def __init__(self, nx: int, ny: int, nz: int, bounds: Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]):
+    def __init__(
+        self,
+        nx: int,
+        ny: int,
+        nz: int,
+        bounds: Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]],
+    ):
         """
         Create 3D structured mesh.
 
@@ -68,7 +74,9 @@ class StructuredMesh3D:
 
         # Create 3D grid
         self.x, self.y, self.z = np.meshgrid(x, y, z, indexing="ij")
-        self.vertices = np.stack([self.x.ravel(), self.y.ravel(), self.z.ravel()], axis=1)
+        self.vertices = np.stack(
+            [self.x.ravel(), self.y.ravel(), self.z.ravel()], axis=1
+        )
 
         # Generate hexahedral cells
         self.cells = []
@@ -131,7 +139,7 @@ class AdvancedMeshGenerator3D:
 
         Examples:
             >>> from smrforge.geometry.advanced_mesh import AdvancedMeshGenerator3D
-            >>> 
+            >>>
             >>> generator = AdvancedMeshGenerator3D(mesh_type=MeshType.STRUCTURED)
             >>> mesh = generator.generate_structured_3d(
             ...     bounds=((0, 150), (0, 150), (0, 793)),
@@ -166,7 +174,7 @@ class AdvancedMeshGenerator3D:
         Examples:
             >>> import numpy as np
             >>> from smrforge.geometry.advanced_mesh import AdvancedMeshGenerator3D
-            >>> 
+            >>>
             >>> generator = AdvancedMeshGenerator3D()
             >>> # Generate interior points
             >>> points = np.random.rand(100, 3) * 100
@@ -195,14 +203,20 @@ class AdvancedMeshGenerator3D:
                 vertices = hull.points
                 cells = None
 
-            return Mesh3D(vertices=vertices, cells=cells, faces=faces if cells is None else None)
+            return Mesh3D(
+                vertices=vertices, cells=cells, faces=faces if cells is None else None
+            )
         else:
             raise ValueError(f"Unknown method: {method}")
 
     def generate_hybrid_3d(
         self,
-        core_region: Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]],
-        refinement_regions: List[Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float], int]],
+        core_region: Tuple[
+            Tuple[float, float], Tuple[float, float], Tuple[float, float]
+        ],
+        refinement_regions: List[
+            Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float], int]
+        ],
         base_resolution: int = 20,
     ) -> Mesh3D:
         """
@@ -218,7 +232,7 @@ class AdvancedMeshGenerator3D:
 
         Examples:
             >>> from smrforge.geometry.advanced_mesh import AdvancedMeshGenerator3D
-            >>> 
+            >>>
             >>> generator = AdvancedMeshGenerator3D(mesh_type=MeshType.HYBRID)
             >>> core = ((0, 150), (0, 150), (0, 793))
             >>> refinement = [(((0, 50), (0, 50), (0, 200), 30))]  # Fine mesh in center
@@ -233,7 +247,8 @@ class AdvancedMeshGenerator3D:
         if self.n_jobs > 1 and _JOBLIB_AVAILABLE:
             # Parallel generation
             refinement_meshes = Parallel(n_jobs=self.n_jobs)(
-                delayed(self._generate_refinement_region)(region) for region in refinement_regions
+                delayed(self._generate_refinement_region)(region)
+                for region in refinement_regions
             )
         else:
             # Sequential generation
@@ -253,7 +268,10 @@ class AdvancedMeshGenerator3D:
             return core_mesh3d
 
     def _generate_refinement_region(
-        self, region: Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float], int]
+        self,
+        region: Tuple[
+            Tuple[float, float], Tuple[float, float], Tuple[float, float], int
+        ],
     ) -> Optional[Mesh3D]:
         """Generate unstructured mesh for a refinement region."""
         bounds = (region[0], region[1], region[2])
@@ -280,7 +298,9 @@ class AdvancedMeshGenerator3D:
 
     def generate_parallel(
         self,
-        regions: List[Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]],
+        regions: List[
+            Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]
+        ],
         resolution: Union[int, List[int]] = 30,
         mesh_type: Optional[MeshType] = None,
     ) -> List[Mesh3D]:
@@ -297,7 +317,7 @@ class AdvancedMeshGenerator3D:
 
         Examples:
             >>> from smrforge.geometry.advanced_mesh import AdvancedMeshGenerator3D
-            >>> 
+            >>>
             >>> generator = AdvancedMeshGenerator3D(n_jobs=-1)  # Use all cores
             >>> regions = [
             ...     ((0, 50), (0, 50), (0, 200)),
@@ -383,19 +403,23 @@ class MeshConverter:
             >>> from pathlib import Path
             >>> from smrforge.geometry.advanced_mesh import MeshConverter
             >>> from smrforge.geometry.mesh_extraction import extract_core_volume_mesh
-            >>> 
+            >>>
             >>> mesh = extract_core_volume_mesh(core)
             >>> MeshConverter.convert_to_format(mesh, Path("output.vtk"), "vtk")
         """
         output_format = output_format.lower()
 
         if output_format in ["vtk", "vtu"]:
-            return MeshConverter._export_to_vtk(mesh, output_path, output_format, **kwargs)
+            return MeshConverter._export_to_vtk(
+                mesh, output_path, output_format, **kwargs
+            )
         elif output_format == "stl":
             return MeshConverter._export_to_stl(mesh, output_path, **kwargs)
         elif output_format in ["xdmf", "obj", "ply", "msh", "med"]:
             if _MESHIO_AVAILABLE:
-                return MeshConverter._export_with_meshio(mesh, output_path, output_format, **kwargs)
+                return MeshConverter._export_with_meshio(
+                    mesh, output_path, output_format, **kwargs
+                )
             else:
                 raise ImportError(
                     f"meshio is required for {output_format} export. "
@@ -405,7 +429,9 @@ class MeshConverter:
             raise ValueError(f"Unsupported output format: {output_format}")
 
     @staticmethod
-    def _export_to_vtk(mesh: Mesh3D, output_path: Path, format: str = "vtk", **kwargs) -> bool:
+    def _export_to_vtk(
+        mesh: Mesh3D, output_path: Path, format: str = "vtk", **kwargs
+    ) -> bool:
         """Export to VTK format."""
         if _PYVISTA_AVAILABLE:
             from smrforge.visualization.mesh_3d import export_mesh_to_vtk
@@ -413,7 +439,9 @@ class MeshConverter:
             export_mesh_to_vtk(mesh, str(output_path))
             return True
         elif _MESHIO_AVAILABLE:
-            return MeshConverter._export_with_meshio(mesh, output_path, format, **kwargs)
+            return MeshConverter._export_with_meshio(
+                mesh, output_path, format, **kwargs
+            )
         else:
             raise ImportError(
                 "PyVista or meshio is required for VTK export. "
@@ -461,10 +489,14 @@ class MeshConverter:
                 )
 
     @staticmethod
-    def _export_with_meshio(mesh: Mesh3D, output_path: Path, format: str, **kwargs) -> bool:
+    def _export_with_meshio(
+        mesh: Mesh3D, output_path: Path, format: str, **kwargs
+    ) -> bool:
         """Export using meshio library."""
         if not _MESHIO_AVAILABLE:
-            raise ImportError("meshio is required. Install with: pip install meshio[all]")
+            raise ImportError(
+                "meshio is required. Install with: pip install meshio[all]"
+            )
 
         # Prepare cells
         cells = {}
@@ -513,7 +545,12 @@ class MeshConverter:
         return True
 
     @staticmethod
-    def convert_between_formats(input_path: Path, output_path: Path, input_format: Optional[str] = None, output_format: Optional[str] = None) -> bool:
+    def convert_between_formats(
+        input_path: Path,
+        output_path: Path,
+        input_format: Optional[str] = None,
+        output_format: Optional[str] = None,
+    ) -> bool:
         """
         Convert mesh between different file formats.
 
@@ -529,7 +566,7 @@ class MeshConverter:
         Examples:
             >>> from pathlib import Path
             >>> from smrforge.geometry.advanced_mesh import MeshConverter
-            >>> 
+            >>>
             >>> MeshConverter.convert_between_formats(
             ...     Path("input.vtk"),
             ...     Path("output.stl"),
@@ -537,7 +574,9 @@ class MeshConverter:
             ... )
         """
         if not _MESHIO_AVAILABLE:
-            raise ImportError("meshio is required for format conversion. Install with: pip install meshio[all]")
+            raise ImportError(
+                "meshio is required for format conversion. Install with: pip install meshio[all]"
+            )
 
         # Auto-detect formats if not provided
         if input_format is None:
@@ -578,4 +617,3 @@ class MeshConverter:
         formats["output"] = sorted(list(set(formats["output"])))
 
         return formats
-

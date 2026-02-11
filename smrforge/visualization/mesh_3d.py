@@ -15,9 +15,11 @@ try:
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
+
     # Create dummy classes for type hints
     class DummyFigure:
         pass
+
     go = type("go", (), {"Figure": DummyFigure, "Mesh3d": DummyFigure, "Scatter3d": DummyFigure})()  # type: ignore
 
 try:
@@ -26,9 +28,11 @@ try:
     _PYVISTA_AVAILABLE = True
 except ImportError:
     _PYVISTA_AVAILABLE = False
+
     # Create dummy classes for type hints
     class DummyPlotter:
         pass
+
     pv = type("pv", (), {"Plotter": DummyPlotter, "UnstructuredGrid": DummyPlotter, "PolyData": DummyPlotter})()  # type: ignore
 
 from ..geometry.mesh_3d import Mesh3D, Surface
@@ -44,7 +48,7 @@ def plot_mesh3d_plotly(
 ):
     """
     Plot 3D mesh using plotly.
-    
+
     Args:
         mesh: Mesh3D instance
         color_by: Optional field name to color by (e.g., "flux", "power", "material")
@@ -52,7 +56,7 @@ def plot_mesh3d_plotly(
         show_edges: Whether to show mesh edges
         opacity: Mesh opacity (0-1)
         title: Plot title
-    
+
     Returns:
         plotly.graph_objects.Figure
     """
@@ -60,9 +64,9 @@ def plot_mesh3d_plotly(
         raise ImportError(
             "plotly is required for 3D visualization. Install with: pip install plotly"
         )
-    
+
     fig = go.Figure()
-    
+
     # Determine coloring
     if color_by and color_by in mesh.cell_data:
         # Color by cell data
@@ -78,7 +82,7 @@ def plot_mesh3d_plotly(
     else:
         color_data = None
         colorbar_title = None
-    
+
     # Plot mesh
     if mesh.faces is not None:
         # Surface mesh
@@ -98,7 +102,7 @@ def plot_mesh3d_plotly(
                 name="Mesh",
             )
         )
-    
+
     # Add edges if requested
     if show_edges and mesh.faces is not None:
         # Extract edges from faces
@@ -110,7 +114,7 @@ def plot_mesh3d_plotly(
                 if v0 > v1:  # Ensure consistent ordering
                     v0, v1 = v1, v0
                 edges.add((v0, v1))
-        
+
         # Plot edges
         for v0, v1 in edges:
             fig.add_trace(
@@ -124,7 +128,7 @@ def plot_mesh3d_plotly(
                     hoverinfo="skip",
                 )
             )
-    
+
     # Update layout
     fig.update_layout(
         title=title,
@@ -137,7 +141,7 @@ def plot_mesh3d_plotly(
         width=800,
         height=600,
     )
-    
+
     return fig
 
 
@@ -149,13 +153,13 @@ def plot_surface_plotly(
 ):
     """
     Plot surface using plotly.
-    
+
     Args:
         surface: Surface instance
         color: Surface color
         opacity: Surface opacity (0-1)
         title: Plot title
-    
+
     Returns:
         plotly.graph_objects.Figure
     """
@@ -163,9 +167,9 @@ def plot_surface_plotly(
         raise ImportError(
             "plotly is required for 3D visualization. Install with: pip install plotly"
         )
-    
+
     fig = go.Figure()
-    
+
     fig.add_trace(
         go.Mesh3d(
             x=surface.vertices[:, 0],
@@ -179,7 +183,7 @@ def plot_surface_plotly(
             name=surface.surface_type,
         )
     )
-    
+
     fig.update_layout(
         title=title,
         scene=dict(
@@ -191,7 +195,7 @@ def plot_surface_plotly(
         width=800,
         height=600,
     )
-    
+
     return fig
 
 
@@ -204,14 +208,14 @@ def plot_mesh3d_pyvista(
 ) -> pv.Plotter:
     """
     Plot 3D mesh using pyvista.
-    
+
     Args:
         mesh: Mesh3D instance
         color_by: Optional field name to color by
         show_edges: Whether to show mesh edges
         opacity: Mesh opacity (0-1)
         **kwargs: Additional pyvista arguments
-    
+
     Returns:
         pyvista.Plotter instance
     """
@@ -219,7 +223,7 @@ def plot_mesh3d_pyvista(
         raise ImportError(
             "pyvista is required for 3D visualization. Install with: pip install pyvista"
         )
-    
+
     # Create pyvista mesh
     if mesh.cells is not None:
         # Volume mesh
@@ -229,7 +233,7 @@ def plot_mesh3d_pyvista(
             n_verts = len(cell)
             cell_array.append(n_verts)
             cell_array.extend(cell)
-        
+
         pv_mesh = pv.UnstructuredGrid(cell_array, mesh.cells, mesh.vertices)
     elif mesh.faces is not None:
         # Surface mesh
@@ -237,7 +241,7 @@ def plot_mesh3d_pyvista(
     else:
         # Points only
         pv_mesh = pv.PolyData(mesh.vertices)
-    
+
     # Add data arrays
     if color_by and color_by in mesh.cell_data:
         pv_mesh[color_by] = mesh.cell_data[color_by]
@@ -247,10 +251,10 @@ def plot_mesh3d_pyvista(
         scalars = "material"
     else:
         scalars = None
-    
+
     # Create plotter
     plotter = pv.Plotter(**kwargs)
-    
+
     # Add mesh
     plotter.add_mesh(
         pv_mesh,
@@ -259,7 +263,7 @@ def plot_mesh3d_pyvista(
         opacity=opacity,
         **kwargs,
     )
-    
+
     return plotter
 
 
@@ -271,13 +275,13 @@ def plot_surface_pyvista(
 ) -> pv.Plotter:
     """
     Plot surface using pyvista.
-    
+
     Args:
         surface: Surface instance
         color: Surface color
         opacity: Surface opacity (0-1)
         **kwargs: Additional pyvista arguments
-    
+
     Returns:
         pyvista.Plotter instance
     """
@@ -285,23 +289,23 @@ def plot_surface_pyvista(
         raise ImportError(
             "pyvista is required for 3D visualization. Install with: pip install pyvista"
         )
-    
+
     # Create pyvista mesh
     pv_mesh = pv.PolyData(surface.vertices, surface.faces)
-    
+
     # Create plotter
     plotter = pv.Plotter(**kwargs)
-    
+
     # Add surface
     plotter.add_mesh(pv_mesh, color=color, opacity=opacity, **kwargs)
-    
+
     return plotter
 
 
 def export_mesh_to_vtk(mesh: Mesh3D, filename: str):
     """
     Export mesh to VTK format for ParaView.
-    
+
     Args:
         mesh: Mesh3D instance
         filename: Output filename (.vtk or .vtu)
@@ -310,7 +314,7 @@ def export_mesh_to_vtk(mesh: Mesh3D, filename: str):
         raise ImportError(
             "pyvista is required for VTK export. Install with: pip install pyvista"
         )
-    
+
     # Create pyvista mesh
     if mesh.cells is not None:
         cell_array = []
@@ -323,14 +327,14 @@ def export_mesh_to_vtk(mesh: Mesh3D, filename: str):
         pv_mesh = pv.PolyData(mesh.vertices, mesh.faces)
     else:
         pv_mesh = pv.PolyData(mesh.vertices)
-    
+
     # Add data arrays
     for name, data in mesh.cell_data.items():
         pv_mesh[name] = data
-    
+
     if mesh.cell_materials is not None:
         pv_mesh["material"] = mesh.cell_materials
-    
+
     # Save
     pv_mesh.save(filename)
 
@@ -343,13 +347,13 @@ def plot_multiple_meshes_plotly(
 ):
     """
     Plot multiple meshes in a single plotly figure.
-    
+
     Args:
         meshes: Dictionary mapping name -> Mesh3D
         color_by: Optional field name to color by
         opacity: Mesh opacity (0-1)
         title: Plot title
-    
+
     Returns:
         plotly.graph_objects.Figure
     """
@@ -357,14 +361,14 @@ def plot_multiple_meshes_plotly(
         raise ImportError(
             "plotly is required for 3D visualization. Install with: pip install plotly"
         )
-    
+
     fig = go.Figure()
-    
+
     colors = ["lightblue", "lightcoral", "lightgreen", "lightyellow", "lightpink"]
-    
+
     for i, (name, mesh) in enumerate(meshes.items()):
         color = colors[i % len(colors)]
-        
+
         if mesh.faces is not None:
             fig.add_trace(
                 go.Mesh3d(
@@ -379,7 +383,7 @@ def plot_multiple_meshes_plotly(
                     name=name,
                 )
             )
-    
+
     fig.update_layout(
         title=title,
         scene=dict(
@@ -391,6 +395,5 @@ def plot_multiple_meshes_plotly(
         width=800,
         height=600,
     )
-    
-    return fig
 
+    return fig

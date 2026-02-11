@@ -4,16 +4,16 @@ Tests for integral reactor design components (in-vessel steam generators).
 Tests in-vessel steam generators and integrated primary systems for SMRs.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
     from smrforge.geometry.lwr_smr import (
-        InVesselSteamGenerator,
         IntegratedPrimarySystem,
+        InVesselSteamGenerator,
+        Point3D,
         PWRSMRCore,
         SteamGeneratorTube,
-        Point3D,
     )
 
     _INTEGRAL_DESIGNS_AVAILABLE = True

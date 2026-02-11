@@ -12,6 +12,7 @@ import numpy as np
 
 try:
     import h5py
+
     _H5PY_AVAILABLE = True
 except ImportError:
     _H5PY_AVAILABLE = False
@@ -19,6 +20,7 @@ except ImportError:
 
 try:
     import plotly.graph_objects as go
+
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
@@ -26,6 +28,7 @@ except ImportError:
 
 try:
     import pyvista as pv
+
     _PYVISTA_AVAILABLE = True
 except ImportError:
     _PYVISTA_AVAILABLE = False
@@ -51,15 +54,15 @@ def plot_voxel(
 ):
     """
     Generate 3D voxel plot of reactor geometry.
-    
+
     Creates a voxelized representation of the geometry, similar to OpenMC's
     voxel plots. Can export to HDF5 format for conversion to VTK.
-    
+
     **Dual API Pattern:**
     This function is part of the standalone function API for quick one-off plots.
     For reusable plot configurations, consider using the class-based `Plot` API
     from `smrforge.visualization.plot_api` instead.
-    
+
     Args:
         geometry: Reactor geometry (PrismaticCore, PebbleBedCore, Mesh3D, etc.)
         origin: View origin point (x, y, z) [cm]
@@ -72,14 +75,14 @@ def plot_voxel(
         background: Background color
         backend: Visualization backend - 'plotly', 'pyvista'
         **kwargs: Additional arguments
-    
+
     Returns:
         Figure object (backend-dependent)
-    
+
     Examples:
         # Standalone function API (simpler for quick plots)
         >>> from smrforge.visualization.voxel_plots import plot_voxel
-        >>> 
+        >>>
         >>> fig = plot_voxel(
         ...     core,
         ...     origin=(0, 0, 0),
@@ -87,7 +90,7 @@ def plot_voxel(
         ...     color_by='material',
         ...     backend='plotly'
         ... )
-        
+
         # Alternative: Class-based API (better for reusable configurations)
         >>> from smrforge.visualization.plot_api import create_plot
         >>> plot = create_plot(plot_type='voxel', origin=(0, 0, 0),
@@ -96,25 +99,31 @@ def plot_voxel(
     """
     # Create voxel grid
     voxel_grid = _create_voxel_grid(geometry, origin, width, **kwargs)
-    
+
     if backend == "plotly":
-        return _plot_voxel_plotly(voxel_grid, color_by, data, field_name, colors, background)
+        return _plot_voxel_plotly(
+            voxel_grid, color_by, data, field_name, colors, background
+        )
     elif backend == "pyvista":
-        return _plot_voxel_pyvista(voxel_grid, color_by, data, field_name, colors, background)
+        return _plot_voxel_pyvista(
+            voxel_grid, color_by, data, field_name, colors, background
+        )
     else:
         raise ValueError(f"Unknown backend: {backend}. Choose 'plotly' or 'pyvista'")
 
 
-def _create_voxel_grid(geometry, origin, width, resolution: Tuple[int, int, int] = (50, 50, 100)):
+def _create_voxel_grid(
+    geometry, origin, width, resolution: Tuple[int, int, int] = (50, 50, 100)
+):
     """
     Create voxel grid from geometry.
-    
+
     Args:
         geometry: Reactor geometry
         origin: Origin point
         width: Width in each direction
         resolution: Voxel resolution (nx, ny, nz)
-    
+
     Returns:
         Dictionary with voxel data
     """
@@ -131,7 +140,7 @@ def _create_voxel_grid(geometry, origin, width, resolution: Tuple[int, int, int]
     # Initialize voxel arrays
     material_ids = np.zeros((nx, ny, nz), dtype=int)
     cell_ids = np.zeros((nx, ny, nz), dtype=int)
-    
+
     # Voxelize geometry (fast approximate).
     #
     # This implementation focuses on `PrismaticCore`-style geometries with hex
@@ -154,7 +163,11 @@ def _create_voxel_grid(geometry, origin, width, resolution: Tuple[int, int, int]
 
         for block in getattr(geometry, "blocks", []):
             # Expect GraphiteBlock-like API.
-            if not (hasattr(block, "position") and hasattr(block, "flat_to_flat") and hasattr(block, "height")):
+            if not (
+                hasattr(block, "position")
+                and hasattr(block, "flat_to_flat")
+                and hasattr(block, "height")
+            ):
                 continue
 
             cx = float(block.position.x)
@@ -182,8 +195,8 @@ def _create_voxel_grid(geometry, origin, width, resolution: Tuple[int, int, int]
             # Point-in-regular-hex test (pointy-top orientation).
             # Let q=|x|, r=|y|. Inside iff:
             #   q <= R and r <= sqrt(3) * min(R - q, R/2)
-            q = np.abs(xs)[:, None]        # [nx_sub, 1]
-            r = np.abs(ys)[None, :]        # [1, ny_sub]
+            q = np.abs(xs)[:, None]  # [nx_sub, 1]
+            r = np.abs(ys)[None, :]  # [1, ny_sub]
             inside_xy = (q <= R) & (r <= sqrt3 * np.minimum(R - q, 0.5 * R))
 
             # Assign into 3D slab.
@@ -194,7 +207,7 @@ def _create_voxel_grid(geometry, origin, width, resolution: Tuple[int, int, int]
             mask3 = np.broadcast_to(inside_xy[:, :, None], sub_m.shape)
             sub_m[mask3] = mat_id
             sub_c[mask3] = blk_id
-    
+
     return {
         "x": x,
         "y": y,
@@ -211,7 +224,7 @@ def _plot_voxel_plotly(voxel_grid, color_by, data, field_name, colors, backgroun
     """Plot voxel grid using plotly."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required for voxel plots")
-    
+
     material_ids = voxel_grid["material_ids"]
     cell_ids = voxel_grid.get("cell_ids")
 
@@ -235,19 +248,21 @@ def _plot_voxel_plotly(voxel_grid, color_by, data, field_name, colors, backgroun
     else:
         values = np.asarray(material_ids)
         value_title = "material"
-    
-    fig = go.Figure(data=go.Volume(
-        x=x_flat,
-        y=y_flat,
-        z=z_flat,
-        value=values.ravel(order="C"),
-        isomin=values.min(),
-        isomax=values.max(),
-        opacity=0.3,
-        surface_count=10,
-        colorbar=dict(title=value_title),
-    ))
-    
+
+    fig = go.Figure(
+        data=go.Volume(
+            x=x_flat,
+            y=y_flat,
+            z=z_flat,
+            value=values.ravel(order="C"),
+            isomin=values.min(),
+            isomax=values.max(),
+            opacity=0.3,
+            surface_count=10,
+            colorbar=dict(title=value_title),
+        )
+    )
+
     fig.update_layout(
         scene=dict(
             xaxis_title="X (cm)",
@@ -256,7 +271,7 @@ def _plot_voxel_plotly(voxel_grid, color_by, data, field_name, colors, backgroun
         ),
         title="Voxel Plot",
     )
-    
+
     return fig
 
 
@@ -264,7 +279,7 @@ def _plot_voxel_pyvista(voxel_grid, color_by, data, field_name, colors, backgrou
     """Plot voxel grid using pyvista."""
     if not _PYVISTA_AVAILABLE:
         raise ImportError("pyvista is required for voxel plots")
-    
+
     # Create structured grid
     x, y, z = np.meshgrid(
         voxel_grid["x"],
@@ -272,18 +287,18 @@ def _plot_voxel_pyvista(voxel_grid, color_by, data, field_name, colors, backgrou
         voxel_grid["z"],
         indexing="ij",
     )
-    
+
     grid = pv.StructuredGrid(x, y, z)
     grid["material_ids"] = voxel_grid["material_ids"].flatten(order="F")
-    
+
     if data is not None:
         grid[field_name or "data"] = data.flatten(order="F")
-    
+
     plotter = pv.Plotter()
     plotter.add_mesh(grid, scalars=color_by if data is None else (field_name or "data"))
     plotter.show_axes()
     plotter.set_background(background)
-    
+
     return plotter
 
 
@@ -294,41 +309,41 @@ def export_voxel_to_hdf5(
 ):
     """
     Export voxel grid to HDF5 format (OpenMC-compatible).
-    
+
     Args:
         voxel_grid: Voxel grid dictionary from _create_voxel_grid
         output_file: Output HDF5 file path
         **kwargs: Additional metadata to store
-    
+
     Example:
         >>> voxel_grid = _create_voxel_grid(core, origin, width)
         >>> export_voxel_to_hdf5(voxel_grid, "voxel_plot.h5")
     """
     if not _H5PY_AVAILABLE:
         raise ImportError("h5py is required for HDF5 export")
-    
+
     output_path = Path(output_file)
-    
+
     with h5py.File(output_path, "w") as f:
         # Store voxel data
         f.create_dataset("material_ids", data=voxel_grid["material_ids"])
         f.create_dataset("cell_ids", data=voxel_grid["cell_ids"])
-        
+
         # Store grid information
         f.create_dataset("x", data=voxel_grid["x"])
         f.create_dataset("y", data=voxel_grid["y"])
         f.create_dataset("z", data=voxel_grid["z"])
-        
+
         # Store metadata
         f.attrs["origin"] = voxel_grid["origin"]
         f.attrs["width"] = voxel_grid["width"]
         f.attrs["resolution"] = voxel_grid["resolution"]
-        
+
         # Store additional metadata
         for key, value in kwargs.items():
             if isinstance(value, (int, float, str)):
                 f.attrs[key] = value
-    
+
     logger.info(f"Exported voxel grid to {output_path}")
 
 
@@ -338,23 +353,23 @@ def convert_voxel_hdf5_to_vtk(
 ):
     """
     Convert voxel HDF5 file to VTK format for ParaView/VisIt.
-    
+
     Args:
         hdf5_file: Input HDF5 file path
         vtk_file: Output VTK file path
-    
+
     Example:
         >>> convert_voxel_hdf5_to_vtk("voxel_plot.h5", "voxel_plot.vtk")
     """
     if not _H5PY_AVAILABLE:
         raise ImportError("h5py is required for HDF5 import")
-    
+
     if not _PYVISTA_AVAILABLE:
         raise ImportError("pyvista is required for VTK export")
-    
+
     hdf5_path = Path(hdf5_file)
     vtk_path = Path(vtk_file)
-    
+
     # Read HDF5 file
     with h5py.File(hdf5_path, "r") as f:
         material_ids = f["material_ids"][:]
@@ -363,13 +378,13 @@ def convert_voxel_hdf5_to_vtk(
         z = f["z"][:]
         origin = tuple(f.attrs["origin"])
         width = tuple(f.attrs["width"])
-    
+
     # Create structured grid
     x_grid, y_grid, z_grid = np.meshgrid(x, y, z, indexing="ij")
     grid = pv.StructuredGrid(x_grid, y_grid, z_grid)
     grid["material_ids"] = material_ids.flatten(order="F")
-    
+
     # Save to VTK
     grid.save(str(vtk_path))
-    
+
     logger.info(f"Converted {hdf5_path} to {vtk_path}")

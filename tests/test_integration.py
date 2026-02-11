@@ -55,7 +55,9 @@ class TestValidateInputs:
     def test_validate_inputs_warnings(self):
         """Test validate_inputs issues warnings."""
 
-        @validate_inputs(T=lambda T: PhysicalValidator.validate_temperature(T, max_T=500.0))
+        @validate_inputs(
+            T=lambda T: PhysicalValidator.validate_temperature(T, max_T=500.0)
+        )
         def calculate_density(T):
             return 1.0 / T
 
@@ -63,7 +65,10 @@ class TestValidateInputs:
             warnings.simplefilter("always")
             result = calculate_density(2000.0)  # Above expected max but valid
             assert len(w) > 0
-            assert "WARNING" in str(w[0].message).upper() or "above" in str(w[0].message).lower()
+            assert (
+                "WARNING" in str(w[0].message).upper()
+                or "above" in str(w[0].message).lower()
+            )
 
 
 class TestValidateOutputs:
@@ -246,7 +251,11 @@ class TestValidatedReactorSpec:
 
     def test_validated_reactor_spec_creation(self):
         """Test creating a ValidatedReactorSpec."""
-        from smrforge.validation.models import FuelType, ReactorSpecification, ReactorType
+        from smrforge.validation.models import (
+            FuelType,
+            ReactorSpecification,
+            ReactorType,
+        )
 
         spec = ReactorSpecification(
             name="Test-Reactor",
@@ -469,7 +478,8 @@ class TestValidatedSolverMethods:
 
     def test_validated_solver_solve_with_validation(self):
         """Test ValidatedSolver.solve_with_validation method."""
-        from unittest.mock import Mock, MagicMock
+        from unittest.mock import MagicMock, Mock
+
         from smrforge.validation.models import CrossSectionData, SolverOptions
 
         # Create a mock ValidatedSolver that implements required methods
@@ -518,6 +528,7 @@ class TestValidatedSolverMethods:
     def test_validated_solver_solve_with_validation_enabled(self):
         """Test ValidatedSolver.solve_with_validation with validation enabled."""
         from unittest.mock import Mock
+
         from smrforge.validation.models import CrossSectionData, SolverOptions
 
         # Create a mock ValidatedSolver that implements required methods
@@ -568,9 +579,12 @@ class TestValidatedSolverMethods:
             # If validation fails due to missing methods on geometry/options, that's expected
             pytest.skip("solve_with_validation requires full geometry interface")
 
-    def test_validated_solver_solve_with_validation_raises_on_validation_errors(self, monkeypatch):
+    def test_validated_solver_solve_with_validation_raises_on_validation_errors(
+        self, monkeypatch
+    ):
         """Ensure solve_with_validation raises when validate_solution reports errors."""
         from unittest.mock import Mock
+
         from smrforge.validation.models import CrossSectionData
 
         class MockValidatedSolver(ValidatedSolver):
@@ -667,4 +681,7 @@ class TestValidateArrayEdgeCases:
         result = validate_array(arr, "test_array", min_val=2.0, max_val=4.0)
         # Should have warnings for values outside range
         assert len(result.issues) > 0
-        assert any("minimum" in str(issue).lower() or "maximum" in str(issue).lower() for issue in result.issues)
+        assert any(
+            "minimum" in str(issue).lower() or "maximum" in str(issue).lower()
+            for issue in result.issues
+        )

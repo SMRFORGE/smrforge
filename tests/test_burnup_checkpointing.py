@@ -10,10 +10,11 @@ Tests cover:
 - Error handling (missing files, corrupted checkpoints, h5py unavailable)
 """
 
-import pytest
-import numpy as np
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import numpy as np
+import pytest
 
 from smrforge.burnup import BurnupOptions, BurnupSolver, NuclideInventory
 from smrforge.core.reactor_core import Nuclide
@@ -62,7 +63,7 @@ def simple_neutronics(simple_geometry, simple_xs_data):
 
 class TestBurnupCheckpointing:
     """Tests for burnup checkpointing functionality."""
-    
+
     def test_checkpoint_options_initialization(self, simple_neutronics, tmp_path):
         """Test BurnupOptions with checkpoint configuration."""
         options = BurnupOptions(
@@ -70,345 +71,359 @@ class TestBurnupCheckpointing:
             power_density=1e6,
             initial_enrichment=0.195,
             checkpoint_interval=30,  # days
-            checkpoint_dir=tmp_path / "checkpoints"
+            checkpoint_dir=tmp_path / "checkpoints",
         )
-        
+
         assert options.checkpoint_interval == 30
         assert options.checkpoint_dir == tmp_path / "checkpoints"
-    
+
     def test_checkpoint_dir_creation(self, simple_neutronics, tmp_path):
         """Test that checkpoint directory is created."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
-            time_steps=[0, 30],
-            checkpoint_interval=30,
-            checkpoint_dir=checkpoint_dir
+            time_steps=[0, 30], checkpoint_interval=30, checkpoint_dir=checkpoint_dir
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Trigger checkpoint save by running solve
         # Patch neutronics to avoid validation issues
-        with patch.object(solver.neutronics, 'solve_steady_state', return_value=(1.0, np.ones(10))):
-            with patch.object(solver.neutronics, '_validate_solution', return_value=None):
-                with patch.object(solver, '_solve_time_step', return_value=None):
+        with patch.object(
+            solver.neutronics, "solve_steady_state", return_value=(1.0, np.ones(10))
+        ):
+            with patch.object(
+                solver.neutronics, "_validate_solution", return_value=None
+            ):
+                with patch.object(solver, "_solve_time_step", return_value=None):
                     solver.solve()
-        
+
         # Directory should be created
         assert checkpoint_dir.exists()
-    
+
     def test_save_checkpoint_creates_file(self, simple_neutronics, tmp_path):
         """Test that checkpoint file is created."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
-            time_steps=[0, 30],
-            checkpoint_interval=30,
-            checkpoint_dir=checkpoint_dir
+            time_steps=[0, 30], checkpoint_interval=30, checkpoint_dir=checkpoint_dir
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Manually trigger checkpoint save
         solver._save_checkpoint(step=1, t_days=30.0)
-        
+
         # Checkpoint file should exist
         checkpoint_file = checkpoint_dir / "checkpoint_30days.h5"
         assert checkpoint_file.exists()
-    
+
     def test_save_checkpoint_content(self, simple_neutronics, tmp_path):
         """Test checkpoint file content structure."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
-            time_steps=[0, 30],
-            checkpoint_interval=30,
-            checkpoint_dir=checkpoint_dir
+            time_steps=[0, 30], checkpoint_interval=30, checkpoint_dir=checkpoint_dir
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Save checkpoint
         solver._save_checkpoint(step=1, t_days=30.0)
-        
+
         checkpoint_file = checkpoint_dir / "checkpoint_30days.h5"
-        
+
         # Verify HDF5 structure
         try:
             import h5py
-            with h5py.File(checkpoint_file, 'r') as f:
-                assert 'step' in f.attrs
-                assert 'time_days' in f.attrs
-                assert 'n_nuclides' in f.attrs
-                assert 'nuclide_names' in f
-                assert 'concentrations' in f
-                assert 'times' in f
-                assert 'burnup' in f
+
+            with h5py.File(checkpoint_file, "r") as f:
+                assert "step" in f.attrs
+                assert "time_days" in f.attrs
+                assert "n_nuclides" in f.attrs
+                assert "nuclide_names" in f
+                assert "concentrations" in f
+                assert "times" in f
+                assert "burnup" in f
                 # Note: 'options' may not be in attrs if serialization failed (WindowsPath issue)
                 # Just verify the checkpoint was created with essential data
         except ImportError:
             pytest.skip("h5py not available")
-    
+
     def test_save_checkpoint_saves_state(self, simple_neutronics, tmp_path):
         """Test that checkpoint saves correct state."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
-            time_steps=[0, 30],
-            checkpoint_interval=30,
-            checkpoint_dir=checkpoint_dir
+            time_steps=[0, 30], checkpoint_interval=30, checkpoint_dir=checkpoint_dir
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Modify state before checkpoint
         solver.concentrations[0, 1] = 0.5  # Set a concentration
-        
+
         # Save checkpoint
         solver._save_checkpoint(step=1, t_days=30.0)
-        
+
         checkpoint_file = checkpoint_dir / "checkpoint_30days.h5"
-        
+
         # Verify saved state
         try:
             import h5py
-            with h5py.File(checkpoint_file, 'r') as f:
-                assert f.attrs['step'] == 1
-                assert f.attrs['time_days'] == pytest.approx(30.0)
-                assert f.attrs['n_nuclides'] == len(solver.nuclides)
-                
+
+            with h5py.File(checkpoint_file, "r") as f:
+                assert f.attrs["step"] == 1
+                assert f.attrs["time_days"] == pytest.approx(30.0)
+                assert f.attrs["n_nuclides"] == len(solver.nuclides)
+
                 # Check concentrations
-                saved_concentrations = f['concentrations'][:]
+                saved_concentrations = f["concentrations"][:]
                 assert saved_concentrations.shape[0] == len(solver.nuclides)
                 assert saved_concentrations[0, 1] == pytest.approx(0.5)
-                
+
                 # Check nuclide names
-                nuclide_names = [n.decode('utf-8') for n in f['nuclide_names'][:]]
+                nuclide_names = [n.decode("utf-8") for n in f["nuclide_names"][:]]
                 assert len(nuclide_names) == len(solver.nuclides)
         except ImportError:
             pytest.skip("h5py not available")
-    
-    def test_save_checkpoint_without_h5py(self, simple_neutronics, tmp_path, monkeypatch):
+
+    def test_save_checkpoint_without_h5py(
+        self, simple_neutronics, tmp_path, monkeypatch
+    ):
         """Test checkpoint save when h5py is unavailable."""
         from unittest.mock import patch
-        
+
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
-            time_steps=[0, 30],
-            checkpoint_interval=30,
-            checkpoint_dir=checkpoint_dir
+            time_steps=[0, 30], checkpoint_interval=30, checkpoint_dir=checkpoint_dir
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Patch the import inside _save_checkpoint to raise ImportError
         import builtins
+
         original_import = builtins.__import__
+
         def import_side_effect(name, *args, **kwargs):
-            if name == 'h5py':
+            if name == "h5py":
                 raise ImportError("No module named 'h5py'")
             return original_import(name, *args, **kwargs)
-        
-        with patch('builtins.__import__', side_effect=import_side_effect):
+
+        with patch("builtins.__import__", side_effect=import_side_effect):
             # Should not raise error, just log warning
             solver._save_checkpoint(step=1, t_days=30.0)
-        
+
         # No file should be created
         checkpoint_file = checkpoint_dir / "checkpoint_30days.h5"
         assert not checkpoint_file.exists()
-    
+
     def test_load_checkpoint_file_not_found(self, simple_neutronics, tmp_path):
         """Test loading non-existent checkpoint raises error."""
         checkpoint_file = tmp_path / "nonexistent.h5"
-        
-        options = BurnupOptions(
-            time_steps=[0, 30]
-        )
-        
+
+        options = BurnupOptions(time_steps=[0, 30])
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         with pytest.raises(FileNotFoundError, match="Checkpoint file not found"):
             solver._load_checkpoint(checkpoint_file)
-    
+
     def test_load_checkpoint_restores_state(self, simple_neutronics, tmp_path):
         """Test that checkpoint loading restores state correctly."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
             time_steps=[0, 30, 60],
             checkpoint_interval=30,
-            checkpoint_dir=checkpoint_dir
+            checkpoint_dir=checkpoint_dir,
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Modify state and save checkpoint
         solver.concentrations[0, 1] = 0.5
         solver.burnup_mwd_per_kg[1] = 10.0
         solver._save_checkpoint(step=1, t_days=30.0)
-        
+
         # Create new solver and load checkpoint
         solver2 = BurnupSolver(simple_neutronics, options)
         checkpoint_file = checkpoint_dir / "checkpoint_30days.h5"
-        
+
         try:
             solver2._load_checkpoint(checkpoint_file)
-            
+
             # Verify state was restored
             assert solver2._checkpoint_step == 1
             assert len(solver2.nuclides) == len(solver.nuclides)
             # Note: Exact concentration match may depend on array slicing in implementation
         except ImportError:
             pytest.skip("h5py not available")
-    
-    def test_load_checkpoint_without_h5py(self, simple_neutronics, tmp_path, monkeypatch):
+
+    def test_load_checkpoint_without_h5py(
+        self, simple_neutronics, tmp_path, monkeypatch
+    ):
         """Test loading checkpoint when h5py is unavailable raises error."""
         from unittest.mock import patch
-        
+
         checkpoint_file = tmp_path / "checkpoint.h5"
         checkpoint_file.touch()  # Create empty file
-        
-        options = BurnupOptions(
-            time_steps=[0, 30]
-        )
-        
+
+        options = BurnupOptions(time_steps=[0, 30])
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Patch the import inside _load_checkpoint to raise ImportError
         def import_side_effect(name, *args, **kwargs):
-            if name == 'h5py':
+            if name == "h5py":
                 raise ImportError("No module named 'h5py'")
             return __import__(name, *args, **kwargs)
-        
-        with patch('builtins.__import__', side_effect=import_side_effect):
+
+        with patch("builtins.__import__", side_effect=import_side_effect):
             with pytest.raises(ImportError, match="h5py required"):
                 solver._load_checkpoint(checkpoint_file)
-    
+
     def test_checkpoint_interval_timing(self, simple_neutronics, tmp_path):
         """Test checkpoint interval timing logic."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
             time_steps=[0, 10, 20, 30, 40, 50],  # 10 day intervals
             checkpoint_interval=30,  # Checkpoint every 30 days
-            checkpoint_dir=checkpoint_dir
+            checkpoint_dir=checkpoint_dir,
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Mock solve to just check checkpoint calls
         checkpoint_calls = []
-        
+
         original_save = solver._save_checkpoint
+
         def mock_save(step, t_days):
             checkpoint_calls.append((step, t_days))
             return original_save(step, t_days)
-        
+
         solver._save_checkpoint = mock_save
-        
+
         # Patch neutronics to avoid validation issues
-        with patch.object(solver.neutronics, 'solve_steady_state', return_value=(1.0, np.ones(10))):
-            with patch.object(solver.neutronics, '_validate_solution', return_value=None):
-                with patch.object(solver, '_solve_time_step', return_value=None):
+        with patch.object(
+            solver.neutronics, "solve_steady_state", return_value=(1.0, np.ones(10))
+        ):
+            with patch.object(
+                solver.neutronics, "_validate_solution", return_value=None
+            ):
+                with patch.object(solver, "_solve_time_step", return_value=None):
                     solver.solve()
-        
+
         # Should have checkpoints at appropriate intervals
         # Exact behavior depends on implementation, but should be called
         assert len(checkpoint_calls) >= 0  # At minimum should not crash
-    
+
     def test_resume_from_checkpoint(self, simple_neutronics, tmp_path):
         """Test resume_from_checkpoint wrapper method."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
             time_steps=[0, 30, 60],
             checkpoint_interval=30,
-            checkpoint_dir=checkpoint_dir
+            checkpoint_dir=checkpoint_dir,
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Save initial checkpoint
         solver._save_checkpoint(step=1, t_days=30.0)
-        
+
         checkpoint_file = checkpoint_dir / "checkpoint_30days.h5"
-        
+
         # Resume from checkpoint
         try:
             solver2 = BurnupSolver(simple_neutronics, options)
-            with patch.object(solver2, 'solve', return_value=Mock()) as mock_solve:
+            with patch.object(solver2, "solve", return_value=Mock()) as mock_solve:
                 result = solver2.resume_from_checkpoint(checkpoint_file)
-                
+
                 # Should call solve with resume_from_checkpoint parameter
-                mock_solve.assert_called_once_with(resume_from_checkpoint=checkpoint_file)
+                mock_solve.assert_called_once_with(
+                    resume_from_checkpoint=checkpoint_file
+                )
         except ImportError:
             pytest.skip("h5py not available")
-    
+
     def test_checkpoint_none_dir(self, simple_neutronics):
         """Test that checkpoint is skipped when checkpoint_dir is None."""
         options = BurnupOptions(
-            time_steps=[0, 30],
-            checkpoint_interval=30,
-            checkpoint_dir=None
+            time_steps=[0, 30], checkpoint_interval=30, checkpoint_dir=None
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Should not raise error, just return early
         solver._save_checkpoint(step=1, t_days=30.0)
-    
+
     def test_checkpoint_interval_none(self, simple_neutronics, tmp_path):
         """Test that checkpoints are not saved when interval is None."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         options = BurnupOptions(
             time_steps=[0, 30],
             checkpoint_interval=None,  # No checkpoints
-            checkpoint_dir=checkpoint_dir
+            checkpoint_dir=checkpoint_dir,
         )
-        
+
         solver = BurnupSolver(simple_neutronics, options)
-        
+
         # Patch neutronics to avoid validation issues
-        with patch.object(solver.neutronics, 'solve_steady_state', return_value=(1.0, np.ones(10))):
-            with patch.object(solver.neutronics, '_validate_solution', return_value=None):
+        with patch.object(
+            solver.neutronics, "solve_steady_state", return_value=(1.0, np.ones(10))
+        ):
+            with patch.object(
+                solver.neutronics, "_validate_solution", return_value=None
+            ):
                 # Run solve - should not create checkpoints
-                with patch.object(solver, '_solve_time_step', return_value=None):
+                with patch.object(solver, "_solve_time_step", return_value=None):
                     solver.solve()
-        
+
         # No checkpoint files should exist
         assert not any(checkpoint_dir.glob("*.h5"))
 
 
 class TestBurnupCheckpointIntegration:
     """Integration tests for checkpoint/resume workflow."""
-    
-    @pytest.mark.skipif(not pytest.importorskip("h5py", reason="h5py not available"), reason="h5py required")
+
+    @pytest.mark.skipif(
+        not pytest.importorskip("h5py", reason="h5py not available"),
+        reason="h5py required",
+    )
     def test_full_checkpoint_resume_workflow(self, simple_neutronics, tmp_path):
         """Test complete checkpoint and resume workflow."""
         checkpoint_dir = tmp_path / "checkpoints"
-        
+
         # First run: save checkpoint
         options1 = BurnupOptions(
             time_steps=[0, 30],
             checkpoint_interval=30,
             checkpoint_dir=checkpoint_dir,
-            initial_enrichment=0.195
+            initial_enrichment=0.195,
         )
-        
+
         solver1 = BurnupSolver(simple_neutronics, options1)
-        
+
         # Patch neutronics to avoid validation issues
-        with patch.object(solver1.neutronics, 'solve_steady_state', return_value=(1.0, np.ones(10))):
-            with patch.object(solver1.neutronics, '_validate_solution', return_value=None):
+        with patch.object(
+            solver1.neutronics, "solve_steady_state", return_value=(1.0, np.ones(10))
+        ):
+            with patch.object(
+                solver1.neutronics, "_validate_solution", return_value=None
+            ):
                 # Mock solve to only do first step
-                with patch.object(solver1, '_solve_time_step', return_value=None):
+                with patch.object(solver1, "_solve_time_step", return_value=None):
                     solver1.solve()
-        
+
         checkpoint_file = checkpoint_dir / "checkpoint_30days.h5"
-        
+
         # Note: Checkpoint save may fail due to WindowsPath serialization issue
         # If checkpoint file exists, test loading it
         if checkpoint_file.exists():
@@ -417,20 +432,25 @@ class TestBurnupCheckpointIntegration:
                 options2 = BurnupOptions(
                     time_steps=[30, 60],  # Continue from 30 days
                     checkpoint_dir=checkpoint_dir,
-                    initial_enrichment=0.195
+                    initial_enrichment=0.195,
                 )
-                
+
                 solver2 = BurnupSolver(simple_neutronics, options2)
-                
+
                 # Patch missing constant if needed
                 try:
                     from smrforge.core.constants import SYMBOL_TO_Z
-                    with patch('smrforge.burnup.solver.ELEMENT_SYMBOLS_REVERSE', SYMBOL_TO_Z, create=True):
+
+                    with patch(
+                        "smrforge.burnup.solver.ELEMENT_SYMBOLS_REVERSE",
+                        SYMBOL_TO_Z,
+                        create=True,
+                    ):
                         # Load checkpoint
                         solver2._load_checkpoint(checkpoint_file)
-                        
+
                         # Verify state was loaded
-                        assert hasattr(solver2, '_checkpoint_step')
+                        assert hasattr(solver2, "_checkpoint_step")
                         assert solver2._checkpoint_step == 1
                 except ImportError:
                     pytest.skip("ELEMENT_SYMBOLS_REVERSE not available")

@@ -36,9 +36,7 @@ try:
 except ImportError as e:  # pragma: no cover
     import warnings
 
-    warnings.warn(
-        f"Could not import optimized Monte Carlo solver: {e}", ImportWarning
-    )
+    warnings.warn(f"Could not import optimized Monte Carlo solver: {e}", ImportWarning)
     _MC_OPTIMIZED_AVAILABLE = False
 
 try:
@@ -63,9 +61,7 @@ try:
 except ImportError as e:  # pragma: no cover
     import warnings
 
-    warnings.warn(
-        f"Could not import adaptive sampling: {e}", ImportWarning
-    )
+    warnings.warn(f"Could not import adaptive sampling: {e}", ImportWarning)
     _ADAPTIVE_AVAILABLE = False
 
 __all__ = []
@@ -78,7 +74,9 @@ if _MC_OPTIMIZED_AVAILABLE:
 if _TRANSPORT_AVAILABLE:
     __all__.append("Transport")
 if _ADAPTIVE_AVAILABLE:
-    __all__.extend(["AdaptiveMonteCarloSolver", "ImportanceMap", "create_adaptive_solver"])
+    __all__.extend(
+        ["AdaptiveMonteCarloSolver", "ImportanceMap", "create_adaptive_solver"]
+    )
 
 # Hybrid solver (Phase 2 optimization)
 try:
@@ -92,9 +90,7 @@ try:
 except ImportError as e:  # pragma: no cover
     import warnings
 
-    warnings.warn(
-        f"Could not import hybrid solver: {e}", ImportWarning
-    )
+    warnings.warn(f"Could not import hybrid solver: {e}", ImportWarning)
     _HYBRID_AVAILABLE = False
 
 if _HYBRID_AVAILABLE:
@@ -103,8 +99,8 @@ if _HYBRID_AVAILABLE:
 # Implicit Monte Carlo (Phase 3 optimization)
 try:
     from smrforge.neutronics.implicit_mc import (
-        ImplicitMonteCarloSolver,
         IMCTimeStep,
+        ImplicitMonteCarloSolver,
         create_implicit_mc_solver,
     )
 
@@ -112,10 +108,10 @@ try:
 except ImportError as e:  # pragma: no cover
     import warnings
 
-    warnings.warn(
-        f"Could not import implicit Monte Carlo: {e}", ImportWarning
-    )
+    warnings.warn(f"Could not import implicit Monte Carlo: {e}", ImportWarning)
     _IMC_AVAILABLE = False
 
 if _IMC_AVAILABLE:
-    __all__.extend(["ImplicitMonteCarloSolver", "IMCTimeStep", "create_implicit_mc_solver"])
+    __all__.extend(
+        ["ImplicitMonteCarloSolver", "IMCTimeStep", "create_implicit_mc_solver"]
+    )

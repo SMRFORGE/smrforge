@@ -1,6 +1,8 @@
 # Code Style Guide - SMRForge
 
-**Last Updated:** January 1, 2026
+**Last Updated:** February 2026
+
+This guide covers formatting, **type hints**, import style, and code quality tools. Type hints are required for all new and modified code.
 
 ## Formatting
 
@@ -40,19 +42,22 @@ Black is configured in `pyproject.toml`:
 
 ## Type Hints
 
-We use Python type hints for better code documentation and static analysis.
+We use Python type hints for better code documentation, static analysis, and IDE support. Type hints are required for all new and modified code.
 
 ### Requirements
 
-- Add type hints to all function signatures
-- Use `typing` module for complex types
-- Use `Optional[Type]` for nullable values
-- Use `Union[Type1, Type2]` for multiple types
+- **All function signatures** must have parameter types and return types
+- **Class methods** must have typed parameters and return types (use `-> None` for void methods)
+- Use `typing` module: `List`, `Dict`, `Tuple`, `Optional`, `Union`, `Any`
+- Use `Optional[Type]` for nullable values (not `Union[Type, None]`)
+- Use `Protocol` for duck typing; `TypeVar` for generics
+- Use `numpy.ndarray` for NumPy arrays; document shapes in comments when important
+- Avoid `Any` when a more specific type is possible
 
 ### Examples
 
 ```python
-from typing import Tuple, Optional, Dict, List
+from typing import List, Optional, Tuple
 import numpy as np
 
 def solve_steady_state(self) -> Tuple[float, np.ndarray]:
@@ -61,11 +66,30 @@ def solve_steady_state(self) -> Tuple[float, np.ndarray]:
 
 def compute_power(
     total_power: float,
-    flux: Optional[np.ndarray] = None
+    flux: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Compute power distribution."""
     ...
+
+def add_constraint(
+    self,
+    name: str,
+    limit: float,
+    constraint_type: str = "max",
+) -> None:
+    """Add a constraint (void method)."""
+    ...
 ```
+
+### Conventions
+
+- **Python 3.8+**: Use `typing.List`, `typing.Dict` (not built-in `list`, `dict`) for compatibility
+- **Optional parameters**: `param: Optional[str] = None`
+- **Multiple types**: `Union[str, int]` or `str | int` (Python 3.10+)
+- **Literals**: `Literal["power", "arnoldi"]` for fixed string/value sets
+- **Protocols**: For structural typing without inheritance
+
+See **[Type Hints Conventions](../technical/type-hints-conventions.md)** for full guidelines, including Protocol, TypeVar, NumPy arrays, and migration strategy.
 
 ### Tools
 
@@ -76,6 +100,12 @@ mypy smrforge/
 # Note: Some third-party libraries may not have type stubs
 # These are ignored in pyproject.toml configuration
 ```
+
+### Migration
+
+- New code: type hints required
+- Modified code: add type hints when touching a function
+- Existing code: add hints incrementally; run `mypy smrforge/` to find gaps
 
 ---
 
@@ -142,17 +172,19 @@ black smrforge/ tests/
 # Sort imports
 isort smrforge/ tests/
 
-# Type checking
+# Type checking (see type hints section)
 mypy smrforge/
 
-# Linting
-flake8 smrforge/ tests/
+# Linting (matches CI: line-length=88, ignore E203/W503 for Black compatibility)
+flake8 smrforge/ tests/ --max-line-length=88 --extend-ignore=E203,W503
 
 # All at once (if configured)
 pre-commit run --all-files
 ```
 
+**Type hints** are enforced as part of code quality. See the [Type Hints](#type-hints) section and [Type Hints Conventions](../technical/type-hints-conventions.md) for full guidelines.
+
 ---
 
-*Last Updated: 2025*
+*Last Updated: February 2026*
 

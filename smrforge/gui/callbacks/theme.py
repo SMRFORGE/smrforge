@@ -3,8 +3,9 @@ Theme switching callbacks for dark/gray mode support.
 """
 
 try:
-    from dash import Input, Output, clientside_callback
     import dash_bootstrap_components as dbc
+    from dash import Input, Output, clientside_callback
+
     _DASH_AVAILABLE = True
 except ImportError:
     _DASH_AVAILABLE = False
@@ -14,7 +15,7 @@ def register_theme_callbacks(app):
     """Register theme switching callbacks."""
     if not _DASH_AVAILABLE:
         return
-    
+
     # Clientside callback for theme switching using Bootswatch CDN
     clientside_callback(
         """
@@ -81,11 +82,11 @@ def register_theme_callbacks(app):
             return window.dash_clientside.no_update;
         }
         """,
-        Output('theme-store', 'data', allow_duplicate=True),
-        Input('theme-selector', 'value'),
-        prevent_initial_call='initial_duplicate',
+        Output("theme-store", "data", allow_duplicate=True),
+        Input("theme-selector", "value"),
+        prevent_initial_call="initial_duplicate",
     )
-    
+
     # Load theme from localStorage on page load
     app.clientside_callback(
         """
@@ -142,10 +143,10 @@ def register_theme_callbacks(app):
             return {'theme': savedTheme};
         }
         """,
-        Output('theme-store', 'data'),
-        Input('theme-store', 'id'),
+        Output("theme-store", "data"),
+        Input("theme-store", "id"),
     )
-    
+
     # Sync theme selector with stored preference
     app.clientside_callback(
         """
@@ -157,6 +158,6 @@ def register_theme_callbacks(app):
             return savedTheme;
         }
         """,
-        Output('theme-selector', 'value'),
-        Input('theme-store', 'data'),
+        Output("theme-selector", "value"),
+        Input("theme-store", "data"),
     )

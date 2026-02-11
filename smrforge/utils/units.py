@@ -10,7 +10,7 @@ Based on PyRK's approach using Pint for dimensional analysis.
 from typing import Any, Optional, Union
 
 try:
-    from pint import UnitRegistry, Quantity
+    from pint import Quantity, UnitRegistry
     from pint.errors import DimensionalityError
 
     _PINT_AVAILABLE = True
@@ -37,7 +37,9 @@ class _FallbackUnitRegistry:
     class _FallbackQuantity:
         """Tiny Quantity-like object with `.magnitude` for tests."""
 
-        def __init__(self, magnitude: float, units: "_FallbackUnitRegistry._FallbackUnit"):
+        def __init__(
+            self, magnitude: float, units: "_FallbackUnitRegistry._FallbackUnit"
+        ):
             self.magnitude = magnitude
             self.units = units
 
@@ -104,9 +106,7 @@ def get_ureg() -> Any:
     return _ureg
 
 
-def check_units(
-    value: Any, expected_unit: Union[str, Any], name: str = "value"
-) -> Any:
+def check_units(value: Any, expected_unit: Union[str, Any], name: str = "value") -> Any:
     """
     Check that a value has the expected units.
 

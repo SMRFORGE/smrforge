@@ -2,9 +2,10 @@
 Tests for get_design_point and save_variant (convenience API).
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import Mock
+
+import pytest
 
 from smrforge.convenience import get_design_point, save_variant
 
@@ -51,4 +52,3 @@ def test_save_variant_sanitizes_name(tmp_path):
     path = save_variant(reactor, "v1.2-beta", output_dir=str(tmp_path))
     assert path.name == "design_v1.2-beta.json"
     reactor.save.assert_called_once()
-

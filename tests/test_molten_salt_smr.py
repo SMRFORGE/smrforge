@@ -4,21 +4,21 @@ Tests for Molten Salt SMR geometry.
 Tests molten salt channels, graphite blocks, freeze plugs, and MSR cores.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
+    from smrforge.geometry.core_geometry import Point3D
     from smrforge.geometry.molten_salt_smr import (
         FreezePlug,
         GraphiteModeratorBlock,
-        MSRType,
-        MSRSMRCore,
         MoltenSaltChannel,
+        MSRSMRCore,
+        MSRType,
         SaltCirculationLoop,
         create_liquid_fuel_msr_core,
         create_thermal_msr_core,
     )
-    from smrforge.geometry.core_geometry import Point3D
 
     _MOLTEN_SALT_SMR_AVAILABLE = True
 except ImportError:
@@ -59,7 +59,7 @@ class TestMoltenSaltChannel:
         )
 
         area = channel.flow_area()
-        expected = np.pi * 5.0 ** 2
+        expected = np.pi * 5.0**2
 
         assert area == pytest.approx(expected)
 
@@ -74,7 +74,7 @@ class TestMoltenSaltChannel:
         )
 
         volume = channel.volume()
-        expected = np.pi * 5.0 ** 2 * 400.0
+        expected = np.pi * 5.0**2 * 400.0
 
         assert volume == pytest.approx(expected)
 
@@ -143,7 +143,7 @@ class TestGraphiteModeratorBlock:
         )
 
         volume = block.volume()
-        expected = 20.0 ** 2 * 400.0
+        expected = 20.0**2 * 400.0
 
         assert volume == pytest.approx(expected)
 
@@ -159,7 +159,7 @@ class TestGraphiteModeratorBlock:
         )
 
         mass = block.mass()
-        expected = 20.0 ** 2 * 400.0 * 1.7
+        expected = 20.0**2 * 400.0 * 1.7
 
         assert mass == pytest.approx(expected)
 

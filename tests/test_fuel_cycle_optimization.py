@@ -2,11 +2,12 @@
 Unit tests for fuel cycle optimization module.
 """
 
-import numpy as np
-import pytest
 import builtins
 import importlib
 import sys
+
+import numpy as np
+import pytest
 
 from smrforge.fuel_cycle.optimization import (
     FuelCycleOptimizer,
@@ -25,16 +26,16 @@ class TestFuelCycleOptimizer:
             max_cycle_length=2000.0,
             min_cycle_length=365.0,
         )
-        
+
         # Mock burnup solver
         def burnup_solver(cycle_length):
             # Simulate: longer cycle -> lower k_eff, higher burnup
             keff = 1.05 - 0.0001 * (cycle_length - 365.0) / 365.0
             burnup = 10.0 + 0.01 * (cycle_length - 365.0) / 365.0
             return keff, burnup
-        
+
         result = optimizer.optimize_cycle_length(burnup_solver)
-        
+
         assert "optimal_cycle_length" in result
         assert result["optimal_cycle_length"] >= optimizer.min_cycle_length
         assert result["optimal_cycle_length"] <= optimizer.max_cycle_length
@@ -58,21 +59,25 @@ class TestFuelCycleOptimizer:
             return 0.5, 0.0  # always too short / undercritical
 
         result = optimizer.optimize_cycle_length(burnup_solver)
-        assert optimizer.min_cycle_length <= result["optimal_cycle_length"] <= optimizer.max_cycle_length
+        assert (
+            optimizer.min_cycle_length
+            <= result["optimal_cycle_length"]
+            <= optimizer.max_cycle_length
+        )
 
     def test_optimize_enrichment(self):
         """Test enrichment optimization."""
         optimizer = FuelCycleOptimizer(power_thermal=100e6)
-        
+
         # Mock burnup solver
         def burnup_solver(enrichment, cycle_length):
             # Simulate: higher enrichment -> higher k_eff
             keff = 0.8 + 5.0 * enrichment
             burnup = 50.0 * enrichment
             return keff, burnup
-        
+
         result = optimizer.optimize_enrichment(1095.0, burnup_solver)
-        
+
         assert "optimal_enrichment" in result
         assert result["optimal_enrichment"] > 0.0
         assert result["optimal_enrichment"] < 0.25
@@ -93,21 +98,19 @@ class TestFuelCycleOptimizer:
             power_thermal=100e6,
             optimization_objective="min_cost",
         )
-        
+
         # Mock burnup solver
         def burnup_solver(enrichment, cycle_length):
             keff = 0.8 + 5.0 * enrichment
             burnup = 50.0 * enrichment
             return keff, burnup
-        
+
         # Mock cost function
         def cost_function(enrichment, cycle_length):
             return 1000.0 * enrichment + 100.0 * cycle_length / 365.0
-        
-        result = optimizer.multi_objective_optimization(
-            burnup_solver, cost_function
-        )
-        
+
+        result = optimizer.multi_objective_optimization(burnup_solver, cost_function)
+
         assert "optimal_parameters" in result
         if result["optimal_parameters"] is not None:
             assert "enrichment" in result["optimal_parameters"]
@@ -129,11 +132,15 @@ class TestFuelCycleOptimizer:
         def burnup_solver(enrichment, cycle_length):
             raise RuntimeError("fail")
 
-        result = optimizer.multi_objective_optimization(burnup_solver, method="grid_search")
+        result = optimizer.multi_objective_optimization(
+            burnup_solver, method="grid_search"
+        )
         assert result["optimal_parameters"] is None
         assert result["results"] is None
 
-    def test_multi_objective_optimization_genetic_algorithm_path_with_stub(self, monkeypatch):
+    def test_multi_objective_optimization_genetic_algorithm_path_with_stub(
+        self, monkeypatch
+    ):
         import smrforge.fuel_cycle.optimization as opt
 
         optimizer = FuelCycleOptimizer(power_thermal=100e6, target_keff=1.0)
@@ -171,7 +178,7 @@ class TestFuelCycleOptimizer:
         result = optimizer.multi_objective_optimization(
             burnup_solver,
             cost_function=None,  # cover default cost function branch
-            weights=None,        # cover default weights branch
+            weights=None,  # cover default weights branch
             method="genetic_algorithm",
         )
         assert result["optimization_method"] == "genetic_algorithm"
@@ -180,7 +187,9 @@ class TestFuelCycleOptimizer:
         assert calls["exception_penalty"] == 1e10
         assert calls["noncritical_penalty"] == 1e10
 
-    def test_multi_objective_optimization_particle_swarm_path_with_stub(self, monkeypatch):
+    def test_multi_objective_optimization_particle_swarm_path_with_stub(
+        self, monkeypatch
+    ):
         import smrforge.fuel_cycle.optimization as opt
 
         optimizer = FuelCycleOptimizer(power_thermal=100e6, target_keff=1.0)
@@ -231,6 +240,7 @@ def test_fuel_cycle_optimization_import_without_advanced_opt(monkeypatch):
 
     # Restore normal module state
     import smrforge.fuel_cycle.optimization as opt
+
     importlib.reload(opt)
 
 
@@ -239,10 +249,8 @@ class TestRefuelingStrategyOptimizer:
 
     def test_optimize_batch_configuration(self):
         """Test batch configuration optimization."""
-        optimizer = RefuelingStrategyOptimizer(
-            n_assemblies=100, max_batches=3
-        )
-        
+        optimizer = RefuelingStrategyOptimizer(n_assemblies=100, max_batches=3)
+
         # Mock burnup solver
         def burnup_solver(n_batches, batch_fractions, shuffle_pattern):
             # Simulate: more batches -> higher burnup, higher cost
@@ -250,9 +258,9 @@ class TestRefuelingStrategyOptimizer:
             burnup = 50.0 + 5.0 * n_batches
             cost = 1000.0 * n_batches
             return keff, burnup, cost
-        
+
         result = optimizer.optimize_batch_configuration(burnup_solver)
-        
+
         assert "optimal_configuration" in result
         config = result["optimal_configuration"]
         assert "n_batches" in config
@@ -262,27 +270,31 @@ class TestRefuelingStrategyOptimizer:
         def burnup_solver(n_batches, batch_fractions, shuffle_pattern):
             return 1.0, float(n_batches), float(n_batches) * 10.0
 
-        o1 = RefuelingStrategyOptimizer(n_assemblies=10, max_batches=2, optimization_objective="max_burnup")
+        o1 = RefuelingStrategyOptimizer(
+            n_assemblies=10, max_batches=2, optimization_objective="max_burnup"
+        )
         r1 = o1.optimize_batch_configuration(burnup_solver)
         assert r1["optimal_configuration"]["n_batches"] == 2
 
-        o2 = RefuelingStrategyOptimizer(n_assemblies=10, max_batches=2, optimization_objective="max_cycle")
+        o2 = RefuelingStrategyOptimizer(
+            n_assemblies=10, max_batches=2, optimization_objective="max_cycle"
+        )
         r2 = o2.optimize_batch_configuration(burnup_solver)
         assert r2["optimal_configuration"]["n_batches"] == 2
 
     def test_optimize_refueling_frequency(self):
         """Test refueling frequency optimization."""
         optimizer = RefuelingStrategyOptimizer(n_assemblies=100)
-        
+
         # Mock burnup solver
         def burnup_solver(frequency):
             # Simulate: longer frequency -> higher cost, higher burnup
             cost = 10000.0 / frequency  # More frequent = more expensive
             burnup = 30.0 + 10.0 * frequency  # Longer = more burnup
             return cost, burnup
-        
+
         result = optimizer.optimize_refueling_frequency(burnup_solver)
-        
+
         assert "optimal_frequency" in result
         assert result["optimal_frequency"] > 0.5
         assert result["optimal_frequency"] <= 5.0  # Allow equality at max

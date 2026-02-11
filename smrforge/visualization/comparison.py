@@ -245,7 +245,11 @@ def compare_designs_plotly(
                         zmin=vmin,
                         zmax=vmax,
                         showscale=(not colorbar_shared or i == n_designs - 1),
-                        colorbar=dict(title=field_name) if (not colorbar_shared or i == n_designs - 1) else None,
+                        colorbar=(
+                            dict(title=field_name)
+                            if (not colorbar_shared or i == n_designs - 1)
+                            else None
+                        ),
                         name=name,
                     ),
                     row=row,
@@ -253,8 +257,12 @@ def compare_designs_plotly(
                 )
 
         # Update axis labels
-        fig.update_xaxes(title_text="X (cm)" if view in ["xy", "xz"] else "Y (cm)", row=row, col=col)
-        fig.update_yaxes(title_text="Y (cm)" if view == "xy" else "Z (cm)", row=row, col=col)
+        fig.update_xaxes(
+            title_text="X (cm)" if view in ["xy", "xz"] else "Y (cm)", row=row, col=col
+        )
+        fig.update_yaxes(
+            title_text="Y (cm)" if view == "xy" else "Z (cm)", row=row, col=col
+        )
 
     fig.update_layout(
         title_text=f"{field_name.title()} Comparison",
@@ -310,10 +318,22 @@ def compare_metrics_matplotlib(
                 if time_series.ndim == 1:
                     # 1D array - assume it's values vs indices
                     x = np.arange(len(time_series))
-                    ax.plot(x, time_series, label=f"{design_name} - {metric_name}", color=colors[i], **kwargs)
+                    ax.plot(
+                        x,
+                        time_series,
+                        label=f"{design_name} - {metric_name}",
+                        color=colors[i],
+                        **kwargs,
+                    )
                 elif time_series.ndim == 2 and time_series.shape[1] == 2:
                     # 2D array with shape (n, 2) - assume (time, value)
-                    ax.plot(time_series[:, 0], time_series[:, 1], label=f"{design_name} - {metric_name}", color=colors[i], **kwargs)
+                    ax.plot(
+                        time_series[:, 0],
+                        time_series[:, 1],
+                        label=f"{design_name} - {metric_name}",
+                        color=colors[i],
+                        **kwargs,
+                    )
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -395,4 +415,3 @@ def overlay_comparison_matplotlib(
     ax.legend(labels)
 
     return fig, ax
-

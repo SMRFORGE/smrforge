@@ -2,16 +2,17 @@
 Tests for coupled safety margin report (validation.safety_report).
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import Mock
 
-from smrforge.validation.safety_report import (
-    safety_margin_report,
-    SafetyMarginReport,
-    MarginEntry,
-)
+import pytest
+
 from smrforge.validation.constraints import ConstraintSet
+from smrforge.validation.safety_report import (
+    MarginEntry,
+    SafetyMarginReport,
+    safety_margin_report,
+)
 
 
 class TestMarginEntry:

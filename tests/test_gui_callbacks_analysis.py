@@ -61,10 +61,20 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     run_analysis = by_name["run_analysis"]
 
     # update_analysis_options: all branches + has_reactor
-    for t in ["neutronics", "burnup", "quick_transient", "safety", "lumped_thermal", "complete", "other"]:
+    for t in [
+        "neutronics",
+        "burnup",
+        "quick_transient",
+        "safety",
+        "lumped_thermal",
+        "complete",
+        "other",
+    ]:
         out = update_analysis_options(t, {"x": 1})
         assert isinstance(out, tuple) and len(out) == 6
-        assert out[-1] is False  # run button enabled when reactor exists (except quick/lumped)
+        assert (
+            out[-1] is False
+        )  # run button enabled when reactor exists (except quick/lumped)
     out = update_analysis_options("neutronics", {})
     assert out[-1] is True  # disabled without reactor
 
@@ -116,7 +126,15 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
         def _get_solver(self):
             return object()
 
-    reactor_spec = {"name": "R", "power_thermal": 10e6, "core_height": 200.0, "core_diameter": 100.0, "enrichment": 0.195, "reactor_type": "prismatic", "fuel_type": "UCO"}
+    reactor_spec = {
+        "name": "R",
+        "power_thermal": 10e6,
+        "core_height": 200.0,
+        "core_diameter": 100.0,
+        "enrichment": 0.195,
+        "reactor_type": "prismatic",
+        "fuel_type": "UCO",
+    }
 
     # Early return: requires reactor but reactor_spec empty
     out_results, feedback, progress = run_analysis(
@@ -174,7 +192,12 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     # Neutronics success + warning path (validation warning contains 'k_eff')
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
-        patch("smrforge.create_reactor", return_value=DummyReactor(solve_keff_behavior="warn_with_keff", flux_size=2000)),
+        patch(
+            "smrforge.create_reactor",
+            return_value=DummyReactor(
+                solve_keff_behavior="warn_with_keff", flux_size=2000
+            ),
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -204,7 +227,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     # Neutronics warning path (validation warning without 'k_eff' -> else formatting)
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
-        patch("smrforge.create_reactor", return_value=DummyReactor(solve_keff_behavior="warn_no_keff", flux_size=3)),
+        patch(
+            "smrforge.create_reactor",
+            return_value=DummyReactor(solve_keff_behavior="warn_no_keff", flux_size=3),
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -232,8 +258,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
 
     # Neutronics: cover compute_power_distribution exception logging branch
     reactor_with_bad_power = DummyReactor(solve_keff_behavior="ok", flux_size=3)
+
     def _raise_power(*_args, **_kwargs):
         raise RuntimeError("no power")
+
     reactor_with_bad_power._solver.compute_power_distribution = _raise_power
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
@@ -266,7 +294,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     # Neutronics exception: fallback to solver.k_eff
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
-        patch("smrforge.create_reactor", return_value=DummyReactor(solve_keff_behavior="raise")),
+        patch(
+            "smrforge.create_reactor",
+            return_value=DummyReactor(solve_keff_behavior="raise"),
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -326,7 +357,12 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     # Neutronics exception: no solver -> error status
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
-        patch("smrforge.create_reactor", return_value=DummyReactor(solve_keff_behavior="raise", include_solver=False)),
+        patch(
+            "smrforge.create_reactor",
+            return_value=DummyReactor(
+                solve_keff_behavior="raise", include_solver=False
+            ),
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -399,7 +435,9 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
         patch("smrforge.create_reactor", return_value=DummyReactor()),
-        patch("smrforge.burnup.solver.BurnupSolver", side_effect=RuntimeError("no solver")),
+        patch(
+            "smrforge.burnup.solver.BurnupSolver", side_effect=RuntimeError("no solver")
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -426,7 +464,16 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
         assert "warning" in out_results.get("burnup", {})
 
     # Quick transient success and error
-    with patch("smrforge.convenience.transients.quick_transient", return_value={"time": [0, 1], "power": [1, 2], "T_fuel": [10, 11], "T_moderator": [9, 10], "reactivity": [0.0, 0.1]}):
+    with patch(
+        "smrforge.convenience.transients.quick_transient",
+        return_value={
+            "time": [0, 1],
+            "power": [1, 2],
+            "T_fuel": [10, 11],
+            "T_moderator": [9, 10],
+            "reactivity": [0.0, 0.1],
+        },
+    ):
         out_results, feedback, progress = run_analysis(
             1,
             "quick_transient",
@@ -451,7 +498,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
         )
         assert out_results.get("quick_transient", {}).get("status") == "success"
 
-    with patch("smrforge.convenience.transients.quick_transient", side_effect=RuntimeError("boom")):
+    with patch(
+        "smrforge.convenience.transients.quick_transient",
+        side_effect=RuntimeError("boom"),
+    ):
         out_results, feedback, progress = run_analysis(
             1,
             "quick_transient",
@@ -513,7 +563,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
         )
         assert out_results.get("lumped_thermal", {}).get("status") == "success"
 
-    with patch("smrforge.thermal.lumped.LumpedThermalHydraulics", side_effect=RuntimeError("fail")):
+    with patch(
+        "smrforge.thermal.lumped.LumpedThermalHydraulics",
+        side_effect=RuntimeError("fail"),
+    ):
         out_results, feedback, progress = run_analysis(
             1,
             "lumped_thermal",
@@ -553,7 +606,13 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
             if callable(qrem):
                 qrem(0.0, 1000.0, 800.0)
                 qrem(10.0, 1000.0, 800.0)
-            return {"time": [0, 1], "power": [1, 2], "T_fuel": [10, 11], "T_mod": [9, 10], "reactivity": [0.0, -0.01]}
+            return {
+                "time": [0, 1],
+                "power": [1, 2],
+                "T_fuel": [10, 11],
+                "T_mod": [9, 10],
+                "reactivity": [0.0, -0.01],
+            }
 
     for tt in ["slb", "lofc", "other"]:
         with (
@@ -588,7 +647,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
         patch("smrforge.create_reactor", return_value=DummyReactor()),
-        patch("smrforge.safety.transients.PointKineticsSolver", side_effect=RuntimeError("pk fail")),
+        patch(
+            "smrforge.safety.transients.PointKineticsSolver",
+            side_effect=RuntimeError("pk fail"),
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -618,9 +680,17 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
         patch("smrforge.create_reactor", return_value=DummyReactor()),
-        patch("smrforge.convenience.transients.quick_transient", side_effect=RuntimeError("boom")),
-        patch("smrforge.burnup.solver.BurnupSolver", side_effect=RuntimeError("no solver")),
-        patch("smrforge.safety.transients.PointKineticsSolver", side_effect=RuntimeError("pk fail")),
+        patch(
+            "smrforge.convenience.transients.quick_transient",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch(
+            "smrforge.burnup.solver.BurnupSolver", side_effect=RuntimeError("no solver")
+        ),
+        patch(
+            "smrforge.safety.transients.PointKineticsSolver",
+            side_effect=RuntimeError("pk fail"),
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -650,7 +720,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     # Success formatting branch (no warnings/errors) should include k-eff detail line
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
-        patch("smrforge.create_reactor", return_value=DummyReactor(solve_keff_behavior="ok")),
+        patch(
+            "smrforge.create_reactor",
+            return_value=DummyReactor(solve_keff_behavior="ok"),
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -678,7 +751,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
         assert isinstance(feedback, dbc.Alert)
 
     # Outer exception formatting: validation error message
-    with patch("smrforge.validation.models.ReactorSpecification", side_effect=RuntimeError("validation bad")):
+    with patch(
+        "smrforge.validation.models.ReactorSpecification",
+        side_effect=RuntimeError("validation bad"),
+    ):
         out_results, feedback, progress = run_analysis(
             1,
             "neutronics",
@@ -707,7 +783,10 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
     # Outer exception formatting: solve/neutronics hint
     with (
         patch("smrforge.validation.models.ReactorSpecification", DummySpec),
-        patch("smrforge.create_reactor", side_effect=RuntimeError("neutronics solve blew up")),
+        patch(
+            "smrforge.create_reactor",
+            side_effect=RuntimeError("neutronics solve blew up"),
+        ),
     ):
         out_results, feedback, progress = run_analysis(
             1,
@@ -733,4 +812,3 @@ def test_analysis_callbacks_cover_update_options_and_run_paths():
         )
         assert out_results == {}
         assert isinstance(feedback, dbc.Alert)
-

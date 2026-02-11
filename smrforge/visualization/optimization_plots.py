@@ -27,7 +27,10 @@ except ImportError:  # pragma: no cover
     _PLOTLY_AVAILABLE = False
     go = None  # type: ignore
 
-from smrforge.visualization._viz_common import ensure_matplotlib_available, ensure_plotly_available
+from smrforge.visualization._viz_common import (
+    ensure_matplotlib_available,
+    ensure_plotly_available,
+)
 
 
 def _extract_history(history_or_result: Any) -> np.ndarray:
@@ -39,7 +42,11 @@ def _extract_history(history_or_result: Any) -> np.ndarray:
         history_or_result = hist
 
     # Common SMRForge pattern: history is List[Dict] with best fitness/objective.
-    if isinstance(history_or_result, list) and history_or_result and isinstance(history_or_result[0], dict):
+    if (
+        isinstance(history_or_result, list)
+        and history_or_result
+        and isinstance(history_or_result[0], dict)
+    ):
         keys = ("best_fitness", "objective", "f", "value", "score")
         series = []
         for row in history_or_result:
@@ -84,7 +91,9 @@ def plot_optimization_trace(
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=it, y=hist, mode="lines+markers", name="objective"))
-        fig.update_layout(title=plot_title, xaxis_title="iteration", yaxis_title="objective")
+        fig.update_layout(
+            title=plot_title, xaxis_title="iteration", yaxis_title="objective"
+        )
         return fig
 
     if backend == "matplotlib":
@@ -104,4 +113,3 @@ def plot_optimization_trace(
 __all__ = [
     "plot_optimization_trace",
 ]
-

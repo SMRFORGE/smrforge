@@ -68,4 +68,3 @@ def test_gui_components_happy_and_no_dash_paths():
     assert rb.create_reactor_builder() == "Dash not available"
     assert rv.create_results_viewer() == "Dash not available"
     assert sb.create_sidebar() == "Dash not available"
-

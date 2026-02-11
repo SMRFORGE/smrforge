@@ -8,25 +8,28 @@ This test suite verifies data flow and integration between:
 - File caching and retrieval
 """
 
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 try:
     import polars as pl
+
     _POLARS_AVAILABLE = True
 except ImportError:
     _POLARS_AVAILABLE = False
 
 try:
+    from smrforge.core.endf_parser import ENDFCompatibility, ENDFEvaluation
     from smrforge.core.reactor_core import (
         CrossSectionTable,
         Library,
         NuclearDataCache,
         Nuclide,
     )
-    from smrforge.core.endf_parser import ENDFCompatibility, ENDFEvaluation
+
     _INTEGRATION_AVAILABLE = True
 except ImportError:
     _INTEGRATION_AVAILABLE = False
@@ -36,7 +39,7 @@ except ImportError:
 def realistic_endf_file(temp_dir):
     """Create a realistic ENDF file for integration testing."""
     endf_path = temp_dir / "integration_U235.endf"
-    
+
     # Complete ENDF file with header and multiple reactions
     endf_content = """ 1.001000+3 9.991673-1          0          0          0          0 125 1451    1
  9.223500+4 2.350000+2          0          0          0          0 125 1451    2
@@ -67,25 +70,27 @@ def realistic_endf_file(temp_dir):
 class TestEndfReactorCoreIntegration:
     """Integration tests for reactor_core and endf_parser."""
 
-    def test_endf_evaluation_to_reactor_core_workflow(self, realistic_endf_file, temp_dir):
+    def test_endf_evaluation_to_reactor_core_workflow(
+        self, realistic_endf_file, temp_dir
+    ):
         """Test complete workflow from ENDF file to reactor_core usage."""
         # Step 1: Parse ENDF file with ENDFEvaluation
         eval_obj = ENDFEvaluation(realistic_endf_file)
-        
+
         # Verify parsing worked
         assert len(eval_obj.reactions) > 0
         assert 1 in eval_obj.reactions  # Total cross-section
-        
+
         # Step 2: Use parsed data in NuclearDataCache
         cache = NuclearDataCache(cache_dir=temp_dir / "integration_cache")
         u235 = Nuclide(Z=92, A=235)
-        
+
         # Step 3: Get cross-section using cache (should use ENDF parser backend)
         try:
             energy, xs = cache.get_cross_section(
                 u235, "total", library=Library.ENDF_B_VIII_1
             )
-            
+
             # Verify results
             assert energy is not None
             assert xs is not None
@@ -99,11 +104,11 @@ class TestEndfReactorCoreIntegration:
         """Test ENDFCompatibility wrapper works with reactor_core."""
         # Create ENDFCompatibility wrapper
         compat = ENDFCompatibility(realistic_endf_file)
-        
+
         # Verify wrapper provides expected interface
         assert 1 in compat  # Total cross-section
         assert 2 in compat  # Elastic
-        
+
         # Get reaction data through wrapper
         total_rxn = compat[1]
         assert hasattr(total_rxn, "energy")
@@ -114,21 +119,25 @@ class TestEndfReactorCoreIntegration:
         """Test that reactor_core uses ENDF parser backend when available."""
         cache = NuclearDataCache(cache_dir=temp_dir / "backend_test_cache")
         u235 = Nuclide(Z=92, A=235)
-        
+
         # Mock the file to be available
-        with patch.object(cache, '_find_local_endf_file', return_value=realistic_endf_file):
+        with patch.object(
+            cache, "_find_local_endf_file", return_value=realistic_endf_file
+        ):
             try:
                 energy, xs = cache.get_cross_section(
                     u235, "total", library=Library.ENDF_B_VIII_1
                 )
-                
+
                 # Verify backend was used
                 assert energy is not None
                 assert xs is not None
             except (FileNotFoundError, ImportError, ValueError):
                 pytest.skip("ENDF parser backend not available")
 
-    def test_cross_section_table_from_endf_evaluation(self, realistic_endf_file, temp_dir):
+    def test_cross_section_table_from_endf_evaluation(
+        self, realistic_endf_file, temp_dir
+    ):
         """Test CrossSectionTable with ENDF-derived data via generate_multigroup.
         CrossSectionTable(cache) only; populate via generate_multigroup()."""
         if not _POLARS_AVAILABLE:
@@ -138,8 +147,11 @@ class TestEndfReactorCoreIntegration:
         neutrons_dir.mkdir(parents=True, exist_ok=True)
         endf_dest = neutrons_dir / "n-092_U_235.endf"
         import shutil
+
         shutil.copy(realistic_endf_file, endf_dest)
-        cache = NuclearDataCache(cache_dir=temp_dir / "xs_cache", local_endf_dir=temp_dir)
+        cache = NuclearDataCache(
+            cache_dir=temp_dir / "xs_cache", local_endf_dir=temp_dir
+        )
         u235 = Nuclide(Z=92, A=235)
         xs_table = CrossSectionTable(cache=cache)
         group_structure = np.logspace(7, -5, 9)  # 8 groups
@@ -167,8 +179,11 @@ class TestEndfReactorCoreIntegration:
         neutrons_dir.mkdir(parents=True, exist_ok=True)
         endf_dest = neutrons_dir / "n-092_U_235.endf"
         import shutil
+
         shutil.copy(realistic_endf_file, endf_dest)
-        cache = NuclearDataCache(cache_dir=temp_dir / "multigroup_cache", local_endf_dir=temp_dir)
+        cache = NuclearDataCache(
+            cache_dir=temp_dir / "multigroup_cache", local_endf_dir=temp_dir
+        )
         u235 = Nuclide(Z=92, A=235)
         group_structure = np.logspace(7, -5, 27)  # 26 groups
         xs_table = CrossSectionTable(cache=cache)
@@ -187,23 +202,25 @@ class TestEndfReactorCoreIntegration:
         """Test that parsed ENDF data is properly cached."""
         cache = NuclearDataCache(cache_dir=temp_dir / "cache_integration")
         u235 = Nuclide(Z=92, A=235)
-        
+
         # First call - should parse and cache
-        with patch.object(cache, '_find_local_endf_file', return_value=realistic_endf_file):
+        with patch.object(
+            cache, "_find_local_endf_file", return_value=realistic_endf_file
+        ):
             try:
                 energy1, xs1 = cache.get_cross_section(
                     u235, "total", library=Library.ENDF_B_VIII_1
                 )
-                
+
                 # Second call - should use cache
                 energy2, xs2 = cache.get_cross_section(
                     u235, "total", library=Library.ENDF_B_VIII_1
                 )
-                
+
                 # Results should match
                 assert np.array_equal(energy1, energy2)
                 assert np.array_equal(xs1, xs2)
-                
+
             except (FileNotFoundError, ImportError, ValueError):
                 pytest.skip("ENDF files not available for caching test")
 
@@ -211,11 +228,13 @@ class TestEndfReactorCoreIntegration:
         """Test error handling across reactor_core and endf_parser."""
         cache = NuclearDataCache(cache_dir=temp_dir / "error_test_cache")
         u235 = Nuclide(Z=92, A=235)
-        
+
         # Test with non-existent file
         nonexistent_file = temp_dir / "nonexistent.endf"
-        
-        with patch.object(cache, '_find_local_endf_file', return_value=nonexistent_file):
+
+        with patch.object(
+            cache, "_find_local_endf_file", return_value=nonexistent_file
+        ):
             try:
                 energy, xs = cache.get_cross_section(
                     u235, "total", library=Library.ENDF_B_VIII_1
@@ -230,14 +249,13 @@ class TestEndfReactorCoreIntegration:
         # Parse with ENDFEvaluation
         eval_obj = ENDFEvaluation(realistic_endf_file)
         total_rxn_eval = eval_obj[1]
-        
+
         # Parse with ENDFCompatibility
         compat = ENDFCompatibility(realistic_endf_file)
         total_rxn_compat = compat[1]
-        
+
         # Data should match
         assert np.array_equal(total_rxn_eval.energy, total_rxn_compat.energy)
         assert np.array_equal(
-            total_rxn_eval.cross_section, 
-            total_rxn_compat.cross_section
+            total_rxn_eval.cross_section, total_rxn_compat.cross_section
         )

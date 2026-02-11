@@ -101,7 +101,7 @@
 - ✅ Priority modules: **75-80%+ coverage**
 - ✅ `reactor_core.py`: **86.5%** (up from 70.8%, +15.7% improvement) - **SIGNIFICANTLY IMPROVED**
 - ✅ `endf_parser.py`: **97.3%** (up from 95.1%, +2.2% improvement) - **EXCELLENT**
-- ✅ `convenience.py`: **93.0%** (up from 82.8%, +10.2% improvement) - **EXCELLENT**
+- ✅ `convenience package`: **93.0%** (up from 82.8%, +10.2% improvement) - **EXCELLENT**
 - ✅ All high/medium priority modules: **75-80%+**
 - ✅ **Total statements:** 10,340 (2,147 missing)
 - ✅ **Coverage gap to 80%:** ~83 statements (0.8% increase needed) - **Very close to target!**
@@ -124,7 +124,7 @@
 **14 Priority Modules Completed (All at ~75% target or higher):**
 1. ✅ `core/reactor_core.py` (70.8% → **86.5%**) - **SIGNIFICANTLY IMPROVED** (+53+ new tests, exceeds target!)
 2. ✅ `core/endf_parser.py` (95.1% → **97.3%**) - **EXCELLENT** (Tasks #9 and #10 complete)
-3. ✅ `convenience.py` (82.8% → **93.0%**) - **EXCELLENT** (+11 new tests)
+3. ✅ `convenience package` (82.8% → **93.0%**) - **EXCELLENT** (+11 new tests)
 4. ✅ `uncertainty/uq.py` (70.5% → **80.1%**) - **COMPLETE** (30+ new tests)
 5. ✅ `core/resonance_selfshield.py` (72.4% → **90.8%**) - **EXCELLENT** (+18.4%)
 6. ✅ `core/material_mapping.py` (41.0% → **100.0%**) - **PERFECT COVERAGE** (+59.0%)
@@ -150,7 +150,7 @@
 - ✅ Numba JIT function testing (documented exclusions)
 - ✅ `ReactionData.interpolate` comprehensive testing (23 tests, Task #9)
 - ✅ `ENDFCompatibility` wrapper methods testing (Task #10)
-- ✅ `convenience.py` ImportError handling and error paths (+11 tests)
+- ✅ `convenience package` ImportError handling and error paths (+11 tests)
 - ✅ `geometry/assembly.py` comprehensive coverage (99.5%, +13 tests)
 
 **Remaining Coverage Gaps:**

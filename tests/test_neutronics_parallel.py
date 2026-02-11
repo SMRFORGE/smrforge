@@ -30,12 +30,16 @@ def simple_xs_data():
         sigma_a=np.array([[0.1, 0.2, 0.3, 0.4]]),
         sigma_f=np.array([[0.05, 0.15, 0.25, 0.35]]),
         nu_sigma_f=np.array([[0.125, 0.375, 0.625, 0.875]]),
-        sigma_s=np.array([[
-            [0.39, 0.01, 0.0, 0.0],
-            [0.0, 0.58, 0.02, 0.0],
-            [0.0, 0.0, 0.65, 0.03],
-            [0.0, 0.0, 0.0, 0.75]
-        ]]),
+        sigma_s=np.array(
+            [
+                [
+                    [0.39, 0.01, 0.0, 0.0],
+                    [0.0, 0.58, 0.02, 0.0],
+                    [0.0, 0.0, 0.65, 0.03],
+                    [0.0, 0.0, 0.0, 0.75],
+                ]
+            ]
+        ),
         chi=np.array([[1.0, 0.0, 0.0, 0.0]]),
         D=np.array([[1.5, 0.4, 0.3, 0.2]]),
     )
@@ -55,7 +59,9 @@ class TestParallelGroupSolve:
             verbose=False,
             skip_solution_validation=True,  # Skip validation for test
         )
-        solver_serial = MultiGroupDiffusion(simple_geometry, simple_xs_data, options_serial)
+        solver_serial = MultiGroupDiffusion(
+            simple_geometry, simple_xs_data, options_serial
+        )
         k_eff_serial, flux_serial = solver_serial.solve_steady_state()
 
         # Parallel solve
@@ -67,21 +73,27 @@ class TestParallelGroupSolve:
             verbose=False,
             skip_solution_validation=True,  # Skip validation for test
         )
-        solver_parallel = MultiGroupDiffusion(simple_geometry, simple_xs_data, options_parallel)
+        solver_parallel = MultiGroupDiffusion(
+            simple_geometry, simple_xs_data, options_parallel
+        )
         k_eff_parallel, flux_parallel = solver_parallel.solve_steady_state()
 
         # Results should be very close (within tolerance)
         # Note: Parallel and serial may differ slightly due to floating point order
         # Red-black ordering can cause small differences in convergence path
         # Both should converge to reasonable solutions
-        assert abs(k_eff_serial - k_eff_parallel) < 5e-3  # Relaxed tolerance for parallel differences
+        assert (
+            abs(k_eff_serial - k_eff_parallel) < 5e-3
+        )  # Relaxed tolerance for parallel differences
         # Flux comparison: check that both are reasonable (not identical due to parallel differences)
         assert np.all(np.isfinite(flux_serial))
         assert np.all(np.isfinite(flux_parallel))
         assert np.all(flux_serial > 0)
         assert np.all(flux_parallel > 0)
         # Relative difference should be small for most values
-        max_rel_diff = np.max(np.abs((flux_serial - flux_parallel) / (flux_serial + 1e-10)))
+        max_rel_diff = np.max(
+            np.abs((flux_serial - flux_parallel) / (flux_serial + 1e-10))
+        )
         assert max_rel_diff < 0.05  # 5% max relative difference
 
     def test_parallel_fallback_single_group(self, simple_geometry):
@@ -157,13 +169,13 @@ class TestMPISupport:
         """Test that MPI helper functions exist."""
         # Import the module to check if functions are available
         import smrforge.neutronics.solver as solver_module
-        
+
         # Functions should exist and be callable
-        assert hasattr(solver_module, '_get_mpi_comm')
-        assert hasattr(solver_module, '_is_mpi_root')
-        assert hasattr(solver_module, '_mpi_rank')
-        assert hasattr(solver_module, '_mpi_size')
-        
+        assert hasattr(solver_module, "_get_mpi_comm")
+        assert hasattr(solver_module, "_is_mpi_root")
+        assert hasattr(solver_module, "_mpi_rank")
+        assert hasattr(solver_module, "_mpi_size")
+
         # Should return valid values even without MPI
         assert solver_module._is_mpi_root() is True  # Default to True if no MPI
         assert solver_module._mpi_rank() == 0  # Default to 0 if no MPI

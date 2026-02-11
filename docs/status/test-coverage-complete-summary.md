@@ -34,7 +34,7 @@ SMRForge has achieved **79.2% overall test coverage** (10,340 statements, 2,147 
 - All 14 priority modules (9 high + 5 medium) improved from 11-72% to ~75% target
 - `reactor_core.py`: Improved from 70.8% → **86.5%** (+53+ new tests, excellent!)
 - `endf_parser.py`: Improved from 95.1% → **97.3%** (Tasks #9 and #10 complete)
-- `convenience.py`: Improved from 82.8% → **93.0%** (+11 new tests)
+- `convenience package`: Improved from 82.8% → **93.0%** (+11 new tests)
 
 ---
 
@@ -168,7 +168,7 @@ SMRForge has achieved **79.2% overall test coverage** (10,340 statements, 2,147 
 **Completed:**
 - ✅ `reactor_core.py`: 70.8% → 86.5%
 - ✅ `endf_parser.py`: 95.1% → 97.3%
-- ✅ `convenience.py`: 82.8% → 93.0%
+- ✅ `convenience package`: 82.8% → 93.0%
 - ✅ All 14 priority modules at target
 
 ---

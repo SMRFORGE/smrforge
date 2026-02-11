@@ -14,6 +14,7 @@ import numpy as np
 
 try:
     import matplotlib.pyplot as plt
+
     _MATPLOTLIB_AVAILABLE = True
 except ImportError:
     _MATPLOTLIB_AVAILABLE = False
@@ -21,6 +22,7 @@ except ImportError:
 
 try:
     import plotly.graph_objects as go
+
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
@@ -67,11 +69,15 @@ def plot_sensitivity_ranking(
     if backend == "plotly":
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure(go.Bar(x=effects, y=params, orientation="h"))
-        fig.update_layout(title=plot_title, xaxis_title="effect", yaxis_title="", margin=dict(l=120))
+        fig.update_layout(
+            title=plot_title, xaxis_title="effect", yaxis_title="", margin=dict(l=120)
+        )
         return fig
     if backend == "matplotlib":
         ensure_matplotlib_available(_MATPLOTLIB_AVAILABLE)
-        fig, ax = plt.subplots(figsize=kwargs.get("figsize", (8, max(4, len(params) * 0.35))))
+        fig, ax = plt.subplots(
+            figsize=kwargs.get("figsize", (8, max(4, len(params) * 0.35)))
+        )
         ax.barh(params, effects, color="steelblue", alpha=0.85)
         ax.set_title(plot_title)
         ax.set_xlabel("effect")
@@ -99,7 +105,9 @@ def plot_sobol_workflow(
         backend: 'plotly' or 'matplotlib'.
     """
     if output_key not in sobol_dict:
-        raise ValueError(f"output_key '{output_key}' not in sobol_dict. Keys: {list(sobol_dict.keys())}")
+        raise ValueError(
+            f"output_key '{output_key}' not in sobol_dict. Keys: {list(sobol_dict.keys())}"
+        )
     Si = sobol_dict[output_key]
     names = Si.get("param_names", [])
     S1 = np.asarray(Si.get("S1", []), dtype=float)
@@ -116,12 +124,18 @@ def plot_sobol_workflow(
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
         fig.add_trace(go.Bar(x=S1[::-1], y=names[::-1], orientation="h", name="S1"))
-        fig.add_trace(go.Bar(x=ST[::-1], y=names[::-1], orientation="h", name="ST", opacity=0.6))
-        fig.update_layout(title=plot_title, barmode="overlay", xaxis_title="index", margin=dict(l=120))
+        fig.add_trace(
+            go.Bar(x=ST[::-1], y=names[::-1], orientation="h", name="ST", opacity=0.6)
+        )
+        fig.update_layout(
+            title=plot_title, barmode="overlay", xaxis_title="index", margin=dict(l=120)
+        )
         return fig
     if backend == "matplotlib":
         ensure_matplotlib_available(_MATPLOTLIB_AVAILABLE)
-        fig, ax = plt.subplots(figsize=kwargs.get("figsize", (8, max(4, len(names) * 0.35))))
+        fig, ax = plt.subplots(
+            figsize=kwargs.get("figsize", (8, max(4, len(names) * 0.35)))
+        )
         ax.barh(names[::-1], S1[::-1], label="S1", color="steelblue")
         ax.barh(names[::-1], ST[::-1], label="ST", color="coral", alpha=0.5)
         ax.set_title(plot_title)
@@ -171,13 +185,35 @@ def plot_pareto_with_knee(
     if backend == "plotly":
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=x, y=y, mode="markers", name="All", marker=dict(size=6, opacity=0.5)))
-        fig.add_trace(go.Scatter(x=x_pareto, y=y_pareto, mode="markers", name="Pareto", marker=dict(size=10)))
+        fig.add_trace(
+            go.Scatter(
+                x=x, y=y, mode="markers", name="All", marker=dict(size=6, opacity=0.5)
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=x_pareto,
+                y=y_pareto,
+                mode="markers",
+                name="Pareto",
+                marker=dict(size=10),
+            )
+        )
         if knee_x is not None:
-            fig.add_trace(go.Scatter(
-                x=[knee_x], y=[knee_y], mode="markers", name="Knee",
-                marker=dict(size=16, symbol="star", color="gold", line=dict(width=2, color="darkorange"))
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=[knee_x],
+                    y=[knee_y],
+                    mode="markers",
+                    name="Knee",
+                    marker=dict(
+                        size=16,
+                        symbol="star",
+                        color="gold",
+                        line=dict(width=2, color="darkorange"),
+                    ),
+                )
+            )
         fig.update_layout(title=plot_title, xaxis_title=metric_x, yaxis_title=metric_y)
         return fig
     if backend == "matplotlib":
@@ -186,7 +222,16 @@ def plot_pareto_with_knee(
         ax.scatter(x, y, s=20, alpha=0.5, label="All")
         ax.scatter(x_pareto, y_pareto, s=60, label="Pareto")
         if knee_x is not None:
-            ax.scatter([knee_x], [knee_y], s=200, marker="*", c="gold", edgecolors="darkorange", linewidths=2, label="Knee")
+            ax.scatter(
+                [knee_x],
+                [knee_y],
+                s=200,
+                marker="*",
+                c="gold",
+                edgecolors="darkorange",
+                linewidths=2,
+                label="Knee",
+            )
         ax.set_title(plot_title)
         ax.set_xlabel(metric_x)
         ax.set_ylabel(metric_y)
@@ -235,18 +280,51 @@ def plot_safety_margins(
     if backend == "plotly":
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
-        fig.add_trace(go.Bar(y=names, x=values, orientation="h", name="value", marker_color=["green" if w else "red" for w in within]))
-        fig.add_trace(go.Bar(y=names, x=limits, orientation="h", name="limit", marker_color="lightgray", opacity=0.7))
-        fig.update_layout(title=plot_title, barmode="group", xaxis_title="value / limit", margin=dict(l=140))
+        fig.add_trace(
+            go.Bar(
+                y=names,
+                x=values,
+                orientation="h",
+                name="value",
+                marker_color=["green" if w else "red" for w in within],
+            )
+        )
+        fig.add_trace(
+            go.Bar(
+                y=names,
+                x=limits,
+                orientation="h",
+                name="limit",
+                marker_color="lightgray",
+                opacity=0.7,
+            )
+        )
+        fig.update_layout(
+            title=plot_title,
+            barmode="group",
+            xaxis_title="value / limit",
+            margin=dict(l=140),
+        )
         return fig
     if backend == "matplotlib":
         ensure_matplotlib_available(_MATPLOTLIB_AVAILABLE)
-        fig, ax = plt.subplots(figsize=kwargs.get("figsize", (8, max(4, len(names) * 0.4))))
+        fig, ax = plt.subplots(
+            figsize=kwargs.get("figsize", (8, max(4, len(names) * 0.4)))
+        )
         y_pos = np.arange(len(names))
         width = 0.35
         colors = ["green" if w else "red" for w in within]
-        ax.barh(y_pos - width / 2, values, width, label="value", color=colors, alpha=0.85)
-        ax.barh(y_pos + width / 2, limits, width, label="limit", color="lightgray", alpha=0.7)
+        ax.barh(
+            y_pos - width / 2, values, width, label="value", color=colors, alpha=0.85
+        )
+        ax.barh(
+            y_pos + width / 2,
+            limits,
+            width,
+            label="limit",
+            color="lightgray",
+            alpha=0.7,
+        )
         ax.set_yticks(y_pos)
         ax.set_yticklabels(names)
         ax.set_title(plot_title)
@@ -279,7 +357,11 @@ def plot_scenario_comparison(
     if not names:
         raise ValueError("scenario_results is empty")
     first = scenario_results[names[0]]
-    mdict = getattr(first, "metrics", first) if hasattr(first, "metrics") else first.get("metrics", first)
+    mdict = (
+        getattr(first, "metrics", first)
+        if hasattr(first, "metrics")
+        else first.get("metrics", first)
+    )
     if metrics is None:
         metrics = [k for k in ("k_eff", "power_thermal_mw") if k in mdict]
     if not metrics:
@@ -287,7 +369,9 @@ def plot_scenario_comparison(
     data = {m: [] for m in metrics}
     for sname in names:
         r = scenario_results[sname]
-        met = getattr(r, "metrics", r) if hasattr(r, "metrics") else r.get("metrics", {})
+        met = (
+            getattr(r, "metrics", r) if hasattr(r, "metrics") else r.get("metrics", {})
+        )
         for m in metrics:
             data[m].append(met.get(m, np.nan))
     plot_title = title or "Scenario comparison"
@@ -383,11 +467,19 @@ def plot_atlas_designs(
                 continue
             name = "Pass" if passed else "Fail"
             idx = np.where(mask)[0]
-            fig.add_trace(go.Scatter(
-                x=xs[mask], y=ys[mask], mode="markers+text", name=name,
-                text=[labels[i] for i in idx], textposition="top center",
-                marker=dict(size=12, color="green" if passed else "red", symbol="circle")
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=xs[mask],
+                    y=ys[mask],
+                    mode="markers+text",
+                    name=name,
+                    text=[labels[i] for i in idx],
+                    textposition="top center",
+                    marker=dict(
+                        size=12, color="green" if passed else "red", symbol="circle"
+                    ),
+                )
+            )
         fig.update_layout(title=plot_title, xaxis_title=x_metric, yaxis_title=y_metric)
         return fig
     if backend == "matplotlib":
@@ -395,9 +487,22 @@ def plot_atlas_designs(
         fig, ax = plt.subplots(figsize=kwargs.get("figsize", (8, 6)))
         for passed in (True, False):
             mask = np.array(colors) == ("green" if passed else "red")
-            ax.scatter(xs[mask], ys[mask], c="green" if passed else "red", label="Pass" if passed else "Fail", s=80)
+            ax.scatter(
+                xs[mask],
+                ys[mask],
+                c="green" if passed else "red",
+                label="Pass" if passed else "Fail",
+                s=80,
+            )
         for i, lb in enumerate(labels):
-            ax.annotate(lb, (xs[i], ys[i]), xytext=(0, 8), textcoords="offset points", fontsize=8, ha="center")
+            ax.annotate(
+                lb,
+                (xs[i], ys[i]),
+                xytext=(0, 8),
+                textcoords="offset points",
+                fontsize=8,
+                ha="center",
+            )
         ax.set_title(plot_title)
         ax.set_xlabel(x_metric)
         ax.set_ylabel(y_metric)

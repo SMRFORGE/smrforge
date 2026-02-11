@@ -16,6 +16,7 @@ logger = get_logger("smrforge.workflows.surrogate")
 
 try:
     from scipy.interpolate import RBFInterpolator
+
     _RBF_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _RBF_AVAILABLE = False
@@ -24,6 +25,7 @@ except ImportError:  # pragma: no cover
 @dataclass
 class SurrogateModel:
     """Fitted surrogate: predict(x) and metadata."""
+
     method: str  # "rbf" | "linear"
     param_names: List[str]
     output_name: str
@@ -37,16 +39,23 @@ def fit_surrogate(
     param_names: Optional[List[str]] = None,
     output_name: str = "output",
     method: str = "rbf",
+    **factory_kwargs: Any,
 ) -> SurrogateModel:
     """
     Fit a surrogate model to (X, y).
+
+    Uses the plugin registry first: if ``method`` is registered via
+    register_surrogate(), the registered factory is used. Otherwise uses
+    built-in methods "rbf" and "linear". Pro/Enterprise or third parties
+    can add custom ML models without forking.
 
     Args:
         X: (n_samples, n_params) training inputs.
         y: (n_samples,) training outputs.
         param_names: Parameter names (for metadata).
         output_name: Output label.
-        method: "rbf" (default) or "linear".
+        method: "rbf" (default), "linear", or a registered name.
+        **factory_kwargs: Extra kwargs passed to registered factory.
 
     Returns:
         SurrogateModel with .predict(X_new) returning (n_new,) array.
@@ -55,13 +64,20 @@ def fit_surrogate(
     y = np.asarray(y, dtype=float).ravel()
     n_params = X.shape[1]
     param_names = param_names or [f"x{i}" for i in range(n_params)]
-    logger.debug("Fitting surrogate: method=%s, n_samples=%s, n_params=%s", method, X.shape[0], n_params)
+    logger.debug(
+        "Fitting surrogate: method=%s, n_samples=%s, n_params=%s",
+        method,
+        X.shape[0],
+        n_params,
+    )
 
+    # Built-in methods first (common path; skips registry import/lookup)
     if method == "linear":
         # y = X @ coef + intercept
         ones = np.ones((X.shape[0], 1))
         X_aug = np.hstack([ones, X])
         coef, residuals, rank, s = np.linalg.lstsq(X_aug, y, rcond=None)
+
         def predict(Xnew):
             Xnew = np.asarray(Xnew, dtype=float)
             if Xnew.ndim == 1:
@@ -69,6 +85,7 @@ def fit_surrogate(
             ones_new = np.ones((Xnew.shape[0], 1))
             Xnew_aug = np.hstack([ones_new, Xnew])
             return (Xnew_aug @ coef).ravel()
+
         return SurrogateModel(
             method="linear",
             param_names=param_names,
@@ -78,13 +95,17 @@ def fit_surrogate(
         )
     if method == "rbf":
         if not _RBF_AVAILABLE:
-            raise ImportError("scipy.interpolate.RBFInterpolator required for method='rbf'")
+            raise ImportError(
+                "scipy.interpolate.RBFInterpolator required for method='rbf'"
+            )
         rbf = RBFInterpolator(X, y)
+
         def predict(Xnew):
             Xnew = np.asarray(Xnew, dtype=float)
             if Xnew.ndim == 1:
                 Xnew = Xnew.reshape(1, -1)
             return rbf(Xnew).ravel()
+
         return SurrogateModel(
             method="rbf",
             param_names=param_names,
@@ -92,7 +113,38 @@ def fit_surrogate(
             n_samples=X.shape[0],
             predict=predict,
         )
-    raise ValueError(f"method must be 'rbf' or 'linear', got {method}")
+
+    # Fall back to plugin registry (Pro/Enterprise, third-party ML models)
+    from .plugin_registry import get_surrogate, list_surrogates
+
+    factory = get_surrogate(method)
+    if factory is not None:
+        obj = factory(
+            X, y, param_names=param_names, output_name=output_name, **factory_kwargs
+        )
+        predict_fn = getattr(obj, "predict", None)
+        if callable(predict_fn):
+
+            def _predict(Xnew: np.ndarray) -> np.ndarray:
+                return np.asarray(predict_fn(Xnew)).ravel()
+
+            return SurrogateModel(
+                method=method,
+                param_names=param_names,
+                output_name=output_name,
+                n_samples=X.shape[0],
+                predict=_predict,
+            )
+        raise ValueError(
+            f"Registry factory for '{method}' did not return object with .predict()"
+        )
+
+    registered = list_surrogates()
+    available = sorted(set(["rbf", "linear"] + registered))
+    raise ValueError(
+        f"method must be one of {available}, got {method!r}. "
+        f"Use register_surrogate() to add custom models."
+    )
 
 
 def surrogate_from_sweep_results(
@@ -132,4 +184,6 @@ def surrogate_from_sweep_results(
         raise ValueError("Need at least 2 valid samples to fit surrogate")
     X = np.array(rows_x)
     y = np.array(rows_y)
-    return fit_surrogate(X, y, param_names=param_names, output_name=output_metric, method=method)
+    return fit_surrogate(
+        X, y, param_names=param_names, output_name=output_metric, method=method
+    )

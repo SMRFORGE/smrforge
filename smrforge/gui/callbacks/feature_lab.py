@@ -5,10 +5,10 @@ Feature lab callbacks.
 from __future__ import annotations
 
 try:
-    from dash import Input, Output, State
-    from dash.exceptions import PreventUpdate
     import dash_bootstrap_components as dbc
     import plotly.graph_objects as go
+    from dash import Input, Output, State
+    from dash.exceptions import PreventUpdate
 
     _DASH_AVAILABLE = True
 except ImportError:  # pragma: no cover
@@ -65,6 +65,7 @@ def _demo_keff() -> tuple[str, dict]:
 
 def _demo_neutronics_dashboard() -> tuple[str, dict]:
     import numpy as np
+
     from smrforge.visualization.tally_data import plot_neutronics_dashboard
 
     # Synthetic multi-group flux: [nz, nr, ng]
@@ -137,9 +138,13 @@ def _demo_quick_transient() -> tuple[str, dict]:
     if t is not None and p is not None and len(t) > 0 and len(p) > 0:
         fig.add_trace(go.Scatter(x=t, y=p, mode="lines", name="Power (W)"))
     if t is not None and tf is not None and len(t) > 0 and len(tf) > 0:
-        fig.add_trace(go.Scatter(x=t, y=tf, mode="lines", name="T_fuel (K)", yaxis="y2"))
+        fig.add_trace(
+            go.Scatter(x=t, y=tf, mode="lines", name="T_fuel (K)", yaxis="y2")
+        )
     if t is not None and tm is not None and len(t) > 0 and len(tm) > 0:
-        fig.add_trace(go.Scatter(x=t, y=tm, mode="lines", name="T_moderator (K)", yaxis="y2"))
+        fig.add_trace(
+            go.Scatter(x=t, y=tm, mode="lines", name="T_moderator (K)", yaxis="y2")
+        )
     fig.update_layout(
         title="Quick transient (power + temperatures)",
         xaxis_title="Time (s)",
@@ -152,14 +157,22 @@ def _demo_quick_transient() -> tuple[str, dict]:
         [
             "Quick transient demo (point kinetics)",
             f"  points: {len(t)}",
-            f"  peak power (MW): {(max(p)/1e6):.3f}" if p is not None and len(p) > 0 else "  peak power: N/A",
+            (
+                f"  peak power (MW): {(max(p)/1e6):.3f}"
+                if p is not None and len(p) > 0
+                else "  peak power: N/A"
+            ),
         ]
     )
     return text, fig.to_dict()
 
 
 def _demo_lumped_thermal() -> tuple[str, dict]:
-    from smrforge.thermal.lumped import LumpedThermalHydraulics, ThermalLump, ThermalResistance
+    from smrforge.thermal.lumped import (
+        LumpedThermalHydraulics,
+        ThermalLump,
+        ThermalResistance,
+    )
 
     fuel = ThermalLump(
         name="fuel",
@@ -179,7 +192,9 @@ def _demo_lumped_thermal() -> tuple[str, dict]:
         lump1_name="fuel",
         lump2_name="moderator",
     )
-    solver = LumpedThermalHydraulics(lumps={"fuel": fuel, "moderator": moderator}, resistances=[resistance])
+    solver = LumpedThermalHydraulics(
+        lumps={"fuel": fuel, "moderator": moderator}, resistances=[resistance]
+    )
     res = solver.solve_transient(t_span=(0.0, 3600.0), adaptive=True)
 
     t = res.get("time", [])
@@ -191,21 +206,27 @@ def _demo_lumped_thermal() -> tuple[str, dict]:
         fig.add_trace(go.Scatter(x=t, y=tf, mode="lines", name="T_fuel (K)"))
     if t is not None and tm is not None and len(t) > 0 and len(tm) > 0:
         fig.add_trace(go.Scatter(x=t, y=tm, mode="lines", name="T_moderator (K)"))
-    fig.update_layout(title="Lumped thermal (temperatures)", xaxis_title="Time (s)", yaxis_title="K")
+    fig.update_layout(
+        title="Lumped thermal (temperatures)", xaxis_title="Time (s)", yaxis_title="K"
+    )
 
     text = "\n".join(
         [
             "Lumped thermal demo (0-D)",
             f"  points: {len(t)}",
-            f"  final T_fuel (K): {tf[-1]:.1f}" if tf is not None and len(tf) > 0 else "  final T_fuel: N/A",
+            (
+                f"  final T_fuel (K): {tf[-1]:.1f}"
+                if tf is not None and len(tf) > 0
+                else "  final T_fuel: N/A"
+            ),
         ]
     )
     return text, fig.to_dict()
 
 
 def _demo_parameter_sweep() -> tuple[str, dict]:
-    from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
     from smrforge.visualization.sweep_plots import plot_sweep_heatmap
+    from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
 
     cfg = SweepConfig(
         parameters={"enrichment": [0.15, 0.195, 0.24], "power_mw": [8.0, 10.0, 12.0]},
@@ -231,13 +252,19 @@ def _demo_parameter_sweep() -> tuple[str, dict]:
     if df.empty:
         return text, _blank_figure("Sweep completed (no data)")
 
-    fig = plot_sweep_heatmap(result, x_param="enrichment", y_param="power_mw", metric="k_eff", backend="plotly")
+    fig = plot_sweep_heatmap(
+        result,
+        x_param="enrichment",
+        y_param="power_mw",
+        metric="k_eff",
+        backend="plotly",
+    )
     return text, as_plotly_dict(fig)
 
 
 def _demo_sweep_heatmap() -> tuple[str, dict]:
-    from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
     from smrforge.visualization.sweep_plots import plot_sweep_heatmap
+    from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
 
     cfg = SweepConfig(
         parameters={"enrichment": [0.15, 0.195, 0.24], "power_mw": [8.0, 10.0, 12.0]},
@@ -246,14 +273,16 @@ def _demo_sweep_heatmap() -> tuple[str, dict]:
         parallel=False,
     )
     res = ParameterSweep(cfg).run()
-    fig = plot_sweep_heatmap(res, x_param="enrichment", y_param="power_mw", metric="k_eff", backend="plotly")
+    fig = plot_sweep_heatmap(
+        res, x_param="enrichment", y_param="power_mw", metric="k_eff", backend="plotly"
+    )
     text = "\n".join(["Sweep visualization: heatmap", f"  cases: {len(res.results)}"])
     return text, as_plotly_dict(fig)
 
 
 def _demo_sweep_tornado() -> tuple[str, dict]:
-    from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
     from smrforge.visualization.sweep_plots import plot_sweep_tornado
+    from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
 
     cfg = SweepConfig(
         parameters={"enrichment": [0.15, 0.195, 0.24], "power_mw": [8.0, 10.0, 12.0]},
@@ -268,12 +297,20 @@ def _demo_sweep_tornado() -> tuple[str, dict]:
 
 
 def _demo_uq_mc() -> tuple[str, dict]:
-    from smrforge.uncertainty.uq import MonteCarloSampler, UncertainParameter
     import numpy as np
 
+    from smrforge.uncertainty.uq import MonteCarloSampler, UncertainParameter
+
     params = [
-        UncertainParameter(name="enrichment", distribution="normal", nominal=0.195, uncertainty=0.01),
-        UncertainParameter(name="power_mw", distribution="uniform", nominal=10.0, uncertainty=(8.0, 12.0)),
+        UncertainParameter(
+            name="enrichment", distribution="normal", nominal=0.195, uncertainty=0.01
+        ),
+        UncertainParameter(
+            name="power_mw",
+            distribution="uniform",
+            nominal=10.0,
+            uncertainty=(8.0, 12.0),
+        ),
     ]
     sampler = MonteCarloSampler(params)
     samples = sampler.sample_monte_carlo(1000, random_state=0)
@@ -298,15 +335,25 @@ def _demo_uq_mc() -> tuple[str, dict]:
 
 def _demo_uq_distribution() -> tuple[str, dict]:
     import numpy as np
-    from smrforge.uncertainty.uq import UQResults, UncertainParameter
+
+    from smrforge.uncertainty.uq import UncertainParameter, UQResults
     from smrforge.uncertainty.visualization import plot_uq_distribution
 
     params = [
-        UncertainParameter(name="enrichment", distribution="normal", nominal=0.195, uncertainty=0.01),
-        UncertainParameter(name="power_mw", distribution="uniform", nominal=10.0, uncertainty=(8.0, 12.0)),
+        UncertainParameter(
+            name="enrichment", distribution="normal", nominal=0.195, uncertainty=0.01
+        ),
+        UncertainParameter(
+            name="power_mw",
+            distribution="uniform",
+            nominal=10.0,
+            uncertainty=(8.0, 12.0),
+        ),
     ]
     n = 1000
-    samples = np.column_stack([p.sample(n, random_state=10 + i) for i, p in enumerate(params)])
+    samples = np.column_stack(
+        [p.sample(n, random_state=10 + i) for i, p in enumerate(params)]
+    )
     # Simple model: keff responds mostly to enrichment, lightly to power
     keff = 1.0 + 0.8 * (samples[:, 0] - 0.195) - 0.002 * (samples[:, 1] - 10.0)
     outputs = keff.reshape(-1, 1)
@@ -327,17 +374,37 @@ def _demo_uq_distribution() -> tuple[str, dict]:
 
 def _demo_uq_correlations() -> tuple[str, dict]:
     import numpy as np
-    from smrforge.uncertainty.uq import UQResults, UncertainParameter
+
+    from smrforge.uncertainty.uq import UncertainParameter, UQResults
     from smrforge.uncertainty.visualization import plot_uq_correlation_matrix
 
     params = [
-        UncertainParameter(name="enrichment", distribution="normal", nominal=0.195, uncertainty=0.01),
-        UncertainParameter(name="power_mw", distribution="uniform", nominal=10.0, uncertainty=(8.0, 12.0)),
-        UncertainParameter(name="core_height", distribution="uniform", nominal=200.0, uncertainty=(180.0, 220.0)),
+        UncertainParameter(
+            name="enrichment", distribution="normal", nominal=0.195, uncertainty=0.01
+        ),
+        UncertainParameter(
+            name="power_mw",
+            distribution="uniform",
+            nominal=10.0,
+            uncertainty=(8.0, 12.0),
+        ),
+        UncertainParameter(
+            name="core_height",
+            distribution="uniform",
+            nominal=200.0,
+            uncertainty=(180.0, 220.0),
+        ),
     ]
     n = 800
-    samples = np.column_stack([p.sample(n, random_state=20 + i) for i, p in enumerate(params)])
-    keff = 1.0 + 0.9 * (samples[:, 0] - 0.195) - 0.001 * (samples[:, 1] - 10.0) + 0.0002 * (samples[:, 2] - 200.0)
+    samples = np.column_stack(
+        [p.sample(n, random_state=20 + i) for i, p in enumerate(params)]
+    )
+    keff = (
+        1.0
+        + 0.9 * (samples[:, 0] - 0.195)
+        - 0.001 * (samples[:, 1] - 10.0)
+        + 0.0002 * (samples[:, 2] - 200.0)
+    )
     outputs = keff.reshape(-1, 1)
     percentiles = {p: np.percentile(outputs, p, axis=0) for p in (5, 50, 95)}
     res = UQResults(
@@ -356,6 +423,7 @@ def _demo_uq_correlations() -> tuple[str, dict]:
 
 def _demo_burnup_dashboard() -> tuple[str, dict]:
     import numpy as np
+
     from smrforge.burnup.solver import NuclideInventory
     from smrforge.core.reactor_core import Nuclide
     from smrforge.visualization.material_composition import plot_burnup_dashboard
@@ -377,14 +445,19 @@ def _demo_burnup_dashboard() -> tuple[str, dict]:
     c_xe = 1e-3 + 2e-2 * (1.0 - np.exp(-4.0 * t_days / t_days.max()))
     concentrations = np.vstack([c_u235, c_u238, c_pu239, c_xe])
 
-    inv = NuclideInventory(nuclides=nuclides, concentrations=concentrations, times=t_s, burnup=burnup)
+    inv = NuclideInventory(
+        nuclides=nuclides, concentrations=concentrations, times=t_s, burnup=burnup
+    )
     fig = plot_burnup_dashboard(inv, backend="plotly")
-    text = "\n".join(["Burnup dashboard demo (synthetic inventory)", f"  steps: {len(t_days)}"])
+    text = "\n".join(
+        ["Burnup dashboard demo (synthetic inventory)", f"  steps: {len(t_days)}"]
+    )
     return text, as_plotly_dict(fig)
 
 
 def _demo_mesh_diagnostics() -> tuple[str, dict]:
     import numpy as np
+
     from smrforge.geometry.mesh_generation import AdvancedMeshGenerator
     from smrforge.visualization.mesh_diagnostics import plot_mesh_verification_dashboard
 
@@ -397,34 +470,73 @@ def _demo_mesh_diagnostics() -> tuple[str, dict]:
 
     # Synthetic size distribution (lognormal)
     sizes = rng.lognormal(mean=0.0, sigma=0.7, size=500)
-    fig = plot_mesh_verification_dashboard(quality=quality, sizes=sizes, backend="plotly")
-    text = "\n".join(["Mesh diagnostics demo", f"  vertices: {len(vertices)}", f"  triangles: {len(triangles)}"])
+    fig = plot_mesh_verification_dashboard(
+        quality=quality, sizes=sizes, backend="plotly"
+    )
+    text = "\n".join(
+        [
+            "Mesh diagnostics demo",
+            f"  vertices: {len(vertices)}",
+            f"  triangles: {len(triangles)}",
+        ]
+    )
     return text, as_plotly_dict(fig)
 
 
 def _demo_validation_viz() -> tuple[str, dict]:
     from smrforge.validation.data_validation import ValidationLevel, ValidationResult
-    from smrforge.visualization.validation_plots import plot_validation_issues, plot_validation_summary
+    from smrforge.visualization.validation_plots import (
+        plot_validation_issues,
+        plot_validation_summary,
+    )
 
     res = ValidationResult(valid=True)
-    res.add_issue(ValidationLevel.WARNING, "temperature", "Below expected minimum", value=250.0, expected=">= 273 K")
-    res.add_issue(ValidationLevel.ERROR, "pressure", "Negative pressure", value=-1.0, expected=">= 0 Pa")
-    res.add_issue(ValidationLevel.ERROR, "k_eff", "Unphysical criticality", value=4.2, expected="<= 3.0")
+    res.add_issue(
+        ValidationLevel.WARNING,
+        "temperature",
+        "Below expected minimum",
+        value=250.0,
+        expected=">= 273 K",
+    )
+    res.add_issue(
+        ValidationLevel.ERROR,
+        "pressure",
+        "Negative pressure",
+        value=-1.0,
+        expected=">= 0 Pa",
+    )
+    res.add_issue(
+        ValidationLevel.ERROR,
+        "k_eff",
+        "Unphysical criticality",
+        value=4.2,
+        expected="<= 3.0",
+    )
 
     fig = plot_validation_summary(res, backend="plotly")
     # If user wants details, they can switch to issues plot; keep summary here.
-    text = "\n".join(["Validation visualization demo", f"  valid: {res.valid}", f"  issues: {len(res.issues)}"])
+    text = "\n".join(
+        [
+            "Validation visualization demo",
+            f"  valid: {res.valid}",
+            f"  issues: {len(res.issues)}",
+        ]
+    )
     return text, as_plotly_dict(fig)
+
 
 def _demo_optimization() -> tuple[str, dict]:
     import numpy as np
+
     from smrforge.optimization.design import DesignOptimizer
 
     # Simple convex objective for a fast demo
     def obj(x: np.ndarray) -> float:
         return float((x[0] - 1.5) ** 2 + 0.1 * (x[1] + 0.5) ** 2)
 
-    opt = DesignOptimizer(objective=obj, bounds=[(-5.0, 5.0), (-5.0, 5.0)], method="minimize")
+    opt = DesignOptimizer(
+        objective=obj, bounds=[(-5.0, 5.0), (-5.0, 5.0)], method="minimize"
+    )
     res = opt.optimize(max_iterations=50)
 
     text = "\n".join(
@@ -440,21 +552,29 @@ def _demo_optimization() -> tuple[str, dict]:
 
 def _demo_optimization_trace() -> tuple[str, dict]:
     import numpy as np
+
     from smrforge.visualization.optimization_plots import plot_optimization_trace
 
     # Synthetic decreasing objective history (fast + deterministic).
     it = np.arange(40)
     hist = (1.0 / (1.0 + 0.15 * it)) + 0.01 * np.sin(it / 3.0)
-    fig = plot_optimization_trace(hist, backend="plotly", title="Optimization trace (synthetic)")
+    fig = plot_optimization_trace(
+        hist, backend="plotly", title="Optimization trace (synthetic)"
+    )
     text = "\n".join(["Optimization trace demo", f"  iterations: {len(hist)}"])
     return text, as_plotly_dict(fig)
 
 
 def _demo_economics() -> tuple[str, dict]:
-    from smrforge.economics.cost_modeling import CapitalCostEstimator, OperatingCostEstimator
+    from smrforge.economics.cost_modeling import (
+        CapitalCostEstimator,
+        OperatingCostEstimator,
+    )
 
     power_electric = 10e6 * 0.33  # 10 MWth at ~33% efficiency
-    cap = CapitalCostEstimator(power_electric=power_electric, reactor_type="prismatic", nth_of_a_kind=1)
+    cap = CapitalCostEstimator(
+        power_electric=power_electric, reactor_type="prismatic", nth_of_a_kind=1
+    )
     op = OperatingCostEstimator(
         power_electric=power_electric,
         fuel_loading=150.0,
@@ -479,29 +599,49 @@ def _demo_economics() -> tuple[str, dict]:
     items = [(k, v) for k, v in breakdown.items() if k != "total_overnight_cost"]
     items = sorted(items, key=lambda kv: kv[1], reverse=True)[:10]
     fig.add_trace(go.Bar(x=[k for k, _ in items], y=[v for _, v in items]))
-    fig.update_layout(title="Capital cost breakdown (top components)", xaxis_tickangle=-30, yaxis_title="USD")
+    fig.update_layout(
+        title="Capital cost breakdown (top components)",
+        xaxis_tickangle=-30,
+        yaxis_title="USD",
+    )
     return text, fig.to_dict()
 
 
 def _demo_economics_capex() -> tuple[str, dict]:
-    from smrforge.economics.cost_modeling import CapitalCostEstimator, OperatingCostEstimator, LCOECalculator
+    from smrforge.economics.cost_modeling import (
+        CapitalCostEstimator,
+        LCOECalculator,
+        OperatingCostEstimator,
+    )
     from smrforge.visualization.economics_plots import plot_capex_breakdown
 
     power_electric = 10e6 * 0.33
-    cap = CapitalCostEstimator(power_electric=power_electric, reactor_type="prismatic", nth_of_a_kind=1)
+    cap = CapitalCostEstimator(
+        power_electric=power_electric, reactor_type="prismatic", nth_of_a_kind=1
+    )
     overnight = cap.estimate_overnight_cost()
     breakdown = cap.get_cost_breakdown()
-    fig = plot_capex_breakdown(breakdown, backend="plotly", kind="waterfall", title="CAPEX waterfall")
-    text = "\n".join(["Economics demo: CAPEX waterfall", f"  overnight cost (USD): {overnight:,.0f}"])
+    fig = plot_capex_breakdown(
+        breakdown, backend="plotly", kind="waterfall", title="CAPEX waterfall"
+    )
+    text = "\n".join(
+        ["Economics demo: CAPEX waterfall", f"  overnight cost (USD): {overnight:,.0f}"]
+    )
     return text, as_plotly_dict(fig)
 
 
 def _demo_economics_lcoe() -> tuple[str, dict]:
-    from smrforge.economics.cost_modeling import CapitalCostEstimator, OperatingCostEstimator, LCOECalculator
+    from smrforge.economics.cost_modeling import (
+        CapitalCostEstimator,
+        LCOECalculator,
+        OperatingCostEstimator,
+    )
     from smrforge.visualization.economics_plots import plot_lcoe_breakdown
 
     power_electric = 10e6 * 0.33
-    cap = CapitalCostEstimator(power_electric=power_electric, reactor_type="prismatic", nth_of_a_kind=1)
+    cap = CapitalCostEstimator(
+        power_electric=power_electric, reactor_type="prismatic", nth_of_a_kind=1
+    )
     op = OperatingCostEstimator(
         power_electric=power_electric,
         fuel_loading=150.0,
@@ -509,17 +649,30 @@ def _demo_economics_lcoe() -> tuple[str, dict]:
         target_burnup=150.0,
         capacity_factor=0.95,
     )
-    lcoe = LCOECalculator(capital_cost=cap.estimate_overnight_cost(), power_electric=power_electric, operating_cost_estimator=op)
+    lcoe = LCOECalculator(
+        capital_cost=cap.estimate_overnight_cost(),
+        power_electric=power_electric,
+        operating_cost_estimator=op,
+    )
     breakdown = lcoe.get_cost_breakdown()
     fig = plot_lcoe_breakdown(breakdown, backend="plotly", title="LCOE breakdown")
-    text = "\n".join(["Economics demo: LCOE", f"  total LCOE (USD/kWh): {breakdown.get('total_lcoe', lcoe.calculate_lcoe()):.4f}"])
+    text = "\n".join(
+        [
+            "Economics demo: LCOE",
+            f"  total LCOE (USD/kWh): {breakdown.get('total_lcoe', lcoe.calculate_lcoe()):.4f}",
+        ]
+    )
     return text, as_plotly_dict(fig)
+
 
 def _demo_control_pid() -> tuple[str, dict]:
     import numpy as np
+
     from smrforge.control.controllers import PIDController
 
-    pid = PIDController(Kp=0.8, Ki=0.2, Kd=0.05, setpoint=1.0, output_min=0.0, output_max=2.0)
+    pid = PIDController(
+        Kp=0.8, Ki=0.2, Kd=0.05, setpoint=1.0, output_min=0.0, output_max=2.0
+    )
 
     t = np.linspace(0, 20, 401)
     y = np.zeros_like(t)
@@ -593,7 +746,13 @@ def register_feature_lab_callbacks(app):
 
         runner = _DEMO_RUNNERS.get(demo_id)
         if runner is None:
-            return "", _blank_figure("Unknown demo"), "Unknown demo selected.", "warning", True
+            return (
+                "",
+                _blank_figure("Unknown demo"),
+                "Unknown demo selected.",
+                "warning",
+                True,
+            )
 
         try:
             text, fig = runner()
@@ -607,4 +766,3 @@ def register_feature_lab_callbacks(app):
                 "danger",
                 True,
             )
-

@@ -15,6 +15,7 @@ logger = get_logger("smrforge.workflows.sobol_indices")
 
 try:
     from SALib.analyze import sobol as salib_sobol
+
     _SALIB_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _SALIB_AVAILABLE = False
@@ -45,14 +46,18 @@ def sobol_indices_from_samples(
     """
     n_params = X.shape[1]
     if len(param_names) != n_params:
-        raise ValueError(f"param_names length {len(param_names)} != X.shape[1] {n_params}")
+        raise ValueError(
+            f"param_names length {len(param_names)} != X.shape[1] {n_params}"
+        )
     if Y.ndim == 1:
         Y = Y.reshape(-1, 1)
     n_out = Y.shape[1]
     out_labels = [f"Y{i}" for i in range(n_out)]
 
     if problem_bounds is None:
-        problem_bounds = [(float(X[:, i].min()), float(X[:, i].max())) for i in range(n_params)]
+        problem_bounds = [
+            (float(X[:, i].min()), float(X[:, i].max())) for i in range(n_params)
+        ]
     problem = {
         "num_vars": n_params,
         "names": param_names,
@@ -68,9 +73,15 @@ def sobol_indices_from_samples(
         label = out_labels[j]
         # Check if X looks like Saltelli (n = N*(2*D+2)) -> use SALib
         N = len(y)
-        if _SALIB_AVAILABLE and N >= (2 * n_params + 2) and (N % (2 * n_params + 2)) == 0:
+        if (
+            _SALIB_AVAILABLE
+            and N >= (2 * n_params + 2)
+            and (N % (2 * n_params + 2)) == 0
+        ):
             try:
-                Si = salib_sobol.analyze(problem, X, y, calc_second_order=calc_second_order)
+                Si = salib_sobol.analyze(
+                    problem, X, y, calc_second_order=calc_second_order
+                )
                 result[label] = {
                     "S1": Si["S1"].tolist(),
                     "ST": Si["ST"].tolist(),
@@ -93,11 +104,15 @@ def _simple_sobol_approx(
     n_params = X.shape[1]
     var_y = np.var(y)
     if var_y <= 0:
-        return {"S1": [0.0] * n_params, "ST": [0.0] * n_params, "param_names": param_names}
+        return {
+            "S1": [0.0] * n_params,
+            "ST": [0.0] * n_params,
+            "param_names": param_names,
+        }
     s1 = []
     for i in range(n_params):
         r = np.corrcoef(X[:, i], y)[0, 1]
-        s1.append(float(r ** 2) if np.isfinite(r) else 0.0)
+        s1.append(float(r**2) if np.isfinite(r) else 0.0)
     # ST approx: total variance explained by each param (here same as S1 for additive approx)
     st = s1[:]
     return {"S1": s1, "ST": st, "param_names": param_names}
@@ -135,7 +150,13 @@ def sobol_indices_from_sweep_results(
         rows_x.append(row)
         rows_y.append(y)
     if len(rows_x) < 10:
-        return {"Y0": {"S1": [0.0] * len(param_names), "ST": [0.0] * len(param_names), "param_names": param_names}}
+        return {
+            "Y0": {
+                "S1": [0.0] * len(param_names),
+                "ST": [0.0] * len(param_names),
+                "param_names": param_names,
+            }
+        }
     X = np.array(rows_x)
     Y = np.array(rows_y)
     return sobol_indices_from_samples(X, Y, param_names)

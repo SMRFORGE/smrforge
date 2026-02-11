@@ -47,6 +47,7 @@ def test_data_manager_callbacks_cover_all_branches():
     import dash_bootstrap_components as dbc
 
     from smrforge.gui.callbacks import data_manager as dm
+
     dm = importlib.reload(dm)
     assert dm._DASH_AVAILABLE is True
     app = DummyApp()
@@ -77,21 +78,29 @@ def test_data_manager_callbacks_cover_all_branches():
     assert isinstance(alert, dbc.Alert)
     assert progress == ""
 
-    with patch("smrforge.data_downloader.download_endf_data", return_value={"downloaded": 1, "skipped": 2, "failed": 3}):
+    with patch(
+        "smrforge.data_downloader.download_endf_data",
+        return_value={"downloaded": 1, "skipped": 2, "failed": 3},
+    ):
         ok_alert, ok_progress = download_endf_data(
             1, "ENDF/B-VIII.1", "elements", None, "U, Pu", "C:\\tmp", 1
         )
         assert isinstance(ok_alert, dbc.Alert)
         assert ok_progress == ""
 
-    with patch("smrforge.data_downloader.download_endf_data", return_value={"downloaded": 1, "skipped": 0, "failed": 0}):
+    with patch(
+        "smrforge.data_downloader.download_endf_data",
+        return_value={"downloaded": 1, "skipped": 0, "failed": 0},
+    ):
         ok_alert, ok_progress = download_endf_data(
             1, "ENDF/B-VIII.1", "isotopes", "U235, U238", None, "C:\\tmp", 1
         )
         assert isinstance(ok_alert, dbc.Alert)
         assert ok_progress == ""
 
-    with patch("smrforge.data_downloader.download_endf_data", side_effect=RuntimeError("boom")):
+    with patch(
+        "smrforge.data_downloader.download_endf_data", side_effect=RuntimeError("boom")
+    ):
         err_alert, err_progress = download_endf_data(
             1, "ENDF/B-VIII.1", "common_smr", None, None, None, None
         )
@@ -109,4 +118,3 @@ def test_data_manager_callbacks_cover_all_branches():
     with patch.object(dm.html, "P", side_effect=RuntimeError("fail html.P")):
         out = save_configuration(1, "C:\\endf", None)
         assert isinstance(out, dbc.Alert)
-

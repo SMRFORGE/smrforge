@@ -24,6 +24,7 @@ class TestMaterialProperty:
 
     def test_material_property_creation(self):
         """Test creating a MaterialProperty."""
+
         def corr(T):
             return 2.0 * T
 
@@ -44,6 +45,7 @@ class TestMaterialProperty:
 
     def test_material_property_call(self):
         """Test calling MaterialProperty at a temperature."""
+
         def corr(T):
             return 2.0 * T
 
@@ -60,6 +62,7 @@ class TestMaterialProperty:
 
     def test_material_property_temperature_range_error(self):
         """Test MaterialProperty raises error for out-of-range temperature."""
+
         def corr(T):
             return 2.0 * T
 
@@ -79,6 +82,7 @@ class TestMaterialProperty:
 
     def test_material_property_evaluate_array(self):
         """Test MaterialProperty.evaluate_array vectorized evaluation."""
+
         def corr(T):
             return 2.0 * T
 
@@ -201,7 +205,9 @@ class TestGraphiteMaterial:
 
         for key, value in props.items():
             assert isinstance(value, float)
-            assert value > 0 or key == "thermal_expansion"  # thermal_expansion can be small
+            assert (
+                value > 0 or key == "thermal_expansion"
+            )  # thermal_expansion can be small
 
 
 class TestHeliumCoolant:
@@ -369,7 +375,9 @@ class TestTRISOFuel:
         assert 0 <= P_fail <= 1.0
 
         # Higher values should increase failure probability
-        P_fail_high = triso.failure_probability(T_max=2000.0, burnup=100.0, fluence=1e25)
+        P_fail_high = triso.failure_probability(
+            T_max=2000.0, burnup=100.0, fluence=1e25
+        )
         assert P_fail_high >= P_fail
 
 
@@ -541,7 +549,11 @@ class TestFastFunctions:
         """Test graphite_conductivity_fast function."""
         T_array = np.linspace(300, 2000, 100)
 
-        func = graphite_conductivity_fast.py_func if hasattr(graphite_conductivity_fast, "py_func") else graphite_conductivity_fast
+        func = (
+            graphite_conductivity_fast.py_func
+            if hasattr(graphite_conductivity_fast, "py_func")
+            else graphite_conductivity_fast
+        )
         k_array = func(T_array, grade=0)
 
         assert isinstance(k_array, np.ndarray)
@@ -551,7 +563,11 @@ class TestFastFunctions:
     def test_graphite_conductivity_fast_all_grades(self):
         """Test graphite_conductivity_fast for all grades (coverage for lines 611-627)."""
         T_array = np.linspace(300, 2000, 100)
-        func = graphite_conductivity_fast.py_func if hasattr(graphite_conductivity_fast, "py_func") else graphite_conductivity_fast
+        func = (
+            graphite_conductivity_fast.py_func
+            if hasattr(graphite_conductivity_fast, "py_func")
+            else graphite_conductivity_fast
+        )
 
         # Test grade 0 (IG-110)
         k_ig110 = func(T_array, grade=0)
@@ -579,7 +595,11 @@ class TestFastFunctions:
         """Test helium_properties_fast function."""
         T_array = np.linspace(300, 2000, 100)
 
-        func = helium_properties_fast.py_func if hasattr(helium_properties_fast, "py_func") else helium_properties_fast
+        func = (
+            helium_properties_fast.py_func
+            if hasattr(helium_properties_fast, "py_func")
+            else helium_properties_fast
+        )
         rho, mu, k = func(T_array, P=7.0e6)
 
         assert isinstance(rho, np.ndarray)
@@ -593,4 +613,3 @@ class TestFastFunctions:
         assert np.all(rho > 0)
         assert np.all(mu > 0)
         assert np.all(k > 0)
-

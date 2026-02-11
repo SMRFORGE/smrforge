@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated:** February 10, 2026
+**Last Updated:** February 2026
 
 All notable changes to SMRForge will be documented in this file.
 
@@ -9,19 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added (February 2026)
+### Changed
+- **Convenience API consolidation:** Removed legacy `smrforge/convenience.py`; all convenience functionality now lives in `smrforge/convenience/` package. No public API changes—`from smrforge.convenience import create_reactor` and `smrforge.create_reactor` work unchanged.
+
+## [0.2.0] - 2026-02-XX (Beta)
+
+### Added
 - **Serpent round-trip (Community):** Serpent run and result parsing in Community tier. `smrforge.io.serpent_run.run_serpent()`, `parse_res_file()`, `run_and_parse()` for running Serpent 2 and extracting k-eff from `_res.m`. Completes round-trip with Pro export: Pro export → Community run Serpent → parse results. Convenience: `smrforge.io.run_serpent()`, `parse_serpent_res()`.
 - **OpenMC integration (Community):** Full OpenMC export/import in Community tier. Export PrismaticCore/PebbleBedCore to geometry.xml, materials.xml, settings.xml; import OpenMC geometry; run OpenMC via subprocess; parse statepoint HDF5 for k-eff and tallies. `OpenMCConverter.export_reactor()`, `import_reactor()`, `smrforge.io.openmc_run.run_openmc()`, `parse_statepoint()`. See examples/openmc_export_example.py.
 - Rich colorized logging: Console output now uses Rich's RichHandler for color-coded log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL), rich tracebacks, and improved readability. File logging remains plain text. Falls back to standard handler if Rich is unavailable. Respects NO_COLOR environment variable.
 - Docker: Updated Dockerfile, Dockerfile.dev, and docker-compose.yml with Rich logging notes and February 2026 date. Added Rich verification and NO_COLOR note to docs/guides/docker.md.
 - Docker: Added documentation provenance note (SMRForge original work; OpenMC/Serpent inspiration/analysis).
 
-### Added (January 29, 2026)
+### Fixed
+- **Examples on Windows**: Replaced Unicode checkmarks (✓/✗) with ASCII-safe markers in preset validation and examples to prevent `UnicodeEncodeError` on Windows cp1252 consoles.
+
+### Added (January 2026)
 - Pint mandatory dependency: `pint>=0.20.0` added to `setup.py` install_requires
 - Parameter sweep coverage tests: burnup analysis path, preset path fallback, parallel save intermediate, correlations
 - Constraints coverage tests: save/load, value from reactor spec, min/max severity paths, unknown type skip
 
-### Changed (January 29, 2026)
+### Changed (January 2026)
 - Documentation: Updated README, COVERAGE_TRACKING, DOCUMENTATION_INDEX, docker guide with current info
 - Archived `docs/development/coverage-inventory.md` → `docs/archive/coverage-inventory-archived-2026-01-29.md` (superseded by COVERAGE_TRACKING.md)
 - Coverage status: ~89.7% overall (target 90%), testing-and-coverage.md updated with COVERAGE_TRACKING as source of truth

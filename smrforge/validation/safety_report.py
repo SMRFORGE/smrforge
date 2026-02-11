@@ -11,6 +11,7 @@ from .constraints import ConstraintSet, DesignValidator, ValidationResult
 @dataclass
 class MarginEntry:
     """Single constraint margin."""
+
     name: str
     value: float
     limit: float
@@ -24,6 +25,7 @@ class MarginEntry:
 @dataclass
 class SafetyMarginReport:
     """Coupled safety margin report."""
+
     passed: bool
     margins: List[MarginEntry] = field(default_factory=list)
     metrics: Dict[str, float] = field(default_factory=dict)
@@ -140,16 +142,18 @@ def safety_margin_report(
         if uq_results and cname in uq_results:
             p5 = uq_results[cname].get("p5") or uq_results[cname].get("percentile_5")
             p95 = uq_results[cname].get("p95") or uq_results[cname].get("percentile_95")
-        margins.append(MarginEntry(
-            name=cname,
-            value=value,
-            limit=limit,
-            unit=unit,
-            margin=margin,
-            within_limit=within,
-            percentile_5=p5,
-            percentile_95=p95,
-        ))
+        margins.append(
+            MarginEntry(
+                name=cname,
+                value=value,
+                limit=limit,
+                unit=unit,
+                margin=margin,
+                within_limit=within,
+                percentile_5=p5,
+                percentile_95=p95,
+            )
+        )
 
     return SafetyMarginReport(
         passed=validation.passed,

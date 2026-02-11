@@ -75,7 +75,9 @@ class Lattice:
     lattice_type: str  # 'rectangular', 'hexagonal', 'cylindrical'
     dimension: Tuple[int, int, int]  # (nx, ny, nz) or (nrings, nz)
     lower_left: Point3D
-    pitch: Tuple[float, float, float]  # (pitch_x, pitch_y, pitch_z) or (pitch_radial, pitch_axial)
+    pitch: Tuple[
+        float, float, float
+    ]  # (pitch_x, pitch_y, pitch_z) or (pitch_radial, pitch_axial)
     universes: List[List[List[int]]]  # Universe IDs at each position
 
 
@@ -114,7 +116,7 @@ class AdvancedGeometryImporter:
         Examples:
             >>> from pathlib import Path
             >>> from smrforge.geometry.advanced_import import AdvancedGeometryImporter
-            >>> 
+            >>>
             >>> core = AdvancedGeometryImporter.from_openmc_full(Path("geometry.xml"))
             >>> print(f"Blocks: {len(core.blocks)}")
         """
@@ -128,7 +130,9 @@ class AdvancedGeometryImporter:
 
             # Extract core structure
             core = PrismaticCore(name="Imported-OpenMC-Full")
-            core = AdvancedGeometryImporter._reconstruct_lattice_from_openmc(geometry, core)
+            core = AdvancedGeometryImporter._reconstruct_lattice_from_openmc(
+                geometry, core
+            )
 
             return core
         except Exception as e:
@@ -150,11 +154,16 @@ class AdvancedGeometryImporter:
                 surf_id = int(surface_elem.get("id", 0))
                 surf_type = surface_elem.get("type", "")
                 coeffs_str = surface_elem.get("coeffs", "")
-                coeffs = [float(x) for x in coeffs_str.split() if x] if coeffs_str else []
+                coeffs = (
+                    [float(x) for x in coeffs_str.split() if x] if coeffs_str else []
+                )
                 boundary = surface_elem.get("boundary_type", "vacuum")
 
                 surfaces[surf_id] = CSGSurface(
-                    id=surf_id, surface_type=surf_type, coeffs=coeffs, boundary_type=boundary
+                    id=surf_id,
+                    surface_type=surf_type,
+                    coeffs=coeffs,
+                    boundary_type=boundary,
                 )
 
             # Parse cells
@@ -166,7 +175,9 @@ class AdvancedGeometryImporter:
                 fill = cell_elem.get("fill")
 
                 # Extract surface IDs from region string
-                surface_ids = AdvancedGeometryImporter._extract_surface_ids_from_region(region)
+                surface_ids = AdvancedGeometryImporter._extract_surface_ids_from_region(
+                    region
+                )
 
                 cells[cell_id] = CSGCell(
                     id=cell_id,
@@ -181,7 +192,9 @@ class AdvancedGeometryImporter:
             for lattice_elem in root.findall(".//lattice"):
                 lattice_id = int(lattice_elem.get("id", 0))
                 lattice_type = lattice_elem.get("type", "rectangular")
-                dimension = tuple(int(x) for x in lattice_elem.get("dimension", "1 1 1").split())
+                dimension = tuple(
+                    int(x) for x in lattice_elem.get("dimension", "1 1 1").split()
+                )
 
                 # Extract pitch
                 pitch_str = lattice_elem.get("pitch", "1.0 1.0 1.0")
@@ -190,7 +203,11 @@ class AdvancedGeometryImporter:
                 # Extract lower_left
                 ll_str = lattice_elem.get("lower_left", "0.0 0.0 0.0")
                 ll_coords = [float(x) for x in ll_str.split()]
-                lower_left = Point3D(ll_coords[0], ll_coords[1], ll_coords[2] if len(ll_coords) > 2 else 0.0)
+                lower_left = Point3D(
+                    ll_coords[0],
+                    ll_coords[1],
+                    ll_coords[2] if len(ll_coords) > 2 else 0.0,
+                )
 
                 # Parse universes (simplified - would need full lattice structure)
                 universes_flat = []
@@ -231,7 +248,9 @@ class AdvancedGeometryImporter:
 
             # Reconstruct geometry from CSG and lattices
             core = PrismaticCore(name="Imported-OpenMC-CSG")
-            core = AdvancedGeometryImporter._reconstruct_core_from_csg(surfaces, cells, lattices, core)
+            core = AdvancedGeometryImporter._reconstruct_core_from_csg(
+                surfaces, cells, lattices, core
+            )
 
             return core
 
@@ -297,7 +316,9 @@ class AdvancedGeometryImporter:
         return core
 
     @staticmethod
-    def _reconstruct_lattice(lattices: Dict[int, Lattice], core: PrismaticCore) -> PrismaticCore:
+    def _reconstruct_lattice(
+        lattices: Dict[int, Lattice], core: PrismaticCore
+    ) -> PrismaticCore:
         """Reconstruct hexagonal lattice from lattice definition."""
         for lattice in lattices.values():
             if lattice.lattice_type == "hexagonal":
@@ -345,7 +366,9 @@ class AdvancedGeometryImporter:
         return core
 
     @staticmethod
-    def _reconstruct_lattice_from_openmc(geometry: Any, core: PrismaticCore) -> PrismaticCore:
+    def _reconstruct_lattice_from_openmc(
+        geometry: Any, core: PrismaticCore
+    ) -> PrismaticCore:
         """Reconstruct lattice using OpenMC's geometry object."""
         # This would use OpenMC's API to extract lattice structure
         # Placeholder for OpenMC integration
@@ -371,7 +394,7 @@ class AdvancedGeometryImporter:
         Examples:
             >>> from pathlib import Path
             >>> from smrforge.geometry.advanced_import import AdvancedGeometryImporter
-            >>> 
+            >>>
             >>> core = AdvancedGeometryImporter.from_serpent_full(Path("geometry.inp"))
             >>> print(f"Blocks: {len(core.blocks)}")
         """
@@ -390,7 +413,9 @@ class AdvancedGeometryImporter:
 
             # Reconstruct core
             core = PrismaticCore(name="Imported-Serpent-Full")
-            core = AdvancedGeometryImporter._reconstruct_from_serpent(surfaces, cells, lattices, core)
+            core = AdvancedGeometryImporter._reconstruct_from_serpent(
+                surfaces, cells, lattices, core
+            )
 
             return core
 
@@ -447,7 +472,9 @@ class AdvancedGeometryImporter:
             params_str = match.group(3).strip()
 
             # Parse parameters (simplified)
-            params = [float(x) for x in re.findall(r"[-+]?\d*\.?\d+", params_str[:100])]  # Limit length
+            params = [
+                float(x) for x in re.findall(r"[-+]?\d*\.?\d+", params_str[:100])
+            ]  # Limit length
 
             lattices[lat_id] = {"type": lat_type, "params": params}
 
@@ -537,7 +564,9 @@ class AdvancedGeometryImporter:
         return core
 
     @staticmethod
-    def from_cad(filepath: Path, format: Optional[str] = None) -> Optional[PrismaticCore]:
+    def from_cad(
+        filepath: Path, format: Optional[str] = None
+    ) -> Optional[PrismaticCore]:
         """
         Import geometry from CAD formats (STEP, IGES, STL).
 
@@ -556,7 +585,7 @@ class AdvancedGeometryImporter:
         Examples:
             >>> from pathlib import Path
             >>> from smrforge.geometry.advanced_import import AdvancedGeometryImporter
-            >>> 
+            >>>
             >>> # Import from STEP file
             >>> core = AdvancedGeometryImporter.from_cad(Path("geometry.step"))
             >>> print(f"Imported geometry with {len(core.blocks)} blocks")
@@ -569,7 +598,13 @@ class AdvancedGeometryImporter:
         # Auto-detect format from extension
         if format is None:
             ext = filepath.suffix.lower()
-            format_map = {".step": "step", ".stp": "step", ".iges": "iges", ".igs": "iges", ".stl": "stl"}
+            format_map = {
+                ".step": "step",
+                ".stp": "step",
+                ".iges": "iges",
+                ".igs": "iges",
+                ".stl": "stl",
+            }
             format = format_map.get(ext, "stl")
 
         try:
@@ -593,18 +628,18 @@ class AdvancedGeometryImporter:
             # For now, create a single center block
             # Full implementation would parse CAD structure to identify blocks
             if core.core_diameter > 0 and core.core_height > 0:
-                    block = GraphiteBlock(
-                        id=0,
-                        position=Point3D(
-                            (bounds[0][0] + bounds[1][0]) / 2,
-                            (bounds[0][1] + bounds[1][1]) / 2,
-                            (bounds[0][2] + bounds[1][2]) / 2,
-                        ),
-                        flat_to_flat=core.core_diameter / 2,
-                        height=core.core_height,
-                        block_type="fuel",
-                    )
-                    core.blocks.append(block)
+                block = GraphiteBlock(
+                    id=0,
+                    position=Point3D(
+                        (bounds[0][0] + bounds[1][0]) / 2,
+                        (bounds[0][1] + bounds[1][1]) / 2,
+                        (bounds[0][2] + bounds[1][2]) / 2,
+                    ),
+                    flat_to_flat=core.core_diameter / 2,
+                    height=core.core_height,
+                    block_type="fuel",
+                )
+                core.blocks.append(block)
 
             return core
 
@@ -630,7 +665,7 @@ class AdvancedGeometryImporter:
         Examples:
             >>> from pathlib import Path
             >>> from smrforge.geometry.advanced_import import AdvancedGeometryImporter
-            >>> 
+            >>>
             >>> core = AdvancedGeometryImporter.from_mcnp(Path("geometry.i"))
             >>> print(f"Imported geometry: {len(core.blocks)} blocks")
         """
@@ -646,7 +681,9 @@ class AdvancedGeometryImporter:
 
             # Reconstruct geometry
             core = PrismaticCore(name="Imported-MCNP")
-            core = AdvancedGeometryImporter._reconstruct_from_mcnp(surfaces, cells, core)
+            core = AdvancedGeometryImporter._reconstruct_from_mcnp(
+                surfaces, cells, core
+            )
 
             return core
 
@@ -673,14 +710,23 @@ class AdvancedGeometryImporter:
             if len(parts) >= 2:
                 try:
                     # Check if first part is a digit (surface ID)
-                    if parts[0].isdigit() or (parts[0].startswith("-") and parts[0][1:].isdigit()):
+                    if parts[0].isdigit() or (
+                        parts[0].startswith("-") and parts[0][1:].isdigit()
+                    ):
                         surf_id = abs(int(parts[0]))
                         if len(parts) >= 2:
                             surf_type = parts[1].upper()
                             params = [float(x) for x in parts[2:] if _is_numeric(x)]
 
-                            if params or surf_type in ["PX", "PY", "PZ"]:  # Planes can have single param
-                                surfaces[surf_id] = {"type": surf_type, "params": params}
+                            if params or surf_type in [
+                                "PX",
+                                "PY",
+                                "PZ",
+                            ]:  # Planes can have single param
+                                surfaces[surf_id] = {
+                                    "type": surf_type,
+                                    "params": params,
+                                }
 
                 except (ValueError, IndexError):
                     continue
@@ -720,7 +766,9 @@ class AdvancedGeometryImporter:
 
     @staticmethod
     def _reconstruct_from_mcnp(
-        surfaces: Dict[int, Dict[str, Any]], cells: Dict[int, Dict[str, Any]], core: PrismaticCore
+        surfaces: Dict[int, Dict[str, Any]],
+        cells: Dict[int, Dict[str, Any]],
+        core: PrismaticCore,
     ) -> PrismaticCore:
         """Reconstruct PrismaticCore from MCNP parsed data."""
         # Extract dimensions from surfaces
@@ -792,7 +840,7 @@ class GeometryConverter:
         Examples:
             >>> from pathlib import Path
             >>> from smrforge.geometry.advanced_import import GeometryConverter
-            >>> 
+            >>>
             >>> GeometryConverter.convert_format(
             ...     Path("geometry.xml"),
             ...     Path("geometry.json"),
@@ -827,8 +875,8 @@ class GeometryConverter:
         elif output_format == "stl":
             GeometryConverter._export_to_stl(core, output_path)
         elif output_format == "vtk":
-            from smrforge.visualization.mesh_3d import export_mesh_to_vtk
             from smrforge.geometry.mesh_extraction import extract_core_volume_mesh
+            from smrforge.visualization.mesh_3d import export_mesh_to_vtk
 
             mesh = extract_core_volume_mesh(core)
             export_mesh_to_vtk(mesh, str(output_path))
@@ -841,7 +889,9 @@ class GeometryConverter:
     def _export_to_stl(core: PrismaticCore, filepath: Path):
         """Export geometry to STL format."""
         if not _TRIMESH_AVAILABLE:
-            raise ImportError("trimesh is required for STL export. Install with: pip install trimesh")
+            raise ImportError(
+                "trimesh is required for STL export. Install with: pip install trimesh"
+            )
 
         # Create mesh from blocks
         vertices = []
@@ -871,5 +921,3 @@ class GeometryConverter:
         if vertices and faces:
             mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
             mesh.export(str(filepath))
-
-

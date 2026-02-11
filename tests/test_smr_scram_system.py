@@ -4,18 +4,18 @@ Tests for SMR-specific scram system.
 Tests advanced scram features for Small Modular Reactors.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
+    from smrforge.geometry.control_rods import BankPriority, ControlRod, ControlRodBank
+    from smrforge.geometry.core_geometry import Point3D
     from smrforge.geometry.smr_scram_system import (
+        ScramType,
         SMRScramSequence,
         SMRScramSystem,
-        ScramType,
         create_nuscale_scram_system,
     )
-    from smrforge.geometry.control_rods import ControlRod, ControlRodBank, BankPriority
-    from smrforge.geometry.core_geometry import Point3D
 
     _SMR_SCRAM_AVAILABLE = True
 except ImportError:
@@ -202,7 +202,9 @@ class TestSMRScramSystem:
 
         # Add banks with worth
         for i in range(2):
-            rod = ControlRod(id=i, position=Point3D(0, 0, 0), length=365.76, diameter=1.0)
+            rod = ControlRod(
+                id=i, position=Point3D(0, 0, 0), length=365.76, diameter=1.0
+            )
             bank = ControlRodBank(
                 id=i,
                 name=f"Bank{i}",

@@ -104,7 +104,9 @@ class ValidationReport:
         return "\n".join(lines)
 
 
-def validate_geometry_completeness(core: Union["PrismaticCore", "PebbleBedCore"]) -> ValidationReport:
+def validate_geometry_completeness(
+    core: Union["PrismaticCore", "PebbleBedCore"],
+) -> ValidationReport:
     """
     Validate geometry completeness and structure.
 
@@ -116,7 +118,7 @@ def validate_geometry_completeness(core: Union["PrismaticCore", "PebbleBedCore"]
 
     Examples:
         >>> from smrforge.geometry.validation import validate_geometry_completeness
-        >>> 
+        >>>
         >>> report = validate_geometry_completeness(core)
         >>> if not report.valid:
         ...     print("Errors found:")
@@ -189,7 +191,7 @@ def check_gaps_and_boundaries(
 
     Examples:
         >>> from smrforge.geometry.validation import check_gaps_and_boundaries
-        >>> 
+        >>>
         >>> gaps = check_gaps_and_boundaries(core.blocks)
         >>> for gap in gaps:
         ...     if gap.severity == "error":
@@ -255,7 +257,7 @@ def validate_material_connectivity(
 
     Examples:
         >>> from smrforge.geometry.validation import validate_material_connectivity
-        >>> 
+        >>>
         >>> report = validate_material_connectivity(core)
         >>> if report.connectivity_issues:
         ...     for issue in report.connectivity_issues:
@@ -340,7 +342,7 @@ def check_distances_and_clearances(
 
     Examples:
         >>> from smrforge.geometry.validation import check_distances_and_clearances
-        >>> 
+        >>>
         >>> report = check_distances_and_clearances(core)
         >>> if report.clearance_issues:
         ...     for issue in report.clearance_issues:
@@ -420,7 +422,7 @@ def validate_assembly_placement(
 
     Examples:
         >>> from smrforge.geometry.validation import validate_assembly_placement
-        >>> 
+        >>>
         >>> report = validate_assembly_placement(core)
         >>> if report.assembly_issues:
         ...     for issue in report.assembly_issues:
@@ -507,7 +509,7 @@ def validate_control_rod_insertion(
 
     Examples:
         >>> from smrforge.geometry.validation import validate_control_rod_insertion
-        >>> 
+        >>>
         >>> report = validate_control_rod_insertion(core)
         >>> if report.control_rod_issues:
         ...     for issue in report.control_rod_issues:
@@ -554,7 +556,10 @@ def validate_control_rod_insertion(
                             (control_rod.position.x - channel.position.x) ** 2
                             + (control_rod.position.y - channel.position.y) ** 2
                         )
-                        if dist_horizontal < rod_radius + channel.radius + min_clearance:
+                        if (
+                            dist_horizontal
+                            < rod_radius + channel.radius + min_clearance
+                        ):
                             report.add_warning(
                                 f"Control rod {control_rod.id} too close to fuel channel "
                                 f"{channel.id} in block {block.id}: "
@@ -583,7 +588,7 @@ def validate_fuel_loading_pattern(
 
     Examples:
         >>> from smrforge.geometry.validation import validate_fuel_loading_pattern
-        >>> 
+        >>>
         >>> expected = {"Block_1": "fuel", "Block_2": "reflector"}
         >>> report = validate_fuel_loading_pattern(core, expected_pattern=expected)
         >>> if not report.valid:
@@ -600,9 +605,7 @@ def validate_fuel_loading_pattern(
             block_type = getattr(block, "block_type", "unknown")
             if block_type == "fuel":
                 if not hasattr(block, "fuel_channels") or not block.fuel_channels:
-                    report.add_warning(
-                        f"Fuel block {block.id} has no fuel channels"
-                    )
+                    report.add_warning(f"Fuel block {block.id} has no fuel channels")
                     report.assembly_issues.append(
                         f"Fuel block {block.id} missing fuel channels"
                     )
@@ -620,9 +623,7 @@ def validate_fuel_loading_pattern(
                     f"Block {block_id} type mismatch: expected {expected_type}, "
                     f"found {block_type}"
                 )
-                report.assembly_issues.append(
-                    f"Type mismatch: block {block_id}"
-                )
+                report.assembly_issues.append(f"Type mismatch: block {block_id}")
 
     return report
 
@@ -653,7 +654,7 @@ def comprehensive_validation(
 
     Examples:
         >>> from smrforge.geometry.validation import comprehensive_validation
-        >>> 
+        >>>
         >>> report = comprehensive_validation(core)
         >>> print(report.summary())
         >>> if not report.valid:
@@ -716,4 +717,3 @@ def comprehensive_validation(
             report.assembly_issues.extend(fuel_report.assembly_issues)
 
     return report
-

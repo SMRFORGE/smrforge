@@ -4,8 +4,8 @@ Tests for advanced control rod worth calculations.
 Tests worth profiles, flux-weighted worth, and worth interpolation.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
     from smrforge.core.control_rod_worth import (
@@ -79,14 +79,18 @@ class TestWorthProfile:
 
     def test_get_worth_fraction_position_gt_one_normalized(self):
         """Test get_worth_fraction with position > 1 normalizes by max(positions)."""
-        profile = WorthProfile(positions=np.array([0.0, 1.0]), worth_fractions=np.array([0.0, 1.0]))
+        profile = WorthProfile(
+            positions=np.array([0.0, 1.0]), worth_fractions=np.array([0.0, 1.0])
+        )
         # position 2.0 > 1.0 -> normalize 2/1 = 2, interp clips to 1.0
         w = profile.get_worth_fraction(2.0)
         assert w == pytest.approx(1.0)
 
     def test_get_worth_fraction_position_gt_one_max_zero(self):
         """Test get_worth_fraction when position > 1 and max(positions) is 0."""
-        profile = WorthProfile(positions=np.array([0.0, 0.0]), worth_fractions=np.array([0.5, 0.5]))
+        profile = WorthProfile(
+            positions=np.array([0.0, 0.0]), worth_fractions=np.array([0.5, 0.5])
+        )
         w = profile.get_worth_fraction(2.0)
         assert w == pytest.approx(0.5)
 
@@ -182,7 +186,9 @@ class TestControlRodWorthCalculator:
         calculator = ControlRodWorthCalculator(max_worth=1000.0)
         axial_positions = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
         flux = np.ones(5)
-        worth = calculator.calculate_worth(insertion=0.5, flux=flux, axial_positions=axial_positions)
+        worth = calculator.calculate_worth(
+            insertion=0.5, flux=flux, axial_positions=axial_positions
+        )
         assert worth >= 0.0
 
     def test_calculate_worth_no_inserted_region(self):
@@ -191,15 +197,21 @@ class TestControlRodWorthCalculator:
         # All positions > 0.5 (e.g. 0.6, 0.7, 0.8, 0.9, 1.0)
         axial_positions = np.array([0.6, 0.7, 0.8, 0.9, 1.0])
         flux = np.ones(5)
-        worth = calculator.calculate_worth(insertion=0.5, flux=flux, axial_positions=axial_positions)
+        worth = calculator.calculate_worth(
+            insertion=0.5, flux=flux, axial_positions=axial_positions
+        )
         assert worth == pytest.approx(0.0)
 
     def test_calculate_worth_zero_flux_sum(self):
         """Test flux-weighted worth when inserted region has zero total flux."""
         calculator = ControlRodWorthCalculator(max_worth=1000.0)
         axial_positions = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
-        flux = np.array([0.0, 0.0, 0.0, 0.0, 1.0])  # only last point has flux; insertion 0.3 -> first 2 points
-        worth = calculator.calculate_worth(insertion=0.3, flux=flux, axial_positions=axial_positions)
+        flux = np.array(
+            [0.0, 0.0, 0.0, 0.0, 1.0]
+        )  # only last point has flux; insertion 0.3 -> first 2 points
+        worth = calculator.calculate_worth(
+            insertion=0.3, flux=flux, axial_positions=axial_positions
+        )
         # inserted_mask for 0.3: positions 0, 0.25. Flux at those = 0. So sum(inserted_flux)==0 -> np.mean(worth_fractions)
         assert worth >= 0.0
 

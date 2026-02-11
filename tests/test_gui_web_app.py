@@ -9,7 +9,13 @@ def _import_web_app_without_dash():
 
     def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
         # Force the top-level Dash/Plotly stack to be unavailable.
-        if name in {"dash", "dash_bootstrap_components", "plotly", "plotly.graph_objects", "plotly.express"}:
+        if name in {
+            "dash",
+            "dash_bootstrap_components",
+            "plotly",
+            "plotly.graph_objects",
+            "plotly.express",
+        }:
             raise ImportError("forced for coverage")
         return orig_import(name, globals, locals, fromlist, level)
 
@@ -68,9 +74,7 @@ def test_web_app_create_app_and_register_callbacks_and_run_server_branches():
     fl = Mock()
     theme = Mock()
 
-    with (
-        pytest.MonkeyPatch.context() as mp,
-    ):
+    with (pytest.MonkeyPatch.context() as mp,):
         import smrforge.gui.callbacks as cb
         import smrforge.gui.callbacks.theme as cb_theme
 
@@ -131,4 +135,3 @@ def test_web_app_create_app_and_register_callbacks_and_run_server_branches():
         mp.setattr(web_app, "create_app", lambda: dummy_old)
         web_app.run_server(host="127.0.0.1", port=8051, debug=False)
         assert dummy_old.called is True
-

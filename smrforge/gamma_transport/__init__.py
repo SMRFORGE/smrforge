@@ -8,7 +8,6 @@ This module provides:
 - Shielding calculations
 """
 
-from .solver import GammaTransportSolver, GammaTransportOptions
+from .solver import GammaTransportOptions, GammaTransportSolver
 
 __all__ = ["GammaTransportSolver", "GammaTransportOptions"]
-

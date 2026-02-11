@@ -89,4 +89,3 @@ def test_delete_global_covers_success_and_exception():
     g2 = BadDict({"y": 2})
     delete_global(g2, "y")  # should swallow exception
     assert "y" in g2
-

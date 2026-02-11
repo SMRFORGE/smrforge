@@ -235,17 +235,17 @@ def _compute_subgroup_flux(
     Ultra-fast with Numba.
 
     phi_sg = w_sg * S / (sigma_t_bg + sigma_sg)
-    
+
     Note: This function is excluded from coverage reporting because Numba JIT
     compilation makes line-by-line coverage tracking unreliable. This function
     is tested in tests/test_resonance_selfshield_critical.py.
-    
+
     Args:
         sigma_sg: Subgroup cross-sections [barns]
         w_sg: Subgroup weights (sum to 1.0)
         sigma_t_background: Background total cross-section [barns]
         source: Source strength [normalized]
-    
+
     Returns:
         Subgroup fluxes [normalized]
     """
@@ -382,20 +382,22 @@ class EquivalenceTheory:
 
     @staticmethod
     @njit(cache=True)
-    def escape_probability_sphere(sigma_t: float, radius: float) -> float:  # pragma: no cover
+    def escape_probability_sphere(
+        sigma_t: float, radius: float
+    ) -> float:  # pragma: no cover
         """
         Escape probability from sphere (Wigner rational approximation).
 
         P_esc = 1 / (1 + sigma_t * radius)
-        
+
         Note: This function is excluded from coverage reporting because Numba JIT
         compilation makes line-by-line coverage tracking unreliable. This function
         is tested in tests/test_resonance_selfshield_comprehensive.py.
-        
+
         Args:
             sigma_t: Total cross-section [1/cm]
             radius: Sphere radius [cm]
-        
+
         Returns:
             Escape probability (0-1)
         """

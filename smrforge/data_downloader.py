@@ -6,13 +6,13 @@ with support for selective downloads, progress indicators, and resume capability
 
 Example:
     >>> from smrforge.data_downloader import download_endf_data
-    >>> 
+    >>>
     >>> # Download full library
     >>> download_endf_data(
     ...     library="ENDF/B-VIII.1",
     ...     output_dir="~/ENDF-Data"
     ... )
-    >>> 
+    >>>
     >>> # Download specific elements
     >>> download_endf_data(
     ...     library="ENDF/B-VIII.1",
@@ -21,35 +21,37 @@ Example:
     ... )
 """
 
-from pathlib import Path
-from typing import Dict, List, Optional, Set, Union, Tuple
-import os
 import hashlib
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 try:
     import requests
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
+
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
 
 try:
     from tqdm import tqdm
+
     TQDM_AVAILABLE = True
 except ImportError:
     TQDM_AVAILABLE = False
 
+from .core.constants import ELEMENT_SYMBOLS, SYMBOL_TO_Z
 from .core.reactor_core import (
     Library,
-    Nuclide,
     NuclearDataCache,
+    Nuclide,
     get_standard_endf_directory,
     organize_bulk_endf_downloads,
 )
-from .core.constants import ELEMENT_SYMBOLS, SYMBOL_TO_Z
 from .utils.logging import get_logger
 
 logger = get_logger("smrforge.data_downloader")
@@ -61,27 +63,56 @@ _source_cache: Dict[str, str] = {}  # library.value -> "iaea" or "nndc"
 
 # Common SMR nuclides for pre-selected sets
 COMMON_SMR_NUCLIDES = [
-    "H1", "H2", "O16", "O17", "O18",  # Water/moderator
-    "C12", "C13",  # Graphite
-    "U235", "U238", "U236", "U237",  # Uranium
-    "Pu239", "Pu240", "Pu241", "Pu242", "Pu238",  # Plutonium
-    "Th232", "Th233",  # Thorium
-    "Np237", "Am241", "Am243",  # Minor actinides
-    "Zr90", "Zr91", "Zr92", "Zr94", "Zr96",  # Zirconium
-    "Fe54", "Fe56", "Fe57", "Fe58",  # Iron
-    "Cr50", "Cr52", "Cr53", "Cr54",  # Chromium
-    "Ni58", "Ni60", "Ni61", "Ni62", "Ni64",  # Nickel
+    "H1",
+    "H2",
+    "O16",
+    "O17",
+    "O18",  # Water/moderator
+    "C12",
+    "C13",  # Graphite
+    "U235",
+    "U238",
+    "U236",
+    "U237",  # Uranium
+    "Pu239",
+    "Pu240",
+    "Pu241",
+    "Pu242",
+    "Pu238",  # Plutonium
+    "Th232",
+    "Th233",  # Thorium
+    "Np237",
+    "Am241",
+    "Am243",  # Minor actinides
+    "Zr90",
+    "Zr91",
+    "Zr92",
+    "Zr94",
+    "Zr96",  # Zirconium
+    "Fe54",
+    "Fe56",
+    "Fe57",
+    "Fe58",  # Iron
+    "Cr50",
+    "Cr52",
+    "Cr53",
+    "Cr54",  # Chromium
+    "Ni58",
+    "Ni60",
+    "Ni61",
+    "Ni62",
+    "Ni64",  # Nickel
 ]
 
 
 def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
     """
     Generate download URL for ENDF file from IAEA Nuclear Data Services.
-    
+
     Args:
         nuclide: Nuclide instance.
         library: Nuclear data library enum.
-    
+
     Returns:
         URL string for downloading the ENDF file.
     """
@@ -92,16 +123,16 @@ def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
         Library.JEFF_33: "https://www-nds.iaea.org/exfor/endf/jeff3.3",
         Library.JENDL_5: "https://www-nds.iaea.org/exfor/endf/jendl5.0",
     }
-    
+
     base_url = base_urls.get(library, base_urls[Library.ENDF_B_VIII_1])
-    
+
     # Generate filename in standard format: n-ZZZ_Element_AAA.endf
     z_str = f"{nuclide.Z:03d}"
     symbol = ELEMENT_SYMBOLS[nuclide.Z]
     a_str = f"{nuclide.A:03d}"
     meta_suffix = f"m{nuclide.m}" if nuclide.m > 0 else ""
     filename = f"n-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
-    
+
     # Include `nuclide.name` in the URL for readability/testing while keeping the
     # canonical ENDF filename at the end.
     return f"{base_url}/{nuclide.name}/{filename}"
@@ -110,15 +141,15 @@ def _get_endf_url(nuclide: Nuclide, library: Library) -> str:
 def _get_nndc_url(nuclide: Nuclide, library: Library) -> str:
     """
     Generate download URL for ENDF file from NNDC (alternative source).
-    
+
     Args:
         nuclide: Nuclide instance.
         library: Nuclear data library enum.
-    
+
     Returns:
         URL string for downloading the ENDF file.
         Falls back to IAEA URL if library is not supported by NNDC.
-    
+
     Note:
         This is a helper function used internally by the downloader.
         NNDC URLs use simpler naming: `{base_url}/{nuclide.name}.endf`
@@ -128,41 +159,41 @@ def _get_nndc_url(nuclide: Nuclide, library: Library) -> str:
         Library.ENDF_B_VIII: "https://www.nndc.bnl.gov/endf/b8.0/endf",
         Library.ENDF_B_VIII_1: "https://www.nndc.bnl.gov/endf/b8.1/endf",
     }
-    
+
     base_url = base_urls.get(library)
     if not base_url:
         # Fallback to IAEA for non-ENDF libraries
         return _get_endf_url(nuclide, library)
-    
+
     # NNDC uses simpler naming: U235.endf
     filename = f"{nuclide.name}.endf"
-    
+
     return f"{base_url}/{filename}"
 
 
 def _get_download_urls(nuclide: Nuclide, library: Library) -> List[str]:
     """
     Get download URLs with source caching (preferred source first).
-    
+
     Args:
         nuclide: Nuclide instance.
         library: Nuclear data library enum.
-    
+
     Returns:
         List of URLs, with preferred source first based on cache.
         Returns [IAEA_URL, NNDC_URL] or [NNDC_URL, IAEA_URL] depending on
         which source was successful in previous downloads.
-    
+
     Note:
         This is a helper function used internally by the downloader.
         Uses `_source_cache` to remember which source works best for each library.
     """
     iaea_url = _get_endf_url(nuclide, library)
     nndc_url = _get_nndc_url(nuclide, library)
-    
+
     # Check cache for preferred source
     preferred_source = _source_cache.get(library.value)
-    
+
     if preferred_source == "nndc":
         return [nndc_url, iaea_url]
     else:
@@ -173,11 +204,11 @@ def _get_download_urls(nuclide: Nuclide, library: Library) -> List[str]:
 def _cache_successful_source(url: str, library: Library) -> None:
     """
     Cache which source was successful for future downloads.
-    
+
     Args:
         url: URL that succeeded (must contain "iaea.org" or "nndc.bnl.gov").
         library: Library enum to cache the preference for.
-    
+
     Note:
         This is a helper function used internally by the downloader.
         Updates the module-level `_source_cache` dictionary to remember
@@ -192,70 +223,73 @@ def _cache_successful_source(url: str, library: Library) -> None:
 def _parse_isotope_string(iso_str: str) -> Optional[Nuclide]:
     """
     Parse isotope string (e.g., "U235", "Pu239m1") to Nuclide.
-    
+
     Args:
         iso_str: Isotope string in format "ElementSymbolMassNumber" or
             "ElementSymbolMassNumbermMetastableState" (e.g., "U235", "Pu239m1").
-    
+
     Returns:
         Nuclide instance if parsing succeeds, None otherwise.
-    
+
     Note:
         This is a helper function used internally by the downloader.
         Handles both ground state and metastable isotopes.
     """
     iso_str = iso_str.strip()
-    
+
     # Handle metastable states (e.g., "U239m1", "Am242m")
-    if 'm' in iso_str.lower():
-        parts = iso_str.lower().split('m')
+    if "m" in iso_str.lower():
+        parts = iso_str.lower().split("m")
         base = parts[0]
         m_str = parts[1] if len(parts) > 1 else "1"
         m = int(m_str) if m_str.isdigit() else 1
     else:
         base = iso_str
         m = 0
-    
+
     # Extract element symbol and mass number
     # Pattern: ElementSymbol + MassNumber (e.g., "U235", "Pu239")
     import re
+
     match = re.match(r"^([A-Z][a-z]?)(\d+)$", base)
     if not match:
         return None
-    
+
     symbol, a_str = match.groups()
     if symbol not in SYMBOL_TO_Z:
         return None
-    
+
     Z = SYMBOL_TO_Z[symbol]
     A = int(a_str)
-    
+
     return Nuclide(Z=Z, A=A, m=m)
 
 
-def _expand_elements_to_nuclides(elements: List[str], library: Library) -> List[Nuclide]:
+def _expand_elements_to_nuclides(
+    elements: List[str], library: Library
+) -> List[Nuclide]:
     """
     Expand element symbols to all available nuclides for that element.
-    
+
     Note: This is a simplified version that uses a predefined list of common
     isotopes. In practice, you'd need to query the data source for available
     nuclides, or use a more comprehensive list.
-    
+
     Args:
         elements: List of element symbols (e.g., ["U", "Pu"]).
         library: Nuclear data library (currently not used, kept for API compatibility).
-    
+
     Returns:
         List of Nuclide instances for common isotopes of those elements.
         Returns empty list if no valid elements are provided.
-    
+
     Note:
         This is a helper function used internally by the downloader.
         Only includes common isotopes for each element. For a complete list,
         consider using a nuclide database or querying the data source.
     """
     nuclides = []
-    
+
     # Common isotopes for each element (simplified - would need full list)
     common_isotopes = {
         "U": [235, 238, 236, 237, 234, 233],
@@ -269,18 +303,18 @@ def _expand_elements_to_nuclides(elements: List[str], library: Library) -> List[
         "Cr": [50, 52, 53, 54],
         "Ni": [58, 60, 61, 62, 64],
     }
-    
+
     for element in elements:
         if element not in SYMBOL_TO_Z:
             logger.warning(f"Unknown element symbol: {element}")
             continue
-        
+
         Z = SYMBOL_TO_Z[element]
         isotopes = common_isotopes.get(element, [])
-        
+
         for A in isotopes:
             nuclides.append(Nuclide(Z=Z, A=A, m=0))
-    
+
     return nuclides
 
 
@@ -295,7 +329,7 @@ def download_file(
 ) -> bool:
     """
     Download a file from URL with resume capability and progress indicator.
-    
+
     Args:
         url: URL to download from.
         output_path: Path to save the file.
@@ -305,17 +339,17 @@ def download_file(
         timeout: Request timeout in seconds.
         session: Optional requests.Session to use for connection pooling.
             If None, creates a new session.
-    
+
     Returns:
         True if download succeeded, False otherwise.
-    
+
     Raises:
         ImportError: If requests library is not available.
-    
+
     Example:
         >>> from pathlib import Path
         >>> from smrforge.data_downloader import download_file
-        >>> 
+        >>>
         >>> success = download_file(
         ...     url="https://example.com/file.endf",
         ...     output_path=Path("file.endf"),
@@ -328,7 +362,7 @@ def download_file(
             "requests library is required for downloads. "
             "Install with: pip install requests"
         )
-    
+
     # Use provided session or create new one
     if session is None:
         session = requests.Session()
@@ -340,24 +374,24 @@ def download_file(
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
-    
+
     # Check if file exists and resume
     headers = {}
     if resume and output_path.exists():
         headers["Range"] = f"bytes={output_path.stat().st_size}-"
-    
+
     try:
         response = session.get(url, headers=headers, stream=True, timeout=timeout)
         response.raise_for_status()
-        
+
         # Handle partial content (resume)
         mode = "ab" if resume and output_path.exists() else "wb"
-        
+
         total_size = int(response.headers.get("content-length", 0))
         if resume and output_path.exists():
             existing_size = output_path.stat().st_size
             total_size += existing_size
-        
+
         with open(output_path, mode) as f:
             if show_progress and TQDM_AVAILABLE:
                 with tqdm(
@@ -366,7 +400,11 @@ def download_file(
                     unit_scale=True,
                     unit_divisor=1024,
                     desc=output_path.name,
-                    initial=output_path.stat().st_size if resume and output_path.exists() else 0,
+                    initial=(
+                        output_path.stat().st_size
+                        if resume and output_path.exists()
+                        else 0
+                    ),
                 ) as pbar:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
@@ -376,9 +414,9 @@ def download_file(
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
-        
+
         return True
-    
+
     except Exception as e:
         logger.error(f"Failed to download {url}: {e}")
         return False
@@ -399,7 +437,7 @@ def download_endf_data(
 ) -> Dict[str, any]:
     """
     Download ENDF nuclear data files from NNDC/IAEA.
-    
+
     Args:
         library: Library version (e.g., "ENDF/B-VIII.1") or Library enum.
         output_dir: Output directory. Defaults to standard ENDF directory.
@@ -412,7 +450,7 @@ def download_endf_data(
         validate: If True, validate downloaded files.
         organize: If True, organize files into standard structure.
         max_workers: Maximum concurrent downloads (default: 5). Uses parallel downloads when > 1.
-    
+
     Returns:
         Dictionary with download statistics:
         - "downloaded": Number of files downloaded
@@ -421,28 +459,28 @@ def download_endf_data(
         - "total": Total number of files attempted
         - "output_dir": Path to output directory
         - "organized": Number of files organized (if organize=True)
-    
+
     Raises:
         ImportError: If requests library is not available.
         ValueError: If no nuclides are specified for download or invalid library version.
         IOError: If output directory cannot be created or accessed.
-    
+
     Example:
         >>> from smrforge.data_downloader import download_endf_data
-        >>> 
+        >>>
         >>> # Download full library
         >>> stats = download_endf_data(
         ...     library="ENDF/B-VIII.1",
         ...     output_dir="~/ENDF-Data"
         ... )
-        >>> 
+        >>>
         >>> # Download specific elements
         >>> stats = download_endf_data(
         ...     library="ENDF/B-VIII.1",
         ...     elements=["U", "Pu", "Th"],
         ...     output_dir="~/ENDF-Data"
         ... )
-        >>> 
+        >>>
         >>> # Download common SMR nuclides
         >>> stats = download_endf_data(
         ...     library="ENDF/B-VIII.1",
@@ -455,7 +493,7 @@ def download_endf_data(
             "requests library is required for downloads. "
             "Install with: pip install requests"
         )
-    
+
     # Convert library string to enum
     if isinstance(library, str):
         library_map = {
@@ -465,22 +503,22 @@ def download_endf_data(
             "JENDL-5.0": Library.JENDL_5,
         }
         library = library_map.get(library, Library.ENDF_B_VIII_1)
-    
+
     # Determine output directory
     if output_dir is None:
         output_dir = get_standard_endf_directory()
     else:
         output_dir = Path(output_dir).expanduser().resolve()
-    
+
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Create temporary download directory
     download_dir = output_dir / "downloads" / library.value
     download_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Determine nuclides to download
     nuclide_list: List[Nuclide] = []
-    
+
     if nuclide_set == "common_smr":
         nuclide_list = [_parse_isotope_string(iso) for iso in COMMON_SMR_NUCLIDES]
         nuclide_list = [n for n in nuclide_list if n is not None]
@@ -501,12 +539,12 @@ def download_endf_data(
         )
         nuclide_list = [_parse_isotope_string(iso) for iso in COMMON_SMR_NUCLIDES]
         nuclide_list = [n for n in nuclide_list if n is not None]
-    
+
     if not nuclide_list:
         raise ValueError("No nuclides specified for download")
-    
+
     logger.info(f"Downloading {len(nuclide_list)} nuclides from {library.value}")
-    
+
     # Download files
     stats = {
         "downloaded": 0,
@@ -515,9 +553,9 @@ def download_endf_data(
         "total": len(nuclide_list),
         "output_dir": str(output_dir),
     }
-    
+
     download_tasks: List[Tuple[Nuclide, Path, List[str]]] = []
-    
+
     for nuclide in nuclide_list:
         # Generate filename using the same method as NuclearDataCache
         z_str = f"{nuclide.Z:03d}"
@@ -526,7 +564,7 @@ def download_endf_data(
         meta_suffix = f"m{nuclide.m}" if nuclide.m > 0 else ""
         filename = f"n-{z_str}_{symbol}_{a_str}{meta_suffix}.endf"
         filepath = download_dir / filename
-        
+
         # Skip if already exists and resume is enabled
         if resume and filepath.exists():
             if validate:
@@ -538,14 +576,14 @@ def download_endf_data(
                     filepath.unlink()
             else:
                 continue  # Skip, will count later
-        
+
         # Get URLs with caching (preferred source first)
         urls = _get_download_urls(nuclide, library)
         download_tasks.append((nuclide, filepath, urls))
-    
+
     # Count skipped files
     skipped_count = len(nuclide_list) - len(download_tasks)
-    
+
     # Initialize stats
     stats = {
         "downloaded": 0,
@@ -554,7 +592,7 @@ def download_endf_data(
         "total": len(nuclide_list),
         "output_dir": str(output_dir),
     }
-    
+
     # Create shared session with connection pooling for parallel downloads
     if download_tasks and max_workers > 1:
         session = requests.Session()
@@ -572,7 +610,7 @@ def download_endf_data(
         session.mount("https://", adapter)
     else:
         session = None
-    
+
     # Download files in parallel or sequentially
     if max_workers > 1 and len(download_tasks) > 1:
         # Parallel download
@@ -592,7 +630,11 @@ def download_endf_data(
             success = False
             for url in urls:
                 if download_file(
-                    url, filepath, resume=resume, show_progress=show_progress, session=session
+                    url,
+                    filepath,
+                    resume=resume,
+                    show_progress=show_progress,
+                    session=session,
                 ):
                     # Validate if requested
                     if validate:
@@ -609,13 +651,13 @@ def download_endf_data(
                         success = True
                         _cache_successful_source(url, library)
                         break
-            
+
             if success:
                 stats["downloaded"] += 1
             else:
                 stats["failed"] += 1
                 logger.warning(f"Failed to download {nuclide.name}")
-    
+
     # Organize files if requested
     if organize and stats["downloaded"] > 0:
         logger.info("Organizing downloaded files...")
@@ -627,12 +669,12 @@ def download_endf_data(
             create_structure=True,
         )
         stats["organized"] = organize_stats.get("files_organized", 0)
-    
+
     logger.info(
         f"Download complete: {stats['downloaded']} downloaded, "
         f"{stats['skipped']} skipped, {stats['failed']} failed"
     )
-    
+
     return stats
 
 
@@ -648,7 +690,7 @@ def _download_parallel(
 ):
     """
     Download files in parallel using ThreadPoolExecutor.
-    
+
     Args:
         download_tasks: List of (nuclide, filepath, urls) tuples.
         stats: Statistics dictionary to update.
@@ -659,7 +701,10 @@ def _download_parallel(
         library: Library enum.
         max_workers: Maximum number of parallel workers.
     """
-    def download_single_file(task: Tuple[Nuclide, Path, List[str]]) -> Tuple[Nuclide, bool, Optional[str]]:
+
+    def download_single_file(
+        task: Tuple[Nuclide, Path, List[str]],
+    ) -> Tuple[Nuclide, bool, Optional[str]]:
         """Download a single file and return (nuclide, success, successful_url)."""
         nuclide, filepath, urls = task
         for url in urls:
@@ -677,42 +722,44 @@ def _download_parallel(
                 else:
                     return (nuclide, True, url)
         return (nuclide, False, None)
-    
+
     # Create progress bar if requested
     if show_progress and TQDM_AVAILABLE:
-        pbar = tqdm(total=len(download_tasks), desc="Downloading ENDF files", unit="file")
+        pbar = tqdm(
+            total=len(download_tasks), desc="Downloading ENDF files", unit="file"
+        )
     else:
         pbar = None
-    
+
     # Download in parallel
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(download_single_file, task): task for task in download_tasks}
-        
+        futures = {
+            executor.submit(download_single_file, task): task for task in download_tasks
+        }
+
         for future in as_completed(futures):
             nuclide, success, successful_url = future.result()
-            
+
             if pbar:
                 pbar.set_description(f"Downloading {nuclide.name}")
                 pbar.update(1)
-            
+
             if success:
                 stats["downloaded"] += 1
                 if successful_url:
                     _cache_successful_source(successful_url, library)
                 if pbar:
-                    pbar.set_postfix({
-                        "Downloaded": stats["downloaded"],
-                        "Failed": stats["failed"]
-                    })
+                    pbar.set_postfix(
+                        {"Downloaded": stats["downloaded"], "Failed": stats["failed"]}
+                    )
             else:
                 stats["failed"] += 1
                 logger.warning(f"Failed to download {nuclide.name}")
                 if pbar:
-                    pbar.set_postfix({
-                        "Downloaded": stats["downloaded"],
-                        "Failed": stats["failed"]
-                    })
-    
+                    pbar.set_postfix(
+                        {"Downloaded": stats["downloaded"], "Failed": stats["failed"]}
+                    )
+
     if pbar:
         pbar.close()
 
@@ -725,33 +772,33 @@ def download_preprocessed_library(
 ) -> Dict[str, any]:
     """
     Download pre-processed Zarr library (placeholder for Phase 2).
-    
+
     This function will be implemented in Phase 2 to download pre-processed
     libraries from GitHub Releases or Zenodo. Currently falls back to
     downloading raw ENDF files.
-    
+
     Args:
         library: Library version (e.g., "ENDF/B-VIII.1") or Library enum.
         nuclides: Nuclide set name (e.g., "common_smr") or list of Nuclide instances.
         output_dir: Output directory. Defaults to standard ENDF directory.
         show_progress: If True, show progress indicators.
-    
+
     Returns:
         Dictionary with download statistics (same format as `download_endf_data`).
-    
+
     Raises:
         ImportError: If requests library is not available.
         ValueError: If no nuclides are specified or invalid library version.
         IOError: If output directory cannot be created or accessed.
-    
+
     Note:
         This is a placeholder function. It currently calls `download_endf_data()`
         to download raw ENDF files. Pre-processed library support will be added
         in Phase 2 of the data import improvements.
-    
+
     Example:
         >>> from smrforge.data_downloader import download_preprocessed_library
-        >>> 
+        >>>
         >>> # Download common SMR nuclides (currently downloads raw ENDF)
         >>> stats = download_preprocessed_library(
         ...     library="ENDF/B-VIII.1",
@@ -764,7 +811,7 @@ def download_preprocessed_library(
         "This feature will be available in Phase 2. "
         "Use download_endf_data() to download raw ENDF files instead."
     )
-    
+
     # For now, fall back to raw ENDF download
     if isinstance(nuclides, str):
         return download_endf_data(

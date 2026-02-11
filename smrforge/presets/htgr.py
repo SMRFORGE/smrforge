@@ -475,9 +475,9 @@ class DesignLibrary:
             try:
                 # Re-validate (Pydantic validates on construction, but good to check)
                 ReactorSpecification.model_validate(spec.model_dump())
-                console.print(f"✓ {name}: Valid")
+                console.print(f"[green][OK][/green] {name}: Valid")
             except Exception as e:
-                console.print(f"✗ {name}: {e}")
+                console.print(f"[red][FAIL][/red] {name}: {e}")
                 all_valid = False
 
         return all_valid

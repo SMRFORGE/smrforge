@@ -3,7 +3,8 @@ Tests for uncertainty visualization tools.
 """
 
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend for tests
+
+matplotlib.use("Agg")  # Use non-interactive backend for tests
 
 import numpy as np
 import pytest
@@ -54,6 +55,7 @@ class TestVisualizationTools:
         assert fig is not None
         # Clean up
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_plot_distributions_invalid_results(self):
@@ -104,6 +106,7 @@ class TestVisualizationTools:
         fig = VisualizationTools.plot_scatter_matrix(sample_uq_results, max_params=2)
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig.fig)
 
     def test_plot_scatter_matrix_invalid_results(self):
@@ -140,6 +143,7 @@ class TestVisualizationTools:
         assert fig is not None
         # Clean up
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_plot_sobol_indices_invalid_results(self):
@@ -149,9 +153,7 @@ class TestVisualizationTools:
 
     def test_plot_sobol_indices_missing_output(self):
         """Test that missing output_name raises ValueError."""
-        sobol_results = {
-            "output1": {"S1": np.array([0.3]), "ST": np.array([0.4])}
-        }
+        sobol_results = {"output1": {"S1": np.array([0.3]), "ST": np.array([0.4])}}
 
         with pytest.raises(ValueError, match="output_name.*not in sobol_results"):
             VisualizationTools.plot_sobol_indices(
@@ -160,9 +162,7 @@ class TestVisualizationTools:
 
     def test_plot_sobol_indices_invalid_parameter_names(self):
         """Test that invalid parameter_names raises ValueError."""
-        sobol_results = {
-            "output1": {"S1": np.array([0.3]), "ST": np.array([0.4])}
-        }
+        sobol_results = {"output1": {"S1": np.array([0.3]), "ST": np.array([0.4])}}
 
         with pytest.raises(ValueError, match="parameter_names must be non-empty list"):
             VisualizationTools.plot_sobol_indices(sobol_results, "output1", [])
@@ -172,9 +172,7 @@ class TestVisualizationTools:
         sobol_results = {"output1": {}}  # Missing S1 and ST
 
         with pytest.raises(ValueError, match="must contain 'S1' and 'ST' keys"):
-            VisualizationTools.plot_sobol_indices(
-                sobol_results, "output1", ["param1"]
-            )
+            VisualizationTools.plot_sobol_indices(sobol_results, "output1", ["param1"])
 
     def test_plot_sobol_indices_length_mismatch(self):
         """Test that length mismatch raises ValueError."""
@@ -191,4 +189,3 @@ class TestVisualizationTools:
             VisualizationTools.plot_sobol_indices(
                 sobol_results, "output1", parameter_names
             )
-

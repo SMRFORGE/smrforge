@@ -15,6 +15,7 @@ def reaction_data_class():
     """Get the ReactionData class."""
     try:
         from smrforge.core.endf_parser import ReactionData
+
         return ReactionData
     except ImportError:
         pytest.skip("ENDF parser not available")
@@ -26,10 +27,7 @@ def simple_reaction_data(reaction_data_class):
     energy = np.array([1.0e5, 1.0e6, 1.0e7])
     cross_section = np.array([10.0, 20.0, 30.0])
     return reaction_data_class(
-        energy=energy,
-        cross_section=cross_section,
-        mt_number=1,
-        reaction_name="total"
+        energy=energy, cross_section=cross_section, mt_number=1, reaction_name="total"
     )
 
 
@@ -39,10 +37,7 @@ def non_monotonic_reaction_data(reaction_data_class):
     energy = np.array([1.0e5, 5.0e5, 1.0e6, 2.0e6, 1.0e7])
     cross_section = np.array([10.0, 15.0, 20.0, 25.0, 30.0])
     return reaction_data_class(
-        energy=energy,
-        cross_section=cross_section,
-        mt_number=2,
-        reaction_name="elastic"
+        energy=energy, cross_section=cross_section, mt_number=2, reaction_name="elastic"
     )
 
 
@@ -55,7 +50,7 @@ def constant_cross_section(reaction_data_class):
         energy=energy,
         cross_section=cross_section,
         mt_number=102,
-        reaction_name="capture"
+        reaction_name="capture",
     )
 
 
@@ -102,7 +97,7 @@ class TestReactionDataInterpolate:
         # Energy at midpoint between 1e5 and 1e6
         energy_interp = 5.5e5  # Midpoint
         result = simple_reaction_data.interpolate(energy_interp)
-        
+
         # Should be midpoint between cross sections: (10.0 + 20.0) / 2 = 15.0
         expected = 15.0
         assert np.isclose(result, expected, rtol=1e-10)
@@ -113,7 +108,7 @@ class TestReactionDataInterpolate:
         # Energy at 25% from first to second point
         energy_interp = 3.25e5  # 25% of way from 1e5 to 1e6
         result = simple_reaction_data.interpolate(energy_interp)
-        
+
         # Linear interpolation: xs1 + f * (xs2 - xs1)
         # f = (3.25e5 - 1e5) / (1e6 - 1e5) = 0.25
         # result = 10.0 + 0.25 * (20.0 - 10.0) = 12.5
@@ -125,7 +120,7 @@ class TestReactionDataInterpolate:
         # Energy between 1e6 and 1e7
         energy_interp = 5.5e6  # Midpoint
         result = simple_reaction_data.interpolate(energy_interp)
-        
+
         # Should be midpoint: (20.0 + 30.0) / 2 = 25.0
         expected = 25.0
         assert np.isclose(result, expected, rtol=1e-10)
@@ -146,7 +141,7 @@ class TestReactionDataInterpolate:
         result1 = constant_cross_section.interpolate(5.0e5)
         result2 = constant_cross_section.interpolate(5.0e6)
         result3 = constant_cross_section.interpolate(5.0e7)
-        
+
         assert result1 == 15.0
         assert result2 == 15.0
         assert result3 == 15.0
@@ -165,9 +160,9 @@ class TestReactionDataInterpolate:
             energy=energy,
             cross_section=cross_section,
             mt_number=18,
-            reaction_name="fission"
+            reaction_name="fission",
         )
-        
+
         # Should return the single value for any energy
         assert rxn_data.interpolate(1.0e5) == 25.0
         assert rxn_data.interpolate(1.0e6) == 25.0
@@ -181,13 +176,13 @@ class TestReactionDataInterpolate:
             energy=energy,
             cross_section=cross_section,
             mt_number=1,
-            reaction_name="total"
+            reaction_name="total",
         )
-        
+
         # At boundaries
         assert rxn_data.interpolate(1.0e5) == 10.0
         assert rxn_data.interpolate(1.0e6) == 20.0
-        
+
         # Between points
         result = rxn_data.interpolate(5.5e5)
         assert np.isclose(result, 15.0, rtol=1e-10)
@@ -201,14 +196,14 @@ class TestReactionDataInterpolate:
             energy=energy,
             cross_section=cross_section,
             mt_number=2,
-            reaction_name="elastic"
+            reaction_name="elastic",
         )
-        
+
         # Test interpolation at various points
         result1 = rxn_data.interpolate(1.0)  # 1 eV
         result2 = rxn_data.interpolate(1.0e3)  # 1 keV
         result3 = rxn_data.interpolate(1.0e6)  # 1 MeV
-        
+
         # All should be finite and positive
         assert np.isfinite(result1)
         assert np.isfinite(result2)
@@ -216,7 +211,7 @@ class TestReactionDataInterpolate:
         assert result1 > 0
         assert result2 > 0
         assert result3 > 0
-        
+
         # Should follow 1/v trend (decreasing with energy)
         assert result1 > result2
         assert result2 > result3
@@ -230,9 +225,9 @@ class TestReactionDataInterpolate:
             energy=energy,
             cross_section=cross_section,
             mt_number=1,
-            reaction_name="total"
+            reaction_name="total",
         )
-        
+
         # Should handle gracefully (will use searchsorted behavior)
         result = rxn_data.interpolate(5.5e5)
         assert np.isfinite(result)
@@ -247,9 +242,9 @@ class TestReactionDataInterpolate:
             energy=energy,
             cross_section=cross_section,
             mt_number=1,
-            reaction_name="total"
+            reaction_name="total",
         )
-        
+
         # Interpolate at 2.5e5
         result = rxn_data.interpolate(2.5e5)
         # Between 1e5 (xs=10.0) and 5e5 (xs=12.0)
@@ -274,11 +269,10 @@ class TestReactionDataInterpolate:
             energy=energy,
             cross_section=cross_section,
             mt_number=1,
-            reaction_name="total"
+            reaction_name="total",
         )
-        
+
         # Should handle small differences without numerical issues
         result = rxn_data.interpolate(1.000005e5)
         assert np.isfinite(result)
         # Should handle division by small number correctly (code has check for e2 != e1)
-

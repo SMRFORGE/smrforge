@@ -35,4 +35,3 @@ def test_fuel_cycle_init_handles_missing_advanced_optimization():
         assert "GeneticAlgorithm" not in fc.__all__
         assert fc.GeneticAlgorithm is None
         assert fc.ParticleSwarmOptimization is None
-

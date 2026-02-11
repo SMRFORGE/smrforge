@@ -32,7 +32,6 @@ from smrforge.validation.pydantic_layer import (
     validate_positive_array,
 )
 
-
 # ============================================================================
 # Validation Functions
 # ============================================================================
@@ -126,7 +125,9 @@ class TestReactorSpecificationValidators:
 
     def test_validate_temperatures_inlet_equals_outlet(self):
         """Test that inlet >= outlet is rejected."""
-        with pytest.raises(ValueError, match="Inlet temperature.*must be.*less than outlet"):
+        with pytest.raises(
+            ValueError, match="Inlet temperature.*must be.*less than outlet"
+        ):
             ReactorSpecification(
                 name="Test",
                 reactor_type=ReactorType.PRISMATIC,
@@ -151,7 +152,9 @@ class TestReactorSpecificationValidators:
 
     def test_validate_temperatures_outlet_exceeds_max_fuel(self):
         """Test that outlet > max_fuel_temperature is rejected."""
-        with pytest.raises(ValueError, match="Outlet temperature.*exceeds.*max fuel temperature"):
+        with pytest.raises(
+            ValueError, match="Outlet temperature.*exceeds.*max fuel temperature"
+        ):
             ReactorSpecification(
                 name="Test",
                 reactor_type=ReactorType.PRISMATIC,
@@ -669,9 +672,17 @@ class TestUtilityFunctions:
             # Save as YAML - convert enum values to strings for proper serialization
             data = sample_spec.model_dump(mode="python")
             # Convert enum values to their string representations
-            data["reactor_type"] = data["reactor_type"].value if hasattr(data["reactor_type"], "value") else str(data["reactor_type"])
-            data["fuel_type"] = data["fuel_type"].value if hasattr(data["fuel_type"], "value") else str(data["fuel_type"])
-            
+            data["reactor_type"] = (
+                data["reactor_type"].value
+                if hasattr(data["reactor_type"], "value")
+                else str(data["reactor_type"])
+            )
+            data["fuel_type"] = (
+                data["fuel_type"].value
+                if hasattr(data["fuel_type"], "value")
+                else str(data["fuel_type"])
+            )
+
             with open(filepath, "w") as yaml_file:
                 yaml.dump(data, yaml_file)
 
@@ -715,4 +726,3 @@ class TestSMRForgeSettings:
         assert hasattr(settings, "strict_validation")
         assert hasattr(settings, "validation_warnings")
         assert hasattr(settings, "log_level")
-

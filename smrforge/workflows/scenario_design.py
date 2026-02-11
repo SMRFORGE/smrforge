@@ -17,6 +17,7 @@ logger = get_logger("smrforge.workflows.scenario_design")
 @dataclass
 class ScenarioResult:
     """Result of one scenario (one constraint set / mission)."""
+
     scenario_name: str
     passed: bool
     metrics: Dict[str, float] = field(default_factory=dict)
@@ -61,11 +62,15 @@ def run_scenario_design(
                 elif spec == "safety_margins":
                     cs = ConstraintSet.get_safety_margins()
                 else:
-                    logger.warning("Unknown scenario spec '%s', using regulatory_limits", spec)
+                    logger.warning(
+                        "Unknown scenario spec '%s', using regulatory_limits", spec
+                    )
                     cs = ConstraintSet.get_regulatory_limits()
         else:
             cs = ConstraintSet.get_regulatory_limits()
-        report = safety_margin_report(reactor, constraint_set=cs, analysis_results=analysis_results)
+        report = safety_margin_report(
+            reactor, constraint_set=cs, analysis_results=analysis_results
+        )
         margins_summary = {m.name: m.margin for m in report.margins}
         results[name] = ScenarioResult(
             scenario_name=name,

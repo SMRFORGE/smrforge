@@ -17,6 +17,7 @@ logger = get_logger("smrforge.workflows.sensitivity")
 try:
     from SALib.analyze import morris as salib_morris
     from SALib.sample import morris as salib_morris_sample
+
     _SALIB_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _SALIB_AVAILABLE = False
@@ -25,6 +26,7 @@ except ImportError:  # pragma: no cover
 @dataclass
 class SensitivityRanking:
     """Parameter ranking by sensitivity (e.g. OAT or Morris mu_star)."""
+
     parameter: str
     effect: float  # absolute or relative effect on output
     rank: int  # 1 = most sensitive
@@ -82,7 +84,11 @@ def one_at_a_time_from_sweep(
         Xp = np.array(param_arrays[p])
         # Simple measure: std of output when grouping by discretized param (or correlation)
         if np.all(np.isfinite(Xp)) and np.all(np.isfinite(Y)):
-            effects[p] = float(np.abs(np.corrcoef(Xp, Y)[0, 1])) if np.std(Xp) > 0 and np.std(Y) > 0 else 0.0
+            effects[p] = (
+                float(np.abs(np.corrcoef(Xp, Y)[0, 1]))
+                if np.std(Xp) > 0 and np.std(Y) > 0
+                else 0.0
+            )
         else:
             effects[p] = 0.0
     # Rank by effect (higher = more sensitive)
@@ -115,7 +121,11 @@ def morris_screening(
     """
     if not _SALIB_AVAILABLE:
         raise ImportError("SALib required for Morris screening: pip install SALib")
-    logger.debug("Morris screening: n_trajectories=%s, n_params=%s", n_trajectories, len(param_bounds))
+    logger.debug(
+        "Morris screening: n_trajectories=%s, n_params=%s",
+        n_trajectories,
+        len(param_bounds),
+    )
     names = list(param_bounds.keys())
     bounds = [param_bounds[n] for n in names]
     problem = {

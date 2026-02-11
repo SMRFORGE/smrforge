@@ -45,6 +45,7 @@ def simple_params():
 @pytest.fixture
 def simple_model():
     """Create a simple test model."""
+
     def model(params):
         """Simple linear model for testing."""
         p1 = params.get("param1", 1.0)
@@ -53,6 +54,7 @@ def simple_model():
             "output1": p1 + p2,
             "output2": p1 * p2,
         }
+
     return model
 
 
@@ -175,7 +177,9 @@ class TestUncertainParameter:
             )
 
         # min >= max
-        with pytest.raises(ValueError, match="uncertainty\[0\] must be < uncertainty\[1\]"):
+        with pytest.raises(
+            ValueError, match="uncertainty\[0\] must be < uncertainty\[1\]"
+        ):
             UncertainParameter(
                 name="test",
                 distribution="uniform",
@@ -187,7 +191,9 @@ class TestUncertainParameter:
         """Test that nominal outside bounds for triangular raises ValueError."""
         from smrforge.uncertainty.uq import UncertainParameter
 
-        with pytest.raises(ValueError, match="nominal must be between uncertainty bounds"):
+        with pytest.raises(
+            ValueError, match="nominal must be between uncertainty bounds"
+        ):
             UncertainParameter(
                 name="test",
                 distribution="triangular",
@@ -450,7 +456,12 @@ class TestUncertaintyPropagation:
         from smrforge.uncertainty.uq import UncertaintyPropagation
 
         def array_model(params):
-            return np.array([params["param1"] + params["param2"], params["param1"] * params["param2"]])
+            return np.array(
+                [
+                    params["param1"] + params["param2"],
+                    params["param1"] * params["param2"],
+                ]
+            )
 
         uq = UncertaintyPropagation(
             parameters=simple_params,
@@ -582,4 +593,3 @@ class TestSensitivityAnalysis:
 
         with pytest.raises(ValueError, match="n_samples must be > 0"):
             sa.sobol_analysis(n_samples=0)
-

@@ -7,8 +7,9 @@ performance doesn't degrade over time.
 
 import time
 from typing import Dict, List
-import pytest
+
 import numpy as np
+import pytest
 
 from smrforge.geometry.core_geometry import PrismaticCore
 from smrforge.neutronics.solver import MultiGroupDiffusion
@@ -18,12 +19,12 @@ from smrforge.validation.models import CrossSectionData, SolverOptions
 
 class PerformanceBenchmark:
     """Base class for performance benchmarks."""
-    
+
     def __init__(self, name: str):
         self.name = name
         self.results: List[float] = []
         self.threshold_multiplier = 1.5  # 50% slower is acceptable
-    
+
     def measure(self, func, *args, **kwargs):
         """Measure execution time of a function."""
         start = time.perf_counter()
@@ -31,11 +32,11 @@ class PerformanceBenchmark:
         elapsed = time.perf_counter() - start
         self.results.append(elapsed)
         return result, elapsed
-    
+
     def get_average(self) -> float:
         """Get average execution time."""
         return np.mean(self.results) if self.results else 0.0
-    
+
     def get_std(self) -> float:
         """Get standard deviation of execution times."""
         return np.std(self.results) if len(self.results) > 1 else 0.0
@@ -44,11 +45,11 @@ class PerformanceBenchmark:
 # Baseline timings (in seconds) - update these after establishing baseline
 # These should be updated after initial run with acceptable performance
 BASELINE_TIMINGS = {
-    "keff_calculation_small": 0.5,      # Small core k-eff calculation
-    "keff_calculation_medium": 2.0,     # Medium core k-eff calculation
-    "geometry_mesh_generation": 0.1,    # Mesh generation
-    "flux_calculation": 1.0,            # Flux calculation
-    "burnup_step": 3.0,                 # Single burnup step
+    "keff_calculation_small": 0.5,  # Small core k-eff calculation
+    "keff_calculation_medium": 2.0,  # Medium core k-eff calculation
+    "geometry_mesh_generation": 0.1,  # Mesh generation
+    "flux_calculation": 1.0,  # Flux calculation
+    "burnup_step": 3.0,  # Single burnup step
 }
 
 # Baseline peak memory (MiB) - tracemalloc. Update when intentionally changing memory use.
@@ -63,17 +64,17 @@ BASELINE_MEMORY_MULTIPLIER = 1.5
 @pytest.mark.performance
 class TestKeffCalculationPerformance:
     """Performance benchmarks for k-eff calculations."""
-    
+
     def test_keff_calculation_small(self):
         """Test k-eff calculation performance for small core."""
         benchmark = PerformanceBenchmark("keff_calculation_small")
-        
+
         # Create small reactor
         geometry = PrismaticCore(name="BenchmarkCore")
         geometry.core_height = 100.0
         geometry.core_diameter = 50.0
         geometry.generate_mesh(n_radial=5, n_axial=3)
-        
+
         # Simple cross-section data (mock)
         # Note: sigma_a must be >= sigma_f for validation to pass
         sigma_f = np.array([[0.0, 0.0, 0.1, 0.2], [0.0, 0.0, 0.0, 0.0]])
@@ -89,21 +90,26 @@ class TestKeffCalculationPerformance:
             chi=np.array([[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]),
             D=np.ones((2, 4)),
         )
-        
+
         from smrforge.validation.models import SolverOptions
-        options = SolverOptions(max_iterations=50, tolerance=1e-5, skip_solution_validation=True)
+
+        options = SolverOptions(
+            max_iterations=50, tolerance=1e-5, skip_solution_validation=True
+        )
         solver = MultiGroupDiffusion(geometry, xs_data, options)
-        
+
         # Measure performance (multiple runs for average)
         for _ in range(3):
             _, elapsed = benchmark.measure(solver.solve_steady_state)
-        
+
         avg_time = benchmark.get_average()
         baseline = BASELINE_TIMINGS.get("keff_calculation_small", 1.0)
         threshold = baseline * benchmark.threshold_multiplier
-        
-        print(f"\n{benchmark.name}: {avg_time:.3f}s (baseline: {baseline:.3f}s, threshold: {threshold:.3f}s)")
-        
+
+        print(
+            f"\n{benchmark.name}: {avg_time:.3f}s (baseline: {baseline:.3f}s, threshold: {threshold:.3f}s)"
+        )
+
         # Performance regression check
         if avg_time > threshold:
             pytest.fail(
@@ -111,18 +117,19 @@ class TestKeffCalculationPerformance:
                 f"exceeding threshold of {threshold:.3f}s (baseline: {baseline:.3f}s). "
                 f"Performance degraded by {(avg_time/baseline - 1)*100:.1f}%"
             )
-    
+
     def test_keff_calculation_medium(self):
         """Test k-eff calculation performance for medium core."""
         benchmark = PerformanceBenchmark("keff_calculation_medium")
-        
+
         # Create medium reactor
         geometry = PrismaticCore(name="BenchmarkCoreMedium")
         geometry.core_height = 200.0
         geometry.core_diameter = 100.0
         geometry.generate_mesh(n_radial=10, n_axial=5)
-        
+
         from smrforge.validation.models import CrossSectionData, SolverOptions
+
         # Note: sigma_a must be >= sigma_f for validation to pass
         sigma_f = np.array([[0.0, 0.0, 0.1, 0.2], [0.0, 0.0, 0.0, 0.0]])
         sigma_a = np.maximum(sigma_f, np.ones((2, 4)) * 0.3)  # Absorption >= fission
@@ -137,18 +144,22 @@ class TestKeffCalculationPerformance:
             chi=np.array([[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]),
             D=np.ones((2, 4)),
         )
-        
-        options = SolverOptions(max_iterations=50, tolerance=1e-5, skip_solution_validation=True)
+
+        options = SolverOptions(
+            max_iterations=50, tolerance=1e-5, skip_solution_validation=True
+        )
         solver = MultiGroupDiffusion(geometry, xs_data, options)
-        
+
         # Measure performance (single run for medium-sized problem)
         _, elapsed = benchmark.measure(solver.solve_steady_state)
-        
+
         baseline = BASELINE_TIMINGS.get("keff_calculation_medium", 2.0)
         threshold = baseline * benchmark.threshold_multiplier
-        
-        print(f"\n{benchmark.name}: {elapsed:.3f}s (baseline: {baseline:.3f}s, threshold: {threshold:.3f}s)")
-        
+
+        print(
+            f"\n{benchmark.name}: {elapsed:.3f}s (baseline: {baseline:.3f}s, threshold: {threshold:.3f}s)"
+        )
+
         if elapsed > threshold:
             pytest.fail(
                 f"Performance regression: {benchmark.name} took {elapsed:.3f}s, "
@@ -159,27 +170,29 @@ class TestKeffCalculationPerformance:
 @pytest.mark.performance
 class TestGeometryPerformance:
     """Performance benchmarks for geometry operations."""
-    
+
     def test_mesh_generation_performance(self):
         """Test mesh generation performance."""
         benchmark = PerformanceBenchmark("geometry_mesh_generation")
-        
+
         geometry = PrismaticCore(name="BenchmarkGeometry")
         geometry.core_height = 200.0
         geometry.core_diameter = 100.0
-        
+
         # Measure mesh generation
         for _ in range(5):
             _, elapsed = benchmark.measure(
                 geometry.generate_mesh, n_radial=10, n_axial=5
             )
-        
+
         avg_time = benchmark.get_average()
         baseline = BASELINE_TIMINGS.get("geometry_mesh_generation", 0.1)
         threshold = baseline * benchmark.threshold_multiplier
-        
-        print(f"\n{benchmark.name}: {avg_time:.3f}s (baseline: {baseline:.3f}s, threshold: {threshold:.3f}s)")
-        
+
+        print(
+            f"\n{benchmark.name}: {avg_time:.3f}s (baseline: {baseline:.3f}s, threshold: {threshold:.3f}s)"
+        )
+
         if avg_time > threshold:
             pytest.fail(
                 f"Performance regression: {benchmark.name} took {avg_time:.3f}s, "
@@ -193,6 +206,7 @@ class TestMemoryBenchmarks:
 
     def test_keff_small_memory(self):
         """Peak memory during small keff run must not exceed baseline * multiplier."""
+
         def workload():
             geometry = PrismaticCore(name="MemBenchCore")
             geometry.core_height = 100.0
@@ -211,7 +225,9 @@ class TestMemoryBenchmarks:
                 chi=np.array([[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]),
                 D=np.ones((2, 4)),
             )
-            options = SolverOptions(max_iterations=50, tolerance=1e-5, skip_solution_validation=True)
+            options = SolverOptions(
+                max_iterations=50, tolerance=1e-5, skip_solution_validation=True
+            )
             solver = MultiGroupDiffusion(geometry, xs_data, options)
             solver.solve_steady_state()
 
@@ -219,7 +235,9 @@ class TestMemoryBenchmarks:
         peak_mb = report["peak_mb"]
         baseline = BASELINE_MEMORY_MB.get("keff_small", 50.0)
         threshold = baseline * BASELINE_MEMORY_MULTIPLIER
-        print(f"\nkeff_small memory: {peak_mb:.2f} MiB (baseline: {baseline:.0f}, threshold: {threshold:.0f})")
+        print(
+            f"\nkeff_small memory: {peak_mb:.2f} MiB (baseline: {baseline:.0f}, threshold: {threshold:.0f})"
+        )
         if peak_mb > threshold:
             pytest.fail(
                 f"Memory regression: keff_small peak {peak_mb:.2f} MiB "
@@ -228,6 +246,7 @@ class TestMemoryBenchmarks:
 
     def test_mesh_generation_memory(self):
         """Peak memory during mesh generation must not exceed baseline * multiplier."""
+
         def workload():
             geometry = PrismaticCore(name="MemBenchMesh")
             geometry.core_height = 200.0
@@ -238,7 +257,9 @@ class TestMemoryBenchmarks:
         peak_mb = report["peak_mb"]
         baseline = BASELINE_MEMORY_MB.get("mesh_generation", 25.0)
         threshold = baseline * BASELINE_MEMORY_MULTIPLIER
-        print(f"\nmesh_generation memory: {peak_mb:.2f} MiB (baseline: {baseline:.0f}, threshold: {threshold:.0f})")
+        print(
+            f"\nmesh_generation memory: {peak_mb:.2f} MiB (baseline: {baseline:.0f}, threshold: {threshold:.0f})"
+        )
         if peak_mb > threshold:
             pytest.fail(
                 f"Memory regression: mesh_generation peak {peak_mb:.2f} MiB "

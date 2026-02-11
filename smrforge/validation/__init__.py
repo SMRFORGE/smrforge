@@ -38,6 +38,14 @@ try:
 except ImportError:
     _INTEGRATION_AVAILABLE = False
 
+# Import numerical validation (NaN/Inf, safety-critical outputs)
+from smrforge.validation.numerical_validation import (
+    validate_flux,
+    validate_k_eff,
+    validate_power,
+    validate_safety_critical_outputs,
+)
+
 # Import regulatory traceability (always available)
 from smrforge.validation.regulatory_traceability import (
     CalculationAuditTrail,
@@ -69,6 +77,10 @@ __all__ = [
     "ConsistencyValidator",
     # Regulatory Traceability
     "CalculationAuditTrail",
+    "validate_k_eff",
+    "validate_flux",
+    "validate_power",
+    "validate_safety_critical_outputs",
     "ModelAssumption",
     "SafetyMargin",
     "SafetyMarginReport",

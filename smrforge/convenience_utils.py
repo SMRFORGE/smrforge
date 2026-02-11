@@ -12,18 +12,18 @@ import numpy as np
 
 # Import core modules
 try:
-    from .geometry.core_geometry import PrismaticCore, PebbleBedCore
+    from .burnup.solver import BurnupOptions, BurnupSolver
+    from .core.reactor_core import NuclearDataCache, Nuclide
+    from .decay_heat.calculator import DecayHeatCalculator
+    from .gamma_transport.solver import GammaTransportOptions, GammaTransportSolver
+    from .geometry.core_geometry import PebbleBedCore, PrismaticCore
     from .geometry.mesh_extraction import (
-        extract_core_volume_mesh,
         extract_core_surface_mesh,
+        extract_core_volume_mesh,
         extract_material_boundaries,
     )
     from .neutronics.solver import MultiGroupDiffusion
     from .validation.models import CrossSectionData, SolverOptions
-    from .burnup.solver import BurnupSolver, BurnupOptions
-    from .core.reactor_core import Nuclide, NuclearDataCache
-    from .decay_heat.calculator import DecayHeatCalculator
-    from .gamma_transport.solver import GammaTransportSolver, GammaTransportOptions
 
     _CORE_AVAILABLE = True
 except ImportError:
@@ -31,8 +31,8 @@ except ImportError:
 
 # Import visualization (optional)
 try:
-    from .visualization.mesh_3d import plot_mesh3d_plotly, export_mesh_to_vtk
     from .visualization.geometry import plot_core_layout
+    from .visualization.mesh_3d import export_mesh_to_vtk, plot_mesh3d_plotly
 
     _VIZ_AVAILABLE = True
 except ImportError:
@@ -278,9 +278,9 @@ def quick_keff_calculation(
     # Add skip_validation to solver options if not provided
     if "options" not in solver_kwargs:
         solver_kwargs.setdefault("verbose", False)
-    
+
     solver = create_simple_solver(core=core, xs_data=xs_data, **solver_kwargs)
-    
+
     # Create options with skip_validation if needed
     if skip_validation:
         options = SolverOptions(
@@ -291,7 +291,7 @@ def quick_keff_calculation(
         )
         # Update solver options
         solver.options = options
-    
+
     return solver.solve_steady_state()
 
 
@@ -327,7 +327,7 @@ def create_simple_burnup_solver(
         >>> # Create with default time steps (0, 1 year, 2 years in days)
         >>> burnup = create_simple_burnup_solver()
         >>> inventory = burnup.solve()
-        
+
         >>> # Create with custom time steps (in days)
         >>> burnup = create_simple_burnup_solver(
         ...     time_steps_days=[0, 90, 180, 365, 730],  # 0, 3, 6, 12, 24 months
@@ -577,7 +577,9 @@ def quick_plot_core(
         >>> quick_plot_core(core, view="xy")
     """
     if not _VIZ_AVAILABLE:
-        raise ImportError("Visualization module not available. Install with: pip install smrforge[viz]")
+        raise ImportError(
+            "Visualization module not available. Install with: pip install smrforge[viz]"
+        )
 
     fig, ax = plot_core_layout(core, view=view, **kwargs)
     if show:
@@ -608,7 +610,9 @@ def quick_plot_mesh(
         >>> quick_plot_mesh(mesh, color_by="material")
     """
     if not _VIZ_AVAILABLE:
-        raise ImportError("Visualization module not available. Install with: pip install smrforge[viz]")
+        raise ImportError(
+            "Visualization module not available. Install with: pip install smrforge[viz]"
+        )
 
     fig = plot_mesh3d_plotly(mesh, color_by=color_by, **kwargs)
     if show:
@@ -722,7 +726,9 @@ def _add_convenience_methods() -> None:
     if hasattr(MultiGroupDiffusion, "quick_solve"):
         return  # Already added
 
-    def quick_solve(self, return_power: bool = False) -> Union[float, Tuple[float, np.ndarray], Dict]:
+    def quick_solve(
+        self, return_power: bool = False
+    ) -> Union[float, Tuple[float, np.ndarray], Dict]:
         """
         Quick solve for k-eff, optionally returning flux and power.
 
@@ -826,4 +832,3 @@ def run_complete_analysis(
         results["burnup_time_days"] = burnup_time_days
 
     return results
-

@@ -4,14 +4,15 @@ Comprehensive unit tests for SMRForge CLI module.
 Tests all CLI command handlers and helper functions with proper mocking.
 """
 
-import pytest
-import sys
+import argparse
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch, MagicMock, call
-import argparse
+from unittest.mock import MagicMock, Mock, call, patch
+
 import numpy as np
+import pytest
 
 # Import CLI module
 import smrforge.cli as cli_module

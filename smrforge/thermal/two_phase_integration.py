@@ -7,15 +7,14 @@ and the existing thermal-hydraulics solver.
 
 from typing import Dict, Optional
 
+from ..utils.logging import get_logger
+from .hydraulics import ChannelGeometry, ChannelThermalHydraulics
 from .two_phase_advanced import (
     BoilingHeatTransfer,
     DriftFluxModel,
     TwoFluidModel,
     TwoPhaseThermalHydraulics,
 )
-from .hydraulics import ChannelThermalHydraulics, ChannelGeometry
-
-from ..utils.logging import get_logger
 
 logger = get_logger("smrforge.thermal.two_phase_integration")
 
@@ -32,7 +31,7 @@ def integrate_two_phase_with_thermal_hydraulics(
 ) -> Dict:
     """
     Integrate advanced two-phase flow with thermal-hydraulics solver.
-    
+
     Args:
         thermal_solver: ChannelThermalHydraulics instance
         geometry: ChannelGeometry instance
@@ -42,7 +41,7 @@ def integrate_two_phase_with_thermal_hydraulics(
         inlet_temperature: Inlet temperature [K]
         inlet_quality: Inlet quality (0-1)
         model_type: Two-phase model type ('drift_flux' or 'two_fluid')
-        
+
     Returns:
         Dictionary with integrated solution
     """
@@ -54,18 +53,18 @@ def integrate_two_phase_with_thermal_hydraulics(
         length=geometry.length / 100.0,  # Convert cm to m
         heat_flux=heat_flux,
     )
-    
+
     # Solve two-phase flow
     two_phase_result = two_phase.solve(
         inlet_temperature=inlet_temperature,
         inlet_quality=inlet_quality,
         model_type=model_type,
     )
-    
+
     # Integrate with thermal-hydraulics solver
     # Update thermal solver with two-phase properties
     # (This would be more detailed in a full implementation)
-    
+
     return {
         "two_phase": two_phase_result,
         "void_fraction": two_phase_result["void_fraction"],

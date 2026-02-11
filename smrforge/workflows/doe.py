@@ -15,6 +15,7 @@ logger = get_logger("smrforge.workflows.doe")
 
 try:
     from scipy.stats import qmc
+
     _SCIPY_QMC = True
 except ImportError:
     _SCIPY_QMC = False
@@ -33,6 +34,7 @@ def full_factorial(
         List of dicts, each a point in the design space.
     """
     from itertools import product
+
     names = list(levels.keys())
     value_lists = [levels[n] for n in names]
     combinations = []
@@ -60,7 +62,9 @@ def latin_hypercube(
         List of dicts, each a point in the design space.
     """
     if not _SCIPY_QMC:
-        raise ImportError("scipy.stats.qmc required for latin_hypercube: pip install scipy")
+        raise ImportError(
+            "scipy.stats.qmc required for latin_hypercube: pip install scipy"
+        )
     sampler = qmc.LatinHypercube(d=len(names), seed=seed)
     u = sampler.random(n=n_samples)
     bounds_arr = np.array(bounds)
@@ -115,7 +119,9 @@ def sobol_space_filling(
         List of dicts.
     """
     if not _SCIPY_QMC:
-        raise ImportError("scipy.stats.qmc required for sobol_space_filling: pip install scipy")
+        raise ImportError(
+            "scipy.stats.qmc required for sobol_space_filling: pip install scipy"
+        )
     sampler = qmc.Sobol(d=len(names), seed=seed)
     u = sampler.random(n=n_samples)
     bounds_arr = np.array(bounds)

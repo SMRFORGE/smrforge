@@ -9,9 +9,9 @@ import pytest
 
 try:
     from smrforge.presets.htgr import (
-        DesignLibrary,
         GTMHR350,
         HTRPM200,
+        DesignLibrary,
         MicroHTGR,
         ValarAtomicsReactor,
     )
@@ -256,7 +256,9 @@ class TestDesignLibrary:
         # Should not raise; output is printed via rich.
         library.compare_designs(["valar-10-noelec"])
 
-    def test_design_library_validate_all_designs_handles_validation_exceptions(self, monkeypatch):
+    def test_design_library_validate_all_designs_handles_validation_exceptions(
+        self, monkeypatch
+    ):
         """Cover validate_all_designs exception path."""
         import smrforge.presets.htgr as htgr_mod
 
@@ -271,7 +273,9 @@ class TestDesignLibrary:
                 raise ValueError("boom")
             return real_validate(*args, **kwargs)
 
-        monkeypatch.setattr(htgr_mod.ReactorSpecification, "model_validate", staticmethod(_raise_once))
+        monkeypatch.setattr(
+            htgr_mod.ReactorSpecification, "model_validate", staticmethod(_raise_once)
+        )
         assert library.validate_all_designs() is False
 
     def test_design_library_compare_designs(self, capsys):
@@ -322,4 +326,3 @@ def test_htgr_module_import_when_lwr_presets_unavailable(monkeypatch):
     import smrforge.presets.htgr as htgr_mod
 
     importlib.reload(htgr_mod)
-

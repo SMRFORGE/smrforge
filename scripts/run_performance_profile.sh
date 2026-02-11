@@ -10,7 +10,7 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
 
 MESH=""
-OUTPUT=""
+OUTPUT="output/profiling/report"
 while [[ $# -gt 0 ]]; do
   case $1 in
     --mesh) MESH=1; shift ;;
@@ -19,16 +19,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+mkdir -p "$(dirname "$OUTPUT")"
 echo "Performance + memory profile (keff${MESH:+, mesh}) - mode both"
 echo ""
 
-KEFF_OUT=()
-[[ -n "$OUTPUT" ]] && KEFF_OUT=(--output "$OUTPUT")
-python scripts/profile_performance.py --function keff --mode both "${KEFF_OUT[@]}"
+python scripts/profile_performance.py --function keff --mode both --output "$OUTPUT"
 if [[ -n "$MESH" ]]; then
-  MESH_OUT=()
-  [[ -n "$OUTPUT" ]] && MESH_OUT=(--output "${OUTPUT}_mesh")
-  python scripts/profile_performance.py --function mesh --mode both "${MESH_OUT[@]}"
+  python scripts/profile_performance.py --function mesh --mode both --output "${OUTPUT}_mesh"
 fi
 
 echo ""

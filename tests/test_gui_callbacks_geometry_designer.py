@@ -83,7 +83,11 @@ def test_geometry_designer_callbacks_cover_branches():
         assert data["layout"].shape == (2, 2)
 
     # Clear button
-    with patch.object(gd, "callback_context", SimpleNamespace(triggered=[{"prop_id": "geometry-clear-btn.n_clicks"}])):
+    with patch.object(
+        gd,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "geometry-clear-btn.n_clicks"}]),
+    ):
         fig, data, palette = update_core_layout(
             "prismatic",
             2,
@@ -101,7 +105,11 @@ def test_geometry_designer_callbacks_cover_branches():
         assert int(data["layout"].sum()) == 0
 
     # Reset button
-    with patch.object(gd, "callback_context", SimpleNamespace(triggered=[{"prop_id": "geometry-reset-btn.n_clicks"}])):
+    with patch.object(
+        gd,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "geometry-reset-btn.n_clicks"}]),
+    ):
         fig, data, palette = update_core_layout(
             "prismatic",
             3,
@@ -120,7 +128,11 @@ def test_geometry_designer_callbacks_cover_branches():
 
     # Paint click
     click_data = {"points": [{"x": 1, "y": 2}]}
-    with patch.object(gd, "callback_context", SimpleNamespace(triggered=[{"prop_id": "geometry-core-layout.clickData"}])):
+    with patch.object(
+        gd,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "geometry-core-layout.clickData"}]),
+    ):
         fig, data, palette = update_core_layout(
             "prismatic",
             3,
@@ -139,7 +151,11 @@ def test_geometry_designer_callbacks_cover_branches():
         assert data["materials"]["2,1"] == "fuel"
 
     # Erase click
-    with patch.object(gd, "callback_context", SimpleNamespace(triggered=[{"prop_id": "geometry-core-layout.clickData"}])):
+    with patch.object(
+        gd,
+        "callback_context",
+        SimpleNamespace(triggered=[{"prop_id": "geometry-core-layout.clickData"}]),
+    ):
         fig, data, palette = update_core_layout(
             "prismatic",
             3,
@@ -161,7 +177,9 @@ def test_geometry_designer_callbacks_cover_branches():
     assert fig3d is not None
 
     # update_preview_and_stats: with hover (no props)
-    fig3d, stats, props = update_preview_and_stats({"layout": np.zeros((2, 2), dtype=int), "materials": {}, "properties": {}}, None)
+    fig3d, stats, props = update_preview_and_stats(
+        {"layout": np.zeros((2, 2), dtype=int), "materials": {}, "properties": {}}, None
+    )
     assert fig3d is not None
 
     # update_preview_and_stats: with hover and props
@@ -187,7 +205,9 @@ def test_geometry_designer_callbacks_cover_branches():
         ("geometry-tool-erase.n_clicks", "erase"),
         ("geometry-tool-unknown.n_clicks", "paint"),
     ]:
-        with patch.object(gd, "callback_context", SimpleNamespace(triggered=[{"prop_id": btn}])):
+        with patch.object(
+            gd, "callback_context", SimpleNamespace(triggered=[{"prop_id": btn}])
+        ):
             out = update_tool(1, 1, 1, 1)
             assert out["tool"] == expected
 
@@ -204,4 +224,3 @@ def test_geometry_designer_callbacks_cover_branches():
     assert div is not None
     div2 = gd._calculate_core_statistics(None)
     assert div2 is not None
-

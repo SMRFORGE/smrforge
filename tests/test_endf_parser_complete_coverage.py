@@ -16,13 +16,15 @@ This test suite fills remaining coverage gaps:
 - ENDFCompatibility.to_polars (line 407)
 """
 
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 try:
     import polars as pl
+
     POLARS_AVAILABLE = True
 except ImportError:
     POLARS_AVAILABLE = False
@@ -33,6 +35,7 @@ def endf_evaluation_class():
     """Get the ENDFEvaluation class."""
     try:
         from smrforge.core.endf_parser import ENDFEvaluation
+
         return ENDFEvaluation
     except ImportError:
         pytest.skip("ENDF parser not available")
@@ -43,6 +46,7 @@ def endf_compatibility_class():
     """Get the ENDFCompatibility class."""
     try:
         from smrforge.core.endf_parser import ENDFCompatibility
+
         return ENDFCompatibility
     except ImportError:
         pytest.skip("ENDF parser not available")
@@ -53,6 +57,7 @@ def reaction_data_class():
     """Get the ReactionData class."""
     try:
         from smrforge.core.endf_parser import ReactionData
+
         return ReactionData
     except ImportError:
         pytest.skip("ENDF parser not available")
@@ -84,7 +89,7 @@ class TestENDFEvaluationContainsAndGetItem:
     ):
         """Test __contains__ returns True when MT exists (line 81)."""
         eval_obj = endf_evaluation_class(complete_endf_file_with_reactions)
-        
+
         # Should return True for MT=1 (total)
         assert 1 in eval_obj
         assert 2 in eval_obj
@@ -94,7 +99,7 @@ class TestENDFEvaluationContainsAndGetItem:
     ):
         """Test __contains__ returns False when MT doesn't exist."""
         eval_obj = endf_evaluation_class(complete_endf_file_with_reactions)
-        
+
         # Should return False for non-existent MT
         assert 18 not in eval_obj
         assert 102 not in eval_obj
@@ -104,7 +109,7 @@ class TestENDFEvaluationContainsAndGetItem:
     ):
         """Test __getitem__ raises KeyError when MT not found (line 86)."""
         eval_obj = endf_evaluation_class(complete_endf_file_with_reactions)
-        
+
         with pytest.raises(KeyError, match="Reaction MT=999 not found"):
             _ = eval_obj[999]
 
@@ -113,7 +118,7 @@ class TestENDFEvaluationContainsAndGetItem:
     ):
         """Test __getitem__ returns ReactionData when MT exists."""
         eval_obj = endf_evaluation_class(complete_endf_file_with_reactions)
-        
+
         reaction = eval_obj[1]
         assert hasattr(reaction, "energy")
         assert hasattr(reaction, "cross_section")
@@ -129,18 +134,18 @@ class TestToPolarsWithPolarsAvailable:
     ):
         """Test to_polars returns DataFrame with correct structure (lines 100-112)."""
         eval_obj = endf_evaluation_class(complete_endf_file_with_reactions)
-        
+
         df = eval_obj.to_polars()
-        
+
         assert df is not None
         assert "mt_number" in df.columns
         assert "reaction_name" in df.columns
         assert "energy" in df.columns
         assert "cross_section" in df.columns
-        
+
         # Should have rows for all reactions and energy points
         assert len(df) > 0
-        
+
         # Check data
         mt1_rows = df.filter(pl.col("mt_number") == 1)
         assert len(mt1_rows) >= 2  # At least 2 energy points
@@ -153,10 +158,10 @@ class TestToPolarsWithPolarsAvailable:
                                                                    125 1451    0
 """
         endf_path.write_text(endf_content)
-        
+
         eval_obj = endf_evaluation_class(endf_path)
         df = eval_obj.to_polars()
-        
+
         # When no reactions, records list is empty
         # Polars DataFrame([]) creates empty DataFrame (no rows, no columns)
         # Or if Polars not available, returns None
@@ -165,7 +170,7 @@ class TestToPolarsWithPolarsAvailable:
             assert len(df) == 0
             # When records is empty, Polars creates DataFrame with no columns
             # So we just check it's a valid DataFrame (or has expected columns if any)
-            assert hasattr(df, 'columns')
+            assert hasattr(df, "columns")
         else:
             # Polars not available - that's also valid
             assert df is None
@@ -174,13 +179,15 @@ class TestToPolarsWithPolarsAvailable:
 class TestToPolarsWithoutPolars:
     """Test to_polars method when Polars is not available (lines 97-98)."""
 
-    @pytest.mark.skipif(POLARS_AVAILABLE, reason="Polars is available, cannot test unavailable path")
+    @pytest.mark.skipif(
+        POLARS_AVAILABLE, reason="Polars is available, cannot test unavailable path"
+    )
     def test_to_polars_returns_none_when_polars_unavailable(
         self, endf_evaluation_class, complete_endf_file_with_reactions
     ):
         """Test to_polars returns None when Polars is not available."""
         eval_obj = endf_evaluation_class(complete_endf_file_with_reactions)
-        
+
         df = eval_obj.to_polars()
         assert df is None
 
@@ -194,9 +201,9 @@ class TestGetReactionsDataframeWithPolarsAvailable:
     ):
         """Test get_reactions_dataframe returns summary DataFrame (line 128)."""
         eval_obj = endf_evaluation_class(complete_endf_file_with_reactions)
-        
+
         df = eval_obj.get_reactions_dataframe()
-        
+
         assert df is not None
         assert "mt_number" in df.columns
         assert "reaction_name" in df.columns
@@ -206,10 +213,10 @@ class TestGetReactionsDataframeWithPolarsAvailable:
         assert "xs_min" in df.columns
         assert "xs_max" in df.columns
         assert "xs_mean" in df.columns
-        
+
         # Should have one row per reaction
         assert len(df) == 2  # MT=1 and MT=2
-        
+
         # Check values
         mt1_row = df.filter(pl.col("mt_number") == 1)
         assert len(mt1_row) == 1
@@ -219,13 +226,15 @@ class TestGetReactionsDataframeWithPolarsAvailable:
 class TestGetReactionsDataframeWithoutPolars:
     """Test get_reactions_dataframe when Polars is not available (line 124)."""
 
-    @pytest.mark.skipif(POLARS_AVAILABLE, reason="Polars is available, cannot test unavailable path")
+    @pytest.mark.skipif(
+        POLARS_AVAILABLE, reason="Polars is available, cannot test unavailable path"
+    )
     def test_get_reactions_dataframe_returns_none_when_polars_unavailable(
         self, endf_evaluation_class, complete_endf_file_with_reactions
     ):
         """Test get_reactions_dataframe returns None when Polars is not available."""
         eval_obj = endf_evaluation_class(complete_endf_file_with_reactions)
-        
+
         df = eval_obj.get_reactions_dataframe()
         assert df is None
 
@@ -238,10 +247,12 @@ class TestParseMf3ExceptionHandling:
     ):
         """Test _parse_mf3 handles ValueError/IndexError in control record parsing."""
         endf_path = temp_dir / "invalid_control.endf"
-        endf_path.write_text("                                                                   125 1451    1\n")
-        
+        endf_path.write_text(
+            "                                                                   125 1451    1\n"
+        )
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         lines = [
             "                                                                   125 3  1    1",  # Valid
             " 1.000000+5 1.000000+1 1.000000+6 1.200000+1                       125 3  1    3",
@@ -251,10 +262,10 @@ class TestParseMf3ExceptionHandling:
             " 1.000000+5 8.000000+0 1.000000+6 9.000000+0                       125 3  2    3",
             "                                                                   125 0  0    0",
         ]
-        
+
         # Should handle gracefully and continue parsing
         eval_obj._parse_mf3(lines)
-        
+
         # Should still parse valid sections
         assert 1 in eval_obj.reactions
         assert 2 in eval_obj.reactions
@@ -268,18 +279,20 @@ class TestParseMf3SectionEdgeCases:
     ):
         """Test _parse_mf3_section returns None when start_idx >= len(lines) (line 237)."""
         endf_path = temp_dir / "empty.endf"
-        endf_path.write_text("                                                                   125 1451    1\n")
-        
+        endf_path.write_text(
+            "                                                                   125 1451    1\n"
+        )
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         lines = [
             "                                                                   125 3  1    1",
             " 1.000000+5 1.000000+1 1.000000+6 1.200000+1                       125 3  1    3",
         ]
-        
+
         # start_idx >= len(lines)
         energy, xs = eval_obj._parse_mf3_section(lines, start_idx=len(lines), mt=1)
-        
+
         assert energy is None
         assert xs is None
 
@@ -288,18 +301,20 @@ class TestParseMf3SectionEdgeCases:
     ):
         """Test _parse_mf3_section breaks when j+11 > len(line) (line 276)."""
         endf_path = temp_dir / "short_line.endf"
-        endf_path.write_text("                                                                   125 1451    1\n")
-        
+        endf_path.write_text(
+            "                                                                   125 1451    1\n"
+        )
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         lines = [
             "                                                                   125 3  1    1",
             " 1.000000+5 1.000000+1",  # Very short line, less than 22 chars (can't have 2 values)
             "                                                                   125 0  0    0",
         ]
-        
+
         energy, xs = eval_obj._parse_mf3_section(lines, start_idx=0, mt=1)
-        
+
         # Should still parse what it can
         # May return None if no valid pairs found, or partial data
         # The break condition prevents reading past line length
@@ -313,7 +328,7 @@ class TestENDFCompatibilityContains:
     ):
         """Test ENDFCompatibility.__contains__ delegates to _evaluation."""
         compat = endf_compatibility_class(complete_endf_file_with_reactions)
-        
+
         # Should delegate to _evaluation.__contains__
         assert 1 in compat
         assert 2 in compat
@@ -329,9 +344,9 @@ class TestENDFCompatibilityToPolars:
     ):
         """Test ENDFCompatibility.to_polars delegates to _evaluation.to_polars."""
         compat = endf_compatibility_class(complete_endf_file_with_reactions)
-        
+
         df = compat.to_polars()
-        
+
         assert df is not None
         assert "mt_number" in df.columns
         assert len(df) > 0
@@ -345,10 +360,12 @@ class TestParseMf3SectionAdditionalEdgeCases:
     ):
         """Test _parse_mf3_section continues when next_mt == 0 (same section continuation)."""
         endf_path = temp_dir / "mt_zero.endf"
-        endf_path.write_text("                                                                   125 1451    1\n")
-        
+        endf_path.write_text(
+            "                                                                   125 1451    1\n"
+        )
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         lines = [
             "                                                                   125 3  1    1",
             " 1.000000+5 1.000000+1 1.000000+6 1.200000+1                       125 3  1    3",
@@ -356,23 +373,23 @@ class TestParseMf3SectionAdditionalEdgeCases:
             " 1.000000+7 1.500000+1 1.000000+8 1.800000+1                       125 3  1    4",
             "                                                                   125 0  0    0",
         ]
-        
+
         energy, xs = eval_obj._parse_mf3_section(lines, start_idx=0, mt=1)
-        
+
         # Should parse all data including continuation (MT=0)
         assert energy is not None
         assert xs is not None
         assert len(energy) >= 2  # At least initial 2 points
 
-    def test_parse_mf3_section_next_mf_different(
-        self, endf_evaluation_class, temp_dir
-    ):
+    def test_parse_mf3_section_next_mf_different(self, endf_evaluation_class, temp_dir):
         """Test _parse_mf3_section stops when next_mf != 3."""
         endf_path = temp_dir / "different_mf.endf"
-        endf_path.write_text("                                                                   125 1451    1\n")
-        
+        endf_path.write_text(
+            "                                                                   125 1451    1\n"
+        )
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         lines = [
             "                                                                   125 3  1    1",
             " 1.000000+5 1.000000+1 1.000000+6 1.200000+1                       125 3  1    3",
@@ -380,9 +397,9 @@ class TestParseMf3SectionAdditionalEdgeCases:
             " 1.000000+7 1.500000+1 1.000000+8 1.800000+1                       125 4  1    4",
             "                                                                   125 0  0    0",
         ]
-        
+
         energy, xs = eval_obj._parse_mf3_section(lines, start_idx=0, mt=1)
-        
+
         # Should stop at MF=4, so should only have first 2 points
         assert energy is not None
         assert xs is not None
@@ -393,10 +410,12 @@ class TestParseMf3SectionAdditionalEdgeCases:
     ):
         """Test _parse_mf3_section handles exceptions when parsing next_mf/next_mt."""
         endf_path = temp_dir / "exception_mf_mt.endf"
-        endf_path.write_text("                                                                   125 1451    1\n")
-        
+        endf_path.write_text(
+            "                                                                   125 1451    1\n"
+        )
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         lines = [
             "                                                                   125 3  1    1",
             " 1.000000+5 1.000000+1 1.000000+6 1.200000+1                       125 3  1    3",
@@ -404,57 +423,59 @@ class TestParseMf3SectionAdditionalEdgeCases:
             " 1.000000+7 1.500000+1 1.000000+8 1.800000+1                       125 3  1    4",
             "                                                                   125 0  0    0",
         ]
-        
+
         energy, xs = eval_obj._parse_mf3_section(lines, start_idx=0, mt=1)
-        
+
         # Should continue parsing after exception
         assert energy is not None
         assert xs is not None
         # Should parse data from both valid data lines
         assert len(energy) >= 2
-    
-    def test_parse_mf3_line_length_check(
-        self, endf_evaluation_class, temp_dir
-    ):
+
+    def test_parse_mf3_line_length_check(self, endf_evaluation_class, temp_dir):
         """Test _parse_mf3 line length check (lines 202-203)."""
         endf_path = temp_dir / "short_lines.endf"
-        endf_path.write_text("                                                                   125 1451    1\n")
-        
+        endf_path.write_text(
+            "                                                                   125 1451    1\n"
+        )
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         lines = [
             "                                                                   125 3  1    1",  # Valid (80 chars)
             "short",  # Too short (< 75 chars) - line 202-203
             " 1.000000+5 1.000000+1 1.000000+6 1.200000+1                       125 3  1    3",
             "                                                                   125 0  0    0",
         ]
-        
+
         # Should skip short lines (lines 202-203)
         eval_obj._parse_mf3(lines)
-        
+
         # Should still parse valid sections
         assert 1 in eval_obj.reactions
-    
+
     def test_parse_mf3_section_exception_in_value_parsing(
         self, endf_evaluation_class, temp_dir
     ):
         """Test _parse_mf3_section exception handling in value parsing (lines 302-303)."""
         endf_path = temp_dir / "invalid_values.endf"
-        endf_path.write_text("                                                                   125 1451    1\n")
-        
+        endf_path.write_text(
+            "                                                                   125 1451    1\n"
+        )
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         lines = [
             "                                                                   125 3  1    1",
             "INVALID+XXX 1.000000+1 1.000000+6 1.200000+1                       125 3  1    3",  # First value invalid - should be skipped
             " 1.000000+5 2.000000+1 1.000000+6 2.200000+1                       125 3  1    4",  # Valid values
             "                                                                   125 0  0    0",
         ]
-        
+
         # Should handle ValueError/IndexError in value parsing (lines 302-303)
         # Invalid values are skipped, so we should still get valid pairs
         energy, xs = eval_obj._parse_mf3_section(lines, start_idx=0, mt=1)
-        
+
         # Should parse valid values (invalid ones are skipped via continue)
         # Even if we get None due to no valid pairs, the exception path was executed
         if energy is not None and xs is not None:
@@ -468,10 +489,8 @@ class TestParseMf3SectionAdditionalEdgeCases:
 
 class TestParseHeaderExceptionHandling:
     """Test _parse_header exception handling (lines 184-185)."""
-    
-    def test_parse_header_exception_handling(
-        self, endf_evaluation_class, temp_dir
-    ):
+
+    def test_parse_header_exception_handling(self, endf_evaluation_class, temp_dir):
         """Test _parse_header exception handling (lines 184-185)."""
         endf_path = temp_dir / "malformed_header.endf"
         # Create file with malformed lines that will cause ValueError/IndexError
@@ -483,9 +502,9 @@ short line that causes IndexError
                                                                    125 0  0    0
 """
         endf_path.write_text(endf_content)
-        
+
         eval_obj = endf_evaluation_class(endf_path)
-        
+
         # Should handle exceptions gracefully (lines 184-185)
         # The header parsing should skip malformed lines and continue
         # Should still be able to parse reactions
@@ -494,10 +513,10 @@ short line that causes IndexError
 
 class TestEndfEvaluationFileNotFound:
     """Test ENDFEvaluation FileNotFoundError handling (line 75)."""
-    
+
     def test_endf_evaluation_file_not_found(self, endf_evaluation_class, temp_dir):
         """Test ENDFEvaluation raises FileNotFoundError for nonexistent file (line 75)."""
         nonexistent_file = temp_dir / "nonexistent_file.endf"
-        
+
         with pytest.raises(FileNotFoundError, match="ENDF file not found"):
             endf_evaluation_class(nonexistent_file)

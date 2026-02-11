@@ -20,7 +20,7 @@ This document provides a comprehensive index of all SMRForge documentation files
 ### Coverage & PyPI
 - **[COVERAGE_TRACKING.md](../COVERAGE_TRACKING.md)** - **Source of truth** for test coverage tracking and path to 90%
 - **[README_COVERAGE.md](../README_COVERAGE.md)** - Quick reference for coverage docs
-- **[README_PYPI.md](../README_PYPI.md)** / **[PYPI_READINESS_CHECKLIST.md](../PYPI_READINESS_CHECKLIST.md)** - PyPI release notes and checklist
+- **[README_PYPI.md](../README_PYPI.md)** / **[PYPI_READINESS_CHECKLIST.md](development/PYPI_READINESS_CHECKLIST.md)** - PyPI release notes and checklist
 
 ---
 
@@ -62,10 +62,12 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[Code Style Guide](development/code-style.md)** - Code formatting, type hints, and style guide
 - **[Type Hints Conventions](technical/type-hints-conventions.md)** - Type hint conventions and examples
 - **[Release Process](development/release-process.md)** - Release procedures
+- **[PyPI Readiness Checklist](development/PYPI_READINESS_CHECKLIST.md)** - PyPI publication checklist
 - **[Testing and Coverage](development/testing-and-coverage.md)** - Testing documentation
 - **[Coverage Exclusions](development/coverage-exclusions.md)** - Test coverage exclusions
 - **[Memory and Performance Assessment](development/memory-and-performance-assessment.md)** - How to assess memory and CPU, where to optimize
 - **[Performance and Benchmarking Assessment](development/performance-and-benchmarking-assessment.md)** - Plan vs. implementation status, profiling results, benchmark outcomes
+- **[Generated Output Layout](development/generated-output-layout.md)** - Where reports, profiling, and workflow results go (`output/`)
 
 ---
 
@@ -102,6 +104,7 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[OpenMC Visualization Gaps Analysis](status/openmc-visualization-gaps-analysis.md)** - Detailed visualization comparison
 - **[OpenMC Visualization Implementation Summary](status/openmc-visualization-implementation-summary.md)** - Visualization implementation details
 - **[GUI/UX Strategy Analysis](status/gui-ux-strategy-analysis.md)** - GUI/UX strategy and recommendations
+- **[V&V Test Report](status/vv_test_report.md)** - Community benchmark V&V report (3/6 passed)
 
 ### Archived Summaries (Consolidated)
 - ~~`data-import-improvement-summary.md`~~ → Consolidated into `data-import-complete-summary.md`

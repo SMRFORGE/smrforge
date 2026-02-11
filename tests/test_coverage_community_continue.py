@@ -548,7 +548,9 @@ class TestOpenMCRunCoverage:
         assert "k_eff" not in out
 
     @patch("subprocess.run")
-    def test_run_and_parse_statepoint_parse_raises_logs_warning(self, mock_run, tmp_path):
+    def test_run_and_parse_statepoint_parse_raises_logs_warning(
+        self, mock_run, tmp_path
+    ):
         """Cover run_and_parse when parse_statepoint raises (lines 167-168)."""
         from smrforge.io.openmc_run import run_and_parse
 
@@ -781,4 +783,3 @@ class TestOpenMCImportExtended:
         )
         assert "core" in result
         assert "materials" not in result or result.get("materials") == {}
-

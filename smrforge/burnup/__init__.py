@@ -9,7 +9,7 @@ This module provides:
 - Enhanced visualization tools (batch comparison, refueling cycles, control rod effects)
 """
 
-from .solver import BurnupSolver, BurnupOptions, NuclideInventory
+from .solver import BurnupOptions, BurnupSolver, NuclideInventory
 
 try:
     from .lwr_burnup import (
@@ -20,12 +20,14 @@ try:
         RodBurnup,
         RodWiseBurnupTracker,
     )
+
     _LWR_BURNUP_AVAILABLE = True
 except ImportError:
     _LWR_BURNUP_AVAILABLE = False
 
 try:
     from .fuel_management_integration import BurnupFuelManagerIntegration
+
     _FUEL_MANAGEMENT_INTEGRATION_AVAILABLE = True
 except ImportError:
     _FUEL_MANAGEMENT_INTEGRATION_AVAILABLE = False
@@ -33,10 +35,11 @@ except ImportError:
 try:
     from .visualization import (
         plot_batch_comparison,
-        plot_refueling_cycles,
-        plot_control_rod_effects,
         plot_burnup_dashboard_enhanced,
+        plot_control_rod_effects,
+        plot_refueling_cycles,
     )
+
     _VISUALIZATION_AVAILABLE = True
 except ImportError:
     _VISUALIZATION_AVAILABLE = False

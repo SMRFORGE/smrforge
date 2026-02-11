@@ -8,6 +8,7 @@ import pytest
 # Test matplotlib availability
 try:
     import matplotlib.pyplot as plt
+
     _MATPLOTLIB_AVAILABLE = True
 except ImportError:
     _MATPLOTLIB_AVAILABLE = False
@@ -15,6 +16,7 @@ except ImportError:
 # Test plotly availability
 try:
     import plotly.graph_objects as go
+
     _PLOTLY_AVAILABLE = True
 except ImportError:
     _PLOTLY_AVAILABLE = False
@@ -182,7 +184,10 @@ class TestConvenienceIntegration:
 
     def test_import_visualization_functions(self):
         """Test that visualization functions can be imported."""
-        from smrforge.visualization.transients import plot_transient, plot_lumped_thermal
+        from smrforge.visualization.transients import (
+            plot_lumped_thermal,
+            plot_transient,
+        )
 
         assert callable(plot_transient)
         assert callable(plot_lumped_thermal)

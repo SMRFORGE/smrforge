@@ -10,14 +10,16 @@ This module provides:
   - Comprehensive logging and error handling
 """
 
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
-import sys
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import numpy as np
 from numba import njit, prange
+
 
 # Numba-accelerated helper functions for matrix construction
 @njit(cache=True)
@@ -25,10 +27,12 @@ def _compute_cell_volume(r: float, dr: float, dz: float) -> float:
     """Compute volume of cylindrical cell element (Numba-accelerated)."""
     return 2 * np.pi * r * dr * dz
 
+
 @njit(cache=True)
 def _compute_radial_area(r: float, dz: float) -> float:
     """Compute radial area for diffusion (Numba-accelerated)."""
     return 2 * np.pi * r * dz
+
 
 @njit(cache=True)
 def _compute_diffusion_coefficient(D1: float, D2: float) -> float:
@@ -36,6 +40,8 @@ def _compute_diffusion_coefficient(D1: float, D2: float) -> float:
     if D1 > 0 and D2 > 0:
         return 2 * D1 * D2 / (D1 + D2)
     return 0.5 * (D1 + D2)  # Fallback to arithmetic mean
+
+
 from pydantic import ValidationError
 from scipy.sparse import csr_matrix, diags
 from scipy.sparse import linalg as sparse_linalg
@@ -43,6 +49,7 @@ from scipy.sparse import linalg as sparse_linalg
 # Try to import MPI (optional)
 try:
     from mpi4py import MPI
+
     _MPI_AVAILABLE = True
 except ImportError:
     _MPI_AVAILABLE = False
@@ -50,13 +57,16 @@ except ImportError:
 
 # Try to import Rich (optional, for progress bars)
 try:
-    from rich.progress import Progress, BarColumn, TextColumn, SpinnerColumn
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+
     _RICH_AVAILABLE = True
 except ImportError:
     _RICH_AVAILABLE = False
     Progress = None
 
 from ..utils.logging import get_logger
+from ..validation.numerical_validation import validate_safety_critical_outputs
+from ..validation.regulatory_traceability import create_audit_trail
 
 # Import Pydantic models
 from ..validation.models import CrossSectionData, SolverOptions
@@ -245,7 +255,7 @@ class MultiGroupDiffusion:
     def _build_material_map(self) -> np.ndarray:
         """
         Map mesh cells to materials using vectorized operations.
-        
+
         Optimized using NumPy broadcasting for ~10-100x speedup vs nested loops.
         """
         # Memory-efficient vectorized condition:
@@ -286,7 +296,9 @@ class MultiGroupDiffusion:
         self.sigma_a_map = self.xs.sigma_a[self.material_map, :]
         self.nu_sigma_f_map = self.xs.nu_sigma_f[self.material_map, :]
 
-    def solve_steady_state(self) -> Tuple[float, np.ndarray]:
+    def solve_steady_state(
+        self, audit_trail_path: Optional[Path] = None
+    ) -> Tuple[float, np.ndarray]:
         """
         Solve steady-state eigenvalue problem.
 
@@ -346,6 +358,29 @@ class MultiGroupDiffusion:
             f"time = {elapsed:.2f} seconds"
         )
 
+        # Auto-attach audit trail when path provided (regulatory traceability)
+        if audit_trail_path is not None:
+            trail = create_audit_trail(
+                calculation_type="keff",
+                inputs={
+                    "geometry": {
+                        "nz": self.nz,
+                        "nr": self.nr,
+                        "ng": self.ng,
+                    },
+                    "solver_options": self.options.model_dump()
+                    if hasattr(self.options, "model_dump")
+                    else str(self.options),
+                },
+                outputs={
+                    "k_eff": float(self.k_eff),
+                    "flux_shape": list(self.flux.shape),
+                    "flux_sum": float(np.sum(self.flux)),
+                },
+                solver_method=self.options.eigen_method,
+            )
+            trail.save(audit_trail_path)
+
         return self.k_eff, self.flux
 
     def _validate_solution(self) -> None:
@@ -353,11 +388,23 @@ class MultiGroupDiffusion:
         Validate solution quality.
         Checks for NaN, Inf, negative flux, reasonable k_eff.
         """
-        validator = DataValidator()
+        # Centralized NaN/Inf validation (safety-critical boundary)
+        num_result = validate_safety_critical_outputs(
+            k_eff=self.k_eff, flux=self.flux
+        )
+        if num_result.has_errors():
+            logger.error("Solution validation failed (NaN/Inf or invalid range)")
+            num_result.print_report()
+            raise ValueError(
+                f"Solution validation failed. "
+                f"k_eff={self.k_eff:.6f}, "
+                f"flux_max={np.max(self.flux):.3e}, "
+                f"flux_min={np.min(self.flux):.3e}"
+            )
 
+        validator = DataValidator()
         # Dummy power for validation (will be normalized later)
         power = np.ones_like(self.flux[:, :, 0])
-
         result = validator.validate_solution(self.k_eff, self.flux, power, 1.0)
 
         if result.has_errors():
@@ -373,20 +420,24 @@ class MultiGroupDiffusion:
     def _power_iteration(self) -> Tuple[float, np.ndarray]:
         """Power iteration eigenvalue solver."""
         k_old = self.k_eff
-        
+
         # Ensure initial flux is non-zero and properly scaled
         # If flux is all zeros or very small, initialize to uniform distribution
         if np.max(self.flux) < 1e-10:
             self.flux = np.ones_like(self.flux)
-            logger.warning("Initial flux was zero, reinitializing to uniform distribution")
-        
+            logger.warning(
+                "Initial flux was zero, reinitializing to uniform distribution"
+            )
+
         # Normalize initial flux
         max_flux = np.max(self.flux)
         if max_flux > 0:
             self.flux = self.flux / max_flux
         else:
             self.flux = np.ones_like(self.flux)
-            logger.warning("Initial flux normalization failed, using uniform distribution")
+            logger.warning(
+                "Initial flux normalization failed, using uniform distribution"
+            )
 
         # Use progress bar if Rich is available and verbose is enabled.
         # On some Windows terminals (cp1252), Rich's spinner glyphs can trigger
@@ -397,7 +448,7 @@ class MultiGroupDiffusion:
             and self.options.max_iterations > 10
             and _supports_unicode_output()
         )
-        
+
         if use_progress:
             progress = Progress(
                 SpinnerColumn(),
@@ -410,7 +461,7 @@ class MultiGroupDiffusion:
             task = progress.add_task(
                 "Power iteration...",
                 total=self.options.max_iterations,
-                k_eff=self.k_eff
+                k_eff=self.k_eff,
             )
             progress.start()
         else:
@@ -418,8 +469,8 @@ class MultiGroupDiffusion:
             task = None
 
         # Initialize error for failure case
-        error = float('inf')
-        
+        error = float("inf")
+
         for iteration in range(self.options.max_iterations):
             self._update_fission_source(k_old)
 
@@ -433,7 +484,7 @@ class MultiGroupDiffusion:
                 # Single-group solve
                 self._update_scattering_source(0)
                 self.flux[:, :, 0] = self._solve_group(0)
-            
+
             # Check if flux became zero (shouldn't happen, but handle gracefully)
             max_flux = np.max(self.flux)
             if max_flux < 1e-10:
@@ -450,7 +501,7 @@ class MultiGroupDiffusion:
                     )
 
             k_new = self._compute_k_eff()
-            
+
             # Check for NaN or invalid values
             if np.isnan(k_new) or np.isinf(k_new):
                 logger.error(
@@ -471,7 +522,7 @@ class MultiGroupDiffusion:
                     f"This usually indicates numerical instability. Check cross-section data and "
                     f"ensure all values are physically reasonable."
                 )
-            
+
             # Check for NaN in flux
             if np.any(np.isnan(self.flux)) or np.any(np.isinf(self.flux)):
                 logger.error(
@@ -492,7 +543,9 @@ class MultiGroupDiffusion:
                 error = abs(k_new - k_old)
                 if error < self.options.tolerance:
                     # If absolute error is small and k_old is near zero, consider converged
-                    logger.info(f"Converged in {iteration+1} iterations (k_eff near zero)")
+                    logger.info(
+                        f"Converged in {iteration+1} iterations (k_eff near zero)"
+                    )
                     return k_new, self.flux
 
             # Check if error is NaN
@@ -532,12 +585,14 @@ class MultiGroupDiffusion:
             else:
                 # If flux is too small, reinitialize
                 self.flux = np.ones_like(self.flux)
-                logger.warning(f"Flux too small at iteration {iteration}, reinitializing")
+                logger.warning(
+                    f"Flux too small at iteration {iteration}, reinitializing"
+                )
 
         # Stop progress bar if it was started
         if progress is not None:
             progress.stop()
-        
+
         # Provide detailed diagnostics on failure
         logger.error(
             f"Failed to converge in {self.options.max_iterations} iterations. "
@@ -551,7 +606,7 @@ class MultiGroupDiffusion:
             f"Source: min={np.min(self.source):.3e}, max={np.max(self.source):.3e}, "
             f"has_nan={np.any(np.isnan(self.source))}"
         )
-        
+
         error_msg = (
             f"Failed to converge in {self.options.max_iterations} iterations. "
             f"Final error: {error:.2e}, tolerance: {self.options.tolerance}. "
@@ -562,8 +617,10 @@ class MultiGroupDiffusion:
         elif np.max(self.flux) < 1e-10:
             error_msg += "Flux is too small - check source terms and cross-sections."
         else:
-            error_msg += "Consider increasing max_iterations or checking cross-section data."
-        
+            error_msg += (
+                "Consider increasing max_iterations or checking cross-section data."
+            )
+
         raise RuntimeError(error_msg)
 
     def _update_fission_source(self, k_eff: float) -> None:
@@ -574,7 +631,7 @@ class MultiGroupDiffusion:
         """
         # Fission rate: [nz, nr, 1]
         fission_rate = np.sum(self.nu_sigma_f_map * self.flux, axis=2, keepdims=True)
-        
+
         # Ensure fission rate is non-zero (handle edge case where nu_sigma_f is very small)
         max_fission_rate = np.max(fission_rate)
         if max_fission_rate < 1e-10:
@@ -601,20 +658,22 @@ class MultiGroupDiffusion:
         k_eff_safe = max(k_eff, 1e-6)
         self.source = chi_map * fission_rate / k_eff_safe
 
-    def _update_scattering_source(self, g: int, flux: Optional[np.ndarray] = None) -> None:
+    def _update_scattering_source(
+        self, g: int, flux: Optional[np.ndarray] = None
+    ) -> None:
         """
         Update scattering source for group g.
 
         Optimized using vectorized operations for ~5-50x speedup depending on number of groups.
         Can use parallel Numba version for large problems.
-        
+
         Args:
             g: Energy group index
             flux: Optional flux array (if None, uses self.flux)
         """
         if flux is None:
             flux = self.flux
-        
+
         # Use parallel version if enabled (Numba parallel is efficient even for smaller problems)
         if self.options.parallel_spatial:
             _update_scattering_source_parallel_numba(
@@ -659,11 +718,11 @@ class MultiGroupDiffusion:
     def _solve_group_with_source(self, g: int, flux: np.ndarray) -> np.ndarray:
         """
         Solve single group with given flux (for parallel execution).
-        
+
         Args:
             g: Energy group index
             flux: Current flux array [nz, nr, ng]
-            
+
         Returns:
             Solved flux for group g [nz, nr]
         """
@@ -679,37 +738,43 @@ class MultiGroupDiffusion:
     def _solve_groups_parallel_red_black(self, flux_old: np.ndarray) -> np.ndarray:
         """
         Solve energy groups using red-black ordering for parallelization.
-        
+
         Algorithm:
         1. Pass 1: Solve even groups in parallel (groups 0, 2, 4, ...)
         2. Pass 2: Solve odd groups in parallel (groups 1, 3, 5, ...)
-        
+
         This maintains accuracy while enabling parallelism.
-        
+
         Args:
             flux_old: Previous iteration flux [nz, nr, ng]
-        
+
         Returns:
             New flux [nz, nr, ng]
         """
         flux_new = np.copy(flux_old)
         ng = self.ng
-        
+
         # Separate even and odd groups
         even_groups = list(range(0, ng, 2))
         odd_groups = list(range(1, ng, 2))
-        
+
         # Determine number of threads
         num_threads = self.options.num_threads
         if num_threads is None:
             num_threads = cpu_count()
-        
+
         # Pass 1: Solve even groups in parallel
-        if len(even_groups) > 1 and self.options.parallel and self.options.parallel_group_solve:
+        if (
+            len(even_groups) > 1
+            and self.options.parallel
+            and self.options.parallel_group_solve
+        ):
             # Snapshot flux so each task sees a consistent iterate (avoids races
             # from other groups updating `flux_new` mid-computation).
             flux_snapshot = np.copy(flux_new)
-            with ThreadPoolExecutor(max_workers=min(len(even_groups), num_threads)) as executor:
+            with ThreadPoolExecutor(
+                max_workers=min(len(even_groups), num_threads)
+            ) as executor:
                 futures = {
                     executor.submit(self._solve_group_with_source, g, flux_snapshot): g
                     for g in even_groups
@@ -723,11 +788,17 @@ class MultiGroupDiffusion:
             for g in even_groups:
                 self._update_scattering_source(g, flux_new)
                 flux_new[:, :, g] = self._solve_group(g)
-        
+
         # Pass 2: Solve odd groups in parallel (can use updated even group fluxes)
-        if len(odd_groups) > 1 and self.options.parallel and self.options.parallel_group_solve:
+        if (
+            len(odd_groups) > 1
+            and self.options.parallel
+            and self.options.parallel_group_solve
+        ):
             flux_snapshot = np.copy(flux_new)
-            with ThreadPoolExecutor(max_workers=min(len(odd_groups), num_threads)) as executor:
+            with ThreadPoolExecutor(
+                max_workers=min(len(odd_groups), num_threads)
+            ) as executor:
                 futures = {
                     executor.submit(self._solve_group_with_source, g, flux_snapshot): g
                     for g in odd_groups
@@ -741,13 +812,13 @@ class MultiGroupDiffusion:
             for g in odd_groups:
                 self._update_scattering_source(g, flux_new)
                 flux_new[:, :, g] = self._solve_group(g)
-        
+
         return flux_new
 
     def _build_group_system(self, g: int) -> Tuple[csr_matrix, np.ndarray]:
         """
         Build sparse matrix for single group.
-        
+
         Optimized with pre-computed values and efficient array operations.
         Uses COO format construction which is faster than element-by-element CSR.
         """
@@ -771,7 +842,7 @@ class MultiGroupDiffusion:
             # Pre-compute dz values for this axial level
             dz_down = self.dz[iz] if iz > 0 else self.dz[iz]
             dz_up = self.dz[iz] if iz < self.nz - 1 else self.dz[iz]
-            
+
             for ir in range(self.nr):
                 i = iz * self.nr + ir
 
@@ -792,7 +863,9 @@ class MultiGroupDiffusion:
                 if ir > 0:
                     r_left = self.r_mesh[ir]
                     A_left = _compute_radial_area(r_left, dz)
-                    D_left = _compute_diffusion_coefficient(D, self.D_map[iz, ir - 1, g])
+                    D_left = _compute_diffusion_coefficient(
+                        D, self.D_map[iz, ir - 1, g]
+                    )
                     coef_left = D_left * A_left / dr
 
                     diag += coef_left
@@ -805,7 +878,9 @@ class MultiGroupDiffusion:
                 if ir < self.nr - 1:
                     r_right = self.r_mesh[ir + 1]
                     A_right = _compute_radial_area(r_right, dz)
-                    D_right = _compute_diffusion_coefficient(D, self.D_map[iz, ir + 1, g])
+                    D_right = _compute_diffusion_coefficient(
+                        D, self.D_map[iz, ir + 1, g]
+                    )
                     coef_right = D_right * A_right / dr
 
                     diag += coef_right
@@ -817,7 +892,9 @@ class MultiGroupDiffusion:
                 # Axial leakage (bottom neighbor)
                 if iz > 0:
                     A_axial = A_axial_precomputed[ir]  # Use pre-computed value
-                    D_bottom = _compute_diffusion_coefficient(D, self.D_map[iz - 1, ir, g])
+                    D_bottom = _compute_diffusion_coefficient(
+                        D, self.D_map[iz - 1, ir, g]
+                    )
                     coef_bottom = D_bottom * A_axial / dz_down
 
                     diag += coef_bottom
@@ -883,7 +960,7 @@ class MultiGroupDiffusion:
             min_sigma_a = np.min(self.sigma_a_map)
             non_zero_sigma_a = np.sum(self.sigma_a_map > 0)
             total_cells = self.sigma_a_map.size
-            
+
             error_msg = (
                 "Zero absorption rate - non-physical solution.\n"
                 f"  Flux range: [{min_flux:.2e}, {max_flux:.2e}]\n"
@@ -999,7 +1076,7 @@ class MultiGroupDiffusion:
                 eigenvalues, eigenvectors = eigs(
                     A,
                     k=1,  # Only need largest eigenvalue
-                    which='LM',  # Largest magnitude
+                    which="LM",  # Largest magnitude
                     v0=flux_initial,
                     maxiter=min(self.options.max_iterations, 100),  # Limit iterations
                     tol=self.options.tolerance * 10,  # Slightly looser for eigs
@@ -1039,7 +1116,6 @@ class MultiGroupDiffusion:
                 f"Arnoldi method failed: {e}. "
                 f"Try using power iteration method (eigen_method='power') instead."
             ) from e
-
 
     def compute_power_distribution(self, total_power: float) -> np.ndarray:
         """
@@ -1170,9 +1246,9 @@ if __name__ == "__main__":
 @njit(
     parallel=True,
     cache=True,
-    fastmath=True,       # Faster math operations
+    fastmath=True,  # Faster math operations
     boundscheck=False,  # Skip bounds checking (faster - arrays validated before call)
-    nogil=True          # Release GIL for true parallelism
+    nogil=True,  # Release GIL for true parallelism
 )
 def _update_scattering_source_parallel_numba(
     flux: np.ndarray,
@@ -1183,7 +1259,7 @@ def _update_scattering_source_parallel_numba(
 ) -> None:
     """
     Parallel scattering source update using Numba.
-    
+
     Args:
         flux: Flux array [nz, nr, ng]
         sigma_s: Scattering matrix [n_materials, ng, ng]
@@ -1193,17 +1269,17 @@ def _update_scattering_source_parallel_numba(
     """
     nz, nr = material_map.shape
     ng = flux.shape[2]
-    
+
     # Parallelize over spatial cells
     for iz in prange(nz):
         for ir in prange(nr):
             mat = material_map[iz, ir]
             scatter_in = 0.0
-            
+
             # Sum scattering from all source groups
             for g_prime in range(ng):
                 scatter_in += sigma_s[mat, g_prime, g] * flux[iz, ir, g_prime]
-            
+
             source[iz, ir, g] += scatter_in
 
 

@@ -277,9 +277,7 @@ class MonteCarloSolver:
             )
 
         if not isinstance(xs_data, CrossSectionData):
-            raise ValueError(
-                f"xs_data must be CrossSectionData, got {type(xs_data)}"
-            )
+            raise ValueError(f"xs_data must be CrossSectionData, got {type(xs_data)}")
 
         if n_particles <= 0:
             raise ValueError(f"n_particles must be > 0, got {n_particles}")
@@ -297,7 +295,9 @@ class MonteCarloSolver:
 
         # Validate cross-section data has at least one group
         if xs_data.n_groups < 1:
-            raise ValueError(f"xs_data must have at least 1 group, got {xs_data.n_groups}")
+            raise ValueError(
+                f"xs_data must have at least 1 group, got {xs_data.n_groups}"
+            )
 
         logger.debug(
             f"Validated inputs: {n_particles} particles, {n_generations} generations, "
@@ -394,7 +394,9 @@ class MonteCarloSolver:
             k_std = 0.0
             logger.warning("k_std is not finite, setting to 0.0")
 
-        logger.info(f"Monte Carlo calculation complete: k_eff = {k_eff:.6f} ± {k_std:.6f}")
+        logger.info(
+            f"Monte Carlo calculation complete: k_eff = {k_eff:.6f} ± {k_std:.6f}"
+        )
         self.console.print(
             f"\n[bold green]k_eff = {k_eff:.6f} ± {k_std:.6f}[/bold green]"
         )
@@ -566,7 +568,9 @@ class MonteCarloSolver:
 
         # Validate cross sections
         if sigma_t <= 0:
-            raise ValueError(f"Invalid total cross section: {sigma_t} for material {mat_id}")
+            raise ValueError(
+                f"Invalid total cross section: {sigma_t} for material {mat_id}"
+            )
 
         # Sample
         xi = self.rng.random() * sigma_t

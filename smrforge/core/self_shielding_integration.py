@@ -11,7 +11,7 @@ from typing import Dict, Optional
 import numpy as np
 
 from ..utils.logging import get_logger
-from .reactor_core import Nuclide, NuclearDataCache
+from .reactor_core import NuclearDataCache, Nuclide
 
 logger = get_logger("smrforge.core.self_shielding_integration")
 
@@ -40,10 +40,10 @@ def get_cross_section_with_self_shielding(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Get cross-section with self-shielding correction.
-    
+
     Integrates Bondarenko, Subgroup, and Equivalence methods from
     resonance_selfshield.py with NuclearDataCache.
-    
+
     Args:
         cache: NuclearDataCache instance
         nuclide: Nuclide instance
@@ -55,28 +55,28 @@ def get_cross_section_with_self_shielding(
             - "subgroup": More accurate subgroup method
             - "equivalence": Equivalence theory (for heterogeneous geometries)
         enable_self_shielding: If False, returns unshielded cross-section
-    
+
     Returns:
         Tuple of (energy [eV], cross_section [barns])
-    
+
     Raises:
         ValueError: If unknown self-shielding method is specified
         ImportError: If resonance_selfshield module is not available and self-shielding is enabled
         FileNotFoundError: If cross-section data cannot be found for the nuclide/reaction
-    
+
     Example:
         >>> from smrforge.core.reactor_core import NuclearDataCache, Nuclide
         >>> from smrforge.core.self_shielding_integration import get_cross_section_with_self_shielding
-        >>> 
+        >>>
         >>> cache = NuclearDataCache()
         >>> u238 = Nuclide(Z=92, A=238)
-        >>> 
+        >>>
         >>> # Get shielded cross-section using Bondarenko method
         >>> energy, xs = get_cross_section_with_self_shielding(
         ...     cache, u238, "capture", temperature=900.0,
         ...     sigma_0=10.0, method="bondarenko"
         ... )
-        >>> 
+        >>>
         >>> # Use subgroup method for higher accuracy
         >>> energy, xs_subgroup = get_cross_section_with_self_shielding(
         ...     cache, u238, "capture", temperature=900.0,
@@ -84,19 +84,23 @@ def get_cross_section_with_self_shielding(
         ... )
     """
     if not _RESONANCE_AVAILABLE:
-        logger.warning("Resonance self-shielding not available, returning unshielded XS")
+        logger.warning(
+            "Resonance self-shielding not available, returning unshielded XS"
+        )
         return cache.get_cross_section(nuclide, reaction, temperature)
-    
+
     if not enable_self_shielding:
         return cache.get_cross_section(nuclide, reaction, temperature)
-    
+
     # Get infinite dilution cross-section
     try:
         energy, xs_inf = cache.get_cross_section(nuclide, reaction, temperature)
     except (ImportError, FileNotFoundError, ValueError) as e:
-        logger.warning(f"Could not get cross-section for {nuclide.name} {reaction}: {e}")
+        logger.warning(
+            f"Could not get cross-section for {nuclide.name} {reaction}: {e}"
+        )
         raise
-    
+
     # Apply self-shielding based on method
     if method == "bondarenko":
         bondarenko = BondarenkoMethod()
@@ -113,11 +117,11 @@ def get_cross_section_with_self_shielding(
         # Vectorized shielding
         xs_shielded = f_factor * xs_inf
         return energy, xs_shielded
-    
+
     elif method == "subgroup":
         subgroup = SubgroupMethod()
         nuclide_name = nuclide.name
-        
+
         # Subgroup method works on energy groups, so we need to group the data
         # Optimized: Pre-compute Bondarenko f-factor once for non-resonance regions
         bondarenko = BondarenkoMethod()
@@ -127,28 +131,28 @@ def get_cross_section_with_self_shielding(
             sigma_0=sigma_0,
             T=temperature,
         )
-        
+
         # Initialize with Bondarenko shielding (will be overwritten for resonance region)
         xs_shielded = f_factor * xs_inf
-        
+
         # Identify resonance region (typically 1 eV to 100 keV)
         # Vectorized mask computation
         resonance_mask = (energy >= 1.0) & (energy <= 1e5)
-        
+
         if np.any(resonance_mask):
             # Use subgroup method for resonance region
             # Average sigma_0 over resonance region
             sigma_0_eff = sigma_0
-            
+
             # Get representative energy for subgroup calculation
             # Optimized: Use vectorized operations
             resonance_energies = energy[resonance_mask]
             resonance_xs = xs_inf[resonance_mask]
-            
+
             # Use middle energy group for subgroup calculation
             mid_idx = len(resonance_energies) // 2
             e_mid = resonance_energies[mid_idx]
-            
+
             # Determine energy group (simplified)
             if e_mid < 1e3:
                 energy_group = "thermal"
@@ -156,12 +160,12 @@ def get_cross_section_with_self_shielding(
                 energy_group = "epithermal"
             else:
                 energy_group = "fast"
-            
+
             # Compute effective cross-section using subgroup method
             xs_eff = subgroup.compute_effective_xs(
                 nuclide_name, reaction, energy_group, sigma_0_eff
             )
-            
+
             # Apply correction factor (vectorized)
             # Optimized: Compute mean once and use vectorized multiplication
             mean_resonance_xs = np.mean(resonance_xs)
@@ -170,9 +174,9 @@ def get_cross_section_with_self_shielding(
                 # Vectorized assignment for resonance region
                 xs_shielded[resonance_mask] = xs_inf[resonance_mask] * correction_factor
             # else: already set to xs_inf[resonance_mask] from Bondarenko above
-        
+
         return energy, xs_shielded
-    
+
     elif method == "equivalence":
         # Equivalence theory requires geometry parameters
         # For now, use Bondarenko as fallback
@@ -181,9 +185,15 @@ def get_cross_section_with_self_shielding(
             "using Bondarenko method instead"
         )
         return get_cross_section_with_self_shielding(
-            cache, nuclide, reaction, temperature, sigma_0, "bondarenko", enable_self_shielding
+            cache,
+            nuclide,
+            reaction,
+            temperature,
+            sigma_0,
+            "bondarenko",
+            enable_self_shielding,
         )
-    
+
     else:
         raise ValueError(f"Unknown self-shielding method: {method}")
 
@@ -200,10 +210,10 @@ def get_cross_section_with_equivalence_theory(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Get cross-section using equivalence theory for heterogeneous geometry.
-    
+
     Uses EquivalenceTheory from resonance_selfshield.py to calculate
     equivalent homogeneous cross-sections for fuel pins in moderator.
-    
+
     Args:
         cache: NuclearDataCache instance
         nuclide: Nuclide instance
@@ -214,21 +224,21 @@ def get_cross_section_with_equivalence_theory(
         fuel_volume_fraction: Fuel volume fraction (0-1)
         moderator_xs: Optional moderator cross-sections [barns]
             If None, uses default water cross-sections
-    
+
     Returns:
         Tuple of (energy [eV], equivalent_cross_section [barns])
-    
+
     Raises:
         ImportError: If resonance_selfshield module is not available
         FileNotFoundError: If cross-section data cannot be found for the nuclide/reaction
-    
+
     Example:
         >>> from smrforge.core.reactor_core import NuclearDataCache, Nuclide
         >>> from smrforge.core.self_shielding_integration import get_cross_section_with_equivalence_theory
-        >>> 
+        >>>
         >>> cache = NuclearDataCache()
         >>> u238 = Nuclide(Z=92, A=238)
-        >>> 
+        >>>
         >>> # Get equivalent cross-section for fuel pin in water
         >>> energy, xs_equiv = get_cross_section_with_equivalence_theory(
         ...     cache, u238, "capture", temperature=600.0,
@@ -240,30 +250,32 @@ def get_cross_section_with_equivalence_theory(
     if not _RESONANCE_AVAILABLE:
         logger.warning("Equivalence theory not available, returning unshielded XS")
         return cache.get_cross_section(nuclide, reaction, temperature)
-    
+
     # Get fuel cross-section
     energy, fuel_xs = cache.get_cross_section(nuclide, reaction, temperature)
-    
+
     # Get or create moderator cross-sections
     if moderator_xs is None:
         # Default water cross-sections (simplified)
         # In production, would fetch actual water cross-sections
         moderator_xs = np.ones_like(fuel_xs) * 0.66  # Water scattering ~0.66 barns
-    
+
     # Use equivalence theory
     # EquivalenceTheory in resonance_selfshield doesn't have calculate_equivalent_xs
     # Use Bondarenko method with effective background cross-section
     bondarenko = BondarenkoMethod()
     nuclide_name = nuclide.name
-    
+
     # Calculate effective background cross-section using equivalence theory concepts
     # Volume-weighted average with equivalence correction
     moderator_volume_fraction = 1.0 - fuel_volume_fraction
-    
+
     # Effective sigma_0 based on moderator and geometry
     # Simplified: use average moderator XS weighted by volume fraction
-    sigma_0_eff = np.mean(moderator_xs) * moderator_volume_fraction / fuel_volume_fraction
-    
+    sigma_0_eff = (
+        np.mean(moderator_xs) * moderator_volume_fraction / fuel_volume_fraction
+    )
+
     # Get f-factor for shielding
     f_factor = bondarenko.get_f_factor(
         nuclide=nuclide_name,
@@ -271,20 +283,22 @@ def get_cross_section_with_equivalence_theory(
         sigma_0=sigma_0_eff,
         T=temperature,
     )
-    
+
     # Apply shielding to fuel cross-sections
     # Equivalent cross-section is volume-weighted average
     equiv_xs = (
-        fuel_volume_fraction * fuel_xs * f_factor +
-        moderator_volume_fraction * moderator_xs
+        fuel_volume_fraction * fuel_xs * f_factor
+        + moderator_volume_fraction * moderator_xs
     )
-    
+
     return energy, equiv_xs
 
 
 # Ensure the parent package (`smrforge.core`) keeps a reference to this submodule.
 # Some test environments manipulate imports/reloads and then patch via
 # `smrforge.core.self_shielding_integration`.
-from .._import_compat import bind_parent_attr_from_modules as _bind_parent_attr_from_modules  # noqa: E402
+from .._import_compat import (  # noqa: E402
+    bind_parent_attr_from_modules as _bind_parent_attr_from_modules,
+)
 
 _bind_parent_attr_from_modules("smrforge.core", "self_shielding_integration")

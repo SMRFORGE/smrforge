@@ -55,7 +55,9 @@ def _flatten_parameters_column(df: pd.DataFrame) -> pd.DataFrame:
         return df.drop(columns=["parameters"])
 
     try:
-        expanded = params_series.apply(lambda x: x if isinstance(x, dict) else {}).apply(pd.Series)
+        expanded = params_series.apply(
+            lambda x: x if isinstance(x, dict) else {}
+        ).apply(pd.Series)
     except Exception:
         return df
 
@@ -125,13 +127,19 @@ def plot_sweep_heatmap(
     if df.empty:
         raise ValueError("Sweep result is empty; cannot plot heatmap.")
 
-    if x_param not in df.columns or y_param not in df.columns or metric not in df.columns:
+    if (
+        x_param not in df.columns
+        or y_param not in df.columns
+        or metric not in df.columns
+    ):
         raise ValueError(
             f"Missing required columns. Need: {x_param}, {y_param}, {metric}. "
             f"Have: {list(df.columns)}"
         )
 
-    pivot = pd.pivot_table(df, values=metric, index=y_param, columns=x_param, aggfunc=agg)
+    pivot = pd.pivot_table(
+        df, values=metric, index=y_param, columns=x_param, aggfunc=agg
+    )
     pivot = pivot.sort_index(axis=0).sort_index(axis=1)
 
     plot_title = title or f"{metric} heatmap"
@@ -141,8 +149,16 @@ def plot_sweep_heatmap(
         fig = go.Figure(
             data=go.Heatmap(
                 z=pivot.values,
-                x=pivot.columns.astype(float) if np.issubdtype(pivot.columns.dtype, np.number) else pivot.columns,
-                y=pivot.index.astype(float) if np.issubdtype(pivot.index.dtype, np.number) else pivot.index,
+                x=(
+                    pivot.columns.astype(float)
+                    if np.issubdtype(pivot.columns.dtype, np.number)
+                    else pivot.columns
+                ),
+                y=(
+                    pivot.index.astype(float)
+                    if np.issubdtype(pivot.index.dtype, np.number)
+                    else pivot.index
+                ),
                 colorscale=kwargs.get("colorscale", "Viridis"),
                 colorbar=dict(title=metric),
             )
@@ -153,7 +169,12 @@ def plot_sweep_heatmap(
     if backend == "matplotlib":
         ensure_matplotlib_available(_MATPLOTLIB_AVAILABLE)
         fig, ax = plt.subplots(figsize=kwargs.get("figsize", (8, 6)))
-        im = ax.imshow(pivot.values, aspect="auto", origin="lower", cmap=kwargs.get("cmap", "viridis"))
+        im = ax.imshow(
+            pivot.values,
+            aspect="auto",
+            origin="lower",
+            cmap=kwargs.get("cmap", "viridis"),
+        )
         ax.set_title(plot_title)
         ax.set_xlabel(x_param)
         ax.set_ylabel(y_param)
@@ -246,7 +267,11 @@ def plot_sweep_tornado(
                 marker=dict(color=kwargs.get("color", "steelblue")),
             )
         )
-        fig.update_layout(title=plot_title, xaxis_title=("|corr|" if mode == "corr" else "Δ metric"), yaxis_title="Parameter")
+        fig.update_layout(
+            title=plot_title,
+            xaxis_title=("|corr|" if mode == "corr" else "Δ metric"),
+            yaxis_title="Parameter",
+        )
         return fig
 
     if backend == "matplotlib":
@@ -308,7 +333,9 @@ def plot_sweep_pareto(
 
     for col in (metric_x, metric_y):
         if col not in df.columns:
-            raise ValueError(f"Missing '{col}' in sweep results. Have: {list(df.columns)}")
+            raise ValueError(
+                f"Missing '{col}' in sweep results. Have: {list(df.columns)}"
+            )
 
     x = pd.to_numeric(df[metric_x], errors="coerce").to_numpy()
     y = pd.to_numeric(df[metric_y], errors="coerce").to_numpy()
@@ -325,8 +352,16 @@ def plot_sweep_pareto(
     if backend == "plotly":
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=x, y=y, mode="markers", name="All", marker=dict(size=7, opacity=0.6)))
-        fig.add_trace(go.Scatter(x=x[mask], y=y[mask], mode="markers", name="Pareto", marker=dict(size=9)))
+        fig.add_trace(
+            go.Scatter(
+                x=x, y=y, mode="markers", name="All", marker=dict(size=7, opacity=0.6)
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=x[mask], y=y[mask], mode="markers", name="Pareto", marker=dict(size=9)
+            )
+        )
         fig.update_layout(title=plot_title, xaxis_title=metric_x, yaxis_title=metric_y)
         return fig
 
@@ -403,7 +438,9 @@ def plot_sweep_correlation_matrix(
     if backend == "matplotlib":
         ensure_matplotlib_available(_MATPLOTLIB_AVAILABLE)
         fig, ax = plt.subplots(figsize=kwargs.get("figsize", (8, 7)))
-        im = ax.imshow(corr.values, vmin=-1.0, vmax=1.0, cmap=kwargs.get("cmap", "RdBu"))
+        im = ax.imshow(
+            corr.values, vmin=-1.0, vmax=1.0, cmap=kwargs.get("cmap", "RdBu")
+        )
         ax.set_title(plot_title)
         ax.set_xticks(range(len(cols)))
         ax.set_yticks(range(len(cols)))
@@ -422,4 +459,3 @@ __all__ = [
     "plot_sweep_pareto",
     "plot_sweep_correlation_matrix",
 ]
-

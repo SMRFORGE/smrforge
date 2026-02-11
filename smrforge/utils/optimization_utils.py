@@ -5,8 +5,9 @@ This module provides utilities for optimizing NumPy operations and
 reducing unnecessary memory copies, improving performance beyond OpenMC.
 """
 
-import numpy as np
 from typing import List, Literal, Optional, Tuple
+
+import numpy as np
 
 from ..utils.logging import get_logger
 
@@ -16,17 +17,17 @@ logger = get_logger("smrforge.utils.optimization_utils")
 def ensure_contiguous(arr: np.ndarray, force_copy: bool = False) -> np.ndarray:
     """
     Ensure array is C-contiguous, avoiding copy when possible.
-    
+
     This is more efficient than always using np.ascontiguousarray() because
     it only creates a copy when necessary (non-contiguous arrays).
-    
+
     Args:
         arr: Input array
         force_copy: Force copy even if contiguous (default: False)
-    
+
     Returns:
         C-contiguous array (view if possible, copy only if needed)
-    
+
     Example:
         >>> arr = np.array([1, 2, 3])
         >>> arr_contig = ensure_contiguous(arr)  # Returns view (no copy)
@@ -35,11 +36,11 @@ def ensure_contiguous(arr: np.ndarray, force_copy: bool = False) -> np.ndarray:
     """
     if force_copy:
         return np.ascontiguousarray(arr)
-    
+
     # Check if already C-contiguous
-    if arr.flags['C_CONTIGUOUS']:
+    if arr.flags["C_CONTIGUOUS"]:
         return arr  # Return view (zero-copy)
-    
+
     # Need copy for non-contiguous
     return np.ascontiguousarray(arr)
 
@@ -51,17 +52,17 @@ def vectorized_cross_section_lookup(
 ) -> np.ndarray:
     """
     Vectorized cross-section lookup using advanced indexing.
-    
+
     More efficient than looping: O(1) per lookup vs O(log N) with binary search.
-    
+
     Args:
         material_ids: Material IDs [N] (int array)
         energy_groups: Energy group indices [N] (int array)
         xs_table: Cross-section table [n_materials, n_groups]
-    
+
     Returns:
         Cross-section values [N] (vectorized lookup)
-    
+
     Example:
         >>> material_ids = np.array([0, 1, 0, 1])
         >>> energy_groups = np.array([0, 1, 2, 0])
@@ -80,18 +81,18 @@ def vectorized_normalize(
 ) -> np.ndarray:
     """
     Vectorized normalization avoiding division by zero.
-    
+
     More efficient than looping: single vectorized operation.
-    
+
     Args:
         arr: Array to normalize
         axis: Axis to normalize along (None = whole array)
         norm_value: Normalization target value (default: 1.0)
         inplace: Modify array in place (default: False)
-    
+
     Returns:
         Normalized array (view if possible, copy if needed)
-    
+
     Example:
         >>> flux = np.array([[1.0, 2.0], [3.0, 4.0]])
         >>> normalized = vectorized_normalize(flux, axis=None, norm_value=1.0)
@@ -100,13 +101,13 @@ def vectorized_normalize(
     # Handle empty arrays
     if arr.size == 0:
         return arr.copy() if not inplace else arr
-    
+
     max_val = np.max(arr, axis=axis, keepdims=(axis is not None))
-    
+
     # Avoid division by zero (use tiny so small positive values still normalize correctly)
     tiny = np.finfo(np.float64).tiny
     max_val = np.maximum(max_val, tiny)
-    
+
     if inplace:
         arr /= max_val
         arr *= norm_value
@@ -122,14 +123,14 @@ def batch_vectorized_operations(
 ) -> np.ndarray:
     """
     Perform vectorized operations on multiple arrays efficiently.
-    
+
     Args:
         arrays: List of arrays to process
         operation: Operation to perform ("sum", "mean", "max", "min")
-    
+
     Returns:
         Result array
-    
+
     Example:
         >>> arr1 = np.array([1, 2, 3])
         >>> arr2 = np.array([4, 5, 6])
@@ -138,10 +139,10 @@ def batch_vectorized_operations(
     """
     if not arrays:
         raise ValueError("Empty array list")
-    
+
     # Stack arrays for vectorized operations
     stacked = np.stack(arrays, axis=0)
-    
+
     if operation == "sum":
         return np.sum(stacked, axis=0)
     elif operation == "mean":
@@ -162,16 +163,16 @@ def zero_copy_slice(
 ) -> np.ndarray:
     """
     Create array slice using view (zero-copy) when possible.
-    
+
     Args:
         arr: Input array
         start: Start index
         stop: Stop index
         step: Step size
-    
+
     Returns:
         Array slice (view if possible)
-    
+
     Example:
         >>> arr = np.array([1, 2, 3, 4, 5])
         >>> slice_view = zero_copy_slice(arr, 1, 4)  # View (no copy)
@@ -187,18 +188,18 @@ def smart_array_copy(
 ) -> np.ndarray:
     """
     Smart array copying: only copy when necessary.
-    
+
     If target has same shape and dtype, reuse memory if possible.
     Otherwise, create new array or copy as needed.
-    
+
     Args:
         source: Source array
         target: Optional target array (reuse if compatible)
         force_copy: Force copy even if compatible (default: False)
-    
+
     Returns:
         Array with source data (reused target or new array)
-    
+
     Example:
         >>> source = np.array([1, 2, 3])
         >>> target = np.zeros(3)
@@ -207,10 +208,10 @@ def smart_array_copy(
     """
     if target is None or force_copy:
         return np.copy(source)
-    
+
     # Check if compatible for reuse
     if target.shape == source.shape and target.dtype == source.dtype:
-        if target.flags['C_CONTIGUOUS']:
+        if target.flags["C_CONTIGUOUS"]:
             # Reuse memory
             target[:] = source
             return target

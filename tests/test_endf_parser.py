@@ -2,9 +2,10 @@
 Tests for ENDF parser module.
 """
 
+from pathlib import Path
+
 import numpy as np
 import pytest
-from pathlib import Path
 
 
 class TestENDFEvaluation:
@@ -67,7 +68,11 @@ class TestENDFCompatibility:
             try:
                 evaluation = ENDFCompatibility(empty_file)
                 # If it succeeds, should have no reactions
-                assert len(evaluation._evaluation.reactions) == 0 if hasattr(evaluation, "_evaluation") else True
+                assert (
+                    len(evaluation._evaluation.reactions) == 0
+                    if hasattr(evaluation, "_evaluation")
+                    else True
+                )
             except (ValueError, Exception):
                 # Also acceptable if it raises an error
                 pass
@@ -125,4 +130,3 @@ class TestReactionData:
                 pytest.skip("ReactionData constructor interface unclear")
         except ImportError:
             pytest.skip("ENDF parser not available")
-

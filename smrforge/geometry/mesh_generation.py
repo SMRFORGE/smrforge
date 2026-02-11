@@ -185,7 +185,11 @@ class AdvancedMeshGenerator:
 
         min_angle = np.min(angles)
         max_angle = np.max(angles)
-        aspect_ratio = np.max(edge_lengths) / np.min(edge_lengths) if np.min(edge_lengths) > 0 else np.inf
+        aspect_ratio = (
+            np.max(edge_lengths) / np.min(edge_lengths)
+            if np.min(edge_lengths) > 0
+            else np.inf
+        )
 
         # Skewness (simplified - ratio of min to ideal angle for equilateral triangle)
         ideal_angle = 60.0  # For equilateral triangle
@@ -322,4 +326,3 @@ def compute_mesh_gradient(
         raise ValueError(f"Unknown method: {method}")
 
     return gradient
-

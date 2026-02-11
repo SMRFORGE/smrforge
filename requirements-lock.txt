@@ -1,0 +1,27 @@
+# Version-locked requirements for reproducibility (see docs/VERSION_LOCK_REQUIREMENTS.md)
+# Regenerate with: pip-compile requirements.txt -o requirements-lock.txt
+# Or: pip freeze | grep -E "numpy|scipy|..." > requirements-lock.txt
+
+numpy==2.3.5
+scipy==1.16.3
+matplotlib==3.10.8
+pandas==2.3.3
+numba==0.63.1
+h5py==3.15.1
+zarr==3.1.5
+polars==1.36.1
+pydantic==2.12.5
+pydantic-settings==2.12.0
+pint==0.25.2
+rich==14.2.0
+requests==2.32.5
+httpx==0.28.1
+tqdm>=4.65.0
+pyyaml==6.0.3
+scikit-learn==1.8.0
+plotly==6.5.1
+pyvista==0.46.4
+dash==3.3.0
+dash-bootstrap-components==2.0.4
+SALib==1.5.2
+seaborn==0.13.2

@@ -38,7 +38,7 @@ class ThermalLump:
         capacitance: Thermal capacitance [J/K] = mass * specific_heat.
         temperature: Initial temperature [K].
         heat_source: Callable function Q(t) returning heat generation [W].
-    
+
     Example:
         >>> fuel_lump = ThermalLump(
         ...     name="fuel",
@@ -75,7 +75,7 @@ class ThermalResistance:
         resistance: Thermal resistance [K/W] = 1/(h*A).
         lump1_name: Name of first thermal lump.
         lump2_name: Name of second thermal lump.
-    
+
     Example:
         >>> resistance = ThermalResistance(
         ...     name="fuel_to_moderator",
@@ -116,14 +116,14 @@ class LumpedThermalHydraulics:
         lumps: Dictionary of thermal lumps {name: ThermalLump}.
         resistances: List of thermal resistances connecting lumps.
         ambient_temperature: Ambient/sink temperature [K] (default: 300.0).
-    
+
     Example:
         >>> from smrforge.thermal.lumped import (
         ...     LumpedThermalHydraulics,
         ...     ThermalLump,
         ...     ThermalResistance
         ... )
-        >>> 
+        >>>
         >>> # Create thermal lumps
         >>> fuel = ThermalLump(
         ...     name="fuel",
@@ -131,14 +131,14 @@ class LumpedThermalHydraulics:
         ...     temperature=1200.0,  # K
         ...     heat_source=lambda t: 1e6 if t < 10 else 0.1e6  # Decay heat
         ... )
-        >>> 
+        >>>
         >>> moderator = ThermalLump(
         ...     name="moderator",
         ...     capacitance=5e8,  # J/K
         ...     temperature=800.0,  # K
         ...     heat_source=lambda t: 0.0  # No direct heat source
         ... )
-        >>> 
+        >>>
         >>> # Create thermal resistance
         >>> resistance = ThermalResistance(
         ...     name="fuel_to_moderator",
@@ -146,20 +146,20 @@ class LumpedThermalHydraulics:
         ...     lump1_name="fuel",
         ...     lump2_name="moderator"
         ... )
-        >>> 
+        >>>
         >>> # Create solver
         >>> solver = LumpedThermalHydraulics(
         ...     lumps={"fuel": fuel, "moderator": moderator},
         ...     resistances=[resistance],
         ...     ambient_temperature=300.0  # K
         ... )
-        >>> 
+        >>>
         >>> # Solve transient
         >>> result = solver.solve_transient(
         ...     t_span=(0.0, 72 * 3600),  # 72 hours
         ...     max_step=3600.0  # 1 hour steps
         ... )
-        >>> 
+        >>>
         >>> print(f"Final fuel temperature: {result['T_fuel'][-1]:.1f} K")
     """
 
@@ -368,6 +368,19 @@ class LumpedThermalHydraulics:
             f"Lumped thermal transient solved: {len(t)} time steps, "
             f"t_span=[{t_span[0]:.1f}, {t_span[1]:.1f}] s"
         )
+
+        # Centralized NaN/Inf validation at safety-critical boundary
+        t_arrays = {k: v for k, v in result.items() if k.startswith("T_")}
+        if t_arrays:
+            from ..validation.numerical_validation import validate_safety_critical_outputs
+
+            num_result = validate_safety_critical_outputs(**t_arrays)
+            if num_result.has_errors():
+                logger.error("Lumped thermal transient: invalid outputs (NaN/Inf)")
+                num_result.print_report()
+                raise ValueError(
+                    "Thermal transient solution has NaN/Inf in temperature arrays"
+                )
 
         return result
 

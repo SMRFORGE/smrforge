@@ -42,8 +42,8 @@ This guide describes how to execute validation tests with real ENDF files, add b
 # Run all validation tests
 python scripts/run_validation.py --endf-dir /path/to/ENDF-B-VIII.1
 
-# Run with custom output file
-python scripts/run_validation.py --endf-dir /path/to/ENDF-B-VIII.1 --output my_report.txt
+# Run with custom output file (use output/validation/ to keep reports organized)
+python scripts/run_validation.py --endf-dir /path/to/ENDF-B-VIII.1 --output output/validation/my_report.txt --json-output output/validation/my_report.json
 
 # Run specific test files
 python scripts/run_validation.py --endf-dir /path/to/ENDF-B-VIII.1 --tests tests/test_validation_comprehensive.py

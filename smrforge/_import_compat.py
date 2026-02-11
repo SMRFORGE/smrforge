@@ -77,4 +77,3 @@ def delete_global(globals_dict: dict, name: str) -> None:
             del globals_dict[name]
         except Exception:
             return
-

@@ -65,11 +65,11 @@ def plot_ray_traced_geometry(
 ):
     """
     Create ray-traced 3D visualization of reactor geometry.
-    
+
     Inspired by OpenMC's SolidRayTracePlot, this function creates a 3D
     visualization by ray-tracing through the geometry to show material
     boundaries and internal structure.
-    
+
     Args:
         geometry: Reactor geometry (PrismaticCore, PebbleBedCore, or Mesh3D)
         origin: Origin point for the view (x, y, z) [cm]
@@ -79,17 +79,17 @@ def plot_ray_traced_geometry(
         color_by: Color scheme - 'material', 'flux', 'power', 'temperature'
         backend: Visualization backend - 'plotly', 'pyvista', or 'matplotlib'
         **kwargs: Additional arguments for the backend
-    
+
     Returns:
         Figure object (backend-dependent)
-    
+
     Example:
         >>> from smrforge.geometry import PrismaticCore
         >>> from smrforge.visualization.advanced import plot_ray_traced_geometry
-        >>> 
+        >>>
         >>> core = PrismaticCore()
         >>> core.build_hexagonal_lattice(n_rings=3, pitch=40.0)
-        >>> 
+        >>>
         >>> # Create ray-traced view
         >>> fig = plot_ray_traced_geometry(
         ...     core,
@@ -101,13 +101,21 @@ def plot_ray_traced_geometry(
         >>> fig.show()
     """
     if backend == "plotly":
-        return _plot_ray_traced_plotly(geometry, origin, width, pixels, basis, color_by, **kwargs)
+        return _plot_ray_traced_plotly(
+            geometry, origin, width, pixels, basis, color_by, **kwargs
+        )
     elif backend == "pyvista":
-        return _plot_ray_traced_pyvista(geometry, origin, width, pixels, basis, color_by, **kwargs)
+        return _plot_ray_traced_pyvista(
+            geometry, origin, width, pixels, basis, color_by, **kwargs
+        )
     elif backend == "matplotlib":
-        return _plot_ray_traced_matplotlib(geometry, origin, width, pixels, basis, color_by, **kwargs)
+        return _plot_ray_traced_matplotlib(
+            geometry, origin, width, pixels, basis, color_by, **kwargs
+        )
     else:
-        raise ValueError(f"Unknown backend: {backend}. Choose 'plotly', 'pyvista', or 'matplotlib'")
+        raise ValueError(
+            f"Unknown backend: {backend}. Choose 'plotly', 'pyvista', or 'matplotlib'"
+        )
 
 
 def plot_slice(
@@ -121,10 +129,10 @@ def plot_slice(
 ):
     """
     Plot a 2D slice through 3D data.
-    
+
     Creates a cross-sectional view through the reactor at a specified
     position along an axis, similar to OpenMC's slice plots.
-    
+
     Args:
         data: 3D data array (n_x, n_y, n_z) or (n_r, n_z) for cylindrical
         geometry: Reactor geometry instance
@@ -133,10 +141,10 @@ def plot_slice(
         field_name: Name of the field (for labels)
         backend: Visualization backend
         **kwargs: Additional plotting arguments
-    
+
     Returns:
         Figure object
-    
+
     Example:
         >>> flux = solver.get_flux()  # Shape: (n_r, n_z, n_groups)
         >>> fig = plot_slice(
@@ -150,7 +158,9 @@ def plot_slice(
     if backend == "plotly":
         return _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs)
     elif backend == "matplotlib":
-        return _plot_slice_matplotlib(data, geometry, axis, position, field_name, **kwargs)
+        return _plot_slice_matplotlib(
+            data, geometry, axis, position, field_name, **kwargs
+        )
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
@@ -165,10 +175,10 @@ def plot_isosurface(
 ):
     """
     Plot an isosurface (contour surface) in 3D.
-    
+
     Creates a 3D surface showing where a scalar field equals a specific value.
     Useful for visualizing flux levels, temperature isotherms, etc.
-    
+
     Args:
         data: 3D scalar field array
         geometry: Reactor geometry
@@ -176,10 +186,10 @@ def plot_isosurface(
         field_name: Name of the field
         backend: Visualization backend
         **kwargs: Additional arguments
-    
+
     Returns:
         Figure object
-    
+
     Example:
         >>> # Plot isosurface where flux = 1e14 n/cm²/s
         >>> fig = plot_isosurface(
@@ -208,10 +218,10 @@ def plot_vector_field(
 ):
     """
     Plot a 3D vector field (e.g., neutron current).
-    
+
     Visualizes vector quantities like neutron current, velocity fields,
     or gradient fields in 3D space.
-    
+
     Args:
         vectors: Vector field array (n_points, 3) - (vx, vy, vz)
         positions: Position array (n_points, 3) - (x, y, z)
@@ -220,10 +230,10 @@ def plot_vector_field(
         scale: Scaling factor for arrow lengths
         backend: Visualization backend
         **kwargs: Additional arguments
-    
+
     Returns:
         Figure object
-    
+
     Example:
         >>> # Plot neutron current
         >>> current = solver.get_current()  # (n_points, 3)
@@ -237,9 +247,13 @@ def plot_vector_field(
         ... )
     """
     if backend == "plotly":
-        return _plot_vector_field_plotly(vectors, positions, geometry, field_name, scale, **kwargs)
+        return _plot_vector_field_plotly(
+            vectors, positions, geometry, field_name, scale, **kwargs
+        )
     elif backend == "pyvista":
-        return _plot_vector_field_pyvista(vectors, positions, geometry, field_name, scale, **kwargs)
+        return _plot_vector_field_pyvista(
+            vectors, positions, geometry, field_name, scale, **kwargs
+        )
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
@@ -253,20 +267,20 @@ def plot_material_boundaries(
 ):
     """
     Visualize material boundaries in 3D.
-    
+
     Highlights interfaces between different materials, useful for
     understanding geometry structure and material distributions.
-    
+
     Args:
         geometry: Reactor geometry
         materials: Optional list of material names to highlight
         opacity: Surface opacity (0-1)
         backend: Visualization backend
         **kwargs: Additional arguments
-    
+
     Returns:
         Figure object
-    
+
     Example:
         >>> fig = plot_material_boundaries(
         ...     core,
@@ -290,19 +304,19 @@ def create_dashboard(
 ):
     """
     Create a multi-plot dashboard layout.
-    
+
     Combines multiple visualizations into a single interactive dashboard,
     similar to OpenMC's multi-view layouts.
-    
+
     Args:
         plots: List of plot dictionaries, each with 'type', 'data', 'geometry', etc.
         layout: Layout style - 'grid', 'row', 'column', or 'custom'
         backend: Visualization backend
         **kwargs: Additional layout arguments
-    
+
     Returns:
         Figure object with subplots
-    
+
     Example:
         >>> plots = [
         ...     {'type': 'slice', 'data': flux, 'axis': 'z', 'position': 200.0},
@@ -321,13 +335,14 @@ def create_dashboard(
 
 # Implementation functions
 
+
 def _plot_ray_traced_plotly(geometry, origin, width, pixels, basis, color_by, **kwargs):
     """Ray-traced plot using plotly."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required for ray-traced visualization")
-    
+
     fig = go.Figure()
-    
+
     # For now, create a simplified ray-traced view
     # In a full implementation, would use actual ray-tracing algorithm
     if hasattr(geometry, "blocks"):
@@ -340,7 +355,7 @@ def _plot_ray_traced_plotly(geometry, origin, width, pixels, basis, color_by, **
                 x = [v[0] for v in vertices] + [vertices[0][0]]
                 y = [v[1] for v in vertices] + [vertices[0][1]]
                 z = [block.position.z] * len(vertices) + [block.position.z]
-                
+
                 fig.add_trace(
                     go.Scatter3d(
                         x=x,
@@ -351,7 +366,7 @@ def _plot_ray_traced_plotly(geometry, origin, width, pixels, basis, color_by, **
                         line=dict(color="blue", width=2),
                     )
                 )
-    
+
     fig.update_layout(
         title="Ray-Traced Geometry View",
         scene=dict(
@@ -363,48 +378,52 @@ def _plot_ray_traced_plotly(geometry, origin, width, pixels, basis, color_by, **
         width=pixels[0],
         height=pixels[1],
     )
-    
+
     return fig
 
 
-def _plot_ray_traced_pyvista(geometry, origin, width, pixels, basis, color_by, **kwargs):
+def _plot_ray_traced_pyvista(
+    geometry, origin, width, pixels, basis, color_by, **kwargs
+):
     """Ray-traced plot using pyvista."""
     if not _PYVISTA_AVAILABLE:
         raise ImportError("pyvista is required for pyvista visualization")
-    
+
     plotter = pv.Plotter()
-    
+
     # Add geometry to plotter
     if hasattr(geometry, "blocks"):
         for block in geometry.blocks:
             # Create block mesh
             # Simplified - would use actual geometry extraction
             pass
-    
+
     plotter.show()
     return plotter
 
 
-def _plot_ray_traced_matplotlib(geometry, origin, width, pixels, basis, color_by, **kwargs):
+def _plot_ray_traced_matplotlib(
+    geometry, origin, width, pixels, basis, color_by, **kwargs
+):
     """Ray-traced plot using matplotlib."""
     if not _MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib is required for matplotlib visualization")
-    
+
     fig = plt.figure(figsize=(pixels[0] / 100, pixels[1] / 100))
     ax = fig.add_subplot(111, projection="3d")
-    
+
     # Add geometry
     if hasattr(geometry, "blocks"):
         for block in geometry.blocks:
             vertices = block.vertices()
             # Create 3D polygon
             # Simplified representation
-    
+
     ax.set_xlabel("X (cm)")
     ax.set_ylabel("Y (cm)")
     ax.set_zlabel("Z (cm)")
     ax.set_title("Ray-Traced Geometry View")
-    
+
     return fig
 
 
@@ -437,7 +456,9 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
         z_centers = 0.5 * (z_mesh[:-1] + z_mesh[1:])
         return r_centers, z_centers
 
-    def _as_rz_plane(a: np.ndarray) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    def _as_rz_plane(
+        a: np.ndarray,
+    ) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """Return (plane[nz,nr], r_centers[nr], z_centers[nz]) if shape matches geometry."""
         centers = _cyl_rz_centers()
         if centers is None:
@@ -599,7 +620,11 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
     def _pick_index(coords: Optional[np.ndarray], n: int, pos: float) -> int:
         if coords is None:
             # Interpret position as index if it looks integer-ish, else use center.
-            if np.isfinite(pos) and abs(pos - round(pos)) < 1e-9 and 0 <= int(round(pos)) < n:
+            if (
+                np.isfinite(pos)
+                and abs(pos - round(pos)) < 1e-9
+                and 0 <= int(round(pos)) < n
+            ):
                 return int(round(pos))
             return n // 2
         return int(np.argmin(np.abs(coords - pos)))
@@ -612,7 +637,7 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
         if axis == "x":
             # plane is (y,z) -> display x-axis=y, y-axis=z
             raw = arr[i, :, :]  # (ny, nz)
-            z_plot = raw.T      # (nz, ny)
+            z_plot = raw.T  # (nz, ny)
             xh = y1 if y1 is not None else np.arange(ny)
             yh = z1 if z1 is not None else np.arange(nz)
             title_s = f"{field_name} - x={float(xh[i]) if x1 is not None else i:g}"
@@ -620,7 +645,7 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
         elif axis == "y":
             # plane is (x,z) -> display x-axis=x, y-axis=z
             raw = arr[:, i, :]  # (nx, nz)
-            z_plot = raw.T      # (nz, nx)
+            z_plot = raw.T  # (nz, nx)
             xh = x1 if x1 is not None else np.arange(nx)
             yh = z1 if z1 is not None else np.arange(nz)
             title_s = f"{field_name} - y={float(yh[i]) if y1 is not None else i:g}"
@@ -628,7 +653,7 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
         elif axis == "z":
             # plane is (x,y) -> display x-axis=x, y-axis=y
             raw = arr[:, :, i]  # (nx, ny)
-            z_plot = raw.T      # (ny, nx)
+            z_plot = raw.T  # (ny, nx)
             xh = x1 if x1 is not None else np.arange(nx)
             yh = y1 if y1 is not None else np.arange(ny)
             title_s = f"{field_name} - z={float(z1[i]) if z1 is not None else i:g}"
@@ -637,7 +662,9 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
             raise ValueError("axis must be 'x', 'y', or 'z' for cartesian 3D arrays")
         return z_plot, xh, yh, title_s, xlab, ylab
 
-    idx0 = _pick_index({"x": x1, "y": y1, "z": z1}.get(axis), {"x": nx, "y": ny, "z": nz}[axis], pos)
+    idx0 = _pick_index(
+        {"x": x1, "y": y1, "z": z1}.get(axis), {"x": nx, "y": ny, "z": nz}[axis], pos
+    )
     z_plot0, xh0, yh0, title0, xlab0, ylab0 = _slice_for_index(idx0)
 
     fig = go.Figure(
@@ -703,7 +730,10 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
                         args=[
                             None,
                             {
-                                "frame": {"duration": int(kwargs.pop("frame_ms", 80)), "redraw": True},
+                                "frame": {
+                                    "duration": int(kwargs.pop("frame_ms", 80)),
+                                    "redraw": True,
+                                },
                                 "transition": {"duration": 0},
                                 "fromcurrent": True,
                             },
@@ -712,7 +742,13 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
                     dict(
                         label="Pause",
                         method="animate",
-                        args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}],
+                        args=[
+                            [None],
+                            {
+                                "frame": {"duration": 0, "redraw": False},
+                                "mode": "immediate",
+                            },
+                        ],
                     ),
                 ],
             )
@@ -727,7 +763,13 @@ def _plot_slice_plotly(data, geometry, axis, position, field_name, **kwargs):
                     dict(
                         method="animate",
                         label=str(i),
-                        args=[[str(i)], {"mode": "immediate", "frame": {"duration": 0, "redraw": True}}],
+                        args=[
+                            [str(i)],
+                            {
+                                "mode": "immediate",
+                                "frame": {"duration": 0, "redraw": True},
+                            },
+                        ],
                     )
                     for i in indices
                 ],
@@ -750,7 +792,11 @@ def _plot_slice_matplotlib(data, geometry, axis, position, field_name, **kwargs)
     cmap = kwargs.pop("cmap", "viridis")
 
     # Cylindrical RZ plane (2D) if mesh is available.
-    if arr.ndim in (2, 3) and hasattr(geometry, "radial_mesh") and hasattr(geometry, "axial_mesh"):
+    if (
+        arr.ndim in (2, 3)
+        and hasattr(geometry, "radial_mesh")
+        and hasattr(geometry, "axial_mesh")
+    ):
         r_mesh = getattr(geometry, "radial_mesh")
         z_mesh = getattr(geometry, "axial_mesh")
         if r_mesh is not None and z_mesh is not None:
@@ -788,11 +834,21 @@ def _plot_slice_matplotlib(data, geometry, axis, position, field_name, **kwargs)
             if plane is not None:
                 fig, ax = plt.subplots(figsize=kwargs.get("figsize", (10, 7)))
                 # Show z (vertical) vs r (horizontal).
-                extent = [float(r_mesh[0]), float(r_mesh[-1]), float(z_mesh[0]), float(z_mesh[-1])]
-                im = ax.imshow(plane, origin="lower", aspect="auto", extent=extent, cmap=cmap)
+                extent = [
+                    float(r_mesh[0]),
+                    float(r_mesh[-1]),
+                    float(z_mesh[0]),
+                    float(z_mesh[-1]),
+                ]
+                im = ax.imshow(
+                    plane, origin="lower", aspect="auto", extent=extent, cmap=cmap
+                )
                 ax.set_xlabel(kwargs.pop("xaxis_title", "Radius (cm)"))
                 ax.set_ylabel(kwargs.pop("yaxis_title", "Height (cm)"))
-                ttl = kwargs.pop("title", f"{field_name} (cylindrical R–Z{', ' + label if label else ''})")
+                ttl = kwargs.pop(
+                    "title",
+                    f"{field_name} (cylindrical R–Z{', ' + label if label else ''})",
+                )
                 ax.set_title(ttl)
                 fig.colorbar(im, ax=ax, label=field_name)
                 return fig, ax
@@ -812,7 +868,11 @@ def _plot_slice_matplotlib(data, geometry, axis, position, field_name, **kwargs)
 
     def _pick_index(coords: Optional[np.ndarray], n: int, pos: float) -> int:
         if coords is None:
-            if np.isfinite(pos) and abs(pos - round(pos)) < 1e-9 and 0 <= int(round(pos)) < n:
+            if (
+                np.isfinite(pos)
+                and abs(pos - round(pos)) < 1e-9
+                and 0 <= int(round(pos)) < n
+            ):
                 return int(round(pos))
             return n // 2
         return int(np.argmin(np.abs(coords - pos)))
@@ -821,7 +881,7 @@ def _plot_slice_matplotlib(data, geometry, axis, position, field_name, **kwargs)
     if axis == "x":
         i = _pick_index(x1, nx, pos)
         raw = arr[i, :, :]  # (ny, nz)
-        z_plot = raw.T      # (nz, ny)
+        z_plot = raw.T  # (nz, ny)
         xh = y1 if y1 is not None else np.arange(ny)
         yh = z1 if z1 is not None else np.arange(nz)
         xlab, ylab = "Y", "Z"
@@ -829,7 +889,7 @@ def _plot_slice_matplotlib(data, geometry, axis, position, field_name, **kwargs)
     elif axis == "y":
         i = _pick_index(y1, ny, pos)
         raw = arr[:, i, :]  # (nx, nz)
-        z_plot = raw.T      # (nz, nx)
+        z_plot = raw.T  # (nz, nx)
         xh = x1 if x1 is not None else np.arange(nx)
         yh = z1 if z1 is not None else np.arange(nz)
         xlab, ylab = "X", "Z"
@@ -837,7 +897,7 @@ def _plot_slice_matplotlib(data, geometry, axis, position, field_name, **kwargs)
     elif axis == "z":
         i = _pick_index(z1, nz, pos)
         raw = arr[:, :, i]  # (nx, ny)
-        z_plot = raw.T      # (ny, nx)
+        z_plot = raw.T  # (ny, nx)
         xh = x1 if x1 is not None else np.arange(nx)
         yh = y1 if y1 is not None else np.arange(ny)
         xlab, ylab = "X", "Y"
@@ -967,16 +1027,18 @@ def _plot_isosurface_pyvista(data, geometry, isovalue, field_name, **kwargs):
     return plotter
 
 
-def _plot_vector_field_plotly(vectors, positions, geometry, field_name, scale, **kwargs):
+def _plot_vector_field_plotly(
+    vectors, positions, geometry, field_name, scale, **kwargs
+):
     """Plot vector field using plotly."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required")
-    
+
     fig = go.Figure()
-    
+
     # Scale vectors
     scaled_vectors = vectors * scale
-    
+
     # Create cone plot or quiver plot
     fig.add_trace(
         go.Cone(
@@ -989,7 +1051,7 @@ def _plot_vector_field_plotly(vectors, positions, geometry, field_name, scale, *
             name=field_name,
         )
     )
-    
+
     fig.update_layout(
         title=f"{field_name} Vector Field",
         scene=dict(
@@ -999,25 +1061,27 @@ def _plot_vector_field_plotly(vectors, positions, geometry, field_name, scale, *
             aspectmode="data",
         ),
     )
-    
+
     return fig
 
 
-def _plot_vector_field_pyvista(vectors, positions, geometry, field_name, scale, **kwargs):
+def _plot_vector_field_pyvista(
+    vectors, positions, geometry, field_name, scale, **kwargs
+):
     """Plot vector field using pyvista."""
     if not _PYVISTA_AVAILABLE:
         raise ImportError("pyvista is required")
-    
+
     plotter = pv.Plotter()
-    
+
     # Create point cloud
     points = pv.PolyData(positions)
     points["vectors"] = vectors * scale
-    
+
     # Add arrows
     arrows = points.glyph(orient="vectors", scale=True, factor=1.0)
     plotter.add_mesh(arrows, **kwargs)
-    
+
     return plotter
 
 
@@ -1025,9 +1089,9 @@ def _plot_material_boundaries_plotly(geometry, materials, opacity, **kwargs):
     """Plot material boundaries using plotly."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required")
-    
+
     fig = go.Figure()
-    
+
     # Extract material boundaries from geometry
     if hasattr(geometry, "blocks"):
         material_colors = {
@@ -1036,19 +1100,19 @@ def _plot_material_boundaries_plotly(geometry, materials, opacity, **kwargs):
             "reflector": "gray",
             "control": "black",
         }
-        
+
         for block in geometry.blocks:
             mat = getattr(block, "material", "unknown")
             color = material_colors.get(mat, "gray")
-            
+
             # Add block surface
             # Simplified - would extract actual surfaces
-    
+
     fig.update_layout(
         title="Material Boundaries",
         scene=dict(aspectmode="data"),
     )
-    
+
     return fig
 
 
@@ -1056,11 +1120,11 @@ def _plot_material_boundaries_pyvista(geometry, materials, opacity, **kwargs):
     """Plot material boundaries using pyvista."""
     if not _PYVISTA_AVAILABLE:
         raise ImportError("pyvista is required")
-    
+
     plotter = pv.Plotter()
-    
+
     # Similar to plotly version but using pyvista
-    
+
     return plotter
 
 
@@ -1068,7 +1132,7 @@ def _create_dashboard_plotly(plots, layout, **kwargs):
     """Create dashboard using plotly."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required")
-    
+
     n_plots = len(plots)
     ncols = kwargs.get("ncols", 2)
     nrows = (n_plots + ncols - 1) // ncols
@@ -1080,30 +1144,35 @@ def _create_dashboard_plotly(plots, layout, **kwargs):
         row_specs = []
         for c in range(ncols):
             idx = r * ncols + c
-            if idx < n_plots and str(plots[idx].get("type", "")).lower() in ("3d", "scatter3d"):
+            if idx < n_plots and str(plots[idx].get("type", "")).lower() in (
+                "3d",
+                "scatter3d",
+            ):
                 row_specs.append({"type": "scatter3d"})
             else:
                 row_specs.append({"type": "xy"})
         specs.append(row_specs)
-    
+
     fig = make_subplots(
         rows=nrows,
         cols=ncols,
         subplot_titles=[p.get("title", f"Plot {i+1}") for i, p in enumerate(plots)],
         specs=specs,
     )
-    
+
     # Add each plot
     for i, plot_dict in enumerate(plots):
         row = i // ncols + 1
         col = i % ncols + 1
-        
+
         plot_type = plot_dict.get("type", "slice")
         # Add trace based on type
         # Implementation would depend on plot type
-    
-    fig.update_layout(height=kwargs.get("height", 800), title=kwargs.get("title", "Dashboard"))
-    
+
+    fig.update_layout(
+        height=kwargs.get("height", 800), title=kwargs.get("title", "Dashboard")
+    )
+
     return fig
 
 
@@ -1111,22 +1180,24 @@ def _create_dashboard_matplotlib(plots, layout, **kwargs):
     """Create dashboard using matplotlib."""
     if not _MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib is required")
-    
+
     n_plots = len(plots)
     ncols = kwargs.get("ncols", 2)
     nrows = (n_plots + ncols - 1) // ncols
-    
-    fig, axes = plt.subplots(nrows, ncols, figsize=kwargs.get("figsize", (16, 4 * nrows)))
-    
+
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=kwargs.get("figsize", (16, 4 * nrows))
+    )
+
     if n_plots == 1:
         axes = [axes]
     else:
         axes = axes.flatten()
-    
+
     for i, (plot_dict, ax) in enumerate(zip(plots, axes)):
         plot_type = plot_dict.get("type", "slice")
         # Add plot based on type
-    
+
     return fig
 
 
@@ -1138,28 +1209,28 @@ def export_visualization(
 ):
     """
     Export visualization to various formats.
-    
+
     Supports export to HTML (interactive), PNG, PDF, SVG, and VTK formats.
-    
+
     Args:
         fig: Figure object (plotly, matplotlib, or pyvista)
         filepath: Output file path
         format: Export format - 'html', 'png', 'pdf', 'svg', 'vtk', 'stl'
         **kwargs: Format-specific options
-    
+
     Example:
         >>> fig = plot_ray_traced_geometry(core)
         >>> export_visualization(fig, "core_view.html", format="html")
         >>> export_visualization(fig, "core_view.png", format="png", width=1920, height=1080)
     """
     filepath = Path(filepath)
-    
+
     if format == "html":
         if hasattr(fig, "write_html"):
             fig.write_html(str(filepath), **kwargs)
         else:
             raise ValueError("Figure does not support HTML export")
-    
+
     elif format in ["png", "pdf", "svg"]:
         if hasattr(fig, "write_image"):
             fig.write_image(str(filepath), format=format, **kwargs)
@@ -1167,14 +1238,14 @@ def export_visualization(
             fig.savefig(str(filepath), format=format, **kwargs)
         else:
             raise ValueError(f"Figure does not support {format} export")
-    
+
     elif format == "vtk":
         if hasattr(fig, "save"):
             # PyVista plotter
             fig.save(str(filepath))
         else:
             raise ValueError("VTK export only supported for PyVista figures")
-    
+
     else:
         raise ValueError(f"Unknown format: {format}")
 
@@ -1187,22 +1258,22 @@ def create_interactive_viewer(
 ):
     """
     Create an interactive 3D viewer for exploring reactor geometry and data.
-    
+
     Provides interactive controls for:
     - Rotating and zooming
     - Slicing through data
     - Toggling visibility of components
     - Changing color schemes
-    
+
     Args:
         geometry: Reactor geometry
         data: Optional dictionary of data fields (e.g., {'flux': flux_array, 'power': power_array})
         backend: Visualization backend
         **kwargs: Additional viewer options
-    
+
     Returns:
         Interactive viewer object
-    
+
     Example:
         >>> viewer = create_interactive_viewer(
         ...     core,
@@ -1223,21 +1294,21 @@ def _create_interactive_viewer_plotly(geometry, data, **kwargs):
     """Create interactive plotly viewer."""
     if not _PLOTLY_AVAILABLE:
         raise ImportError("plotly is required")
-    
+
     fig = go.Figure()
-    
+
     # Add geometry
     if hasattr(geometry, "blocks"):
         for block in geometry.blocks:
             # Add block visualization
             pass
-    
+
     # Add data overlays if provided
     if data:
         for field_name, field_data in data.items():
             # Add data visualization
             pass
-    
+
     # Add interactive controls
     fig.update_layout(
         title="Interactive Reactor Viewer",
@@ -1252,23 +1323,25 @@ def _create_interactive_viewer_plotly(geometry, data, **kwargs):
             dict(
                 type="buttons",
                 direction="left",
-                buttons=list([
-                    dict(
-                        args=[{"visible": [True] * len(fig.data)}],
-                        label="Show All",
-                        method="update"
-                    ),
-                ]),
+                buttons=list(
+                    [
+                        dict(
+                            args=[{"visible": [True] * len(fig.data)}],
+                            label="Show All",
+                            method="update",
+                        ),
+                    ]
+                ),
                 pad={"r": 10, "t": 87},
                 showactive=True,
                 x=0.11,
                 xanchor="left",
                 y=1.02,
-                yanchor="top"
+                yanchor="top",
             ),
         ],
     )
-    
+
     return fig
 
 
@@ -1276,10 +1349,10 @@ def _create_interactive_viewer_pyvista(geometry, data, **kwargs):
     """Create interactive pyvista viewer."""
     if not _PYVISTA_AVAILABLE:
         raise ImportError("pyvista is required")
-    
+
     plotter = pv.Plotter()
-    
+
     # Add geometry and data
     # PyVista has built-in interactive controls
-    
+
     return plotter

@@ -5,28 +5,30 @@ This module provides data structures and utilities for storing and comparing
 benchmark values from standards (ANSI/ANS, MCNP, IAEA benchmarks, etc.).
 """
 
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Optional, Any, Union
-from pathlib import Path
 import json
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
 import numpy as np
 
 
 @dataclass
 class BenchmarkValue:
     """Single benchmark value with uncertainty."""
+
     value: float
     uncertainty: Optional[float] = None
     unit: str = ""
     source: str = ""
     notes: str = ""
-    
+
     def relative_error(self, calculated: float) -> float:
         """Calculate relative error between calculated and benchmark value."""
         if self.value == 0:
-            return float('inf') if calculated != 0 else 0.0
+            return float("inf") if calculated != 0 else 0.0
         return abs((calculated - self.value) / self.value)
-    
+
     def within_uncertainty(self, calculated: float, n_sigma: float = 2.0) -> bool:
         """Check if calculated value is within n_sigma uncertainty."""
         if self.uncertainty is None:
@@ -38,6 +40,7 @@ class BenchmarkValue:
 @dataclass
 class DecayHeatBenchmark:
     """ANSI/ANS decay heat benchmark data."""
+
     test_case: str
     nuclides: Dict[str, float]  # Nuclide name -> concentration
     initial_power: float  # MW
@@ -45,7 +48,7 @@ class DecayHeatBenchmark:
     time_points: List[float]  # seconds
     benchmark_values: List[BenchmarkValue]  # Decay heat at each time point
     standard: str = "ANSI/ANS-5.1"
-    
+
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -71,6 +74,7 @@ class DecayHeatBenchmark:
 @dataclass
 class GammaTransportBenchmark:
     """MCNP or other code gamma transport benchmark data."""
+
     test_case: str
     geometry_description: str
     source_description: str
@@ -79,7 +83,7 @@ class GammaTransportBenchmark:
     benchmark_dose_rate: BenchmarkValue
     reference_code: str = "MCNP"
     reference_version: str = ""
-    
+
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -110,6 +114,7 @@ class GammaTransportBenchmark:
 @dataclass
 class BurnupBenchmark:
     """IAEA or other burnup benchmark data."""
+
     test_case: str
     problem_description: str
     initial_composition: Dict[str, float]  # Nuclide -> concentration
@@ -117,7 +122,7 @@ class BurnupBenchmark:
     benchmark_compositions: List[Dict[str, float]]  # Composition at each time step
     benchmark_k_eff: List[BenchmarkValue]  # k-effective at each time step
     reference_source: str = "IAEA"
-    
+
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -141,7 +146,7 @@ class BurnupBenchmark:
 
 class BenchmarkDatabase:
     """Database of benchmark values for validation."""
-    
+
     def __init__(self, data_file: Optional[Path] = None):
         """Initialize benchmark database."""
         self.decay_heat_benchmarks: Dict[str, DecayHeatBenchmark] = {}
@@ -149,46 +154,44 @@ class BenchmarkDatabase:
         self.burnup_benchmarks: Dict[str, BurnupBenchmark] = {}
         self.cross_section_benchmarks: Dict[str, Dict[str, Any]] = {}
         self.data_file = data_file
-        
+
         if data_file and data_file.exists():
             self.load(data_file)
-    
+
     def add_decay_heat_benchmark(self, benchmark: DecayHeatBenchmark):
         """Add decay heat benchmark."""
         self.decay_heat_benchmarks[benchmark.test_case] = benchmark
-    
+
     def add_gamma_transport_benchmark(self, benchmark: GammaTransportBenchmark):
         """Add gamma transport benchmark."""
         self.gamma_transport_benchmarks[benchmark.test_case] = benchmark
-    
+
     def add_burnup_benchmark(self, benchmark: BurnupBenchmark):
         """Add burnup benchmark."""
         self.burnup_benchmarks[benchmark.test_case] = benchmark
-    
+
     def save(self, output_file: Path):
         """Save benchmark database to JSON file."""
         data = {
             "decay_heat_benchmarks": {
-                name: bm.to_dict()
-                for name, bm in self.decay_heat_benchmarks.items()
+                name: bm.to_dict() for name, bm in self.decay_heat_benchmarks.items()
             },
             "gamma_transport_benchmarks": {
                 name: bm.to_dict()
                 for name, bm in self.gamma_transport_benchmarks.items()
             },
             "burnup_benchmarks": {
-                name: bm.to_dict()
-                for name, bm in self.burnup_benchmarks.items()
+                name: bm.to_dict() for name, bm in self.burnup_benchmarks.items()
             },
             "cross_section_benchmarks": self.cross_section_benchmarks,
         }
-        
+
         output_file.write_text(json.dumps(data, indent=2))
-    
+
     def load(self, input_file: Path):
         """Load benchmark database from JSON file."""
         data = json.loads(input_file.read_text())
-        
+
         # Load decay heat benchmarks
         for name, bm_data in data.get("decay_heat_benchmarks", {}).items():
             benchmark_values = [
@@ -211,7 +214,7 @@ class BenchmarkDatabase:
                 standard=bm_data.get("standard", "ANSI/ANS-5.1"),
             )
             self.decay_heat_benchmarks[name] = benchmark
-        
+
         # Load gamma transport benchmarks
         for name, bm_data in data.get("gamma_transport_benchmarks", {}).items():
             benchmark_flux = [
@@ -240,7 +243,7 @@ class BenchmarkDatabase:
                 reference_version=bm_data.get("reference_version", ""),
             )
             self.gamma_transport_benchmarks[name] = benchmark
-        
+
         # Load burnup benchmarks
         for name, bm_data in data.get("burnup_benchmarks", {}).items():
             benchmark_k_eff = [
@@ -262,7 +265,7 @@ class BenchmarkDatabase:
                 reference_source=bm_data.get("reference_source", "IAEA"),
             )
             self.burnup_benchmarks[name] = benchmark
-        
+
         # Load cross-section benchmarks (simple dict format)
         self.cross_section_benchmarks = data.get("cross_section_benchmarks", {})
 
@@ -274,7 +277,7 @@ def compare_with_benchmark(
 ) -> Dict[str, Any]:
     """
     Compare calculated value with benchmark.
-    
+
     Returns:
         Dictionary with comparison results including:
         - relative_error: Relative error
@@ -285,8 +288,10 @@ def compare_with_benchmark(
     relative_error = benchmark.relative_error(calculated)
     absolute_error = abs(calculated - benchmark.value)
     within_tolerance = relative_error <= tolerance
-    within_uncertainty = benchmark.within_uncertainty(calculated) if benchmark.uncertainty else None
-    
+    within_uncertainty = (
+        benchmark.within_uncertainty(calculated) if benchmark.uncertainty else None
+    )
+
     return {
         "calculated": calculated,
         "benchmark": benchmark.value,

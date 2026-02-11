@@ -32,8 +32,10 @@ except ImportError:  # pragma: no cover
     make_subplots = None  # type: ignore
 
 from smrforge.geometry.mesh_generation import MeshQuality
-from smrforge.visualization._viz_common import ensure_matplotlib_available, ensure_plotly_available
-
+from smrforge.visualization._viz_common import (
+    ensure_matplotlib_available,
+    ensure_plotly_available,
+)
 
 _DEFAULT_THRESHOLDS = {
     "min_angle": (">=", 10.0),
@@ -64,7 +66,11 @@ def plot_mesh_quality_metrics(
     Plot mesh quality metrics as a compact summary chart.
     """
     q = _quality_to_dict(quality)
-    metrics = {k: float(q[k]) for k in ("min_angle", "max_angle", "aspect_ratio", "skewness", "jacobian") if k in q}
+    metrics = {
+        k: float(q[k])
+        for k in ("min_angle", "max_angle", "aspect_ratio", "skewness", "jacobian")
+        if k in q
+    }
     if not metrics:
         raise ValueError("No recognized metrics found in quality")
 
@@ -73,7 +79,13 @@ def plot_mesh_quality_metrics(
     if backend == "plotly":
         ensure_plotly_available(_PLOTLY_AVAILABLE)
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=list(metrics.keys()), y=list(metrics.values()), marker_color="steelblue"))
+        fig.add_trace(
+            go.Bar(
+                x=list(metrics.keys()),
+                y=list(metrics.values()),
+                marker_color="steelblue",
+            )
+        )
         # Add threshold annotations where available
         ann = []
         for k, (op, thr) in _DEFAULT_THRESHOLDS.items():
@@ -179,7 +191,11 @@ def plot_mesh_verification_dashboard(
             cols=1,
             subplot_titles=(
                 ["Quality metrics"]
-                + (["Cell size distribution"] if (quality is not None and sizes is not None) else [])
+                + (
+                    ["Cell size distribution"]
+                    if (quality is not None and sizes is not None)
+                    else []
+                )
             ),
             vertical_spacing=0.12,
         )
@@ -192,11 +208,15 @@ def plot_mesh_verification_dashboard(
             fig.update_yaxes(title_text="value", row=1, col=1)
 
         if quality is None and sizes is not None:
-            sfig = plot_mesh_cell_size_distribution(sizes, backend="plotly", log_scale=bool(kwargs.get("log_scale", True)))
+            sfig = plot_mesh_cell_size_distribution(
+                sizes, backend="plotly", log_scale=bool(kwargs.get("log_scale", True))
+            )
             for tr in sfig.data:
                 fig.add_trace(tr, row=1, col=1)
         elif quality is not None and sizes is not None:
-            sfig = plot_mesh_cell_size_distribution(sizes, backend="plotly", log_scale=bool(kwargs.get("log_scale", True)))
+            sfig = plot_mesh_cell_size_distribution(
+                sizes, backend="plotly", log_scale=bool(kwargs.get("log_scale", True))
+            )
             for tr in sfig.data:
                 fig.add_trace(tr, row=2, col=1)
 
@@ -209,17 +229,33 @@ def plot_mesh_verification_dashboard(
             fig, axes = plt.subplots(2, 1, figsize=kwargs.get("figsize", (9, 8)))
             qfig, qax = plot_mesh_quality_metrics(quality, backend="matplotlib")
             plt.close(qfig)
-            sfig, sax = plot_mesh_cell_size_distribution(sizes, backend="matplotlib", log_scale=bool(kwargs.get("log_scale", True)))
+            sfig, sax = plot_mesh_cell_size_distribution(
+                sizes,
+                backend="matplotlib",
+                log_scale=bool(kwargs.get("log_scale", True)),
+            )
             plt.close(sfig)
             # Replot directly for simplicity
             q = _quality_to_dict(quality)
-            metrics = {k: float(q[k]) for k in ("min_angle", "max_angle", "aspect_ratio", "skewness", "jacobian") if k in q}
+            metrics = {
+                k: float(q[k])
+                for k in (
+                    "min_angle",
+                    "max_angle",
+                    "aspect_ratio",
+                    "skewness",
+                    "jacobian",
+                )
+                if k in q
+            }
             axes[0].bar(list(metrics.keys()), list(metrics.values()), color="steelblue")
             axes[0].set_title("Quality metrics")
             axes[0].grid(True, alpha=0.3, axis="y")
             s = np.asarray(sizes, dtype=float).reshape(-1)
             s = s[np.isfinite(s)]
-            axes[1].hist(s, bins=int(kwargs.get("bins", 50)), color="steelblue", alpha=0.85)
+            axes[1].hist(
+                s, bins=int(kwargs.get("bins", 50)), color="steelblue", alpha=0.85
+            )
             axes[1].set_title("Cell size distribution")
             if kwargs.get("log_scale", True):
                 axes[1].set_xscale("log")
@@ -229,9 +265,13 @@ def plot_mesh_verification_dashboard(
             return fig, axes
         # Fallback single-panel
         if quality is not None:
-            return plot_mesh_quality_metrics(quality, backend="matplotlib", title=plot_title, **kwargs)
+            return plot_mesh_quality_metrics(
+                quality, backend="matplotlib", title=plot_title, **kwargs
+            )
         if sizes is not None:
-            return plot_mesh_cell_size_distribution(sizes, backend="matplotlib", title=plot_title, **kwargs)
+            return plot_mesh_cell_size_distribution(
+                sizes, backend="matplotlib", title=plot_title, **kwargs
+            )
         raise ValueError("Provide at least one of: quality, sizes")
 
     raise ValueError(f"Unknown backend: {backend}")
@@ -242,4 +282,3 @@ __all__ = [
     "plot_mesh_cell_size_distribution",
     "plot_mesh_verification_dashboard",
 ]
-

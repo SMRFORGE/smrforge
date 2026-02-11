@@ -394,9 +394,7 @@ class TestMonteCarloSolver:
 
     def test_track_particle_outside(self, mc_solver):
         """Test tracking particle that starts outside."""
-        particle = MCParticle(
-            x=200.0, y=0.0, z=200.0, u=1.0, v=0.0, w=0.0, energy=2e6
-        )
+        particle = MCParticle(x=200.0, y=0.0, z=200.0, u=1.0, v=0.0, w=0.0, energy=2e6)
 
         fission_sites = mc_solver._track_particle(particle)
 
@@ -447,4 +445,3 @@ class TestMonteCarloSolver:
 
         # Should not raise
         mc_solver.print_results()
-

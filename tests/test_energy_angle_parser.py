@@ -4,9 +4,10 @@ Tests for MF=6 (energy-angle distributions) parser.
 Tests parsing of ENDF MF=6 data for anisotropic scattering calculations.
 """
 
-import pytest
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 try:
     from smrforge.core.energy_angle_parser import (
@@ -15,7 +16,7 @@ try:
         EnergyAngleData,
         get_energy_angle_data,
     )
-    from smrforge.core.reactor_core import Nuclide, NuclearDataCache
+    from smrforge.core.reactor_core import NuclearDataCache, Nuclide
 
     _ENERGY_ANGLE_PARSER_AVAILABLE = True
 except ImportError:
@@ -83,9 +84,7 @@ class TestEnergyAngleData:
         u238 = Nuclide(Z=92, A=238)
 
         energies = np.array([1e5, 1e6, 1e7])  # 100 keV, 1 MeV, 10 MeV
-        distributions = [
-            AngularDistribution(e, 0) for e in energies
-        ]
+        distributions = [AngularDistribution(e, 0) for e in energies]
 
         data = EnergyAngleData(
             nuclide=u238,

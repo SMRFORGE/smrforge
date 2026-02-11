@@ -13,6 +13,7 @@ class TestGeometryImports:
 
     def test_geometry_module_import(self):
         """Test that geometry module can be imported."""
+
     from smrforge import geometry
 
     assert geometry is not None
@@ -230,7 +231,11 @@ class TestGeometryUtilities:
     def test_fuel_channel(self):
         """Test FuelChannel dataclass."""
         try:
-            from smrforge.geometry.core_geometry import FuelChannel, MaterialRegion, Point3D
+            from smrforge.geometry.core_geometry import (
+                FuelChannel,
+                MaterialRegion,
+                Point3D,
+            )
 
             mat_region = MaterialRegion(
                 material_id="fuel",
@@ -432,7 +437,11 @@ class TestGeometryUtilities:
     def test_graphite_block_vertices(self):
         """Test GraphiteBlock.vertices() method."""
         try:
-            from smrforge.geometry.core_geometry import GraphiteBlock, MaterialRegion, Point3D
+            from smrforge.geometry.core_geometry import (
+                GraphiteBlock,
+                MaterialRegion,
+                Point3D,
+            )
 
             block = GraphiteBlock(
                 id=1,
@@ -458,7 +467,10 @@ class TestGeometryUtilities:
             )
 
             mat_region = MaterialRegion(
-                material_id="fuel", composition={"U235": 0.001}, temperature=1200.0, density=10.0
+                material_id="fuel",
+                composition={"U235": 0.001},
+                temperature=1200.0,
+                density=10.0,
             )
 
             block = GraphiteBlock(
@@ -495,7 +507,10 @@ class TestGeometryUtilities:
             )
 
             mat_region = MaterialRegion(
-                material_id="fuel", composition={"U235": 0.001}, temperature=1200.0, density=10.0
+                material_id="fuel",
+                composition={"U235": 0.001},
+                temperature=1200.0,
+                density=10.0,
             )
 
             block = GraphiteBlock(

@@ -58,7 +58,7 @@ SMRForge currently has a **strong foundation** for user experience with:
 - **SimpleReactor class** - High-level wrapper hiding complexity
 
 **Files:**
-- `smrforge/convenience.py` - Convenience functions
+- `smrforge/convenience/` - Convenience functions
 - `smrforge/presets/` - Preset reactor designs
 
 ### 4. Configuration Management

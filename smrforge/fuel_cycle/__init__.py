@@ -17,20 +17,21 @@ Classes:
     ParticleSwarmOptimization: Particle swarm optimizer
 """
 
+from smrforge.fuel_cycle.long_term import LongTermThermalCoupling
+from smrforge.fuel_cycle.material_aging import MaterialAging
 from smrforge.fuel_cycle.optimization import (
     FuelCycleOptimizer,
     RefuelingStrategyOptimizer,
 )
-from smrforge.fuel_cycle.long_term import LongTermThermalCoupling
-from smrforge.fuel_cycle.material_aging import MaterialAging
 
 # Try to import advanced optimization algorithms
 try:
     from smrforge.fuel_cycle.advanced_optimization import (
         GeneticAlgorithm,
-        ParticleSwarmOptimization,
         OptimizationResult,
+        ParticleSwarmOptimization,
     )
+
     _ADVANCED_OPT_AVAILABLE = True
 except ImportError:
     _ADVANCED_OPT_AVAILABLE = False

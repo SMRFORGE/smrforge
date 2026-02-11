@@ -46,6 +46,7 @@ def test_navigation_update_main_content_all_branches():
     import dash
 
     from smrforge.gui.callbacks import navigation as nav
+
     # Ensure we are not using a partially imported module from a prior ImportError-path test.
     nav = importlib.reload(nav)
     assert nav._DASH_AVAILABLE is True
@@ -61,7 +62,9 @@ def test_navigation_update_main_content_all_branches():
     ):
         app = DummyApp()
         nav.register_navigation_callbacks(app)
-        (update_main_content,) = [fn for fn in app.callbacks if fn.__name__ == "update_main_content"]
+        (update_main_content,) = [
+            fn for fn in app.callbacks if fn.__name__ == "update_main_content"
+        ]
 
         # Initial load: ctx.triggered falsy
         with patch.object(dash, "callback_context", SimpleNamespace(triggered=[])):
@@ -78,6 +81,9 @@ def test_navigation_update_main_content_all_branches():
             ("nav-unknown.n_clicks", "reactor"),
         ]
         for prop_id, expected in cases:
-            with patch.object(dash, "callback_context", SimpleNamespace(triggered=[{"prop_id": prop_id}])):
+            with patch.object(
+                dash,
+                "callback_context",
+                SimpleNamespace(triggered=[{"prop_id": prop_id}]),
+            ):
                 assert update_main_content(1, 1, 1, 1, 1, 1) == expected
-

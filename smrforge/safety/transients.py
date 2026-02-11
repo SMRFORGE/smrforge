@@ -28,11 +28,11 @@ logger = get_logger("smrforge.safety.transients")
 class TransientType(Enum):
     """
     Types of transient scenarios for HTGR and LWR SMR safety analysis.
-    
+
     Enum values identify different accident scenarios and operational transients
     that may occur in HTGRs and LWR SMRs. Each transient type requires different
     modeling approaches and has different safety implications.
-    
+
     Attributes:
         LOFC: Loss of Forced Cooling - design basis accident, loss of primary
             coolant circulation (HTGR).
@@ -90,11 +90,11 @@ class TransientType(Enum):
 class TransientConditions:
     """
     Initial and boundary conditions for transient simulation.
-    
+
     Encapsulates all conditions needed to define and run a transient scenario,
     including initial reactor state, transient trigger, time span, safety
     system availability, and environmental conditions.
-    
+
     Attributes:
         initial_power: Initial reactor thermal power in Watts.
         initial_temperature: Initial average core temperature in Kelvin.
@@ -109,7 +109,7 @@ class TransientConditions:
         emergency_cooling: Whether emergency cooling systems are active (default: False).
         ambient_temperature: Ambient temperature for heat transfer in Kelvin (default: 300.0).
         atmospheric_pressure: Atmospheric pressure in Pascal (default: 101325.0).
-    
+
     Example:
         >>> conditions = TransientConditions(
         ...     initial_power=10e6,  # 10 MWth
@@ -150,11 +150,11 @@ class TransientConditions:
 class PointKineticsParameters:
     """
     Point kinetics parameters for transient analysis.
-    
+
     Contains all physical parameters needed for point kinetics equations
     with temperature feedback. Used by PointKineticsSolver for transient
     simulations.
-    
+
     Attributes:
         beta: 1D array of delayed neutron fractions for each precursor group.
             Typically 6 groups for thermal reactors. Units: dimensionless.
@@ -170,7 +170,7 @@ class PointKineticsParameters:
         fuel_heat_capacity: Effective fuel heat capacity in J/K. Used for
             fuel temperature calculation.
         moderator_heat_capacity: Effective moderator heat capacity in J/K.
-    
+
     Example:
         >>> # Typical HTGR delayed neutron parameters (6-group)
         >>> beta = np.array([0.00021, 0.00141, 0.00127, 0.00255, 0.00074, 0.00027])
@@ -205,7 +205,7 @@ class PointKineticsParameters:
     def beta_total(self) -> float:
         """
         Total delayed neutron fraction.
-        
+
         Returns:
             Sum of all delayed neutron fractions (dimensionless).
             Typical values: 0.006-0.007 for thermal reactors.
@@ -291,6 +291,7 @@ class PointKineticsSolver:
         feedback is computed from power balance equations, and reactivity is updated
         based on temperature changes using the reactivity coefficients in params.
     """
+
     def __init__(self, params: PointKineticsParameters):
         """
         Initialize point kinetics solver.
@@ -413,16 +414,16 @@ class PointKineticsSolver:
             ...         return 0.002  # 2 m$ insertion
             ...     else:
             ...         return -0.05  # Scram insertion
-            >>> 
+            >>>
             >>> def Q_removal(t, T_fuel, T_mod):
             ...     return 0.9 * 1e6  # 90% of initial power
-            >>> 
+            >>>
             >>> initial_state = {
             ...     "power": 1e6,  # 1 MWth
             ...     "T_fuel": 1200.0,  # K
             ...     "T_moderator": 900.0,  # K
             ... }
-            >>> 
+            >>>
             >>> result = solver.solve_transient(
             ...     rho_external=rho_ext,
             ...     power_removal=Q_removal,
@@ -430,7 +431,7 @@ class PointKineticsSolver:
             ...     t_span=(0.0, 100.0),
             ...     max_step=0.1,
             ... )
-            >>> 
+            >>>
             >>> print(f"Peak power: {np.max(result['power'])/1e6:.2f} MW")
             >>> print(f"Final power: {result['power'][-1]/1e6:.2f} MW")
         """
@@ -438,7 +439,9 @@ class PointKineticsSolver:
         if not callable(rho_external):
             raise ValueError(f"rho_external must be callable, got {type(rho_external)}")
         if not callable(power_removal):
-            raise ValueError(f"power_removal must be callable, got {type(power_removal)}")
+            raise ValueError(
+                f"power_removal must be callable, got {type(power_removal)}"
+            )
 
         if not isinstance(initial_state, dict):
             raise ValueError(f"initial_state must be dict, got {type(initial_state)}")
@@ -473,7 +476,7 @@ class PointKineticsSolver:
             else:
                 # For short transients, use smaller steps
                 max_step = min(0.1, 0.001 * total_time)  # 0.1s or 0.1% of span
-        
+
         if max_step <= 0:
             raise ValueError(f"max_step must be > 0, got {max_step}")
 
@@ -629,12 +632,12 @@ class PointKineticsSolver:
 class LOFCTransient:
     """
     Loss of Forced Cooling (LOFC) transient analysis.
-    
+
     Implements analysis for the Loss of Forced Cooling accident, which is a
     critical design basis accident for HTGRs. In LOFC, the primary coolant
     circulation is lost (e.g., pump failure, power loss), but the reactor
     remains pressurized and can rely on passive heat removal mechanisms.
-    
+
     Sequence of Events:
         1. Normal operation
         2. Loss of forced cooling (t=0)
@@ -642,17 +645,17 @@ class LOFCTransient:
         4. Decay heat removal via passive cooling (natural convection, radiation)
         5. Temperature peak (typically 30 minutes to several hours)
         6. Long-term cooldown
-    
+
     HTGRs are inherently safe during LOFC due to:
         - Negative temperature reactivity coefficients
         - High thermal inertia
         - Passive heat removal capability
-    
+
     Attributes:
         spec: Reactor specification object.
         geometry: Core geometry object.
         console: Rich console for progress output.
-    
+
     Example:
         >>> from smrforge.presets.htgr import get_htgr_spec
         >>> spec = get_htgr_spec("micro-htgr-1")
@@ -673,7 +676,7 @@ class LOFCTransient:
     def __init__(self, reactor_spec, core_geometry):
         """
         Initialize LOFC transient analyzer.
-        
+
         Args:
             reactor_spec: Reactor specification object containing power,
                 geometry parameters, and material properties.
@@ -1258,24 +1261,24 @@ class AirWaterIngressAnalysis:
 class PWRSMRTransient:
     """
     Base class for PWR SMR transient analysis.
-    
+
     Provides common functionality for PWR SMR-specific transients including
     steam line breaks, feedwater line breaks, pressurizer transients, and LOCA scenarios.
-    
+
     Attributes:
         reactor_spec: Reactor specification object.
         geometry: Core geometry object.
         console: Rich console for progress output.
     """
-    
+
     def __init__(self, reactor_spec, core_geometry):
         """
         Initialize PWR SMR transient analyzer.
-        
+
         Args:
             reactor_spec: Reactor specification object.
             core_geometry: Core geometry object.
-        
+
         Raises:
             ValueError: If inputs are invalid.
         """
@@ -1283,62 +1286,64 @@ class PWRSMRTransient:
             raise ValueError("reactor_spec cannot be None")
         if core_geometry is None:
             raise ValueError("core_geometry cannot be None")
-        
+
         self.spec = reactor_spec
         self.geometry = core_geometry
         self.console = Console()
-        
+
         logger.debug("PWRSMRTransient initialized")
-    
-    def _calculate_steam_flow_loss(self, break_area: float, pressure: float, temperature: float) -> float:
+
+    def _calculate_steam_flow_loss(
+        self, break_area: float, pressure: float, temperature: float
+    ) -> float:
         """
         Calculate steam flow rate through break.
-        
+
         Uses critical flow model for choked flow conditions.
-        
+
         Args:
             break_area: Break area [m²]
             pressure: Steam pressure [Pa]
             temperature: Steam temperature [K]
-        
+
         Returns:
             Steam mass flow rate [kg/s]
         """
         # Simplified critical flow model
         R = 461.5  # J/(kg·K) for steam
         gamma = 1.3  # Specific heat ratio for steam
-        
+
         # Critical pressure ratio
         P_crit_ratio = (2 / (gamma + 1)) ** (gamma / (gamma - 1))
         P_crit = pressure * P_crit_ratio
-        
+
         # Critical velocity
         v_crit = np.sqrt(gamma * R * temperature * (2 / (gamma + 1)))
-        
+
         # Critical density
         rho_crit = P_crit / (R * temperature)
-        
+
         # Mass flow rate
         m_dot = break_area * rho_crit * v_crit
-        
+
         return m_dot
 
 
 class SteamLineBreakTransient(PWRSMRTransient):
     """
     Steam line break (SLB) transient for PWR SMRs.
-    
+
     Models the response to a rupture in the main steam line, which causes:
     1. Rapid depressurization of secondary system
     2. Increased heat removal from primary system
     3. Reactor power reduction due to negative reactivity feedback
     4. Potential pressurizer level changes
-    
+
     Attributes:
         spec: Reactor specification object.
         geometry: Core geometry object.
         console: Rich console for progress output.
-    
+
     Example:
         >>> from smrforge.geometry.lwr_smr import PWRSMRCore
         >>> core = PWRSMRCore(...)
@@ -1353,7 +1358,7 @@ class SteamLineBreakTransient(PWRSMRTransient):
         ... )
         >>> result = slb.simulate(conditions, break_area=0.01)  # 0.01 m² break
     """
-    
+
     def simulate(
         self,
         conditions: TransientConditions,
@@ -1362,78 +1367,84 @@ class SteamLineBreakTransient(PWRSMRTransient):
     ) -> Dict:
         """
         Simulate steam line break transient.
-        
+
         Args:
             conditions: TransientConditions object.
             break_area: Break area [m²] (default: 0.01 m²).
             break_location: Break location ("main_steam_line", "steam_generator_outlet").
-        
+
         Returns:
             Dictionary with time history of power, pressure, temperature, etc.
-        
+
         Raises:
             ValueError: If conditions are invalid.
         """
         if not isinstance(conditions, TransientConditions):
-            raise ValueError(f"conditions must be TransientConditions, got {type(conditions)}")
-        
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
         if break_area <= 0:
             raise ValueError(f"break_area must be > 0, got {break_area}")
-        
+
         logger.info(
             f"Starting SLB simulation: P0={conditions.initial_power/1e6:.2f} MW, "
             f"break_area={break_area:.4f} m²"
         )
-        
+
         self.console.print(f"[bold cyan]Simulating Steam Line Break[/bold cyan]")
-        
+
         # Time array
         t = np.linspace(conditions.t_start, conditions.t_end, 1000)
         dt = t[1] - t[0]
-        
+
         # Initialize arrays
         power = np.zeros_like(t)
         pressure = np.zeros_like(t)
         temperature = np.zeros_like(t)
         steam_flow = np.zeros_like(t)
-        
+
         # Initial conditions
         power[0] = conditions.initial_power
         pressure[0] = conditions.initial_pressure
         temperature[0] = conditions.initial_temperature
-        
+
         # Simulate transient
         for i in range(1, len(t)):
             # Calculate steam flow loss
             if t[i] >= conditions.trigger_time:
                 steam_flow[i] = self._calculate_steam_flow_loss(
-                    break_area, pressure[i-1], temperature[i-1]
+                    break_area, pressure[i - 1], temperature[i - 1]
                 )
             else:
                 steam_flow[i] = 0.0
-            
+
             # Heat removal increases due to increased steam flow
             # Simplified model: power reduction proportional to steam flow
             if t[i] >= conditions.trigger_time:
                 heat_removal_factor = 1.0 + 0.5 * (steam_flow[i] / 10.0)  # Simplified
-                power[i] = power[i-1] / heat_removal_factor
+                power[i] = power[i - 1] / heat_removal_factor
             else:
-                power[i] = power[i-1]
-            
+                power[i] = power[i - 1]
+
             # Pressure decreases due to steam loss
             if t[i] >= conditions.trigger_time:
                 pressure_loss_rate = -steam_flow[i] * 1e5  # Simplified
-                pressure[i] = max(pressure[i-1] + pressure_loss_rate * dt, 1e5)  # Min 1 bar
+                pressure[i] = max(
+                    pressure[i - 1] + pressure_loss_rate * dt, 1e5
+                )  # Min 1 bar
             else:
-                pressure[i] = pressure[i-1]
-            
+                pressure[i] = pressure[i - 1]
+
             # Temperature decreases due to increased heat removal
             if t[i] >= conditions.trigger_time:
-                temp_change = -0.1 * (power[i] - power[i-1]) / conditions.initial_power * 100.0
-                temperature[i] = max(temperature[i-1] + temp_change, 300.0)
+                temp_change = (
+                    -0.1 * (power[i] - power[i - 1]) / conditions.initial_power * 100.0
+                )
+                temperature[i] = max(temperature[i - 1] + temp_change, 300.0)
             else:
-                temperature[i] = temperature[i-1]
-        
+                temperature[i] = temperature[i - 1]
+
         return {
             "time": t,
             "power": power,
@@ -1447,13 +1458,13 @@ class SteamLineBreakTransient(PWRSMRTransient):
 class FeedwaterLineBreakTransient(PWRSMRTransient):
     """
     Feedwater line break transient for PWR SMRs.
-    
+
     Models the response to a rupture in the feedwater line, which causes:
     1. Loss of feedwater flow
     2. Reduced heat removal from secondary system
     3. Primary system temperature increase
     4. Potential reactor scram
-    
+
     Example:
         >>> fwlb = FeedwaterLineBreakTransient(reactor_spec, core)
         >>> conditions = TransientConditions(
@@ -1466,7 +1477,7 @@ class FeedwaterLineBreakTransient(PWRSMRTransient):
         ... )
         >>> result = fwlb.simulate(conditions, break_area=0.02)
     """
-    
+
     def simulate(
         self,
         conditions: TransientConditions,
@@ -1474,49 +1485,55 @@ class FeedwaterLineBreakTransient(PWRSMRTransient):
     ) -> Dict:
         """
         Simulate feedwater line break transient.
-        
+
         Args:
             conditions: TransientConditions object.
             break_area: Break area [m²].
-        
+
         Returns:
             Dictionary with time history.
         """
         if not isinstance(conditions, TransientConditions):
-            raise ValueError(f"conditions must be TransientConditions, got {type(conditions)}")
-        
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
         logger.info(f"Starting feedwater line break simulation")
-        
+
         self.console.print(f"[bold cyan]Simulating Feedwater Line Break[/bold cyan]")
-        
+
         t = np.linspace(conditions.t_start, conditions.t_end, 1000)
         dt = t[1] - t[0]
-        
+
         power = np.zeros_like(t)
         temperature = np.zeros_like(t)
         feedwater_flow = np.zeros_like(t)
-        
+
         power[0] = conditions.initial_power
         temperature[0] = conditions.initial_temperature
         feedwater_flow[0] = conditions.initial_flow_rate
-        
+
         for i in range(1, len(t)):
             if t[i] >= conditions.trigger_time:
                 # Feedwater flow lost
-                feedwater_flow[i] = max(0.0, feedwater_flow[i-1] - break_area * 10.0 * dt)
-                
+                feedwater_flow[i] = max(
+                    0.0, feedwater_flow[i - 1] - break_area * 10.0 * dt
+                )
+
                 # Heat removal decreases
                 heat_removal_factor = feedwater_flow[i] / conditions.initial_flow_rate
-                power[i] = power[i-1] * (1.0 + 0.1 * (1.0 - heat_removal_factor))
-                
+                power[i] = power[i - 1] * (1.0 + 0.1 * (1.0 - heat_removal_factor))
+
                 # Temperature increases
-                temp_increase = 0.5 * (power[i] - power[i-1]) / conditions.initial_power * 50.0
-                temperature[i] = min(temperature[i-1] + temp_increase, 1000.0)
+                temp_increase = (
+                    0.5 * (power[i] - power[i - 1]) / conditions.initial_power * 50.0
+                )
+                temperature[i] = min(temperature[i - 1] + temp_increase, 1000.0)
             else:
-                power[i] = power[i-1]
-                temperature[i] = temperature[i-1]
-                feedwater_flow[i] = feedwater_flow[i-1]
-        
+                power[i] = power[i - 1]
+                temperature[i] = temperature[i - 1]
+                feedwater_flow[i] = feedwater_flow[i - 1]
+
         return {
             "time": t,
             "power": power,
@@ -1529,10 +1546,10 @@ class FeedwaterLineBreakTransient(PWRSMRTransient):
 class PressurizerTransient(PWRSMRTransient):
     """
     Pressurizer pressure/temperature transient for PWR SMRs.
-    
+
     Models pressurizer response to pressure/temperature changes, which can occur
     due to power changes, coolant temperature changes, or control system actions.
-    
+
     Example:
         >>> press = PressurizerTransient(reactor_spec, core)
         >>> conditions = TransientConditions(
@@ -1544,7 +1561,7 @@ class PressurizerTransient(PWRSMRTransient):
         ... )
         >>> result = press.simulate(conditions, pressure_setpoint=15.5e6)
     """
-    
+
     def simulate(
         self,
         conditions: TransientConditions,
@@ -1553,51 +1570,56 @@ class PressurizerTransient(PWRSMRTransient):
     ) -> Dict:
         """
         Simulate pressurizer transient.
-        
+
         Args:
             conditions: TransientConditions object.
             pressure_setpoint: Target pressure setpoint [Pa].
             pressure_change_rate: Rate of pressure change [Pa/s].
-        
+
         Returns:
             Dictionary with time history.
         """
         if not isinstance(conditions, TransientConditions):
-            raise ValueError(f"conditions must be TransientConditions, got {type(conditions)}")
-        
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
         logger.info(f"Starting pressurizer transient simulation")
-        
+
         t = np.linspace(conditions.t_start, conditions.t_end, 1000)
         dt = t[1] - t[0]
-        
+
         pressure = np.zeros_like(t)
         temperature = np.zeros_like(t)
         spray_flow = np.zeros_like(t)
-        
+
         pressure[0] = conditions.initial_pressure
         temperature[0] = conditions.initial_temperature
-        
+
         for i in range(1, len(t)):
             if t[i] >= conditions.trigger_time:
                 # Pressure control
-                pressure_error = pressure_setpoint - pressure[i-1]
-                pressure[i] = pressure[i-1] + np.sign(pressure_error) * min(
+                pressure_error = pressure_setpoint - pressure[i - 1]
+                pressure[i] = pressure[i - 1] + np.sign(pressure_error) * min(
                     abs(pressure_error), abs(pressure_change_rate * dt)
                 )
-                
+
                 # Temperature follows pressure (simplified)
-                temperature[i] = temperature[i-1] + 0.1 * (pressure[i] - pressure[i-1]) / 1e6 * 10.0
-                
+                temperature[i] = (
+                    temperature[i - 1]
+                    + 0.1 * (pressure[i] - pressure[i - 1]) / 1e6 * 10.0
+                )
+
                 # Spray flow for pressure control
                 if pressure[i] > pressure_setpoint:
                     spray_flow[i] = 0.1 * (pressure[i] - pressure_setpoint) / 1e6
                 else:
                     spray_flow[i] = 0.0
             else:
-                pressure[i] = pressure[i-1]
-                temperature[i] = temperature[i-1]
+                pressure[i] = pressure[i - 1]
+                temperature[i] = temperature[i - 1]
                 spray_flow[i] = 0.0
-        
+
         return {
             "time": t,
             "pressure": pressure,
@@ -1610,10 +1632,10 @@ class PressurizerTransient(PWRSMRTransient):
 class LOCATransientLWR(PWRSMRTransient):
     """
     Loss of Coolant Accident (LOCA) for LWR SMRs.
-    
+
     Models both small break (SB-LOCA) and large break (LB-LOCA) scenarios.
     Different from HTGR LOCA due to two-phase flow and different pressure regimes.
-    
+
     Example:
         >>> loca = LOCATransientLWR(reactor_spec, core)
         >>> conditions = TransientConditions(
@@ -1625,7 +1647,7 @@ class LOCATransientLWR(PWRSMRTransient):
         ... )
         >>> result = loca.simulate(conditions, break_area=0.05, break_type="small")
     """
-    
+
     def simulate(
         self,
         conditions: TransientConditions,
@@ -1634,69 +1656,83 @@ class LOCATransientLWR(PWRSMRTransient):
     ) -> Dict:
         """
         Simulate LOCA transient.
-        
+
         Args:
             conditions: TransientConditions object.
             break_area: Break area [m²].
             break_type: Break type ("small" or "large").
-        
+
         Returns:
             Dictionary with time history.
         """
         if not isinstance(conditions, TransientConditions):
-            raise ValueError(f"conditions must be TransientConditions, got {type(conditions)}")
-        
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
         if break_type not in ["small", "large"]:
             raise ValueError(f"break_type must be 'small' or 'large', got {break_type}")
-        
+
         logger.info(f"Starting {break_type} LOCA simulation")
-        
-        self.console.print(f"[bold cyan]Simulating {break_type.upper()} LOCA[/bold cyan]")
-        
+
+        self.console.print(
+            f"[bold cyan]Simulating {break_type.upper()} LOCA[/bold cyan]"
+        )
+
         t = np.linspace(conditions.t_start, conditions.t_end, 1000)
         dt = t[1] - t[0]
-        
+
         power = np.zeros_like(t)
         pressure = np.zeros_like(t)
         temperature = np.zeros_like(t)
         coolant_flow = np.zeros_like(t)
-        
+
         power[0] = conditions.initial_power
         pressure[0] = conditions.initial_pressure
         temperature[0] = conditions.initial_temperature
         coolant_flow[0] = conditions.initial_flow_rate
-        
+
         # Break severity factor
         severity = 2.0 if break_type == "large" else 0.5
-        
+
         for i in range(1, len(t)):
             if t[i] >= conditions.trigger_time:
                 # Coolant loss
                 coolant_loss_rate = break_area * severity * 100.0  # kg/s
-                coolant_flow[i] = max(0.0, coolant_flow[i-1] - coolant_loss_rate * dt)
-                
+                coolant_flow[i] = max(0.0, coolant_flow[i - 1] - coolant_loss_rate * dt)
+
                 # Pressure decreases
                 pressure_loss_rate = -severity * 1e6  # Pa/s
-                pressure[i] = max(pressure[i-1] + pressure_loss_rate * dt, 1e5)
-                
+                pressure[i] = max(pressure[i - 1] + pressure_loss_rate * dt, 1e5)
+
                 # Power decreases due to scram (if available)
-                if conditions.scram_available and t[i] >= conditions.trigger_time + conditions.scram_delay:
-                    power[i] = power[i-1] * 0.1  # Rapid power reduction
+                if (
+                    conditions.scram_available
+                    and t[i] >= conditions.trigger_time + conditions.scram_delay
+                ):
+                    power[i] = power[i - 1] * 0.1  # Rapid power reduction
                 else:
-                    power[i] = power[i-1] * (1.0 - 0.01 * dt)
-                
+                    power[i] = power[i - 1] * (1.0 - 0.01 * dt)
+
                 # Temperature increases initially, then decreases
                 if pressure[i] > 5e6:  # High pressure phase
-                    temp_increase = 0.2 * (power[i] - power[i-1]) / conditions.initial_power * 50.0
-                    temperature[i] = min(temperature[i-1] + temp_increase, 800.0)
+                    temp_increase = (
+                        0.2
+                        * (power[i] - power[i - 1])
+                        / conditions.initial_power
+                        * 50.0
+                    )
+                    temperature[i] = min(temperature[i - 1] + temp_increase, 800.0)
                 else:  # Low pressure phase
-                    temperature[i] = max(temperature[i-1] - 0.5 * dt, 373.0)  # Cooling
+                    temperature[i] = max(
+                        temperature[i - 1] - 0.5 * dt, 373.0
+                    )  # Cooling
             else:
-                power[i] = power[i-1]
-                pressure[i] = pressure[i-1]
-                temperature[i] = temperature[i-1]
-                coolant_flow[i] = coolant_flow[i-1]
-        
+                power[i] = power[i - 1]
+                pressure[i] = pressure[i - 1]
+                temperature[i] = temperature[i - 1]
+                coolant_flow[i] = coolant_flow[i - 1]
+
         return {
             "time": t,
             "power": power,
@@ -1711,24 +1747,24 @@ class LOCATransientLWR(PWRSMRTransient):
 class BWRSMRTransient:
     """
     Base class for BWR SMR transient analysis.
-    
+
     Provides common functionality for BWR SMR-specific transients including
     steam separator issues, recirculation pump trips, and BWR-specific LOCA scenarios.
-    
+
     Attributes:
         reactor_spec: Reactor specification object.
         geometry: Core geometry object.
         console: Rich console for progress output.
     """
-    
+
     def __init__(self, reactor_spec, core_geometry):
         """
         Initialize BWR SMR transient analyzer.
-        
+
         Args:
             reactor_spec: Reactor specification object.
             core_geometry: Core geometry object.
-        
+
         Raises:
             ValueError: If inputs are invalid.
         """
@@ -1736,24 +1772,24 @@ class BWRSMRTransient:
             raise ValueError("reactor_spec cannot be None")
         if core_geometry is None:
             raise ValueError("core_geometry cannot be None")
-        
+
         self.spec = reactor_spec
         self.geometry = core_geometry
         self.console = Console()
-        
+
         logger.debug("BWRSMRTransient initialized")
 
 
 class RecirculationPumpTripTransient(BWRSMRTransient):
     """
     Recirculation pump trip transient for BWR SMRs.
-    
+
     Models the response to loss of forced recirculation, which causes:
     1. Reduced coolant flow through core
     2. Increased void fraction
     3. Negative reactivity insertion (void coefficient)
     4. Power reduction
-    
+
     Example:
         >>> rpt = RecirculationPumpTripTransient(reactor_spec, core)
         >>> conditions = TransientConditions(
@@ -1766,59 +1802,67 @@ class RecirculationPumpTripTransient(BWRSMRTransient):
         ... )
         >>> result = rpt.simulate(conditions)
     """
-    
+
     def simulate(self, conditions: TransientConditions) -> Dict:
         """
         Simulate recirculation pump trip transient.
-        
+
         Args:
             conditions: TransientConditions object.
-        
+
         Returns:
             Dictionary with time history.
         """
         if not isinstance(conditions, TransientConditions):
-            raise ValueError(f"conditions must be TransientConditions, got {type(conditions)}")
-        
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
         logger.info("Starting recirculation pump trip simulation")
-        
+
         self.console.print(f"[bold cyan]Simulating Recirculation Pump Trip[/bold cyan]")
-        
+
         t = np.linspace(conditions.t_start, conditions.t_end, 1000)
         dt = t[1] - t[0]
-        
+
         power = np.zeros_like(t)
         flow_rate = np.zeros_like(t)
         void_fraction = np.zeros_like(t)
         pressure = np.zeros_like(t)
-        
+
         power[0] = conditions.initial_power
         flow_rate[0] = conditions.initial_flow_rate
         void_fraction[0] = 0.3  # Initial void fraction for BWR
         pressure[0] = conditions.initial_pressure
-        
+
         for i in range(1, len(t)):
             if t[i] >= conditions.trigger_time:
                 # Flow rate decreases
-                flow_rate[i] = max(0.0, flow_rate[i-1] * np.exp(-dt / 10.0))  # Exponential decay
-                
+                flow_rate[i] = max(
+                    0.0, flow_rate[i - 1] * np.exp(-dt / 10.0)
+                )  # Exponential decay
+
                 # Void fraction increases (less flow = more void)
-                void_fraction[i] = min(0.8, void_fraction[i-1] + 0.1 * (1.0 - flow_rate[i] / conditions.initial_flow_rate))
-                
+                void_fraction[i] = min(
+                    0.8,
+                    void_fraction[i - 1]
+                    + 0.1 * (1.0 - flow_rate[i] / conditions.initial_flow_rate),
+                )
+
                 # Negative reactivity from void (BWR void coefficient ~ -0.01 dk/k per % void)
                 void_reactivity = -0.01 * (void_fraction[i] - void_fraction[0]) * 100.0
-                
+
                 # Power decreases due to negative reactivity
-                power[i] = power[i-1] * (1.0 + void_reactivity * dt)
-                
+                power[i] = power[i - 1] * (1.0 + void_reactivity * dt)
+
                 # Pressure slightly decreases
-                pressure[i] = pressure[i-1] * (1.0 - 0.001 * dt)
+                pressure[i] = pressure[i - 1] * (1.0 - 0.001 * dt)
             else:
-                power[i] = power[i-1]
-                flow_rate[i] = flow_rate[i-1]
-                void_fraction[i] = void_fraction[i-1]
-                pressure[i] = pressure[i-1]
-        
+                power[i] = power[i - 1]
+                flow_rate[i] = flow_rate[i - 1]
+                void_fraction[i] = void_fraction[i - 1]
+                pressure[i] = pressure[i - 1]
+
         return {
             "time": t,
             "power": power,
@@ -1832,12 +1876,12 @@ class RecirculationPumpTripTransient(BWRSMRTransient):
 class SteamSeparatorIssueTransient(BWRSMRTransient):
     """
     Steam separator malfunction transient for BWR SMRs.
-    
+
     Models the response to steam separator issues, which can cause:
     1. Reduced steam quality
     2. Increased moisture carryover
     3. Potential power oscillations
-    
+
     Example:
         >>> ssi = SteamSeparatorIssueTransient(reactor_spec, core)
         >>> conditions = TransientConditions(
@@ -1849,7 +1893,7 @@ class SteamSeparatorIssueTransient(BWRSMRTransient):
         ... )
         >>> result = ssi.simulate(conditions, separator_efficiency=0.5)
     """
-    
+
     def simulate(
         self,
         conditions: TransientConditions,
@@ -1857,48 +1901,54 @@ class SteamSeparatorIssueTransient(BWRSMRTransient):
     ) -> Dict:
         """
         Simulate steam separator issue transient.
-        
+
         Args:
             conditions: TransientConditions object.
             separator_efficiency: Separator efficiency (0.0 to 1.0).
-        
+
         Returns:
             Dictionary with time history.
         """
         if not isinstance(conditions, TransientConditions):
-            raise ValueError(f"conditions must be TransientConditions, got {type(conditions)}")
-        
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
         if not 0.0 <= separator_efficiency <= 1.0:
-            raise ValueError(f"separator_efficiency must be between 0 and 1, got {separator_efficiency}")
-        
-        logger.info(f"Starting steam separator issue simulation (efficiency={separator_efficiency})")
-        
+            raise ValueError(
+                f"separator_efficiency must be between 0 and 1, got {separator_efficiency}"
+            )
+
+        logger.info(
+            f"Starting steam separator issue simulation (efficiency={separator_efficiency})"
+        )
+
         t = np.linspace(conditions.t_start, conditions.t_end, 1000)
         dt = t[1] - t[0]
-        
+
         power = np.zeros_like(t)
         steam_quality = np.zeros_like(t)
         moisture_carryover = np.zeros_like(t)
-        
+
         power[0] = conditions.initial_power
         steam_quality[0] = 0.99  # Normal BWR steam quality
         moisture_carryover[0] = 0.01
-        
+
         for i in range(1, len(t)):
             if t[i] >= conditions.trigger_time:
                 # Steam quality decreases
-                steam_quality[i] = max(0.5, steam_quality[i-1] * separator_efficiency)
-                
+                steam_quality[i] = max(0.5, steam_quality[i - 1] * separator_efficiency)
+
                 # Moisture carryover increases
                 moisture_carryover[i] = min(0.2, 1.0 - steam_quality[i])
-                
+
                 # Power slightly decreases due to reduced efficiency
-                power[i] = power[i-1] * (1.0 - 0.01 * moisture_carryover[i] * dt)
+                power[i] = power[i - 1] * (1.0 - 0.01 * moisture_carryover[i] * dt)
             else:
-                power[i] = power[i-1]
-                steam_quality[i] = steam_quality[i-1]
-                moisture_carryover[i] = moisture_carryover[i-1]
-        
+                power[i] = power[i - 1]
+                steam_quality[i] = steam_quality[i - 1]
+                moisture_carryover[i] = moisture_carryover[i - 1]
+
         return {
             "time": t,
             "power": power,
@@ -1911,24 +1961,24 @@ class SteamSeparatorIssueTransient(BWRSMRTransient):
 class IntegralSMRTransient:
     """
     Base class for integral SMR transient analysis.
-    
+
     Handles transients specific to integral SMR designs where the steam generator
     and primary system are integrated in a single vessel.
-    
+
     Attributes:
         reactor_spec: Reactor specification object.
         geometry: Core geometry object.
         console: Rich console for progress output.
     """
-    
+
     def __init__(self, reactor_spec, core_geometry):
         """
         Initialize integral SMR transient analyzer.
-        
+
         Args:
             reactor_spec: Reactor specification object.
             core_geometry: Core geometry object.
-        
+
         Raises:
             ValueError: If inputs are invalid.
         """
@@ -1936,24 +1986,24 @@ class IntegralSMRTransient:
             raise ValueError("reactor_spec cannot be None")
         if core_geometry is None:
             raise ValueError("core_geometry cannot be None")
-        
+
         self.spec = reactor_spec
         self.geometry = core_geometry
         self.console = Console()
-        
+
         logger.debug("IntegralSMRTransient initialized")
 
 
 class SteamGeneratorTubeRuptureTransient(IntegralSMRTransient):
     """
     In-vessel steam generator tube rupture transient for integral SMRs.
-    
+
     Models the response to a tube rupture in the in-vessel steam generator, which causes:
     1. Primary-to-secondary leakage
     2. Pressure equalization
     3. Potential contamination of secondary system
     4. Reactor scram
-    
+
     Example:
         >>> sgt = SteamGeneratorTubeRuptureTransient(reactor_spec, core)
         >>> conditions = TransientConditions(
@@ -1965,7 +2015,7 @@ class SteamGeneratorTubeRuptureTransient(IntegralSMRTransient):
         ... )
         >>> result = sgt.simulate(conditions, tube_rupture_count=1)
     """
-    
+
     def simulate(
         self,
         conditions: TransientConditions,
@@ -1974,61 +2024,76 @@ class SteamGeneratorTubeRuptureTransient(IntegralSMRTransient):
     ) -> Dict:
         """
         Simulate steam generator tube rupture transient.
-        
+
         Args:
             conditions: TransientConditions object.
             tube_rupture_count: Number of tubes ruptured.
             rupture_area_per_tube: Rupture area per tube [m²].
-        
+
         Returns:
             Dictionary with time history.
         """
         if not isinstance(conditions, TransientConditions):
-            raise ValueError(f"conditions must be TransientConditions, got {type(conditions)}")
-        
+            raise ValueError(
+                f"conditions must be TransientConditions, got {type(conditions)}"
+            )
+
         if tube_rupture_count < 1:
-            raise ValueError(f"tube_rupture_count must be >= 1, got {tube_rupture_count}")
-        
+            raise ValueError(
+                f"tube_rupture_count must be >= 1, got {tube_rupture_count}"
+            )
+
         logger.info(f"Starting SG tube rupture simulation ({tube_rupture_count} tubes)")
-        
-        self.console.print(f"[bold cyan]Simulating Steam Generator Tube Rupture[/bold cyan]")
-        
+
+        self.console.print(
+            f"[bold cyan]Simulating Steam Generator Tube Rupture[/bold cyan]"
+        )
+
         t = np.linspace(conditions.t_start, conditions.t_end, 1000)
         dt = t[1] - t[0]
-        
+
         power = np.zeros_like(t)
         primary_pressure = np.zeros_like(t)
         secondary_pressure = np.zeros_like(t)
         leakage_rate = np.zeros_like(t)
-        
+
         power[0] = conditions.initial_power
         primary_pressure[0] = conditions.initial_pressure
         secondary_pressure[0] = 6.0e6  # Typical secondary pressure
         leakage_rate[0] = 0.0
-        
+
         total_rupture_area = tube_rupture_count * rupture_area_per_tube
-        
+
         for i in range(1, len(t)):
             if t[i] >= conditions.trigger_time:
                 # Leakage rate (simplified)
-                pressure_diff = primary_pressure[i-1] - secondary_pressure[i-1]
-                leakage_rate[i] = total_rupture_area * np.sqrt(2 * pressure_diff / 1000.0) * 100.0  # kg/s
-                
+                pressure_diff = primary_pressure[i - 1] - secondary_pressure[i - 1]
+                leakage_rate[i] = (
+                    total_rupture_area * np.sqrt(2 * pressure_diff / 1000.0) * 100.0
+                )  # kg/s
+
                 # Pressure equalization
-                primary_pressure[i] = primary_pressure[i-1] - leakage_rate[i] * 1e4 * dt
-                secondary_pressure[i] = secondary_pressure[i-1] + leakage_rate[i] * 1e4 * dt
-                
+                primary_pressure[i] = (
+                    primary_pressure[i - 1] - leakage_rate[i] * 1e4 * dt
+                )
+                secondary_pressure[i] = (
+                    secondary_pressure[i - 1] + leakage_rate[i] * 1e4 * dt
+                )
+
                 # Reactor scram (if available)
-                if conditions.scram_available and t[i] >= conditions.trigger_time + conditions.scram_delay:
-                    power[i] = power[i-1] * 0.1
+                if (
+                    conditions.scram_available
+                    and t[i] >= conditions.trigger_time + conditions.scram_delay
+                ):
+                    power[i] = power[i - 1] * 0.1
                 else:
-                    power[i] = power[i-1] * (1.0 - 0.01 * dt)
+                    power[i] = power[i - 1] * (1.0 - 0.01 * dt)
             else:
-                power[i] = power[i-1]
-                primary_pressure[i] = primary_pressure[i-1]
-                secondary_pressure[i] = secondary_pressure[i-1]
+                power[i] = power[i - 1]
+                primary_pressure[i] = primary_pressure[i - 1]
+                secondary_pressure[i] = secondary_pressure[i - 1]
                 leakage_rate[i] = 0.0
-        
+
         return {
             "time": t,
             "power": power,
@@ -2040,7 +2105,9 @@ class SteamGeneratorTubeRuptureTransient(IntegralSMRTransient):
         }
 
 
-def decay_heat_ans_standard(t: np.ndarray, P0: float, t_operate: float) -> np.ndarray:  # pragma: no cover
+def decay_heat_ans_standard(
+    t: np.ndarray, P0: float, t_operate: float
+) -> np.ndarray:  # pragma: no cover
     """
     ANS 5.1 standard decay heat curve.
     Fast Numba implementation.

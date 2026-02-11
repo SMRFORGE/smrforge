@@ -39,4 +39,3 @@ def test_register_theme_callbacks_registers_clientside_callbacks():
         theme.register_theme_callbacks(app)
         assert global_cb.call_count == 1
         assert app.clientside_callback.call_count == 2
-

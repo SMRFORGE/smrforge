@@ -6,6 +6,7 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
+# - Convenience API consolidated: Legacy smrforge/convenience.py removed; all convenience functionality in smrforge/convenience/ package. No API changes.
 # - Stable API (smrforge.api): Versioned facade; lazy load neutronics/burnup
 # - AI audit: CalculationAuditTrail.ai_models_used, smrforge.ai.record_ai_model
 # - ML export: export_ml_dataset() for Parquet/HDF5 (design points for training)
@@ -106,7 +107,7 @@
 # - Fixed Debian Trixie compatibility (libgl1 instead of libgl1-mesa-glx)
 # - Fixed Dash 3.x API compatibility (app.run() instead of app.run_server())
 # - Fixed dashboard preset loading and validation issues
-# - Fixed create_reactor and list_presets import resolution (convenience module conflict)
+# - Convenience API: create_reactor, list_presets from smrforge.convenience package (consolidated Feb 2026)
 # - Fixed dashboard State component initialization (all analysis options always in layout)
 # - Fixed LumpedThermalHydraulics parameter passing (adaptive/max_step moved to solve_transient)
 # - Improved validation warning messages (show actual validation details)

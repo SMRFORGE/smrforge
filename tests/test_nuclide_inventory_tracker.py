@@ -4,11 +4,11 @@ Tests for NuclideInventoryTracker class.
 Tests general-purpose nuclide inventory tracking for burnup and material evolution.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
-    from smrforge.core.reactor_core import NuclideInventoryTracker, Nuclide
+    from smrforge.core.reactor_core import Nuclide, NuclideInventoryTracker
 
     _INVENTORY_TRACKER_AVAILABLE = True
 except ImportError:
@@ -170,7 +170,9 @@ class TestNuclideInventoryTracker:
 
         assert len(tracker.nuclides) == 2
         # Check that nuclides were parsed correctly
-        u235_names = [nuc.name for nuc in tracker.nuclides if nuc.Z == 92 and nuc.A == 235]
+        u235_names = [
+            nuc.name for nuc in tracker.nuclides if nuc.Z == 92 and nuc.A == 235
+        ]
         assert len(u235_names) > 0
 
     def test_burnup_tracking(self):

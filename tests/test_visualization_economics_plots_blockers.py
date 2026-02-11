@@ -95,9 +95,16 @@ def test_plot_capex_breakdown_plotly_waterfall_and_bar(monkeypatch):
     monkeypatch.setattr(ep, "ensure_plotly_available", lambda ok: None)
     monkeypatch.setattr(ep, "go", _DummyGo)
 
-    breakdown = {"reactor": 10.0, "turbine": 5.0, "total_overnight_cost": 20.0, "zero": 0.0}
+    breakdown = {
+        "reactor": 10.0,
+        "turbine": 5.0,
+        "total_overnight_cost": 20.0,
+        "zero": 0.0,
+    }
 
-    fig = ep.plot_capex_breakdown(breakdown, backend="plotly", kind="waterfall", top_n=2)
+    fig = ep.plot_capex_breakdown(
+        breakdown, backend="plotly", kind="waterfall", top_n=2
+    )
     assert isinstance(fig, _DummyFigure)
     assert fig.data
 
@@ -142,7 +149,11 @@ def test_plot_capex_breakdown_input_errors_and_unknown_backend():
 def test_plot_lcoe_breakdown_plotly_and_matplotlib(monkeypatch):
     import smrforge.visualization.economics_plots as ep
 
-    lcoe = {"capital_contribution": 0.1, "operating_contribution": 0.2, "decommissioning_contribution": 0.3}
+    lcoe = {
+        "capital_contribution": 0.1,
+        "operating_contribution": 0.2,
+        "decommissioning_contribution": 0.3,
+    }
 
     monkeypatch.setattr(ep, "_PLOTLY_AVAILABLE", True)
     monkeypatch.setattr(ep, "ensure_plotly_available", lambda ok: None)
@@ -162,4 +173,3 @@ def test_plot_lcoe_breakdown_plotly_and_matplotlib(monkeypatch):
 
     with pytest.raises(ValueError, match="non-empty dict"):
         ep.plot_lcoe_breakdown({})
-

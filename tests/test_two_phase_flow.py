@@ -4,15 +4,15 @@ Tests for two-phase flow support.
 Tests advanced two-phase flow calculations for BWR SMRs.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 try:
+    from smrforge.geometry.core_geometry import Point3D
     from smrforge.geometry.two_phase_flow import (
         TwoPhaseFlowRegion,
         create_bwr_two_phase_region,
     )
-    from smrforge.geometry.core_geometry import Point3D
 
     _TWO_PHASE_FLOW_AVAILABLE = True
 except ImportError:
@@ -143,6 +143,7 @@ class TestTwoPhaseFlowRegion:
     def test_void_fraction_when_saturation_invalid(self):
         """Test void fraction returns 0 when saturation densities invalid (rho_l or rho_v <= 0)."""
         from unittest.mock import patch
+
         region = TwoPhaseFlowRegion(
             id=1,
             position=Point3D(0, 0, 0),
@@ -151,14 +152,19 @@ class TestTwoPhaseFlowRegion:
             pressure=7.0e6,
             quality=0.5,
         )
-        with patch.object(region, "_get_saturation_densities", return_value=(0.0, 36.0)):
+        with patch.object(
+            region, "_get_saturation_densities", return_value=(0.0, 36.0)
+        ):
             assert region.calculate_void_fraction_from_quality() == 0.0
-        with patch.object(region, "_get_saturation_densities", return_value=(740.0, 0.0)):
+        with patch.object(
+            region, "_get_saturation_densities", return_value=(740.0, 0.0)
+        ):
             assert region.calculate_void_fraction_from_quality() == 0.0
 
     def test_quality_when_saturation_invalid(self):
         """Test quality returns 0 when saturation densities invalid."""
         from unittest.mock import patch
+
         region = TwoPhaseFlowRegion(
             id=1,
             position=Point3D(0, 0, 0),
@@ -166,9 +172,13 @@ class TestTwoPhaseFlowRegion:
             height=365.76,
             void_fraction=0.5,
         )
-        with patch.object(region, "_get_saturation_densities", return_value=(0.0, 36.0)):
+        with patch.object(
+            region, "_get_saturation_densities", return_value=(0.0, 36.0)
+        ):
             assert region.calculate_quality_from_void_fraction() == 0.0
-        with patch.object(region, "_get_saturation_densities", return_value=(740.0, 0.0)):
+        with patch.object(
+            region, "_get_saturation_densities", return_value=(740.0, 0.0)
+        ):
             assert region.calculate_quality_from_void_fraction() == 0.0
 
     def test_calculate_pressure_drop(self):

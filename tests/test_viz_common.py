@@ -35,4 +35,3 @@ def test_viz_common_ensure_helpers_and_as_plotly_dict():
 
     out3 = as_plotly_dict(NoToDict(), title=None)
     assert out3["layout"]["title"] == "Unsupported figure type"
-
