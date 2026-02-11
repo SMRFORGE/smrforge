@@ -110,6 +110,15 @@ These modules are fully implemented, tested, and ready for production use:
 - ✅ **quick_template_from_preset** - Create reactor template from preset
 - ✅ **list_export_formats** - Returns supported export formats (json, openmc, serpent, mcnp)
 - ✅ **list_transient_types** - Returns transient analysis types (reactivity_insertion, decay_heat_removal, lumped_thermal)
+- ✅ **list_uq_sampling_methods** - Returns UQ methods (mc, lhs, sobol) for quick_uq
+- ✅ **list_optimization_objectives** - Returns objectives (max_keff, min_neg_keff) for quick_optimize
+- ✅ **list_optimization_methods** - Returns methods (differential_evolution, minimize, genetic_algorithm)
+- ✅ **list_distributions** - Returns UQ distribution types (normal, uniform, lognormal, triangular)
+- ✅ **list_economics_outputs** - Returns quick_economics output keys
+- ✅ **get_default_config_path** - Path to ~/.smrforge/config.yaml
+- ✅ **get_benchmark_path** - Path to community/validation benchmark definition files
+- ✅ **list_templates** - List saved templates in ~/.smrforge/templates/
+- ✅ **quick_export** - Export reactor to JSON/OpenMC/Serpent/MCNP in one call
 - ✅ **get_config** - Read `~/.smrforge/config.yaml`; full config or dotted-key lookup
 - ✅ **SimpleReactor** - High-level reactor wrapper
 

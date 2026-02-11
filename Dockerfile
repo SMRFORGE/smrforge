@@ -8,7 +8,7 @@
 # Recent Additions (February 2026):
 # - Coding guidelines: optional deps fallbacks, Rich, convenience APIs, kwargs hygiene, path handling (docs/development/code-style.md).
 # - Discovery and help functions: system_info(), help_topics(), list_constraint_sets(), get_constraint_set(), get_example_path(), list_examples(), list_nuclides(), list_sweepable_params(), get_default_output_dir(). See examples/discovery_help_example.py.
-# - New convenience helpers: get_default_endf_dir(), list_endf_libraries(), list_geometry_types(), list_analysis_types(), list_surrogates(), quick_download_endf(). Also: quick_benchmark(), quick_safety_report(), quick_template_from_preset(), list_export_formats(), list_transient_types(), get_config(). See smr.help('convenience').
+# - New convenience helpers: get_default_endf_dir(), list_endf_libraries(), list_geometry_types(), list_analysis_types(), list_surrogates(), quick_download_endf(). Also: quick_benchmark(), quick_safety_report(), quick_template_from_preset(), list_export_formats(), list_transient_types(), get_config(). Discovery: list_uq_sampling_methods(), list_optimization_objectives(), list_optimization_methods(), list_distributions(), list_economics_outputs(). Paths: get_default_config_path(), get_benchmark_path(). I/O: list_templates(), quick_export(). See smr.help('convenience').
 # - Rich display: system_info(display=True), quick_sweep/economics/optimize/uq(display=True); ENDF setup wizard uses Rich Panel/Table when available.
 # - quick_optimize(), quick_uq() convenience wrappers for design optimization and uncertainty quantification.
 # - Convenience API consolidated: Legacy smrforge/convenience.py removed; all convenience functionality in smrforge/convenience/ package. No API changes.

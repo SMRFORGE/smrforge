@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Convenience functions:** `load_reactor(path)` loads a reactor from JSON (full schema or simplified `power_mw` format). `quick_validate(reactor_or_path, constraint_set=None)` validates a design in one call. `create_reactor(config=path)` creates a reactor from a JSON config file.
-- **Additional convenience helpers:** `quick_benchmark()` (community benchmark runner; returns results/passed/total/report), `quick_safety_report()` (safety margin report for preset or reactor), `quick_template_from_preset()` (template from preset), `list_export_formats()`, `list_transient_types()`, `get_config()` (read ~/.smrforge/config.yaml).
+- **Additional convenience helpers:** `quick_benchmark()` (community benchmark runner; returns results/passed/total/report), `quick_safety_report()` (safety margin report for preset or reactor), `quick_template_from_preset()` (template from preset), `list_export_formats()`, `list_transient_types()`, `get_config()` (read ~/.smrforge/config.yaml). Discovery: `list_uq_sampling_methods()`, `list_optimization_objectives()`, `list_optimization_methods()`, `list_distributions()`, `list_economics_outputs()`. Paths: `get_default_config_path()`, `get_benchmark_path()`. I/O: `list_templates()`, `quick_export()` (export reactor to JSON/OpenMC/Serpent/MCNP).
 
 ### Added
 - **New convenience functions:** `quick_sweep()` (parameter sweep), `quick_economics()` (cost estimate), `quick_optimize()` (design optimization), `quick_uq()` (uncertainty quantification), `list_reactor_types()`, `list_fuel_types()` for easier discovery and workflows.

@@ -357,3 +357,111 @@ class TestGetConfig:
 
         val = get_config("nonexistent.key.that.does.not.exist")
         assert val is None
+
+
+class TestListUqSamplingMethods:
+    def test_returns_methods(self):
+        from smrforge import list_uq_sampling_methods
+
+        result = list_uq_sampling_methods()
+        assert "mc" in result
+        assert "lhs" in result
+        assert "sobol" in result
+
+
+class TestListOptimizationObjectives:
+    def test_returns_objectives(self):
+        from smrforge import list_optimization_objectives
+
+        result = list_optimization_objectives()
+        assert "max_keff" in result
+        assert "min_neg_keff" in result
+
+
+class TestListOptimizationMethods:
+    def test_returns_methods(self):
+        from smrforge import list_optimization_methods
+
+        result = list_optimization_methods()
+        assert "differential_evolution" in result
+        assert "minimize" in result
+
+
+class TestListDistributions:
+    def test_returns_distributions(self):
+        from smrforge import list_distributions
+
+        result = list_distributions()
+        assert "normal" in result
+        assert "uniform" in result
+
+
+class TestListEconomicsOutputs:
+    def test_returns_outputs(self):
+        from smrforge import list_economics_outputs
+
+        result = list_economics_outputs()
+        assert "capital_costs" in result
+        assert "lcoe" in result
+
+
+class TestGetDefaultConfigPath:
+    def test_returns_path(self):
+        from smrforge import get_default_config_path
+
+        path = get_default_config_path()
+        assert str(path).endswith("config.yaml")
+        assert ".smrforge" in str(path)
+
+
+class TestGetBenchmarkPath:
+    def test_returns_community_path(self):
+        from smrforge import get_benchmark_path
+
+        path = get_benchmark_path()
+        assert "community_benchmarks" in str(path)
+
+    def test_returns_validation_path(self):
+        from smrforge import get_benchmark_path
+
+        path = get_benchmark_path("validation")
+        assert "validation_benchmarks" in str(path)
+
+
+class TestListTemplates:
+    def test_returns_list(self):
+        from smrforge import list_templates
+
+        result = list_templates()
+        assert isinstance(result, list)
+
+
+class TestQuickExport:
+    def test_quick_export_json(self, tmp_path):
+        from smrforge import quick_export
+
+        out = tmp_path / "reactor.json"
+        path = quick_export("valar-10", "json", str(out))
+        assert path.exists()
+        assert path.suffix == ".json"
+        import json
+
+        data = json.loads(path.read_text())
+        assert "power_thermal" in data or "power_mw" in data or "name" in data
+
+    def test_quick_export_openmc(self, tmp_path):
+        from smrforge import quick_export
+        from smrforge.convenience import _PRESETS_AVAILABLE
+
+        if not _PRESETS_AVAILABLE:
+            pytest.skip("Presets not available")
+        out = tmp_path / "openmc_export"
+        path = quick_export("valar-10", "openmc", str(out))
+        assert path.is_dir()
+        assert (path / "geometry.xml").exists() or (path / "materials.xml").exists()
+
+    def test_quick_export_invalid_format_raises(self):
+        from smrforge import quick_export
+
+        with pytest.raises(ValueError, match="format must be"):
+            quick_export("valar-10", "invalid_format")

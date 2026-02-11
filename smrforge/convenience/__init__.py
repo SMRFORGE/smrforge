@@ -324,8 +324,7 @@ def quick_benchmark(
     runner = CommunityBenchmarkRunner(benchmarks_path=path)
     raw = runner.run_all(case_ids=case_ids)
     results = {
-        cid: {"passed": p, "value": v, "error": e}
-        for cid, (p, v, e) in raw.items()
+        cid: {"passed": p, "value": v, "error": e} for cid, (p, v, e) in raw.items()
     }
     passed = sum(1 for r in results.values() if r["passed"])
     report = runner.generate_report(results=raw)
@@ -364,11 +363,15 @@ def quick_safety_report(
     cs = None
     if constraint_set:
         cs = get_constraint_set(constraint_set)
-    smr = safety_margin_report(reactor, constraint_set=cs, analysis_results=analysis_results)
+    smr = safety_margin_report(
+        reactor, constraint_set=cs, analysis_results=analysis_results
+    )
     return smr.to_dict()
 
 
-def _resolve_reactor(reactor_or_preset: Union["SimpleReactor", str, Path]) -> "SimpleReactor":
+def _resolve_reactor(
+    reactor_or_preset: Union["SimpleReactor", str, Path],
+) -> "SimpleReactor":
     """Resolve reactor from preset name, path, or SimpleReactor instance."""
     if hasattr(reactor_or_preset, "solve"):
         return reactor_or_preset
@@ -378,7 +381,9 @@ def _resolve_reactor(reactor_or_preset: Union["SimpleReactor", str, Path]) -> "S
     return create_reactor(str(reactor_or_preset))
 
 
-def quick_template_from_preset(preset_name: str, name: Optional[str] = None) -> "ReactorTemplate":
+def quick_template_from_preset(
+    preset_name: str, name: Optional[str] = None
+) -> "ReactorTemplate":
     """
     Create a ReactorTemplate from a preset design.
 
@@ -408,6 +413,143 @@ def list_transient_types() -> List[str]:
     return ["reactivity_insertion", "decay_heat_removal", "lumped_thermal"]
 
 
+def list_uq_sampling_methods() -> List[str]:
+    """List sampling methods for quick_uq (method parameter)."""
+    return ["mc", "lhs", "sobol"]
+
+
+def list_optimization_objectives() -> List[str]:
+    """List objective names for quick_optimize (objective parameter)."""
+    return ["max_keff", "min_neg_keff"]
+
+
+def list_optimization_methods() -> List[str]:
+    """List optimization methods for quick_optimize (method parameter)."""
+    return ["differential_evolution", "minimize", "genetic_algorithm"]
+
+
+def list_distributions() -> List[str]:
+    """List distribution names for quick_uq uncertain_params (distribution field)."""
+    return ["normal", "uniform", "lognormal", "triangular"]
+
+
+def list_economics_outputs() -> List[str]:
+    """List output keys returned by quick_economics."""
+    return ["capital_costs", "operating_costs", "lcoe", "lcoe_breakdown"]
+
+
+def get_default_config_path() -> Path:
+    """Return path to ~/.smrforge/config.yaml."""
+    return Path.home() / ".smrforge" / "config.yaml"
+
+
+def get_benchmark_path(name: Optional[str] = None) -> Path:
+    """
+    Return path to benchmark definition file.
+
+    Args:
+        name: "community" (default), "validation", or filename. None uses "community".
+
+    Returns:
+        Path to benchmarks/community_benchmarks.json, validation_benchmarks.json, etc.
+    """
+    root = Path(__file__).resolve().parents[2] / "benchmarks"
+    if name is None or name == "community":
+        return root / "community_benchmarks.json"
+    if name == "validation":
+        return root / "validation_benchmarks.json"
+    return root / name
+
+
+def list_templates() -> List[str]:
+    """List template names in ~/.smrforge/templates/."""
+    from ..workflows.templates import TemplateLibrary
+
+    lib = TemplateLibrary()
+    return lib.list_templates()
+
+
+def quick_export(
+    reactor_or_preset: Union["SimpleReactor", str, Path],
+    fmt: str,
+    path: Optional[Union[str, Path]] = None,
+    **kwargs,
+) -> Path:
+    """
+    Export reactor to a supported format.
+
+    Args:
+        reactor_or_preset: SimpleReactor, preset name, or path to reactor JSON.
+        fmt: Export format: "json", "openmc", "serpent", or "mcnp".
+        path: Output path. Default: output/reactor.<ext> for file, output/openmc_export for openmc.
+        **kwargs: Passed to converter (e.g., particles, batches for openmc).
+
+    Returns:
+        Path to the exported file or directory (for openmc).
+
+    Example:
+        >>> quick_export("valar-10", "json", "my_reactor.json")
+        >>> quick_export("valar-10", "openmc", "openmc_run")
+    """
+    reactor = _resolve_reactor(reactor_or_preset)
+    fmt_lower = fmt.lower().strip()
+    if fmt_lower not in list_export_formats():
+        raise ValueError(f"format must be one of {list_export_formats()}, got {fmt!r}")
+
+    if path is None:
+        base = get_default_output_dir()
+        if fmt_lower == "openmc":
+            path = base / "openmc_export"
+        else:
+            ext = {"json": ".json", "serpent": ".serp", "mcnp": ".mcnp"}.get(
+                fmt_lower, ".out"
+            )
+            path = base / f"reactor{ext}"
+    path = Path(path)
+
+    if fmt_lower == "json":
+        if hasattr(reactor.spec, "model_dump"):
+            data = reactor.spec.model_dump()
+        else:
+            data = dict(reactor.spec) if hasattr(reactor.spec, "__iter__") else {}
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+        return path
+
+    if fmt_lower == "openmc":
+        from ..io.converters import OpenMCConverter
+
+        path.mkdir(parents=True, exist_ok=True)
+        OpenMCConverter.export_reactor(
+            reactor,
+            path,
+            particles=kwargs.get("particles", 1000),
+            batches=kwargs.get("batches", 20),
+        )
+        return path
+
+    if fmt_lower == "serpent":
+        from ..io.converters import SerpentConverter
+
+        if path.suffix not in (".serp", ".inp", ""):
+            path = path.with_suffix(".serp")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        SerpentConverter.export_reactor(reactor, path)
+        return path
+
+    if fmt_lower == "mcnp":
+        from ..io.converters import MCNPConverter
+
+        if path.suffix not in (".mcnp", ".inp", ""):
+            path = path.with_suffix(".mcnp")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        MCNPConverter.export_reactor(reactor, path)
+        return path
+
+    raise ValueError(f"Unsupported format: {fmt}")
+
+
 def get_config(key: Optional[str] = None) -> Union[Dict[str, Any], Any]:
     """
     Read SMRForge configuration from ~/.smrforge/config.yaml.
@@ -425,7 +567,9 @@ def get_config(key: Optional[str] = None) -> Union[Dict[str, Any], Any]:
     try:
         import yaml
     except ImportError:
-        raise ImportError("get_config requires PyYAML. Install: pip install pyyaml") from None
+        raise ImportError(
+            "get_config requires PyYAML. Install: pip install pyyaml"
+        ) from None
     config_file = Path.home() / ".smrforge" / "config.yaml"
     if not config_file.exists():
         return {} if key is None else None
@@ -1334,6 +1478,15 @@ __all__ = [
     "quick_template_from_preset",
     "list_export_formats",
     "list_transient_types",
+    "list_uq_sampling_methods",
+    "list_optimization_objectives",
+    "list_optimization_methods",
+    "list_distributions",
+    "list_economics_outputs",
+    "get_default_config_path",
+    "get_benchmark_path",
+    "list_templates",
+    "quick_export",
     "get_config",
     "get_preset",
     "load_reactor",

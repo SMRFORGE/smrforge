@@ -1361,6 +1361,35 @@ def _get_examples() -> Dict[str, List[Dict[str, str]]]:
             {"description": "Get full config", "code": "cfg = smr.get_config()"},
             {"description": "Get config key", "code": "endf_dir = smr.get_config('endf.default_directory')"},
         ],
+        "list_uq_sampling_methods": [
+            {"description": "List UQ sampling methods", "code": "methods = smr.list_uq_sampling_methods()"},
+        ],
+        "list_optimization_objectives": [
+            {"description": "List optimization objectives", "code": "objs = smr.list_optimization_objectives()"},
+        ],
+        "list_optimization_methods": [
+            {"description": "List optimization methods", "code": "methods = smr.list_optimization_methods()"},
+        ],
+        "list_distributions": [
+            {"description": "List UQ distribution types", "code": "dists = smr.list_distributions()"},
+        ],
+        "list_economics_outputs": [
+            {"description": "List quick_economics output keys", "code": "keys = smr.list_economics_outputs()"},
+        ],
+        "get_default_config_path": [
+            {"description": "Get config file path", "code": "path = smr.get_default_config_path()"},
+        ],
+        "get_benchmark_path": [
+            {"description": "Get community benchmark path", "code": "path = smr.get_benchmark_path()"},
+            {"description": "Get validation benchmark path", "code": "path = smr.get_benchmark_path('validation')"},
+        ],
+        "list_templates": [
+            {"description": "List saved templates", "code": "names = smr.list_templates()"},
+        ],
+        "quick_export": [
+            {"description": "Export reactor to JSON", "code": "path = smr.quick_export('valar-10', 'json', 'my_reactor.json')"},
+            {"description": "Export to OpenMC format", "code": "path = smr.quick_export('valar-10', 'openmc', 'openmc_run')"},
+        ],
     }
 
 
