@@ -16,7 +16,7 @@ Comprehensive end-to-end examples demonstrating the full power of SMRForge for S
 
 ## Table of Contents
 
-1. [Design study and workflow API](#design-study-and-workflow-api)
+1. [Design study and workflow API](#design-study-and-workflow-api) (includes Stable API, ML export, AI audit)
 2. [Complete NuScale SMR Analysis](#complete-nuscale-smr-analysis)
 3. [End-to-End Fuel Cycle Analysis](#end-to-end-fuel-cycle-analysis)
 4. [Integrated Safety and Burnup Analysis](#integrated-safety-and-burnup-analysis)
@@ -108,6 +108,27 @@ filtered = filter_atlas(entries, pass_only=True)
 smrforge workflow atlas --output-dir atlas_output --plot atlas_scatter.html
 smrforge workflow atlas --presets valar-10 gt-mhr htr-pm --output-dir atlas_output --plot atlas.png
 ```
+
+### Stable API, ML export, and AI audit (Python)
+
+Use the stable API facade for integration and AI pipelines:
+
+```python
+from smrforge.api import fit_surrogate, export_ml_dataset, create_audit_trail
+
+# Fit surrogate (rbf, linear, or custom via register_surrogate)
+surrogate = fit_surrogate(X, y, method="rbf")
+
+# Export design points for ML training (Parquet or HDF5)
+export_ml_dataset(sweep_results, "design_points.parquet")
+
+# AI audit trail for regulatory traceability
+trail = create_audit_trail("keff", inputs={}, outputs={"k_eff": 1.0})
+from smrforge.ai import record_ai_model
+record_ai_model(trail, "rbf", version="scipy-1.11", config_hash="abc123")
+```
+
+See `examples/api_ml_export_example.py` for a complete script.
 
 ---
 

@@ -4,8 +4,12 @@
 # Build: docker build -t smrforge:latest .
 # Run:   docker run -it smrforge:latest
 #
-# Last Updated: February 10, 2026
+# Last Updated: February 2026
 # Recent Additions (February 2026):
+# - Stable API (smrforge.api): Versioned facade; lazy load neutronics/burnup
+# - AI audit: CalculationAuditTrail.ai_models_used, smrforge.ai.record_ai_model
+# - ML export: export_ml_dataset() for Parquet/HDF5 (design points for training)
+# - Plugin registry: fit_surrogate uses built-in first, then registered custom surrogates
 # - Serpent round-trip (Community): run_serpent, parse_res_file, run_and_parse in smrforge.io.serpent_run; run_serpent, parse_serpent_res in smrforge.io.
 # - OpenMC integration (Community): Full export/import (geometry.xml, materials.xml, settings.xml), subprocess runner, statepoint HDF5 parsing. See smrforge.io.openmc_export, openmc_import, openmc_run.
 # - Rich colorized logging: Console logging uses RichHandler for color-coded levels (DEBUG, INFO, WARNING, ERROR, CRITICAL), rich tracebacks. File logging remains plain text. Set NO_COLOR=1 to disable colors.

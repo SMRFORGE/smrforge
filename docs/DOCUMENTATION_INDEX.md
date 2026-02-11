@@ -50,13 +50,17 @@ This document provides a comprehensive index of all SMRForge documentation files
 ### System Documentation
 - **[Logging Usage](technical/logging-usage.md)** - Logging system usage
 - **[Coupling Reduction](technical/coupling-reduction.md)** - Architecture and coupling reduction notes
+- **[API Stability](API_STABILITY.md)** - Public API surface and deprecation policy (smrforge.api, workflows)
+- **[Plugin Architecture](PLUGIN_ARCHITECTURE.md)** - Surrogate registry, hooks, AI integration
+- **[Flux Weighting Limitation](FLUX_WEIGHTING_LIMITATION.md)** - Multi-group collapse assumptions
 
 ---
 
 ## 💻 Development Documentation (`development/`)
 
 ### Development Guidelines
-- **[Code Style Guide](development/code-style.md)** - Code formatting and style guide
+- **[Code Style Guide](development/code-style.md)** - Code formatting, type hints, and style guide
+- **[Type Hints Conventions](technical/type-hints-conventions.md)** - Type hint conventions and examples
 - **[Release Process](development/release-process.md)** - Release procedures
 - **[Testing and Coverage](development/testing-and-coverage.md)** - Testing documentation
 - **[Coverage Exclusions](development/coverage-exclusions.md)** - Test coverage exclusions
@@ -86,6 +90,7 @@ This document provides a comprehensive index of all SMRForge documentation files
 
 ### Status Reports
 - **[Feature Status](status/feature-status.md)** - Implementation status of all features
+- **[Deployment Readiness Analysis](status/DEPLOYMENT_READINESS_ANALYSIS.md)** - Community/Pro deployment blockers
 - **[Production Readiness Status](status/production-readiness-status.md)** - Production readiness assessment
 - **[SMRForge Fact Sheet](status/smrforge-fact-sheet.md)** - Comprehensive feature overview
 - **[Codebase Consistency Report](status/codebase-consistency-report.md)** - Codebase consistency analysis
@@ -206,7 +211,7 @@ See **[archive/README.md](archive/README.md)** for the archive layout and subdir
 
 ### API Reference (Sphinx)
 - **Single entry point:** Build Sphinx from `docs/`; the **API Reference** page lists all modules.
-- **Core:** `smrforge.core`, `smrforge.neutronics`, `smrforge.thermal`, `smrforge.geometry`, `smrforge.visualization`, `smrforge.validation`, `smrforge.presets`, `smrforge.convenience`
+- **Core:** `smrforge.core`, `smrforge.neutronics`, `smrforge.thermal`, `smrforge.geometry`, `smrforge.visualization`, `smrforge.validation`, `smrforge.presets`, `smrforge.convenience`, `smrforge.api`, `smrforge.ai`
 - **Workflows and design study:** `smrforge.workflows`, `smrforge.validation.constraints`, `smrforge.validation.safety_report`, `smrforge.validation.constraint_builder`, `smrforge.validation.requirements_parser`, `smrforge.visualization.design_study_plots`
 - See `README.md` in `docs/` for build instructions (`sphinx-build -b html . _build/html`).
 

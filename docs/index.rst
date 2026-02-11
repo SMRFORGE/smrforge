@@ -85,6 +85,8 @@ Features
 * **Burnup**: Nuclide inventory tracking, decay chain utilities, Bateman equation solver
 * **Validation**: Pydantic-based input validation with physics checks
 * **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
+* **Stable API** (smrforge.api): Versioned facade for integration partners and AI/automation
+* **Plugin registry**: Register custom surrogate models; ML data export (Parquet/HDF5)
 
 Indices and tables
 ==================

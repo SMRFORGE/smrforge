@@ -61,6 +61,7 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Parallel execution
 - [ ] Results analysis and export
 - [ ] Sensitivity analysis
+- [ ] ML export (Parquet/HDF5) — `export_ml_dataset()` from sweep results
 
 **Test Script**: `testing/test_04_parameter_sweep.py`  
 **Optional Notebook**: Create from test script if needed
@@ -153,8 +154,12 @@ This document provides a comprehensive checklist for manually testing all SMRFor
 - [ ] Error handling and recovery
 - [ ] Progress indicators
 - [ ] Export formats (JSON, HDF5, CSV, Parquet)
+- [ ] Stable API (`from smrforge.api import fit_surrogate, export_ml_dataset`)
+- [ ] Plugin registry (`register_surrogate`, custom method in `fit_surrogate`)
+- [ ] AI audit trail (`record_ai_model`, `CalculationAuditTrail.ai_models_used`)
 
 **Test Script**: `testing/test_13_advanced.py`  
+**Example**: `examples/api_ml_export_example.py`  
 **Optional Notebook**: Create from test script if needed
 
 ## Testing Notes

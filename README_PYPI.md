@@ -35,6 +35,23 @@ k_eff = reactor.solve_keff()
 print(f"k-effective: {k_eff:.6f}")
 ```
 
+## Stable API (integration & AI)
+
+```python
+from smrforge.api import fit_surrogate, export_ml_dataset, create_audit_trail
+
+# Fit surrogate from sweep results (rbf, linear, or registered custom)
+surrogate = fit_surrogate(X, y, method="rbf")
+
+# Export design points for ML training (Parquet or HDF5)
+export_ml_dataset(results, "design_points.parquet")
+
+# Audit trail with AI model tracking
+trail = create_audit_trail("keff", inputs={}, outputs={"k_eff": 1.0})
+from smrforge.ai import record_ai_model
+record_ai_model(trail, "rbf", version="scipy-1.11")
+```
+
 ## Nuclear data (ENDF) setup
 
 Some features require ENDF data files.

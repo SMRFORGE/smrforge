@@ -131,6 +131,12 @@ SMRForge includes **comprehensive performance optimizations**:
   - ✅ **Self-shielding command** - `smrforge data shield` for resonance self-shielding calculations
   - ✅ **GitHub Actions control** - `smrforge github status/enable/disable` for workflow management
 
+**AI/ML & API Extensibility (February 2026):**
+- **Stable API facade** (`smrforge.api`) — Single import for integration partners: `from smrforge.api import fit_surrogate, MultiGroupDiffusion, ...`
+- **Plugin registry** — Register custom surrogates via `register_surrogate()`; `fit_surrogate(method="custom")` uses them
+- **AI audit trail** — `CalculationAuditTrail.ai_models_used` and `record_ai_model()` for regulatory traceability of AI-assisted runs
+- **ML data export** — `export_ml_dataset()` exports design points to Parquet/HDF5 for training pipelines
+
 **See `docs/status/feature-status.md` for detailed status of all features.**
 
 ## Installation
@@ -160,6 +166,11 @@ pip install smrforge
 # With optional dependencies
 pip install smrforge[uq,viz]  # Uncertainty quantification and visualization
 pip install smrforge[all]     # All optional dependencies
+```
+
+**Verify installation:**
+```bash
+python -c "import smrforge as smr; print(f'SMRForge {smr.__version__}'); k=smr.quick_keff(10, 0.195); print(f'k-eff: {k:.4f}')"
 ```
 
 ### Install from Source
@@ -505,21 +516,29 @@ See the [`examples/`](examples/) directory for complete working examples:
 - **`burnup_example.py`** - Burnup calculations with nuclide tracking
 - **`decay_heat_example.py`** - Decay heat calculations
 - **`thermal_scattering_example.py`** - Thermal scattering law usage
-- **`complete_smr_workflow_example.py`** - **NEW**: Complete end-to-end workflow example
-- **`dashboard_example.py`** - **NEW**: Dashboard usage example
+- **`complete_smr_workflow_example.py`** - Complete end-to-end workflow example
+- **`dashboard_example.py`** - Dashboard usage example
+- **`community_benchmark_example.py`** - Community benchmark validation
+- **`convenience_methods_example.py`** - Convenience API usage
+- **`data_downloader_example.py`** - ENDF data download
+- **`gamma_source_integration_example.py`** - Gamma source integration
+- **`gamma_transport_example.py`** - Gamma transport
+- **`help_system_example.py`** - Help system usage
+- **`mesh_3d_example.py`** - 3D mesh examples
+- **`tsl_file_discovery_example.py`** - Thermal scattering file discovery
 
 ### Geometry Examples
 - **`geometry_import_example.py`** - Importing geometries from external formats
 - **`control_rods_example.py`** - Control rod positioning and reactivity
 - **`assembly_refueling_example.py`** - Fuel assembly and refueling patterns
 - **`visualization_examples.py`** - Geometry and result visualization
-- **`visualization_3d_example.py`** - **NEW**: Advanced 3D visualization examples
+- **`visualization_3d_example.py`** - Advanced 3D visualization examples
 
 All examples are runnable and include comments explaining each step.
 
 ## Testing
 
-SMRForge has comprehensive test coverage with **79.2% overall** (January 2026) and a **90% coverage target**. Priority modules are at 75-80%+; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md) for the path to 90% and module-level details.
+SMRForge has comprehensive test coverage with **~90.5% in-scope** (February 2026) meeting the 90% target. Priority modules exceed 75-80%; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md) for module-level details.
 
 ### Automated Testing
 
@@ -538,8 +557,7 @@ pytest tests/test_neutronics.py
 ```
 
 **Test Coverage Status:**
-- **Overall Coverage**: 79.2% (target: **90%**)
-- **Path to 90%**: Add tests for low-coverage modules; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md#path-to-90-coverage)
+- **In-Scope Coverage**: ~90.5% (target: **90%** met)
 - **Priority Modules**: 75-80%+ coverage achieved
 - **All Priority Modules**: Comprehensive test coverage completed
 - **Critical Modules**: All critical modules exceed target coverage (75-80%+)
