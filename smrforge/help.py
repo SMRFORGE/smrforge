@@ -1333,6 +1333,34 @@ def _get_examples() -> Dict[str, List[Dict[str, str]]]:
                 "code": "stats = smr.quick_download_endf(elements=['U', 'Pu'], nuclide_set=None)",
             },
         ],
+        "quick_benchmark": [
+            {
+                "description": "Run community benchmarks",
+                "code": "out = smr.quick_benchmark(); print(f\"{out['passed']}/{out['total']} passed\")",
+            },
+        ],
+        "quick_safety_report": [
+            {
+                "description": "Safety margin report for preset",
+                "code": "report = smr.quick_safety_report('valar-10'); print('Passed:', report['passed'])",
+            },
+        ],
+        "quick_template_from_preset": [
+            {
+                "description": "Create template from preset",
+                "code": "tmpl = smr.quick_template_from_preset('valar-10'); spec = tmpl.instantiate(enrichment=0.20)",
+            },
+        ],
+        "list_export_formats": [
+            {"description": "List export formats", "code": "fmts = smr.list_export_formats()"},
+        ],
+        "list_transient_types": [
+            {"description": "List transient types", "code": "types = smr.list_transient_types()"},
+        ],
+        "get_config": [
+            {"description": "Get full config", "code": "cfg = smr.get_config()"},
+            {"description": "Get config key", "code": "endf_dir = smr.get_config('endf.default_directory')"},
+        ],
     }
 
 

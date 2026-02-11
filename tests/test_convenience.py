@@ -17,7 +17,9 @@ try:
     create_reactor = smr.create_reactor
     get_preset = smr.get_preset
     list_presets = smr.list_presets
+    load_reactor = smr.load_reactor
     quick_keff = smr.quick_keff
+    quick_validate = smr.quick_validate
     SimpleReactor = smr.SimpleReactor
     _CONVENIENCE_AVAILABLE = True
 except (ImportError, AttributeError):
@@ -99,6 +101,93 @@ class TestCreateReactor:
         """Test that invalid preset name raises error."""
         with pytest.raises(ValueError):
             create_reactor(name="invalid-preset-xyz123")
+
+    def test_create_reactor_from_config_path(self):
+        """Test create_reactor(config=path) delegates to load_reactor."""
+        from pathlib import Path
+
+        path = Path(__file__).parent.parent / "examples" / "inputs" / "reactor.json"
+        if not path.exists():
+            pytest.skip("examples/inputs/reactor.json not found")
+        reactor = create_reactor(config=str(path))
+        assert isinstance(reactor, SimpleReactor)
+        assert reactor.spec is not None
+        assert reactor.spec.name == "Valar-10"
+        assert reactor.spec.power_thermal == 10.0e6
+
+
+class TestLoadReactor:
+    """Test load_reactor function."""
+
+    def test_load_reactor_from_path(self):
+        """Test loading reactor from JSON path (simplified power_mw format)."""
+        from pathlib import Path
+
+        path = Path(__file__).parent.parent / "examples" / "inputs" / "reactor.json"
+        if not path.exists():
+            pytest.skip("examples/inputs/reactor.json not found")
+        reactor = load_reactor(path)
+        assert isinstance(reactor, SimpleReactor)
+        assert reactor.spec.name == "Valar-10"
+        assert reactor.spec.power_thermal == 10.0e6
+        assert reactor.spec.enrichment == 0.195
+
+    def test_load_reactor_from_str(self):
+        """Test loading reactor from string path."""
+        import os
+
+        path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "examples",
+            "inputs",
+            "reactor.json",
+        )
+        if not os.path.exists(path):
+            pytest.skip("examples/inputs/reactor.json not found")
+        reactor = load_reactor(path)
+        assert isinstance(reactor, SimpleReactor)
+        assert reactor.spec is not None
+
+    def test_load_reactor_solve_keff(self):
+        """Test that loaded reactor can solve k-eff."""
+        from pathlib import Path
+
+        path = Path(__file__).parent.parent / "examples" / "inputs" / "reactor.json"
+        if not path.exists():
+            pytest.skip("examples/inputs/reactor.json not found")
+        reactor = load_reactor(path)
+        k = reactor.solve_keff()
+        assert isinstance(k, float)
+        assert k > 0
+
+
+class TestQuickValidate:
+    """Test quick_validate function."""
+
+    def test_quick_validate_with_path(self):
+        """Test quick_validate with path to reactor JSON."""
+        from pathlib import Path
+
+        path = Path(__file__).parent.parent / "examples" / "inputs" / "reactor.json"
+        if not path.exists():
+            pytest.skip("examples/inputs/reactor.json not found")
+        result = quick_validate(str(path))
+        assert hasattr(result, "passed")
+        assert hasattr(result, "violations")
+        assert hasattr(result, "warnings")
+        assert hasattr(result, "metrics")
+        assert isinstance(result.passed, bool)
+        assert isinstance(result.violations, list)
+        assert isinstance(result.warnings, list)
+
+    def test_quick_validate_with_reactor(self):
+        """Test quick_validate with SimpleReactor instance."""
+        reactor = create_reactor(power_mw=10.0)
+        result = quick_validate(reactor)
+        assert hasattr(result, "passed")
+        assert hasattr(result, "violations")
+        assert isinstance(result.passed, bool)
 
 
 class TestQuickKeff:

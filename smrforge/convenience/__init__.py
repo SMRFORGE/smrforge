@@ -300,6 +300,148 @@ def quick_download_endf(
     )
 
 
+def quick_benchmark(
+    benchmarks_file: Optional[Union[str, Path]] = None,
+    case_ids: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Run community benchmark cases and return pass/fail summary.
+
+    Args:
+        benchmarks_file: Path to community_benchmarks.json. Uses default if None.
+        case_ids: Specific case IDs to run. If None, run all.
+
+    Returns:
+        Dict with "results" (case_id -> {passed, value, error}), "passed", "total", "report".
+
+    Example:
+        >>> out = quick_benchmark()
+        >>> print(f"{out['passed']}/{out['total']} passed")
+    """
+    from ..benchmarks.runner import CommunityBenchmarkRunner
+
+    path = Path(benchmarks_file) if benchmarks_file else None
+    runner = CommunityBenchmarkRunner(benchmarks_path=path)
+    raw = runner.run_all(case_ids=case_ids)
+    results = {
+        cid: {"passed": p, "value": v, "error": e}
+        for cid, (p, v, e) in raw.items()
+    }
+    passed = sum(1 for r in results.values() if r["passed"])
+    report = runner.generate_report(results=raw)
+    return {
+        "results": results,
+        "passed": passed,
+        "total": len(results),
+        "report": report,
+    }
+
+
+def quick_safety_report(
+    reactor_or_preset: Union["SimpleReactor", str, Path],
+    constraint_set: Optional[str] = None,
+    analysis_results: Optional[Dict[str, float]] = None,
+) -> Dict[str, Any]:
+    """
+    Build safety margin report for a reactor or preset.
+
+    Args:
+        reactor_or_preset: Reactor instance, preset name, or path to JSON.
+        constraint_set: "regulatory_limits" or "safety_margins". Default: regulatory_limits.
+        analysis_results: Precomputed metrics. If None, runs reactor.solve().
+
+    Returns:
+        Dict with passed, margins, violations, metrics (from SafetyMarginReport.to_dict()).
+
+    Example:
+        >>> report = quick_safety_report("valar-10")
+        >>> print("Passed:", report["passed"])
+    """
+    from ..validation.constraints import ConstraintSet
+    from ..validation.safety_report import safety_margin_report
+
+    reactor = _resolve_reactor(reactor_or_preset)
+    cs = None
+    if constraint_set:
+        cs = get_constraint_set(constraint_set)
+    smr = safety_margin_report(reactor, constraint_set=cs, analysis_results=analysis_results)
+    return smr.to_dict()
+
+
+def _resolve_reactor(reactor_or_preset: Union["SimpleReactor", str, Path]) -> "SimpleReactor":
+    """Resolve reactor from preset name, path, or SimpleReactor instance."""
+    if hasattr(reactor_or_preset, "solve"):
+        return reactor_or_preset
+    path = Path(reactor_or_preset)
+    if path.suffix in (".json", ".yaml", ".yml") or path.exists():
+        return load_reactor(path)
+    return create_reactor(str(reactor_or_preset))
+
+
+def quick_template_from_preset(preset_name: str, name: Optional[str] = None) -> "ReactorTemplate":
+    """
+    Create a ReactorTemplate from a preset design.
+
+    Args:
+        preset_name: Preset design name (e.g., "valar-10").
+        name: Template name. Defaults to preset name.
+
+    Returns:
+        ReactorTemplate instance with parameters extracted from preset.
+
+    Example:
+        >>> tmpl = quick_template_from_preset("valar-10")
+        >>> spec = tmpl.instantiate(enrichment=0.20)
+    """
+    from ..workflows.templates import ReactorTemplate
+
+    return ReactorTemplate.from_preset(preset_name, name=name)
+
+
+def list_export_formats() -> List[str]:
+    """List supported export formats for reactor/converter I/O."""
+    return ["json", "openmc", "serpent", "mcnp"]
+
+
+def list_transient_types() -> List[str]:
+    """List available transient analysis type names."""
+    return ["reactivity_insertion", "decay_heat_removal", "lumped_thermal"]
+
+
+def get_config(key: Optional[str] = None) -> Union[Dict[str, Any], Any]:
+    """
+    Read SMRForge configuration from ~/.smrforge/config.yaml.
+
+    Args:
+        key: Optional dotted key (e.g., "endf.default_directory"). If None, returns full config.
+
+    Returns:
+        Full config dict if key is None; otherwise the value for the key.
+
+    Example:
+        >>> cfg = get_config()
+        >>> endf_dir = get_config("endf.default_directory")
+    """
+    try:
+        import yaml
+    except ImportError:
+        raise ImportError("get_config requires PyYAML. Install: pip install pyyaml") from None
+    config_file = Path.home() / ".smrforge" / "config.yaml"
+    if not config_file.exists():
+        return {} if key is None else None
+    with open(config_file, "r") as f:
+        config = yaml.safe_load(f) or {}
+    if key is None:
+        return config
+    parts = key.split(".")
+    val = config
+    for p in parts:
+        val = val.get(p) if isinstance(val, dict) else None
+        if val is None:
+            return None
+    return val
+
+
 def get_preset(name: str) -> ReactorSpecification:
     """Get a preset reactor design specification."""
     return _get_library().get_design(name)
@@ -1187,6 +1329,12 @@ __all__ = [
     "list_analysis_types",
     "list_surrogates",
     "quick_download_endf",
+    "quick_benchmark",
+    "quick_safety_report",
+    "quick_template_from_preset",
+    "list_export_formats",
+    "list_transient_types",
+    "get_config",
     "get_preset",
     "load_reactor",
     "create_reactor",

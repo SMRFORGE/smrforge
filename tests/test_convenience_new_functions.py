@@ -281,3 +281,79 @@ class TestQuickDownloadEndf:
             stats = quick_download_endf(show_progress=False)
             assert stats["total"] == 5
             assert "output_dir" in stats
+
+
+class TestQuickBenchmark:
+    @pytest.mark.slow
+    def test_quick_benchmark_returns_dict(self):
+        from smrforge import quick_benchmark
+
+        bench_path = (
+            Path(__file__).resolve().parents[1]
+            / "benchmarks"
+            / "community_benchmarks.json"
+        )
+        if not bench_path.exists():
+            pytest.skip("benchmarks/community_benchmarks.json not found")
+        out = quick_benchmark(benchmarks_file=bench_path)
+        assert "results" in out
+        assert "passed" in out
+        assert "total" in out
+        assert "report" in out
+        assert out["total"] >= 0
+
+
+class TestQuickSafetyReport:
+    def test_quick_safety_report_with_preset(self):
+        from smrforge import quick_safety_report
+        from smrforge.convenience import _PRESETS_AVAILABLE
+
+        if not _PRESETS_AVAILABLE:
+            pytest.skip("Presets not available")
+        report = quick_safety_report("valar-10")
+        assert "passed" in report
+        assert "margins" in report
+        assert "violations" in report
+
+
+class TestQuickTemplateFromPreset:
+    def test_quick_template_from_preset(self):
+        from smrforge import quick_template_from_preset
+        from smrforge.convenience import _PRESETS_AVAILABLE
+
+        if not _PRESETS_AVAILABLE:
+            pytest.skip("Presets not available")
+        tmpl = quick_template_from_preset("valar-10")
+        assert tmpl.base_preset == "valar-10"
+        assert hasattr(tmpl, "instantiate")
+
+
+class TestListExportFormats:
+    def test_returns_formats(self):
+        from smrforge import list_export_formats
+
+        result = list_export_formats()
+        assert "json" in result
+        assert "openmc" in result
+
+
+class TestListTransientTypes:
+    def test_returns_types(self):
+        from smrforge import list_transient_types
+
+        result = list_transient_types()
+        assert "reactivity_insertion" in result
+
+
+class TestGetConfig:
+    def test_get_config_empty_returns_dict(self):
+        from smrforge import get_config
+
+        cfg = get_config()
+        assert isinstance(cfg, dict)
+
+    def test_get_config_nonexistent_key_returns_none(self):
+        from smrforge import get_config
+
+        val = get_config("nonexistent.key.that.does.not.exist")
+        assert val is None

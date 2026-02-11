@@ -105,6 +105,12 @@ These modules are fully implemented, tested, and ready for production use:
 - ✅ **Convenience Functions** (`smrforge.convenience`) - One-liner APIs
 - ✅ **Discovery helpers**: `list_endf_libraries`, `list_geometry_types`, `list_analysis_types`, `list_surrogates`; `get_default_endf_dir`
 - ✅ **quick_download_endf** - Download ENDF data to default or specified directory
+- ✅ **quick_benchmark** - Run community benchmarks via `CommunityBenchmarkRunner`; returns `{results, passed, total, report}`
+- ✅ **quick_safety_report** - Safety margin report for reactor or preset (name/path/SimpleReactor)
+- ✅ **quick_template_from_preset** - Create reactor template from preset
+- ✅ **list_export_formats** - Returns supported export formats (json, openmc, serpent, mcnp)
+- ✅ **list_transient_types** - Returns transient analysis types (reactivity_insertion, decay_heat_removal, lumped_thermal)
+- ✅ **get_config** - Read `~/.smrforge/config.yaml`; full config or dotted-key lookup
 - ✅ **SimpleReactor** - High-level reactor wrapper
 
 ### Visualization
