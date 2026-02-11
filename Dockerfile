@@ -7,6 +7,7 @@
 # Last Updated: February 2026
 # Recent Additions (February 2026):
 # - Discovery and help functions: system_info(), help_topics(), list_constraint_sets(), get_constraint_set(), get_example_path(), list_examples(), list_nuclides(), list_sweepable_params(), get_default_output_dir(). See examples/discovery_help_example.py.
+# - Rich display: system_info(display=True), quick_sweep/economics/optimize/uq(display=True); ENDF setup wizard uses Rich Panel/Table when available.
 # - quick_optimize(), quick_uq() convenience wrappers for design optimization and uncertainty quantification.
 # - Convenience API consolidated: Legacy smrforge/convenience.py removed; all convenience functionality in smrforge/convenience/ package. No API changes.
 # - Stable API (smrforge.api): Versioned facade; lazy load neutronics/burnup

@@ -60,12 +60,13 @@ def _is_core_available() -> bool:
     return _CORE_AVAILABLE is True
 
 
-def system_info(verbose: bool = False) -> Dict[str, Any]:
+def system_info(verbose: bool = False, display: bool = False) -> Dict[str, Any]:
     """
     Report SMRForge version and available optional features.
 
     Args:
         verbose: If True, include more detail (e.g. module paths).
+        display: If True, print a Rich table to console (when Rich available).
 
     Returns:
         Dict with version, and boolean flags for presets, thermal, economics,
@@ -113,7 +114,35 @@ def system_info(verbose: bool = False) -> Dict[str, Any]:
         ]:
             result[k] = False
 
+    if display and _RICH_AVAILABLE:
+        _display_system_info_table(result)
+    elif display and not _RICH_AVAILABLE:
+        _print_system_info_plain(result)
+
     return result
+
+
+def _display_system_info_table(result: Dict[str, Any]) -> None:
+    """Print system info as Rich table."""
+    table = Table(title="SMRForge Capabilities", box=box.ROUNDED)
+    table.add_column("Feature", style="cyan")
+    table.add_column("Status", justify="center")
+    version = result.get("version", "unknown")
+    table.add_row("version", f"[bold]{version}[/bold]")
+    for k, v in result.items():
+        if k == "version":
+            continue
+        status = "[green]yes[/green]" if v else "[dim]no[/dim]"
+        table.add_row(k, status)
+    Console().print(table)
+
+
+def _print_system_info_plain(result: Dict[str, Any]) -> None:
+    """Print system info as plain text (Rich not available)."""
+    print("\nSMRForge Capabilities:")
+    for k, v in result.items():
+        mark = "✓" if v else "—"
+        print(f"  {k}: {mark}")
 
 
 def help_topics() -> List[str]:
@@ -923,7 +952,7 @@ def _help_convenience(console: "Console", show_examples: bool) -> None:
 
 ## Discovery and Help
 
-- `system_info()` - Report version and available optional features
+- `system_info()` - Report version and available optional features; use `display=True` for Rich table
 - `help_topics()` - List available help topic names
 - `list_presets()` - List preset reactor designs
 - `list_reactor_types()` - List reactor type names
@@ -945,10 +974,10 @@ def _help_convenience(console: "Console", show_examples: bool) -> None:
 ## Quick Workflows
 
 - `quick_keff()` - Quick k-eff calculation
-- `quick_sweep()` - Parameter sweep with minimal setup
-- `quick_economics()` - Quick cost estimate
-- `quick_optimize()` - Design optimization (max k-eff)
-- `quick_uq()` - Uncertainty quantification (LHS/MC)
+- `quick_sweep()` - Parameter sweep with minimal setup; `display=True` for Rich summary
+- `quick_economics()` - Quick cost estimate; `display=True` for Rich summary
+- `quick_optimize()` - Design optimization (max k-eff); `display=True` for Rich summary
+- `quick_uq()` - Uncertainty quantification (LHS/MC); `display=True` for Rich summary
 - `quick_validate()` - Validate reactor against constraints
 
 ## Quick Creation Functions (convenience_utils)

@@ -14,10 +14,10 @@ def main():
     print("SMRForge Discovery & Help Functions")
     print("=" * 70)
 
-    # 1. System info
+    # 1. System info (with optional Rich display)
     print("\n1. System info (version and available features):")
     print("-" * 70)
-    info = smr.system_info()
+    info = smr.system_info(display=True)
     for k, v in sorted(info.items()):
         print(f"  {k}: {v}")
 

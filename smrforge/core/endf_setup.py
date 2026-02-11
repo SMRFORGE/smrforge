@@ -16,32 +16,78 @@ from .reactor_core import (
     scan_endf_directory,
 )
 
+try:
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.table import Table
+
+    _RICH_AVAILABLE = True
+except ImportError:
+    _RICH_AVAILABLE = False
+    Console = None  # type: ignore
+    Panel = None  # type: ignore
+    Table = None  # type: ignore
+
+
+def _console():
+    """Return Rich Console if available."""
+    return Console() if _RICH_AVAILABLE else None
+
 
 def print_step(step_num: int, title: str):
     """Print a formatted step header."""
-    print(f"\n{'='*60}")
-    print(f"STEP {step_num}: {title}")
-    print("=" * 60)
+    c = _console()
+    if c is not None:
+        c.print(Panel(f"STEP {step_num}: {title}", border_style="cyan", padding=(0, 2)))
+    else:
+        print(f"\n{'='*60}")
+        print(f"STEP {step_num}: {title}")
+        print("=" * 60)
 
 
 def print_success(message: str):
     """Print a success message."""
-    print(f"✓ {message}")
+    c = _console()
+    if c is not None:
+        c.print(f"[green]✓[/green] {message}")
+    else:
+        print(f"✓ {message}")
 
 
 def print_error(message: str):
     """Print an error message."""
-    print(f"✗ {message}")
+    c = _console()
+    if c is not None:
+        c.print(f"[red]✗[/red] {message}")
+    else:
+        print(f"✗ {message}")
 
 
 def print_info(message: str):
     """Print an info message."""
-    print(f"ℹ {message}")
+    c = _console()
+    if c is not None:
+        c.print(f"[blue]ℹ[/blue] {message}")
+    else:
+        print(f"ℹ {message}")
 
 
 def print_warning(message: str):
     """Print a warning message."""
-    print(f"⚠ {message}")
+    c = _console()
+    if c is not None:
+        c.print(f"[yellow]⚠[/yellow] {message}")
+    else:
+        print(f"⚠ {message}")
+
+
+def _out(msg: str):
+    """Print message (Rich if available)."""
+    c = _console()
+    if c is not None:
+        c.print(msg)
+    else:
+        print(msg)
 
 
 def setup_endf_data_interactive() -> Optional[Path]:
@@ -51,14 +97,26 @@ def setup_endf_data_interactive() -> Optional[Path]:
     Returns:
         Path to configured ENDF directory if successful, None if cancelled.
     """
-    print("\n" + "=" * 60)
-    print("SMRForge ENDF Data Setup Wizard")
-    print("=" * 60)
-    print("\nThis wizard will help you set up ENDF nuclear data files.")
-    print("ENDF files are required for cross-section calculations.")
-    print("\nYou have two options:")
-    print("  1. Use existing ENDF files (if you already have them)")
-    print("  2. Get instructions for downloading ENDF files")
+    c = _console()
+    if c is not None:
+        c.print(Panel(
+            "This wizard will help you set up ENDF nuclear data files.\n"
+            "ENDF files are required for cross-section calculations.\n\n"
+            "You have two options:\n"
+            "  1. Use existing ENDF files (if you already have them)\n"
+            "  2. Get instructions for downloading ENDF files",
+            title="[bold cyan]SMRForge ENDF Data Setup Wizard[/bold cyan]",
+            border_style="cyan",
+        ))
+    else:
+        print("\n" + "=" * 60)
+        print("SMRForge ENDF Data Setup Wizard")
+        print("=" * 60)
+        print("\nThis wizard will help you set up ENDF nuclear data files.")
+        print("ENDF files are required for cross-section calculations.")
+        print("\nYou have two options:")
+        print("  1. Use existing ENDF files (if you already have them)")
+        print("  2. Get instructions for downloading ENDF files")
 
     # Step 1: Choose option
     print_step(1, "Choose Setup Option")
@@ -119,13 +177,27 @@ def setup_existing_files() -> Optional[Path]:
     try:
         results = scan_endf_directory(endf_dir)
 
-        print(f"\nScan Results:")
-        print(f"  Total files found: {results['total_files']}")
-        print(f"  Valid ENDF files: {results['valid_files']}")
-        print(f"  Directory structure: {results['directory_structure']}")
-        print(
-            f"  Library versions: {', '.join(results['library_versions']) if results['library_versions'] else 'None detected'}"
-        )
+        c = _console()
+        if c is not None and Table is not None:
+            tbl = Table(title="Scan Results")
+            tbl.add_column("Metric", style="cyan")
+            tbl.add_column("Value", justify="right")
+            tbl.add_row("Total files found", str(results["total_files"]))
+            tbl.add_row("Valid ENDF files", str(results["valid_files"]))
+            tbl.add_row("Directory structure", results["directory_structure"])
+            tbl.add_row(
+                "Library versions",
+                ", ".join(results["library_versions"]) if results["library_versions"] else "None detected",
+            )
+            c.print(tbl)
+        else:
+            print(f"\nScan Results:")
+            print(f"  Total files found: {results['total_files']}")
+            print(f"  Valid ENDF files: {results['valid_files']}")
+            print(f"  Directory structure: {results['directory_structure']}")
+            print(
+                f"  Library versions: {', '.join(results['library_versions']) if results['library_versions'] else 'None detected'}"
+            )
 
         if results["valid_files"] == 0:
             print_error("\nNo valid ENDF files found in this directory!")
@@ -185,10 +257,20 @@ def setup_existing_files() -> Optional[Path]:
                 create_structure=True,
             )
 
-            print(f"\nOrganization Results:")
-            print(f"  Files organized: {stats['files_organized']}")
-            print(f"  Files skipped: {stats['files_skipped']}")
-            print(f"  Unique nuclides: {stats['nuclides_indexed']}")
+            c = _console()
+            if c is not None and Table is not None:
+                tbl = Table(title="Organization Results")
+                tbl.add_column("Metric", style="cyan")
+                tbl.add_column("Value", justify="right")
+                tbl.add_row("Files organized", str(stats["files_organized"]))
+                tbl.add_row("Files skipped", str(stats["files_skipped"]))
+                tbl.add_row("Unique nuclides", str(stats["nuclides_indexed"]))
+                c.print(tbl)
+            else:
+                print(f"\nOrganization Results:")
+                print(f"  Files organized: {stats['files_organized']}")
+                print(f"  Files skipped: {stats['files_skipped']}")
+                print(f"  Unique nuclides: {stats['nuclides_indexed']}")
 
             if stats["files_organized"] > 0:
                 print_success(f"Files successfully organized to {standard_dir}")
@@ -237,14 +319,26 @@ def setup_existing_files() -> Optional[Path]:
 
     # Step 6: Success
     print_step(6, "Setup Complete!")
-    print(f"\n✓ ENDF data directory configured: {endf_dir}")
-    print(f"\nTo use this directory in your code:")
-    print(f"  from pathlib import Path")
-    print(f"  from smrforge.core.reactor_core import NuclearDataCache")
-    print(f"  ")
-    print(f"  cache = NuclearDataCache(")
-    print(f'      local_endf_dir=Path(r"{endf_dir}")')
-    print(f"  )")
+    print_success(f"ENDF data directory configured: {endf_dir}")
+    code_block = (
+        f'from pathlib import Path\n'
+        f'from smrforge.core.reactor_core import NuclearDataCache\n\n'
+        f'cache = NuclearDataCache(\n'
+        f'    local_endf_dir=Path(r"{endf_dir}")\n'
+        f')'
+    )
+    c = _console()
+    if c is not None:
+        c.print("\n[bold]To use this directory in your code:[/bold]")
+        c.print(Panel(code_block, border_style="green", title="Code"))
+    else:
+        print(f"\nTo use this directory in your code:")
+        print(f"  from pathlib import Path")
+        print(f"  from smrforge.core.reactor_core import NuclearDataCache")
+        print(f"  ")
+        print(f"  cache = NuclearDataCache(")
+        print(f'      local_endf_dir=Path(r"{endf_dir}")')
+        print(f"  )")
 
     return endf_dir
 
@@ -367,8 +461,8 @@ if __name__ == "__main__":
     """Run setup wizard if executed directly."""
     result = setup_endf_data_interactive()
     if result:
-        print(f"\n✓ Setup complete! ENDF directory: {result}")
+        print_success(f"Setup complete! ENDF directory: {result}")
         sys.exit(0)
     else:
-        print("\n✗ Setup incomplete or cancelled.")
+        print_error("Setup incomplete or cancelled.")
         sys.exit(1)

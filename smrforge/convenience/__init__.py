@@ -462,6 +462,7 @@ def quick_sweep(
     analysis: str = "keff",
     output_path: Optional[Union[str, Path]] = None,
     parallel: bool = False,
+    display: bool = False,
     **economics_kwargs,
 ) -> Dict:
     """
@@ -474,6 +475,7 @@ def quick_sweep(
         analysis: Analysis type - "keff" (default) or "neutronics".
         output_path: Optional path to save results JSON.
         parallel: Whether to run cases in parallel (default: False for simplicity).
+        display: If True, print a Rich summary table (when Rich available).
         **economics_kwargs: Ignored; for future use.
 
     Returns:
@@ -534,16 +536,20 @@ def quick_sweep(
     if output_path:
         result.save(Path(output_path))
 
-    return {
+    out = {
         "results": result.results,
         "failed_cases": result.failed_cases,
         "summary_stats": result.summary_stats,
     }
+    if display:
+        _display_sweep_summary(out)
+    return out
 
 
 def quick_economics(
     reactor_or_preset: Union["SimpleReactor", str, Path],
     nth_of_a_kind: int = 1,
+    display: bool = False,
     **kwargs,
 ) -> Dict:
     """
@@ -552,6 +558,8 @@ def quick_economics(
     Args:
         reactor_or_preset: SimpleReactor, preset name, or path to reactor JSON.
         nth_of_a_kind: Nth-of-a-kind (1 = FOAK).
+        display: If True, print a Rich summary table (when Rich available).
+        display: If True, print a Rich summary table (when Rich available).
         **kwargs: Passed to estimate_costs_from_spec (modularity_factor, discount_rate, etc.).
 
     Returns:
@@ -576,7 +584,10 @@ def quick_economics(
     else:
         spec = get_preset(str(reactor_or_preset))
 
-    return estimate_costs_from_spec(spec, nth_of_a_kind=nth_of_a_kind, **kwargs)
+    result = estimate_costs_from_spec(spec, nth_of_a_kind=nth_of_a_kind, **kwargs)
+    if display:
+        _display_economics_summary(result)
+    return result
 
 
 def quick_optimize(
@@ -585,6 +596,7 @@ def quick_optimize(
     objective: str = "max_keff",
     max_iter: int = 50,
     method: str = "differential_evolution",
+    display: bool = False,
     **kwargs,
 ) -> Dict:
     """
@@ -596,6 +608,7 @@ def quick_optimize(
         objective: "max_keff" (default) or "min_neg_keff" (same effect).
         max_iter: Maximum iterations.
         method: "differential_evolution" or "minimize".
+        display: If True, print a Rich summary table (when Rich available).
         **kwargs: Passed to DesignOptimizer/optimize.
 
     Returns:
@@ -648,13 +661,14 @@ def quick_optimize(
             f"objective must be 'max_keff' or 'min_neg_keff', got {objective!r}"
         )
 
-    opt = DesignOptimizer(obj, bounds, method=method, **kwargs)
-    result = opt.optimize(max_iterations=max_iter, **kwargs)
+    kwargs_opt = {k: v for k, v in kwargs.items() if k != "display"}
+    opt = DesignOptimizer(obj, bounds, method=method, **kwargs_opt)
+    result = opt.optimize(max_iterations=max_iter, **kwargs_opt)
 
     optimal_point = dict(zip(param_names, result.x_opt.tolist()))
     optimal_point["k_eff"] = -result.f_opt if obj_name in ("max_keff", "min_neg_keff") else result.f_opt
 
-    return {
+    out = {
         "x_opt": result.x_opt.tolist(),
         "f_opt": float(result.f_opt),
         "param_names": param_names,
@@ -663,6 +677,9 @@ def quick_optimize(
         "n_iterations": result.n_iterations,
         "message": result.message,
     }
+    if display:
+        _display_optimize_summary(out)
+    return out
 
 
 def quick_uq(
@@ -672,6 +689,7 @@ def quick_uq(
     method: str = "lhs",
     output_names: Optional[List[str]] = None,
     random_state: Optional[int] = 42,
+    display: bool = False,
     **kwargs,
 ) -> Dict:
     """
@@ -686,6 +704,7 @@ def quick_uq(
         method: "lhs", "mc", or "sobol".
         output_names: Outputs to track (default: ["k_eff", "power_thermal_mw"]).
         random_state: Random seed.
+        display: If True, print a Rich summary table (when Rich available).
         **kwargs: Passed to UncertaintyPropagation.propagate.
 
     Returns:
@@ -740,12 +759,98 @@ def quick_uq(
         **kwargs,
     )
 
-    result: Dict = {
+    result_out: Dict = {
         "mean": uq_results.mean.tolist() if uq_results.mean is not None else [],
         "std": uq_results.std.tolist() if uq_results.std is not None else [],
         "output_names": getattr(uq_results, "output_names", out_names),
     }
-    return result
+    if display:
+        _display_uq_summary(result_out)
+    return result_out
+
+
+def _display_sweep_summary(out: Dict) -> None:
+    """Print Rich table for quick_sweep results."""
+    try:
+        from rich.console import Console
+        from rich.table import Table
+
+        tbl = Table(title="Parameter Sweep Summary")
+        tbl.add_column("Metric", style="cyan")
+        tbl.add_column("Value", justify="right")
+        tbl.add_row("Cases", str(len(out.get("results", []))))
+        tbl.add_row("Failed", str(len(out.get("failed_cases", []))))
+        stats = out.get("summary_stats", {})
+        if "k_eff" in stats:
+            for k, v in stats["k_eff"].items():
+                tbl.add_row(f"k_eff {k}", f"{v:.4g}")
+        Console().print(tbl)
+    except ImportError:
+        pass
+
+
+def _display_economics_summary(result: Dict) -> None:
+    """Print Rich table for quick_economics results."""
+    try:
+        from rich.console import Console
+        from rich.table import Table
+
+        tbl = Table(title="Economics Summary")
+        tbl.add_column("Metric", style="cyan")
+        tbl.add_column("Value", justify="right")
+        if "lcoe" in result:
+            v = result["lcoe"]
+            tbl.add_row("LCOE", f"${float(v):.2f}/kWh")
+        cap = result.get("capital_costs")
+        if cap is not None:
+            v = cap.get("total_overnight_cost", cap.get("total", cap)) if isinstance(cap, dict) else cap
+            tbl.add_row("Capital", f"${float(v):,.0f}" if isinstance(v, (int, float)) else str(v))
+        op = result.get("operating_costs")
+        if op is not None:
+            v = op.get("total_operating_cost", op.get("total", op)) if isinstance(op, dict) else op
+            tbl.add_row("Operating (annual)", f"${float(v):,.0f}" if isinstance(v, (int, float)) else str(v))
+        Console().print(tbl)
+    except (ImportError, TypeError, KeyError):
+        pass
+
+
+def _display_optimize_summary(out: Dict) -> None:
+    """Print Rich table for quick_optimize results."""
+    try:
+        from rich.console import Console
+        from rich.table import Table
+
+        tbl = Table(title="Optimization Summary")
+        tbl.add_column("Parameter", style="cyan")
+        tbl.add_column("Value", justify="right")
+        for k, v in out.get("optimal_point", {}).items():
+            tbl.add_row(k, f"{v:.4g}" if isinstance(v, (int, float)) else str(v))
+        tbl.add_row("Success", "[green]yes[/green]" if out.get("success") else "[red]no[/red]")
+        Console().print(tbl)
+    except ImportError:
+        pass
+
+
+def _display_uq_summary(result: Dict) -> None:
+    """Print Rich table for quick_uq results."""
+    try:
+        from rich.console import Console
+        from rich.table import Table
+
+        tbl = Table(title="UQ Summary")
+        tbl.add_column("Output", style="cyan")
+        tbl.add_column("Mean", justify="right")
+        tbl.add_column("Std", justify="right")
+        names = result.get("output_names", [])
+        means = result.get("mean", [])
+        stds = result.get("std", [])
+        for i, name in enumerate(names):
+            m = means[i] if i < len(means) else "—"
+            s = stds[i] if i < len(stds) else "—"
+            tbl.add_row(name, f"{m:.4g}" if isinstance(m, (int, float)) else str(m), f"{s:.4g}" if isinstance(s, (int, float)) else str(s))
+        Console().print(tbl)
+    except ImportError:
+        pass
 
 
 # When this module is reloaded (tests exercise this), class objects are recreated.
