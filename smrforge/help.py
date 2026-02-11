@@ -60,6 +60,81 @@ def _is_core_available() -> bool:
     return _CORE_AVAILABLE is True
 
 
+def system_info(verbose: bool = False) -> Dict[str, Any]:
+    """
+    Report SMRForge version and available optional features.
+
+    Args:
+        verbose: If True, include more detail (e.g. module paths).
+
+    Returns:
+        Dict with version, and boolean flags for presets, thermal, economics,
+        control, gui, transients, convenience_utils, data_downloader.
+    """
+    result: Dict[str, Any] = {}
+    try:
+        from smrforge.__version__ import __version__
+
+        result["version"] = __version__
+    except ImportError:
+        result["version"] = "unknown"
+
+    smr = _get_smr_module()
+    if smr is not None:
+        result["convenience"] = getattr(smr, "_CONVENIENCE_AVAILABLE", False)
+        result["neutronics"] = getattr(smr, "_NEUTRONICS_AVAILABLE", False)
+        result["thermal"] = getattr(smr, "_THERMAL_AVAILABLE", False)
+        result["economics"] = getattr(smr, "_ECONOMICS_AVAILABLE", False)
+        result["control"] = getattr(smr, "_CONTROL_AVAILABLE", False)
+        result["mechanics"] = getattr(smr, "_MECHANICS_AVAILABLE", False)
+        result["fuel_cycle"] = getattr(smr, "_FUEL_CYCLE_AVAILABLE", False)
+        result["gui"] = getattr(smr, "_GUI_AVAILABLE", False)
+        result["data_downloader"] = getattr(smr, "_DATA_DOWNLOADER_AVAILABLE", False)
+        result["convenience_utils"] = getattr(smr, "_CONVENIENCE_UTILS_AVAILABLE", False)
+        conv = getattr(smr, "convenience", None)
+        result["presets"] = getattr(conv, "_PRESETS_AVAILABLE", False) if conv else False
+        result["transients"] = (
+            getattr(conv, "_TRANSIENT_CONVENIENCE_AVAILABLE", False) if conv else False
+        )
+    else:
+        for k in [
+            "convenience",
+            "neutronics",
+            "thermal",
+            "economics",
+            "control",
+            "mechanics",
+            "fuel_cycle",
+            "gui",
+            "data_downloader",
+            "convenience_utils",
+            "presets",
+            "transients",
+        ]:
+            result[k] = False
+
+    return result
+
+
+def help_topics() -> List[str]:
+    """Return list of available help topic names for programmatic use."""
+    categories = [
+        "geometry",
+        "neutronics",
+        "burnup",
+        "thermal",
+        "decay",
+        "gamma",
+        "visualization",
+        "materials",
+        "nuclides",
+        "convenience",
+        "presets",
+    ]
+    extras = ["getting_started", "examples", "workflows", "troubleshooting"]
+    return categories + extras
+
+
 def help(
     topic: Optional[Union[str, Any]] = None,
     category: Optional[str] = None,
@@ -423,6 +498,7 @@ k_eff = reactor.solve_keff()
 ## Complete Examples
 
 See the `examples/` directory for:
+- `discovery_help_example.py` - Discovery and help (system_info, list_*, get_example_path)
 - `basic_neutronics.py` - Basic neutronics calculation
 - `burnup_example.py` - Burnup calculation
 - `decay_heat_example.py` - Decay heat analysis
@@ -845,7 +921,37 @@ def _help_convenience(console: "Console", show_examples: bool) -> None:
                 """
 # Convenience Functions
 
-## Quick Creation Functions
+## Discovery and Help
+
+- `system_info()` - Report version and available optional features
+- `help_topics()` - List available help topic names
+- `list_presets()` - List preset reactor designs
+- `list_reactor_types()` - List reactor type names
+- `list_fuel_types()` - List fuel type names
+- `list_constraint_sets()` - List validation constraint set names
+- `get_constraint_set(name)` - Get built-in constraint set
+- `get_example_path(name)` - Get path to example input file
+- `list_examples()` - List example script names
+- `list_nuclides()` - List common SMR nuclide names
+- `list_sweepable_params()` - List parameters for quick_sweep
+- `get_default_output_dir()` - Default output directory
+
+## Reactor Creation and Loading
+
+- `create_reactor()` - Create reactor from preset or kwargs
+- `load_reactor(path)` - Load reactor from JSON file
+- `get_preset(name)` - Get preset specification
+
+## Quick Workflows
+
+- `quick_keff()` - Quick k-eff calculation
+- `quick_sweep()` - Parameter sweep with minimal setup
+- `quick_economics()` - Quick cost estimate
+- `quick_optimize()` - Design optimization (max k-eff)
+- `quick_uq()` - Uncertainty quantification (LHS/MC)
+- `quick_validate()` - Validate reactor against constraints
+
+## Quick Creation Functions (convenience_utils)
 
 - `create_simple_core()` - Quick core creation with defaults
 - `create_simple_solver()` - Quick neutronics solver setup
@@ -853,57 +959,38 @@ def _help_convenience(console: "Console", show_examples: bool) -> None:
 - `create_simple_burnup_solver()` - Quick burnup solver setup
 - `create_nuclide_list()` - Create list of Nuclide objects
 
-## Quick Calculation Functions
+## Other Quick Functions
 
-- `quick_keff()` - Quick k-eff calculation (from convenience module)
 - `quick_keff_calculation()` - Quick k-eff with flux return
 - `quick_burnup_calculation()` - Quick burnup calculation
 - `quick_decay_heat()` - Quick decay heat calculation
-
-## Material and Nuclide Functions
-
 - `get_nuclide(name)` - Get Nuclide from name string
 - `get_material(name)` - Get material from database
 - `list_materials(category)` - List available materials
-
-## Visualization Functions
-
 - `quick_mesh_extraction()` - Extract 3D mesh from core
 - `quick_plot_core()` - Quick 2D core layout plot
 - `quick_plot_mesh()` - Quick 3D mesh visualization
-
-## Complete Workflow
-
 - `run_complete_analysis()` - Complete reactor analysis workflow
 
 ## Examples
 
 ```python
-from smrforge import (
-    create_simple_core,
-    create_simple_solver,
-    quick_keff_calculation,
-    get_nuclide,
-    get_material,
-    quick_mesh_extraction,
-    run_complete_analysis
-)
+import smrforge as smr
 
-# Create core
-core = create_simple_core(n_rings=3, pitch=40.0)
+# Check capabilities
+info = smr.system_info()
+print(f"Version: {info['version']}, Presets: {info['presets']}")
 
-# Quick k-eff
-k_eff, flux = quick_keff_calculation()
+# Discovery
+print("Presets:", smr.list_presets())
+print("Sweepable params:", smr.list_sweepable_params()[:5])
+reactor_path = smr.get_example_path("reactor")
 
-# Get nuclide and material
-u235 = get_nuclide("U235")
-graphite = get_material("graphite_IG-110")
-
-# Extract mesh
-mesh = quick_mesh_extraction(core, mesh_type="volume")
-
-# Complete analysis
-results = run_complete_analysis(power_mw=10.0)
+# Quick workflows
+reactor = smr.load_reactor(reactor_path)
+k_eff = reactor.solve_keff()
+out = smr.quick_sweep("valar-10", {"enrichment": [0.18, 0.20]})
+costs = smr.quick_economics("valar-10")
 ```
         """
             ),
@@ -1123,4 +1210,4 @@ def _get_examples() -> Dict[str, List[Dict[str, str]]]:
 
 
 # Make help available as a module-level function
-__all__ = ["help"]
+__all__ = ["help", "system_info", "help_topics"]

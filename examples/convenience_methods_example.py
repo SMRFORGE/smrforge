@@ -13,7 +13,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 
-# Import convenience functions
+# Import reactor convenience functions
+from smrforge import load_reactor, quick_validate, create_reactor
 from smrforge import (
     create_simple_core,
     create_simple_solver,
@@ -33,6 +34,20 @@ def main():
     print("=" * 60)
     print("Convenience Methods Example")
     print("=" * 60)
+
+    # 0. Load reactor from JSON and validate
+    reactor_json = Path(__file__).parent / "inputs" / "reactor.json"
+    if reactor_json.exists():
+        print("\n0. Load Reactor from JSON and Quick Validate")
+        print("-" * 60)
+        reactor = load_reactor(reactor_json)
+        print(f"   Loaded: {reactor.spec.name}, {reactor.spec.power_thermal/1e6:.1f} MW")
+        result = quick_validate(reactor)
+        print(f"   Validation passed: {result.passed}, violations: {len(result.violations)}")
+        r2 = create_reactor(config=str(reactor_json))
+        print(f"   create_reactor(config=): {r2.spec.name}")
+    else:
+        print("\n0. Load Reactor (skipped - examples/inputs/reactor.json not found)")
 
     # 1. Quick core creation
     print("\n1. Quick Core Creation")
@@ -147,6 +162,9 @@ def main():
     print("Example completed!")
     print("=" * 60)
     print("\nSummary of convenience functions:")
+    print("  - load_reactor(path) - Load reactor from JSON")
+    print("  - quick_validate(reactor_or_path) - Validate design")
+    print("  - create_reactor(config=path) - Create reactor from JSON")
     print("  - create_simple_core() - Quick core creation")
     print("  - create_simple_solver() - Quick solver setup")
     print("  - create_simple_xs_data() - Quick cross-section creation")

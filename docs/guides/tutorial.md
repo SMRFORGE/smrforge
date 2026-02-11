@@ -738,6 +738,16 @@ Once you're comfortable with the basics, try:
 # Import
 import smrforge as smr
 
+# Load reactor from JSON (simplified or full schema)
+reactor = smr.load_reactor("examples/inputs/reactor.json")
+
+# Quick validation (reactor or path)
+result = smr.quick_validate(reactor)
+print(f"Passed: {result.passed}")
+
+# Create from config file
+reactor = smr.create_reactor(config="examples/inputs/reactor.json")
+
 # Quick k-eff
 k = smr.quick_keff(power_mw=10, enrichment=0.195)
 

@@ -8,8 +8,9 @@ helpers.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -106,9 +107,163 @@ def list_presets() -> List[str]:
     return _get_library().list_designs()
 
 
+def list_reactor_types() -> List[str]:
+    """List available reactor type names for create_reactor and specs."""
+    return [rt.value for rt in ReactorType]
+
+
+def list_fuel_types() -> List[str]:
+    """List available fuel type names for create_reactor and specs."""
+    return [ft.value for ft in FuelType]
+
+
+def list_constraint_sets() -> List[str]:
+    """List built-in constraint set names for quick_validate."""
+    return ["regulatory_limits", "safety_margins"]
+
+
+def get_constraint_set(name: str) -> "ConstraintSet":
+    """Get a built-in constraint set by name."""
+    from ..validation.constraints import ConstraintSet
+
+    if name == "regulatory_limits":
+        return ConstraintSet.get_regulatory_limits()
+    if name == "safety_margins":
+        return ConstraintSet.get_safety_margins()
+    raise ValueError(
+        f"Unknown constraint set '{name}'. Available: {list_constraint_sets()}"
+    )
+
+
+def get_example_path(name: str) -> Path:
+    """
+    Get path to a canonical example input file.
+
+    Args:
+        name: Example name, e.g. "reactor" -> examples/inputs/reactor.json.
+
+    Returns:
+        Absolute Path to the example file.
+
+    Example:
+        >>> path = get_example_path("reactor")
+        >>> reactor = load_reactor(path)
+    """
+    base = Path(__file__).resolve().parents[2]
+    _example_map = {"reactor": base / "examples" / "inputs" / "reactor.json"}
+    if name not in _example_map:
+        raise ValueError(
+            f"Unknown example '{name}'. Available: {list(_example_map.keys())}"
+        )
+    p = _example_map[name]
+    if not p.exists():
+        raise FileNotFoundError(f"Example file not found: {p}")
+    return p
+
+
+def list_examples() -> List[str]:
+    """List available example script names (without .py) in examples/."""
+    base = Path(__file__).resolve().parents[2] / "examples"
+    if not base.exists():
+        return []
+    return sorted(
+        f.stem for f in base.iterdir() if f.suffix == ".py" and f.name != "__init__.py"
+    )
+
+
+def list_nuclides() -> List[str]:
+    """List common SMR nuclide names (for burnup/ENDF setup)."""
+    try:
+        from ..data_downloader import COMMON_SMR_NUCLIDES
+
+        return list(COMMON_SMR_NUCLIDES)
+    except ImportError:
+        return []
+
+
+def list_sweepable_params() -> List[str]:
+    """List parameter names commonly swept in quick_sweep (from ReactorSpecification)."""
+    return [
+        "enrichment",
+        "power_thermal",
+        "core_height",
+        "core_diameter",
+        "reflector_thickness",
+        "heavy_metal_loading",
+        "inlet_temperature",
+        "outlet_temperature",
+        "max_fuel_temperature",
+        "primary_pressure",
+        "coolant_flow_rate",
+        "cycle_length",
+        "capacity_factor",
+        "target_burnup",
+        "doppler_coefficient",
+        "shutdown_margin",
+    ]
+
+
+def get_default_output_dir() -> Path:
+    """Return the default output directory used by sweeps and workflows."""
+    return Path("output")
+
+
 def get_preset(name: str) -> ReactorSpecification:
     """Get a preset reactor design specification."""
     return _get_library().get_design(name)
+
+
+def load_reactor(path: Union[str, Path]) -> "SimpleReactor":
+    """
+    Load a reactor from a JSON file.
+
+    Accepts either full ReactorSpecification schema or a simplified format
+    with ``power_mw`` (converted to power_thermal). Simplified format uses
+    sensible defaults for missing fields.
+
+    Args:
+        path: Path to reactor JSON file (e.g., ``examples/inputs/reactor.json``).
+
+    Returns:
+        SimpleReactor instance ready for solve_keff(), solve(), etc.
+
+    Example:
+        >>> from smrforge import load_reactor
+        >>> reactor = load_reactor("examples/inputs/reactor.json")
+        >>> k = reactor.solve_keff()
+    """
+    path = Path(path)
+    data = json.loads(path.read_text())
+
+    # Support simplified format with power_mw and minimal fields
+    if "power_mw" in data and "power_thermal" not in data:
+        power_mw = float(data.pop("power_mw", 10))
+        data["power_thermal"] = power_mw * 1e6
+        # Fill required fields with defaults if missing
+        defaults = {
+            "inlet_temperature": 823.15,
+            "outlet_temperature": 1023.15,
+            "max_fuel_temperature": 1873.15,
+            "primary_pressure": 7.0e6,
+            "reflector_thickness": 30.0,
+            "heavy_metal_loading": power_mw * 15.0,
+            "coolant_flow_rate": power_mw * 0.8,
+            "cycle_length": 3650,
+            "capacity_factor": 0.95,
+            "target_burnup": 150.0,
+            "doppler_coefficient": -3.5e-5,
+            "shutdown_margin": 0.05,
+        }
+        for k, v in defaults.items():
+            data.setdefault(k, v)
+
+    spec = ReactorSpecification.model_validate(data)
+    instance = SimpleReactor.__new__(SimpleReactor)
+    instance.spec = spec
+    instance._core = None
+    instance._xs_data = None
+    instance._solver = None
+    return instance
 
 
 def create_reactor(
@@ -117,11 +272,13 @@ def create_reactor(
     core_height: Optional[float] = None,
     core_diameter: Optional[float] = None,
     enrichment: Optional[float] = None,
+    config: Optional[Union[str, Path]] = None,
     **kwargs,
 ) -> "SimpleReactor":
     """
     Create a reactor with sensible defaults.
 
+    If ``config`` is provided (path to JSON file), loads reactor from file.
     If called as `create_reactor("<preset-name>")` (i.e., only the `name`
     positional argument is provided), the name is interpreted as a **preset**
     design name and unknown presets raise `ValueError` (as tests expect).
@@ -129,6 +286,9 @@ def create_reactor(
     If called with keyword arguments (e.g. `create_reactor(name="MyReactor", ...)`)
     the name is treated as a custom reactor name unless it matches a known preset.
     """
+    if config is not None:
+        return load_reactor(config)
+
     preset_names: List[str] = []
     if _PRESETS_AVAILABLE:
         try:
@@ -248,6 +408,40 @@ def get_design_point(reactor: "SimpleReactor") -> Dict[str, float]:
     return point
 
 
+def quick_validate(
+    reactor_or_path: Union["SimpleReactor", str, Path],
+    constraint_set: Optional[object] = None,
+) -> "ValidationResult":
+    """
+    Validate a reactor design against constraints in one call.
+
+    Args:
+        reactor_or_path: SimpleReactor instance or path to reactor JSON file.
+        constraint_set: Optional ConstraintSet (default: regulatory limits).
+
+    Returns:
+        ValidationResult with passed, violations, warnings, metrics.
+
+    Example:
+        >>> from smrforge import quick_validate, load_reactor
+        >>> result = quick_validate("examples/inputs/reactor.json")
+        >>> print(f"Passed: {result.passed}")
+        >>> reactor = load_reactor("reactor.json")
+        >>> result = quick_validate(reactor)
+    """
+    from ..validation.constraints import ConstraintSet, DesignValidator
+
+    if isinstance(reactor_or_path, (str, Path)):
+        reactor = load_reactor(reactor_or_path)
+    else:
+        reactor = reactor_or_path
+
+    if constraint_set is None:
+        constraint_set = ConstraintSet.get_regulatory_limits()
+    validator = DesignValidator(constraint_set)
+    return validator.validate(reactor)
+
+
 def save_variant(
     reactor: "SimpleReactor",
     variant_name: str,
@@ -260,6 +454,298 @@ def save_variant(
     path = output_dir / f"design_{safe_name}.json"
     reactor.save(path)
     return path
+
+
+def quick_sweep(
+    preset_or_reactor: Union[str, Path, "SimpleReactor"],
+    params: Dict[str, Union[tuple, list]],
+    analysis: str = "keff",
+    output_path: Optional[Union[str, Path]] = None,
+    parallel: bool = False,
+    **economics_kwargs,
+) -> Dict:
+    """
+    Run a parameter sweep with minimal setup.
+
+    Args:
+        preset_or_reactor: Preset name, path to reactor JSON, or SimpleReactor.
+        params: Parameter ranges, e.g. {"enrichment": (0.15, 0.25, 0.02)} or
+                {"enrichment": [0.15, 0.19, 0.23]}.
+        analysis: Analysis type - "keff" (default) or "neutronics".
+        output_path: Optional path to save results JSON.
+        parallel: Whether to run cases in parallel (default: False for simplicity).
+        **economics_kwargs: Ignored; for future use.
+
+    Returns:
+        Dict with "results" (list of case dicts), "failed_cases", "summary_stats".
+
+    Example:
+        >>> from smrforge import quick_sweep
+        >>> out = quick_sweep("valar-10", {"enrichment": (0.15, 0.25, 0.02)})
+        >>> for r in out["results"]:
+        ...     print(r["parameters"]["enrichment"], r["k_eff"])
+    """
+    from ..workflows.parameter_sweep import ParameterSweep, SweepConfig
+
+    def _to_create_reactor_kwargs(data: dict) -> dict:
+        """Convert spec-like dict to create_reactor kwargs (power_thermal->power_mw, etc.)."""
+        d = data.copy()
+        if "power_thermal" in d and "power_mw" not in d:
+            d["power_mw"] = d.pop("power_thermal", 10e6) / 1e6
+        return d
+
+    if isinstance(preset_or_reactor, SimpleReactor):
+        template = _to_create_reactor_kwargs(preset_or_reactor.spec.model_dump())
+    elif isinstance(preset_or_reactor, (str, Path)):
+        path = Path(preset_or_reactor)
+        if path.exists():
+            template = json.loads(path.read_text())
+            if "power_mw" in template and "power_thermal" not in template:
+                template["power_thermal"] = float(template.pop("power_mw", 10)) * 1e6
+            template = _to_create_reactor_kwargs(template)
+        else:
+            # Preset name: resolve to full spec so param overrides work
+            try:
+                spec = get_preset(str(preset_or_reactor))
+                template = _to_create_reactor_kwargs(spec.model_dump())
+            except Exception:
+                template = {"name": str(preset_or_reactor)}
+    else:
+        try:
+            spec = get_preset(str(preset_or_reactor))
+            template = _to_create_reactor_kwargs(spec.model_dump())
+        except Exception:
+            template = {"name": str(preset_or_reactor)}
+
+    analysis_types = [analysis] if analysis in ("keff", "neutronics", "burnup") else ["keff"]
+    output_dir = Path(output_path).parent if output_path else Path("output")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    config = SweepConfig(
+        parameters=params,
+        analysis_types=analysis_types,
+        reactor_template=template,
+        output_dir=output_dir,
+        parallel=parallel,
+        save_intermediate=False,
+    )
+    result = ParameterSweep(config).run(show_progress=False)
+
+    if output_path:
+        result.save(Path(output_path))
+
+    return {
+        "results": result.results,
+        "failed_cases": result.failed_cases,
+        "summary_stats": result.summary_stats,
+    }
+
+
+def quick_economics(
+    reactor_or_preset: Union["SimpleReactor", str, Path],
+    nth_of_a_kind: int = 1,
+    **kwargs,
+) -> Dict:
+    """
+    Quick cost estimate from reactor or preset.
+
+    Args:
+        reactor_or_preset: SimpleReactor, preset name, or path to reactor JSON.
+        nth_of_a_kind: Nth-of-a-kind (1 = FOAK).
+        **kwargs: Passed to estimate_costs_from_spec (modularity_factor, discount_rate, etc.).
+
+    Returns:
+        Dict with capital_costs, operating_costs, lcoe, lcoe_breakdown.
+
+    Example:
+        >>> from smrforge import quick_economics
+        >>> costs = quick_economics("valar-10")
+        >>> print(f"LCOE: ${costs['lcoe']:.2f}/kWh")
+    """
+    from ..economics.integration import estimate_costs_from_spec
+
+    if isinstance(reactor_or_preset, SimpleReactor):
+        spec = reactor_or_preset.spec
+    elif isinstance(reactor_or_preset, (str, Path)):
+        path = Path(reactor_or_preset)
+        if path.exists():
+            reactor = load_reactor(path)
+            spec = reactor.spec
+        else:
+            spec = get_preset(str(reactor_or_preset))
+    else:
+        spec = get_preset(str(reactor_or_preset))
+
+    return estimate_costs_from_spec(spec, nth_of_a_kind=nth_of_a_kind, **kwargs)
+
+
+def quick_optimize(
+    reactor_or_preset: Union["SimpleReactor", str, Path],
+    params: Dict[str, Tuple[float, float]],
+    objective: str = "max_keff",
+    max_iter: int = 50,
+    method: str = "differential_evolution",
+    **kwargs,
+) -> Dict:
+    """
+    Quick single-objective design optimization.
+
+    Args:
+        reactor_or_preset: Base reactor (SimpleReactor, preset name, or path to JSON).
+        params: Parameter bounds {name: (low, high)}, e.g. {"enrichment": (0.15, 0.25)}.
+        objective: "max_keff" (default) or "min_neg_keff" (same effect).
+        max_iter: Maximum iterations.
+        method: "differential_evolution" or "minimize".
+        **kwargs: Passed to DesignOptimizer/optimize.
+
+    Returns:
+        Dict with x_opt, f_opt, param_names, optimal_point, success.
+
+    Example:
+        >>> out = quick_optimize("valar-10", {"enrichment": (0.15, 0.25)})
+        >>> print(out["optimal_point"])
+    """
+    from ..optimization.design import DesignOptimizer
+
+    if isinstance(reactor_or_preset, SimpleReactor):
+        base_spec = reactor_or_preset.spec.model_dump()
+    elif isinstance(reactor_or_preset, (str, Path)):
+        path = Path(reactor_or_preset)
+        if path.exists():
+            base_spec = json.loads(path.read_text())
+            if "power_mw" in base_spec and "power_thermal" not in base_spec:
+                base_spec["power_thermal"] = float(base_spec.pop("power_mw", 10)) * 1e6
+        else:
+            base_spec = get_preset(str(reactor_or_preset)).model_dump()
+    else:
+        base_spec = get_preset(str(reactor_or_preset)).model_dump()
+
+    # Convert to create_reactor-friendly format (power_mw not power_thermal)
+    def _to_create_kwargs(spec: dict) -> dict:
+        d = {k: v for k, v in spec.items() if k not in ("preset",)}
+        if "power_thermal" in d and "power_mw" not in d:
+            d["power_mw"] = d.pop("power_thermal", 10e6) / 1e6
+        return d
+
+    param_names = list(params.keys())
+    bounds = [params[n] for n in param_names]
+
+    def reactor_from_x(x):
+        spec = dict(base_spec)
+        for i, name in enumerate(param_names):
+            spec[name] = float(x[i])
+        return create_reactor(**_to_create_kwargs(spec))
+
+    obj_name = (objective or "max_keff").strip().lower()
+    if obj_name in ("max_keff", "min_neg_keff"):
+
+        def obj(x):
+            r = reactor_from_x(x)
+            return -get_design_point(r)["k_eff"]
+
+    else:
+        raise ValueError(
+            f"objective must be 'max_keff' or 'min_neg_keff', got {objective!r}"
+        )
+
+    opt = DesignOptimizer(obj, bounds, method=method, **kwargs)
+    result = opt.optimize(max_iterations=max_iter, **kwargs)
+
+    optimal_point = dict(zip(param_names, result.x_opt.tolist()))
+    optimal_point["k_eff"] = -result.f_opt if obj_name in ("max_keff", "min_neg_keff") else result.f_opt
+
+    return {
+        "x_opt": result.x_opt.tolist(),
+        "f_opt": float(result.f_opt),
+        "param_names": param_names,
+        "optimal_point": optimal_point,
+        "success": result.success,
+        "n_iterations": result.n_iterations,
+        "message": result.message,
+    }
+
+
+def quick_uq(
+    reactor_or_preset: Union["SimpleReactor", str, Path],
+    uncertain_params: List[Dict],
+    n_samples: int = 100,
+    method: str = "lhs",
+    output_names: Optional[List[str]] = None,
+    random_state: Optional[int] = 42,
+    **kwargs,
+) -> Dict:
+    """
+    Quick uncertainty quantification (Monte Carlo / LHS propagation).
+
+    Args:
+        reactor_or_preset: Base reactor (SimpleReactor, preset name, or path to JSON).
+        uncertain_params: List of {"name", "nominal", "distribution", "uncertainty"}.
+            distribution: "normal", "uniform", "lognormal", "triangular".
+            uncertainty: float (std) for normal/lognormal, or (min, max) for uniform.
+        n_samples: Number of samples.
+        method: "lhs", "mc", or "sobol".
+        output_names: Outputs to track (default: ["k_eff", "power_thermal_mw"]).
+        random_state: Random seed.
+        **kwargs: Passed to UncertaintyPropagation.propagate.
+
+    Returns:
+        Dict with mean, std, output_names, samples (if requested).
+
+    Example:
+        >>> out = quick_uq("valar-10", [
+        ...     {"name": "enrichment", "nominal": 0.195, "distribution": "normal", "uncertainty": 0.02},
+        ... ], n_samples=50)
+    """
+    from ..uncertainty.uq import UncertainParameter, UncertaintyPropagation
+
+    if isinstance(reactor_or_preset, SimpleReactor):
+        base_spec = reactor_or_preset.spec.model_dump()
+    elif isinstance(reactor_or_preset, (str, Path)):
+        path = Path(reactor_or_preset)
+        if path.exists():
+            base_spec = json.loads(path.read_text())
+            if "power_mw" in base_spec and "power_thermal" not in base_spec:
+                base_spec["power_thermal"] = float(base_spec.pop("power_mw", 10)) * 1e6
+        else:
+            base_spec = get_preset(str(reactor_or_preset)).model_dump()
+    else:
+        base_spec = get_preset(str(reactor_or_preset)).model_dump()
+
+    def _to_create_kwargs(spec: dict) -> dict:
+        d = {k: v for k, v in spec.items() if k not in ("preset",)}
+        if "power_thermal" in d and "power_mw" not in d:
+            d["power_mw"] = d.pop("power_thermal", 10e6) / 1e6
+        return d
+
+    params = []
+    for p in uncertain_params:
+        name = p["name"]
+        nominal = float(p["nominal"])
+        dist = p.get("distribution", "normal")
+        unc = p.get("uncertainty", 0.1)
+        params.append(UncertainParameter(name, dist, nominal, unc))
+
+    def model(x_dict):
+        spec = dict(base_spec)
+        spec.update(x_dict)
+        r = create_reactor(**_to_create_kwargs(spec))
+        return get_design_point(r)
+
+    out_names = output_names or ["k_eff", "power_thermal_mw"]
+    prop = UncertaintyPropagation(params, model, out_names)
+    uq_results = prop.propagate(
+        n_samples=n_samples,
+        method=method,
+        random_state=random_state,
+        **kwargs,
+    )
+
+    result: Dict = {
+        "mean": uq_results.mean.tolist() if uq_results.mean is not None else [],
+        "std": uq_results.std.tolist() if uq_results.std is not None else [],
+        "output_names": getattr(uq_results, "output_names", out_names),
+    }
+    return result
 
 
 # When this module is reloaded (tests exercise this), class objects are recreated.
@@ -465,8 +951,23 @@ __all__ = [
     "_design_library",
     "_get_library",
     "list_presets",
+    "list_reactor_types",
+    "list_fuel_types",
+    "list_constraint_sets",
+    "get_constraint_set",
+    "get_example_path",
+    "list_examples",
+    "list_nuclides",
+    "list_sweepable_params",
+    "get_default_output_dir",
     "get_preset",
+    "load_reactor",
     "create_reactor",
+    "quick_validate",
+    "quick_sweep",
+    "quick_economics",
+    "quick_optimize",
+    "quick_uq",
     "analyze_preset",
     "compare_designs",
     "get_design_point",

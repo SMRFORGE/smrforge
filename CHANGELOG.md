@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Convenience functions:** `load_reactor(path)` loads a reactor from JSON (full schema or simplified `power_mw` format). `quick_validate(reactor_or_path, constraint_set=None)` validates a design in one call. `create_reactor(config=path)` creates a reactor from a JSON config file.
+
+### Added
+- **New convenience functions:** `quick_sweep()` (parameter sweep), `quick_economics()` (cost estimate), `quick_optimize()` (design optimization), `quick_uq()` (uncertainty quantification), `list_reactor_types()`, `list_fuel_types()` for easier discovery and workflows.
+- **Discovery and help functions:** `system_info()` (version and capabilities), `help_topics()`, `list_constraint_sets()`, `get_constraint_set()`, `get_example_path()`, `list_examples()`, `list_nuclides()`, `list_sweepable_params()`, `get_default_output_dir()`.
+
 ### Changed
 - **Convenience API consolidation:** Removed legacy `smrforge/convenience.py`; all convenience functionality now lives in `smrforge/convenience/` package. No public API changes—`from smrforge.convenience import create_reactor` and `smrforge.create_reactor` work unchanged.
 

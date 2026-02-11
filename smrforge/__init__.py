@@ -66,9 +66,26 @@ try:
         analyze_preset,
         compare_designs,
         create_reactor,
+        get_constraint_set,
+        get_default_output_dir,
+        get_design_point,
+        get_example_path,
         get_preset,
+        list_constraint_sets,
+        list_examples,
+        list_fuel_types,
+        list_nuclides,
         list_presets,
+        list_reactor_types,
+        list_sweepable_params,
+        load_reactor,
+        quick_economics,
         quick_keff,
+        quick_optimize,
+        quick_sweep,
+        quick_uq,
+        quick_validate,
+        save_variant,
     )
 
     _CONVENIENCE_AVAILABLE = True
@@ -162,11 +179,28 @@ if _CONVENIENCE_AVAILABLE:
     __all__.extend(
         [
             "create_reactor",
+            "load_reactor",
+            "quick_validate",
+            "quick_sweep",
+            "quick_economics",
+            "quick_optimize",
+            "quick_uq",
             "list_presets",
+            "list_reactor_types",
+            "list_fuel_types",
+            "list_constraint_sets",
+            "get_constraint_set",
+            "get_example_path",
+            "list_examples",
+            "list_nuclides",
+            "list_sweepable_params",
+            "get_default_output_dir",
             "get_preset",
             "quick_keff",
             "analyze_preset",
             "compare_designs",
+            "get_design_point",
+            "save_variant",
             "SimpleReactor",
         ]
     )
@@ -255,9 +289,9 @@ delete_global(globals(), "utils")
 
 # Help system (always available)
 try:
-    from smrforge.help import help
+    from smrforge.help import help, help_topics, system_info
 
-    __all__.append("help")
+    __all__.extend(["help", "system_info", "help_topics"])
 except ImportError:
     pass
 
