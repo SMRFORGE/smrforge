@@ -337,21 +337,30 @@ class TestBackwardsCompatibility:
             with pytest.raises(ImportError, match="Pint is required"):
                 get_ureg()
 
-    def test_functions_without_pint(self, capfd):
+    def test_functions_without_pint(self):
         """Test that functions degrade gracefully without Pint."""
+        import warnings
         from unittest.mock import patch
 
         from smrforge.utils.units import check_units, convert_units, with_units
 
         with patch("smrforge.utils.units._PINT_AVAILABLE", False):
-            value = check_units(10.0, "megawatt", "power")
-            assert value == 10.0  # Should return original value
-            converted = convert_units(10.0, "watt")
-            assert converted == 10.0
-            with_units_value = with_units(10.0, "megawatt")
-            assert with_units_value == 10.0
-        out, err = capfd.readouterr()
-        assert "pint" in (out + err).lower()
+            # These should warn but not crash
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                value = check_units(10.0, "megawatt", "power")
+                assert len(w) == 1  # Should have issued a warning
+                assert value == 10.0  # Should return original value
+
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                converted = convert_units(10.0, "watt")
+                assert converted == 10.0
+
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                with_units_value = with_units(10.0, "megawatt")
+                assert with_units_value == 10.0
 
     def test_define_reactor_units(self):
         """Test define_reactor_units function (uses real Pint)."""

@@ -52,7 +52,6 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[Coupling Reduction](technical/coupling-reduction.md)** - Architecture and coupling reduction notes
 - **[API Stability](API_STABILITY.md)** - Public API surface and deprecation policy (smrforge.api, workflows)
 - **[Plugin Architecture](PLUGIN_ARCHITECTURE.md)** - Surrogate registry, hooks, AI integration
-- **[AI Features](AI_FEATURES.md)** - BYOS, surrogate workflows, audit trail, validation report
 - **[Flux Weighting Limitation](FLUX_WEIGHTING_LIMITATION.md)** - Multi-group collapse assumptions
 
 ---

@@ -39,15 +39,19 @@ class TestUnitsModule:
             with pytest.raises(ImportError, match="Pint is required"):
                 get_ureg()
 
-    def test_check_units_without_pint(self, capfd):
+    def test_check_units_without_pint(self):
         """Test check_units when Pint is not available."""
         with patch("smrforge.utils.units._PINT_AVAILABLE", False):
+            import warnings
+
             from smrforge.utils.units import check_units
 
-            result = check_units(10.0, "megawatt", "power")
-            assert result == 10.0
-        out, err = capfd.readouterr()
-        assert "pint" in (out + err).lower()
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                result = check_units(10.0, "megawatt", "power")
+                assert result == 10.0
+                assert len(w) == 1
+                assert "Pint not installed" in str(w[0].message)
 
     def test_check_units_with_pint(self):
         """Test check_units when Pint is available."""
@@ -77,15 +81,19 @@ class TestUnitsModule:
         power_w = convert_units(power_mw, "watt")
         assert power_w == 10000000.0
 
-    def test_with_units_without_pint(self, capfd):
+    def test_with_units_without_pint(self):
         """Test with_units when Pint is not available."""
         with patch("smrforge.utils.units._PINT_AVAILABLE", False):
+            import warnings
+
             from smrforge.utils.units import with_units
 
-            result = with_units(10.0, "megawatt")
-            assert result == 10.0
-        out, err = capfd.readouterr()
-        assert "pint" in (out + err).lower()
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                result = with_units(10.0, "megawatt")
+                assert result == 10.0
+                assert len(w) == 1
+                assert "Pint not installed" in str(w[0].message)
 
     def test_with_units_with_pint(self):
         """Test with_units when Pint is available."""

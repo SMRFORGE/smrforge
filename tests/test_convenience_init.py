@@ -31,12 +31,11 @@ class TestConvenienceInitImports:
 
     def test_convenience_init_exception_handling(self):
         """Test convenience.__init__.py handles exceptions during import."""
-        import importlib
-
-        # Ensure module is in sys.modules (may have been popped by preceding tests)
-        conv = importlib.import_module("smrforge.convenience")
-
         with patch("pathlib.Path.exists", return_value=False):
-            importlib.reload(conv)
+            import importlib
+
+            import smrforge.convenience
+
+            importlib.reload(smrforge.convenience)
             # Should handle gracefully
-            assert hasattr(conv, "_CONVENIENCE_MAIN_AVAILABLE")
+            assert hasattr(smrforge.convenience, "_CONVENIENCE_MAIN_AVAILABLE")

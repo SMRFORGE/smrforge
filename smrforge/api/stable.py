@@ -21,7 +21,7 @@ from ..workflows.plugin_registry import (
     register_surrogate,
     run_hooks,
 )
-from ..workflows.surrogate import fit_surrogate, surrogate_from_sweep_results
+from ..workflows.surrogate import fit_surrogate
 
 
 def __getattr__(name: str):
@@ -44,18 +44,6 @@ def __getattr__(name: str):
         except ImportError:
             globals()["BurnupSolver"] = None
             return None  # type: ignore
-    if name == "load_surrogate_from_path":
-        from ..ai.surrogate import load_surrogate_from_path
-        return load_surrogate_from_path
-    if name == "record_ai_model":
-        from ..ai.audit import record_ai_model
-        return record_ai_model
-    if name == "fit_surrogate_with_audit":
-        from ..ai.surrogate import fit_surrogate_with_audit
-        return fit_surrogate_with_audit
-    if name == "generate_validation_report":
-        from ..ai.validation import generate_validation_report
-        return generate_validation_report
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -69,11 +57,6 @@ __all__ = [
     "SolverOptions",
     "create_audit_trail",
     "fit_surrogate",
-    "surrogate_from_sweep_results",
-    "fit_surrogate_with_audit",
-    "load_surrogate_from_path",
-    "record_ai_model",
-    "generate_validation_report",
     "get_surrogate",
     "list_surrogates",
     "register_hook",

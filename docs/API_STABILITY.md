@@ -47,39 +47,24 @@ This document describes which parts of SMRForge are considered **stable** for ex
 | Module / Symbol | Purpose |
 |-----------------|---------|
 | `smrforge.workflows.parameter_sweep.ParameterSweep` | Parameter sweep |
-| `smrforge.workflows.parameter_sweep.SweepConfig` | Sweep config (surrogate_path, seed, etc.) |
-| `smrforge.workflows.fit_surrogate()` | Fit surrogate model (supports audit_trail) |
-| `smrforge.workflows.surrogate_from_sweep_results()` | Build surrogate from sweep results |
-| `smrforge.workflows.register_surrogate()` | Register custom surrogate (factory or path) |
+| `smrforge.workflows.fit_surrogate()` | Fit surrogate model |
+| `smrforge.workflows.register_surrogate()` | Register custom surrogate |
 | `smrforge.workflows.register_hook()` | Register event hooks |
 | `smrforge.workflows.run_hooks()` | Run registered hooks |
 | `smrforge.workflows.export_ml_dataset()` | Export design points to Parquet/HDF5 for ML |
-
-### AI and Surrogates
-
-| Module / Symbol | Purpose |
-|-----------------|---------|
-| `smrforge.ai.audit.record_ai_model()` | Append AI model to audit trail |
-| `smrforge.ai.surrogate.load_surrogate_from_path()` | Load ONNX/TorchScript/pickle surrogate |
-| `smrforge.ai.surrogate.register_surrogate_from_path()` | Register surrogate from file path |
-| `smrforge.ai.surrogate.model_hash()` | SHA-256 hash for model audit |
-| `smrforge.ai.validation.generate_validation_report()` | Compare surrogate vs reference |
-| `smrforge.ai.validation.SurrogateValidationReport` | Validation report dataclass |
 
 ### Stable API Facade
 
 | Import | Purpose |
 |--------|---------|
-| `from smrforge.api import fit_surrogate, register_surrogate, load_surrogate_from_path, ...` | Single import for stable symbols |
+| `from smrforge.api import fit_surrogate, register_surrogate, ...` | Single import for stable symbols |
 
 ### Plugin Registry
 
 | Symbol | Purpose |
 |--------|---------|
-| `register_surrogate(name, factory)` | Register surrogate factory or path |
-| `register_surrogate(name, path, metadata)` | Register BYOS from file path |
+| `register_surrogate(name, factory)` | Register surrogate factory |
 | `get_surrogate(name)` | Get surrogate factory |
-| `get_surrogate_metadata(name)` | Get metadata for registered surrogate |
 | `list_surrogates()` | List registered surrogates |
 | `register_hook(name, callback)` | Register hook callback |
 | `run_hooks(name, context, **kwargs)` | Run hooks |
@@ -107,6 +92,5 @@ This document describes which parts of SMRForge are considered **stable** for ex
 
 ## References
 
-- AI_FEATURES.md
-- PLUGIN_ARCHITECTURE.md
-- NUCLEAR_INDUSTRY_ANALYSIS_AND_AI_FUTURE_PROOFING.md (SMRForge-Private)
+- NUCLEAR_INDUSTRY_ANALYSIS_AND_AI_FUTURE_PROOFING.md
+- docs/PLUGIN_ARCHITECTURE.md

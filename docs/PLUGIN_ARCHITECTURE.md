@@ -14,7 +14,7 @@ The plugin registry (`smrforge.workflows.plugin_registry`) provides:
 
 ## Surrogate Registry
 
-### Registration (Factory)
+### Registration
 
 ```python
 from smrforge.workflows.plugin_registry import register_surrogate, get_surrogate
@@ -28,19 +28,6 @@ def my_ml_factory(X, y, param_names=None, output_name="output", **kwargs):
 register_surrogate("my_ml", my_ml_factory)
 ```
 
-### Registration (BYOS: Path to Model)
-
-Register a surrogate from file path (ONNX, TorchScript, pickle):
-
-```python
-from pathlib import Path
-from smrforge.ai import register_surrogate_from_path
-
-# Loads lazily when first used
-register_surrogate_from_path("keff_onnx", Path("models/keff.onnx"))
-register_surrogate_from_path("keff_pkl", "surrogate.pkl", metadata={"validity_envelope": {...}})
-```
-
 ### Usage
 
 ```python
@@ -52,17 +39,7 @@ if surrogate_factory:
 
 ### Built-in Surrogates
 
-`fit_surrogate()` in `smrforge.workflows.surrogate` uses methods `"rbf"` and `"linear"` directly. The registry allows third-party or Pro/Enterprise surrogates (e.g., custom NN, Gaussian process, ONNX, TorchScript) to be added without forking.
-
-### Audit Trail Integration
-
-Pass `audit_trail` to `fit_surrogate()` to record AI model usage:
-
-```python
-trail = create_audit_trail("keff", inputs={}, outputs={})
-sur = fit_surrogate(X, y, method="rbf", audit_trail=trail)
-# trail.ai_models_used contains [{"name": "rbf", ...}]
-```
+`fit_surrogate()` in `smrforge.workflows.surrogate` uses methods `"rbf"` and `"linear"` directly. The registry allows third-party or Pro/Enterprise surrogates (e.g., custom NN, Gaussian process) to be added without forking.
 
 ## Hook Registry
 
@@ -126,8 +103,6 @@ register_hook("after_keff", audit_ai_models)
 
 ## References
 
-- AI_FEATURES.md — Full AI surrogate documentation
-- NUCLEAR_INDUSTRY_ANALYSIS_AND_AI_FUTURE_PROOFING.md (SMRForge-Private)
+- NUCLEAR_INDUSTRY_ANALYSIS_AND_AI_FUTURE_PROOFING.md
 - smrforge/workflows/surrogate.py
 - smrforge/workflows/plugin_registry.py
-- smrforge/ai/surrogate.py

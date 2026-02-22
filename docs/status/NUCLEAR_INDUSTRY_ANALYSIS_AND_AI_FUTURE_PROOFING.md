@@ -4,8 +4,6 @@
 
 **Confidential | Internal planning | February 2026**
 
-**Implementation:** Phase 1 AI features implemented — see [AI_FEATURES.md](../AI_FEATURES.md) for user-facing documentation.
-
 ---
 
 ## Executive Summary

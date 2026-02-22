@@ -22,28 +22,6 @@ except ImportError:  # pragma: no cover
     _RBF_AVAILABLE = False
 
 
-def _maybe_record_ai_model(
-    audit_trail: Optional[Any],
-    surrogate: "SurrogateModel",
-    config_hash: Optional[str] = None,
-) -> None:
-    """Record surrogate to audit trail when provided (regulatory traceability)."""
-    if audit_trail is None:
-        return
-    try:
-        from smrforge.ai.audit import record_ai_model
-
-        version = getattr(surrogate, "config_hash", None) or config_hash
-        record_ai_model(
-            audit_trail,
-            surrogate.method,
-            version=str(version) if version else None,
-            config_hash=config_hash,
-        )
-    except Exception as e:
-        logger.debug("Could not record AI model to audit trail: %s", e)
-
-
 @dataclass
 class SurrogateModel:
     """Fitted surrogate: predict(x) and metadata."""
@@ -61,7 +39,6 @@ def fit_surrogate(
     param_names: Optional[List[str]] = None,
     output_name: str = "output",
     method: str = "rbf",
-    audit_trail: Optional[Any] = None,
     **factory_kwargs: Any,
 ) -> SurrogateModel:
     """
@@ -78,7 +55,6 @@ def fit_surrogate(
         param_names: Parameter names (for metadata).
         output_name: Output label.
         method: "rbf" (default), "linear", or a registered name.
-        audit_trail: Optional CalculationAuditTrail to record ai_models_used.
         **factory_kwargs: Extra kwargs passed to registered factory.
 
     Returns:
@@ -110,15 +86,13 @@ def fit_surrogate(
             Xnew_aug = np.hstack([ones_new, Xnew])
             return (Xnew_aug @ coef).ravel()
 
-        sur = SurrogateModel(
+        return SurrogateModel(
             method="linear",
             param_names=param_names,
             output_name=output_name,
             n_samples=X.shape[0],
             predict=predict,
         )
-        _maybe_record_ai_model(audit_trail, sur, config_hash=None)
-        return sur
     if method == "rbf":
         if not _RBF_AVAILABLE:
             raise ImportError(
@@ -132,15 +106,13 @@ def fit_surrogate(
                 Xnew = Xnew.reshape(1, -1)
             return rbf(Xnew).ravel()
 
-        sur = SurrogateModel(
+        return SurrogateModel(
             method="rbf",
             param_names=param_names,
             output_name=output_name,
             n_samples=X.shape[0],
             predict=predict,
         )
-        _maybe_record_ai_model(audit_trail, sur, config_hash=None)
-        return sur
 
     # Fall back to plugin registry (Pro/Enterprise, third-party ML models)
     from .plugin_registry import get_surrogate, list_surrogates
@@ -156,15 +128,13 @@ def fit_surrogate(
             def _predict(Xnew: np.ndarray) -> np.ndarray:
                 return np.asarray(predict_fn(Xnew)).ravel()
 
-            sur = SurrogateModel(
+            return SurrogateModel(
                 method=method,
                 param_names=param_names,
                 output_name=output_name,
                 n_samples=X.shape[0],
                 predict=_predict,
             )
-            _maybe_record_ai_model(audit_trail, sur, config_hash=None)
-            return sur
         raise ValueError(
             f"Registry factory for '{method}' did not return object with .predict()"
         )
@@ -182,7 +152,6 @@ def surrogate_from_sweep_results(
     param_names: List[str],
     output_metric: str = "k_eff",
     method: str = "rbf",
-    audit_trail: Optional[Any] = None,
 ) -> SurrogateModel:
     """
     Build a surrogate from a list of sweep result dicts.
@@ -191,8 +160,7 @@ def surrogate_from_sweep_results(
         results: List of {"parameters": {name: val, ...}, output_metric: val} or flat.
         param_names: Parameter names (order = columns of X).
         output_metric: Key for output value.
-        method: "rbf" or "linear" or registered name.
-        audit_trail: Optional CalculationAuditTrail to record ai_models_used.
+        method: "rbf" or "linear".
 
     Returns:
         SurrogateModel.
@@ -217,10 +185,5 @@ def surrogate_from_sweep_results(
     X = np.array(rows_x)
     y = np.array(rows_y)
     return fit_surrogate(
-        X,
-        y,
-        param_names=param_names,
-        output_name=output_metric,
-        method=method,
-        audit_trail=audit_trail,
+        X, y, param_names=param_names, output_name=output_metric, method=method
     )
