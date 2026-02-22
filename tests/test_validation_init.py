@@ -2,6 +2,7 @@
 Tests for smrforge.validation.__init__.py import error paths.
 """
 
+import importlib
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,20 +13,16 @@ class TestValidationInitImports:
 
     def test_validation_init_imports_success(self):
         """Test validation.__init__.py imports successfully."""
-        import smrforge.validation
-
-        assert hasattr(smrforge.validation, "ReactorSpecification")
-        assert hasattr(smrforge.validation, "ValidationResult")
+        validation = importlib.import_module("smrforge.validation")
+        assert hasattr(validation, "ReactorSpecification")
+        assert hasattr(validation, "ValidationResult")
 
     def test_validation_init_integration_import_error(self):
         """Test validation.__init__.py handles integration import error."""
         with patch("smrforge.validation.integration", side_effect=ImportError("Test")):
-            import importlib
-
-            import smrforge.validation
-
-            importlib.reload(smrforge.validation)
+            validation = importlib.import_module("smrforge.validation")
+            importlib.reload(validation)
             # Should still have basic imports
-            assert hasattr(smrforge.validation, "ReactorSpecification")
+            assert hasattr(validation, "ReactorSpecification")
             # Integration features may not be available
-            assert hasattr(smrforge.validation, "_INTEGRATION_AVAILABLE")
+            assert hasattr(validation, "_INTEGRATION_AVAILABLE")

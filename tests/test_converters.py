@@ -88,7 +88,20 @@ class TestMCNPConverter:
 
 
 class TestOpenMCConverter:
-    """Tests for OpenMCConverter class."""
+    """Tests for OpenMCConverter class.
+
+    These tests target the Community implementation (openmc_import, openmc_export).
+    When smrforge_pro is installed, we patch _PRO_AVAILABLE to False so tests
+    exercise the Community code paths.
+    """
+
+    @pytest.fixture(autouse=True)
+    def use_community_openmc(self, monkeypatch):
+        """Force Community implementation so tests don't hit Pro's NotImplementedError."""
+        monkeypatch.setattr(
+            "smrforge.io.converters._PRO_AVAILABLE",
+            False,
+        )
 
     def test_export_reactor_creates_directory(self, tmp_path):
         """Test that export creates output directory."""

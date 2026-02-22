@@ -44,6 +44,9 @@ class SweepConfig:
     parallel: bool = True
     max_workers: Optional[int] = None
     save_intermediate: bool = True
+    surrogate_path: Optional[Union[Path, str]] = None
+    surrogate_output_metric: str = "k_eff"
+    seed: Optional[int] = None
 
     def get_parameter_values(self, param_name: str) -> np.ndarray:
         """Get array of values for a parameter."""
@@ -110,6 +113,8 @@ class SweepConfig:
             data = {**data, "parameters": normalized}
         if "output_dir" in data:
             data["output_dir"] = Path(data["output_dir"])
+        if "surrogate_path" in data and data["surrogate_path"]:
+            data["surrogate_path"] = Path(data["surrogate_path"])
         return cls(
             **{
                 k: v
@@ -123,6 +128,9 @@ class SweepConfig:
                     "parallel",
                     "max_workers",
                     "save_intermediate",
+                    "surrogate_path",
+                    "surrogate_output_metric",
+                    "seed",
                 )
             }
         )
@@ -218,10 +226,39 @@ class ParameterSweep:
         """
         self.config = config
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        self._surrogate_cache = None
+
+    def _load_surrogate_if_needed(self):
+        """Load surrogate from path if surrogate_path is set. Called once at sweep start."""
+        if self._surrogate_cache is not None or self.config.surrogate_path is None:
+            return
+        path = Path(self.config.surrogate_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Surrogate file not found: {path}")
+        try:
+            from ..ai.surrogate import load_surrogate_from_path
+
+            param_names = list(self.config.parameters.keys())
+            self._surrogate_cache = load_surrogate_from_path(
+                path,
+                param_names=param_names,
+                output_name=self.config.surrogate_output_metric,
+            )
+        except ImportError:
+            import pickle
+
+            with open(path, "rb") as f:
+                obj = pickle.load(f)
+            self._surrogate_cache = obj
+        logger.info(
+            "Using surrogate from %s for fast evaluation", path.name
+        )
 
     def _run_single_case(self, params: Dict[str, float]) -> Dict[str, Any]:
         """
         Run analysis for a single parameter combination.
+
+        Uses surrogate for prediction if surrogate_path is set; otherwise runs physics.
 
         Args:
             params: Dictionary of parameter values for this case
@@ -229,6 +266,24 @@ class ParameterSweep:
         Returns:
             Dictionary with results including parameters and analysis outputs
         """
+        if self.config.surrogate_path:
+            return self._run_single_case_surrogate(params)
+        return self._run_single_case_physics(params)
+
+    def _run_single_case_surrogate(self, params: Dict[str, float]) -> Dict[str, Any]:
+        """Run case using surrogate model (no physics)."""
+        if self._surrogate_cache is None:
+            self._load_surrogate_if_needed()
+        sur = self._surrogate_cache
+        param_names = list(self.config.parameters.keys())
+        row = np.array([[float(params.get(p, 0.0)) for p in param_names]])
+        out = sur.predict(row)
+        val = float(np.asarray(out).ravel()[0])
+        metric = self.config.surrogate_output_metric
+        return {"parameters": params.copy(), metric: val, "surrogate_used": True}
+
+    def _run_single_case_physics(self, params: Dict[str, float]) -> Dict[str, Any]:
+        """Run case using physics (create reactor, solve)."""
         try:
             import smrforge as smr
             from smrforge.convenience import create_reactor
@@ -298,9 +353,15 @@ class ParameterSweep:
         Returns:
             SweepResult with all results and statistics
         """
+        if self.config.seed is not None:
+            np.random.seed(self.config.seed)
+
         logger.info(
-            f"Starting parameter sweep with {len(self.config.parameters)} parameters"
+            "Starting parameter sweep with %d parameters",
+            len(self.config.parameters),
         )
+        if self.config.surrogate_path:
+            logger.info("Using surrogate for fast evaluation: %s", self.config.surrogate_path)
 
         # Get all parameter combinations
         all_combinations = self.config.get_all_combinations()

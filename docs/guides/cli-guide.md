@@ -921,8 +921,20 @@ smrforge workflow atlas --presets valar-10 gt-mhr htr-pm --output-dir atlas_outp
 ### Surrogate model
 
 ```bash
+# Fit surrogate from sweep results
 smrforge workflow surrogate --sweep-results sweep_results.json --params power enrichment --metric k_eff --method rbf --output surrogate.pkl
+
+# Deterministic fit (optional)
+smrforge workflow surrogate --sweep-results sweep_results.json --params power enrichment --metric k_eff --method rbf --output surrogate.pkl --seed 42
 ```
+
+**Options:**
+- `--sweep-results FILE` - Sweep results JSON (required)
+- `--params p1 p2 ...` - Parameter names (required)
+- `--metric NAME` - Output metric (default: k_eff)
+- `--method rbf|linear|registered` - Surrogate method (rbf, linear, or registered name)
+- `--output FILE` - Save pickle surrogate
+- `--seed N` - Random seed for deterministic fit
 
 ### Requirements to constraints
 
@@ -938,6 +950,43 @@ smrforge workflow requirements-to-constraints --requirements requirements.yaml -
 smrforge workflow batch-keff configs/*.json --output batch_keff.json
 smrforge workflow batch-keff reactor1.json reactor2.json --no-parallel --output results.json
 ```
+
+---
+
+## Parameter Sweep
+
+The `sweep` command runs parameter sweeps over reactor designs.
+
+```bash
+# Basic sweep (physics-based)
+smrforge sweep --reactor valar-10 \
+    --params enrichment:0.15:0.25:0.02 power:50,75,100 \
+    --analysis keff \
+    --output sweep_results/
+
+# Fast sweep using surrogate (no physics)
+smrforge sweep --params enrichment:0.15:0.25:0.02 power:50,75,100 \
+    --surrogate surrogate.pkl \
+    --surrogate-metric k_eff \
+    --seed 42 \
+    --output fast_sweep/
+```
+
+**Options:**
+- `--config FILE` - Sweep config JSON/YAML (or use --params, --reactor)
+- `--reactor FILE|preset` - Reactor template
+- `--params name:start:end:step or name:val1,val2,...` - Parameter specifications
+- `--analysis TYPES` - Analysis types (default: keff)
+- `--output DIR` - Output directory (default: sweep_results)
+- `--surrogate FILE` - Path to surrogate model (.pkl, .onnx, .pt) for fast evaluation
+- `--surrogate-metric NAME` - Output metric for surrogate (default: k_eff)
+- `--seed N` - Random seed for deterministic runs
+- `--no-parallel` - Disable parallel execution
+- `--workers N` - Number of parallel workers
+- `--resume` - Resume from intermediate files
+- `--progress` - Show progress bar (Rich)
+
+See **docs/AI_FEATURES.md** for surrogate and BYOS details.
 
 ---
 
@@ -1309,7 +1358,7 @@ smrforge workflow sensitivity --sweep-results sweep.json [--metric k_eff] [--plo
 smrforge workflow sobol --sweep-results sweep.json [--metric k_eff] [--plot file] [--output out.json]
 smrforge workflow scenario --reactor <file|preset> --scenarios name:path ... [--output-dir dir] [--plot file]
 smrforge workflow atlas [--presets ...] [--output-dir dir] [--plot file]
-smrforge workflow surrogate --sweep-results sweep.json --params p1 p2 [--metric k_eff] [--output out.pkl]
+smrforge workflow surrogate --sweep-results sweep.json --params p1 p2 [--metric k_eff] [--output out.pkl] [--seed N]
 smrforge workflow requirements-to-constraints --requirements req.yaml --output constraints.json
 smrforge workflow batch-keff <reactor_files...> [--output out.json]
 

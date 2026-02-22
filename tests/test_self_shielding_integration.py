@@ -4,6 +4,8 @@ Tests for self-shielding integration.
 Tests integration of SubgroupMethod and EquivalenceTheory into reactor_core.
 """
 
+import importlib
+
 import numpy as np
 import pytest
 
@@ -140,12 +142,10 @@ class TestSelfShieldingIntegration:
         """Test when resonance_selfshield module is not available."""
         from unittest.mock import patch
 
-        import smrforge.core.self_shielding_integration
+        ssi_mod = importlib.import_module("smrforge.core.self_shielding_integration")
 
         # Mock _RESONANCE_AVAILABLE to False
-        with patch.object(
-            smrforge.core.self_shielding_integration, "_RESONANCE_AVAILABLE", False
-        ):
+        with patch.object(ssi_mod, "_RESONANCE_AVAILABLE", False):
             cache = NuclearDataCache()
             u238 = Nuclide(Z=92, A=238)
 
@@ -214,12 +214,10 @@ class TestSelfShieldingIntegration:
         """Test equivalence theory when resonance_selfshield is not available."""
         from unittest.mock import patch
 
-        import smrforge.core.self_shielding_integration
+        ssi_mod = importlib.import_module("smrforge.core.self_shielding_integration")
 
         # Mock _RESONANCE_AVAILABLE to False
-        with patch.object(
-            smrforge.core.self_shielding_integration, "_RESONANCE_AVAILABLE", False
-        ):
+        with patch.object(ssi_mod, "_RESONANCE_AVAILABLE", False):
             cache = NuclearDataCache()
             u238 = Nuclide(Z=92, A=238)
 
@@ -377,16 +375,11 @@ class TestSelfShieldingIntegration:
 
         try:
             # Reload module to trigger import error
-            import importlib
-
-            import smrforge.core.self_shielding_integration
-
-            importlib.reload(smrforge.core.self_shielding_integration)
+            ssi_mod = importlib.import_module("smrforge.core.self_shielding_integration")
+            importlib.reload(ssi_mod)
 
             # Check that _RESONANCE_AVAILABLE is False
-            assert (
-                smrforge.core.self_shielding_integration._RESONANCE_AVAILABLE is False
-            )
+            assert ssi_mod._RESONANCE_AVAILABLE is False
         finally:
             # Restore original modules
             for mod_name, mod in original_modules.items():
@@ -395,11 +388,8 @@ class TestSelfShieldingIntegration:
                 sys.modules.pop("smrforge.core.resonance_selfshield", None)
 
             # Reload to restore state
-            import importlib
-
-            import smrforge.core.self_shielding_integration
-
-            importlib.reload(smrforge.core.self_shielding_integration)
+            ssi_mod = importlib.import_module("smrforge.core.self_shielding_integration")
+            importlib.reload(ssi_mod)
 
     def test_get_cross_section_with_self_shielding_different_reactions(self):
         """Test self-shielding with different reaction types."""
@@ -595,15 +585,15 @@ class TestSelfShieldingIntegration:
         """Test that warnings are logged when resonance module unavailable."""
         from unittest.mock import patch
 
-        import smrforge.core.self_shielding_integration
+        ssi_mod = importlib.import_module("smrforge.core.self_shielding_integration")
 
         cache = NuclearDataCache()
         u238 = Nuclide(Z=92, A=238)
 
         # Mock _RESONANCE_AVAILABLE to False and check warning
-        with patch.object(
-            smrforge.core.self_shielding_integration, "_RESONANCE_AVAILABLE", False
-        ), patch("smrforge.core.self_shielding_integration.logger") as mock_logger:
+        with patch.object(ssi_mod, "_RESONANCE_AVAILABLE", False), patch(
+            "smrforge.core.self_shielding_integration.logger"
+        ) as mock_logger:
 
             try:
                 energy, xs = get_cross_section_with_self_shielding(
@@ -625,15 +615,15 @@ class TestSelfShieldingIntegration:
         """Test that warnings are logged when equivalence theory unavailable."""
         from unittest.mock import patch
 
-        import smrforge.core.self_shielding_integration
+        ssi_mod = importlib.import_module("smrforge.core.self_shielding_integration")
 
         cache = NuclearDataCache()
         u238 = Nuclide(Z=92, A=238)
 
         # Mock _RESONANCE_AVAILABLE to False
-        with patch.object(
-            smrforge.core.self_shielding_integration, "_RESONANCE_AVAILABLE", False
-        ), patch("smrforge.core.self_shielding_integration.logger") as mock_logger:
+        with patch.object(ssi_mod, "_RESONANCE_AVAILABLE", False), patch(
+            "smrforge.core.self_shielding_integration.logger"
+        ) as mock_logger:
 
             try:
                 energy, xs = get_cross_section_with_equivalence_theory(

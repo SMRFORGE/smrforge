@@ -3,8 +3,6 @@ Tests for validation integration module (decorators, ValidatedClass, etc.).
 Note: This file also contains integration workflow tests which may fail due to test data issues.
 """
 
-import warnings
-
 import numpy as np
 import pytest
 
@@ -52,8 +50,8 @@ class TestValidateInputs:
         with pytest.raises(ValueError, match="Validation failed"):
             calculate_density(-100.0)  # Invalid temperature
 
-    def test_validate_inputs_warnings(self):
-        """Test validate_inputs issues warnings."""
+    def test_validate_inputs_warnings(self, capfd):
+        """Test validate_inputs issues validation warnings (via logger -> stderr/stdout)."""
 
         @validate_inputs(
             T=lambda T: PhysicalValidator.validate_temperature(T, max_T=500.0)
@@ -61,14 +59,11 @@ class TestValidateInputs:
         def calculate_density(T):
             return 1.0 / T
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            result = calculate_density(2000.0)  # Above expected max but valid
-            assert len(w) > 0
-            assert (
-                "WARNING" in str(w[0].message).upper()
-                or "above" in str(w[0].message).lower()
-            )
+        result = calculate_density(2000.0)  # Above expected max but valid
+        assert result > 0
+        out, err = capfd.readouterr()
+        combined = (out + err).lower()
+        assert "above" in combined or "maximum" in combined
 
 
 class TestValidateOutputs:

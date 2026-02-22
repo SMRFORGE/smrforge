@@ -16,7 +16,7 @@ def test_convenience_module_core_paths(tmp_path):
     import smrforge
     import smrforge.convenience as conv
 
-    # Patch heavy geometry + solver work
+    # Patch heavy geometry + solver work (patch by string path so it applies to the active module)
     class DummyCore:
         def __init__(self, name):
             self.name = name
@@ -40,13 +40,19 @@ def test_convenience_module_core_paths(tmp_path):
         def compute_power_distribution(self, power_thermal):
             return np.array([power_thermal])
 
+    # Patch the module that create_reactor actually uses (may differ from sys.modules
+    # after test_dummy_classes manipulates imports)
+    create_reactor_module = sys.modules[smrforge.create_reactor.__module__]
+
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(conv, "PrismaticCore", DummyCore)
-        mp.setattr(conv, "MultiGroupDiffusion", DummySolver)
+        mp.setattr(create_reactor_module, "PrismaticCore", DummyCore)
+        mp.setattr(create_reactor_module, "MultiGroupDiffusion", DummySolver)
 
         # create_reactor custom path
         reactor = smrforge.create_reactor()
-        assert isinstance(reactor, conv.SimpleReactor)
+        # Use smrforge.SimpleReactor for isinstance to avoid class identity issues
+        # when convenience module was reloaded by preceding tests
+        assert isinstance(reactor, smrforge.SimpleReactor)
 
         core = reactor._get_core()
         assert isinstance(core, DummyCore)
@@ -65,7 +71,7 @@ def test_convenience_module_core_paths(tmp_path):
                 raise RuntimeError("nope")
             return {"k_eff": 1.0}
 
-        mp.setattr(conv, "analyze_preset", fake_analyze)
+        mp.setattr(create_reactor_module, "analyze_preset", fake_analyze)
         out = smrforge.compare_designs(["ok", "bad"])
         assert out["ok"]["k_eff"] == 1.0
         assert "error" in out["bad"]

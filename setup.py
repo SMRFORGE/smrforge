@@ -89,10 +89,15 @@ setup(
         "uq": [
             # UQ extras (SALib and seaborn are now required in install_requires)
         ],
+        "ai": [
+            # BYOS: ONNX and TorchScript surrogates (scikit-learn already required)
+            "onnxruntime>=1.14.0",
+        ],
         "all": [
             # Install all optional dependencies
             # Note: Visualization (plotly, pyvista, dash), SALib and seaborn are now required
             "sandy",
+            "onnxruntime>=1.14.0",
         ],
     },
     classifiers=[

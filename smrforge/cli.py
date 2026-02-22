@@ -3916,6 +3916,10 @@ def sweep_run(args):
                 config.parallel = False  # pragma: no cover
             if getattr(args, "workers", None) is not None:  # pragma: no cover
                 config.max_workers = args.workers  # pragma: no cover
+            if getattr(args, "surrogate", None):  # pragma: no cover
+                config.surrogate_path = Path(args.surrogate)  # pragma: no cover
+            if getattr(args, "seed", None) is not None:  # pragma: no cover
+                config.seed = args.seed  # pragma: no cover
         else:
             if not getattr(args, "params", None) or not args.params:
                 _print_error(
@@ -3948,6 +3952,9 @@ def sweep_run(args):
                 output_dir=Path(args.output) if args.output else Path("sweep_results"),
                 parallel=not getattr(args, "no_parallel", False),
                 max_workers=getattr(args, "workers", None),
+                surrogate_path=Path(args.surrogate) if getattr(args, "surrogate", None) else None,
+                surrogate_output_metric=getattr(args, "surrogate_metric", "k_eff") or "k_eff",
+                seed=getattr(args, "seed", None),
             )
 
         sweep = ParameterSweep(config)
@@ -5024,6 +5031,11 @@ def workflow_surrogate(args):
             sys.exit(1)  # pragma: no cover
         metric = getattr(args, "metric", "k_eff")
         method = getattr(args, "method", "rbf")
+        seed = getattr(args, "seed", None)
+        if seed is not None:
+            import numpy as np
+
+            np.random.seed(seed)
         sur = surrogate_from_sweep_results(
             results, params, output_metric=metric, method=method
         )
@@ -5842,9 +5854,11 @@ Note: All features are also available via Python API:
     )
     sur_parser.add_argument("--metric", type=str, default="k_eff")
     sur_parser.add_argument(
-        "--method", type=str, choices=["rbf", "linear"], default="rbf"
+        "--method", type=str, default="rbf",
+        help="Surrogate method: rbf, linear, or registered name (e.g. sklearn_gp)"
     )
     sur_parser.add_argument("--output", type=Path, help="Save pickle surrogate")
+    sur_parser.add_argument("--seed", type=int, help="Random seed for deterministic fit")
     sur_parser.set_defaults(func=workflow_surrogate)
 
     # workflow requirements-to-constraints
@@ -6448,6 +6462,13 @@ Note: All features are also available via Python API:
     sweep_parser.add_argument(
         "--progress", action="store_true", help="Show progress bar (Rich)"
     )
+    sweep_parser.add_argument(
+        "--surrogate", type=Path, help="Path to surrogate model (.pkl, .onnx, .pt) for fast evaluation"
+    )
+    sweep_parser.add_argument(
+        "--surrogate-metric", type=str, default="k_eff", help="Output metric for surrogate (default: k_eff)"
+    )
+    sweep_parser.add_argument("--seed", type=int, help="Random seed for deterministic runs")
     sweep_parser.set_defaults(func=sweep_run)
 
     # Reactor template subcommands
