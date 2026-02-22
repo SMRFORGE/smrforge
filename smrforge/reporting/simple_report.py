@@ -9,6 +9,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
+from ..utils.logging import get_logger
+
+logger = get_logger("smrforge.reporting.simple_report")
+
 
 def _escape_html(text: str) -> str:
     """Escape HTML special characters."""
@@ -155,12 +159,8 @@ def generate_pdf_report(
         # Fallback: write Markdown and suggest conversion
         md_path = out.with_suffix(".md")
         md_path.write_text(md, encoding="utf-8")
-        import warnings
-
-        warnings.warn(
-            "weasyprint not installed. Markdown saved to "
-            f"{md_path}. Install weasyprint for PDF, or convert manually: "
-            "open in browser and Print to PDF.",
-            UserWarning,
+        logger.warning(
+            "weasyprint not installed. Markdown saved to %s. Install weasyprint for PDF, or convert manually: open in browser and Print to PDF.",
+            md_path,
         )
         return None

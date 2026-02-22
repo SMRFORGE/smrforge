@@ -9,6 +9,8 @@ Based on PyRK's approach using Pint for dimensional analysis.
 
 from typing import Any, Optional, Union
 
+from .logging import get_logger
+
 try:
     from pint import Quantity, UnitRegistry
     from pint.errors import DimensionalityError
@@ -20,6 +22,7 @@ except ImportError:  # pragma: no cover
     Quantity = None  # type: ignore
     DimensionalityError = Exception  # type: ignore
 
+logger = get_logger("smrforge.utils.units")
 
 # Global unit registry (singleton pattern)
 _ureg: Optional[Any] = None
@@ -134,11 +137,8 @@ def check_units(value: Any, expected_unit: Union[str, Any], name: str = "value")
     """
     if not _PINT_AVAILABLE:
         # If Pint not available, return value as-is (backwards compatibility)
-        import warnings
-
-        warnings.warn(
-            f"Unit checking disabled: Pint not installed. Install with: pip install pint",
-            UserWarning,
+        logger.warning(
+            "Unit checking disabled: Pint not installed. Install with: pip install pint"
         )
         return value
 
@@ -224,11 +224,8 @@ def with_units(value: float, unit: Union[str, Any]) -> Any:
         >>> temperature = with_units(500.0, "kelvin")
     """
     if not _PINT_AVAILABLE:
-        import warnings
-
-        warnings.warn(
-            "Unit attachment disabled: Pint not installed. Install with: pip install pint",
-            UserWarning,
+        logger.warning(
+            "Unit attachment disabled: Pint not installed. Install with: pip install pint"
         )
         return value
 

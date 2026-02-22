@@ -299,15 +299,15 @@ class TestSimpleReactorAdditional:
 
         solver.solve_steady_state = mock_solve
 
-        # Should return k_eff with warning
-        import warnings
+        # Should return k_eff with logging (solution validation failed)
+        from unittest.mock import patch
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.convenience.logger") as mock_log:
             k_eff = reactor.solve_keff()
             assert k_eff == 1.05
-            assert len(w) > 0
-            assert "validation failed" in str(w[0].message).lower()
+            mock_log.warning.assert_called()
+            calls = " ".join(str(c) for c in mock_log.warning.call_args_list)
+            assert "validation failed" in calls.lower()
 
     def test_solve_with_power_distribution(self):
         """Test solve() includes power distribution if available."""

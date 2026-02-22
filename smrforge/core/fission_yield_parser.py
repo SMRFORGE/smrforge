@@ -15,7 +15,10 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from ..utils.logging import get_logger
 from .reactor_core import Nuclide
+
+logger = get_logger("smrforge.core.fission_yield_parser")
 
 
 @dataclass
@@ -162,10 +165,9 @@ class ENDFFissionYieldParser:
                 energy_dependent=energy_dependent,
             )
         except Exception as e:
-            # Log error but return None to allow graceful fallback
-            import warnings
-
-            warnings.warn(f"Failed to parse fission yield data from {filepath}: {e}")
+            logger.warning(
+                "Failed to parse fission yield data from %s: %s", filepath, e
+            )
             return None
 
     def _parse_filename(self, filename: str) -> Optional[Nuclide]:

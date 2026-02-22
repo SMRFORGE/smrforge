@@ -593,12 +593,10 @@ class NuclearDataCache:
         except ImportError:  # pragma: no cover
             logger.debug("endf-parserpy not available, trying SANDY")
         except Exception as e:  # pragma: no cover
-            import warnings
-
-            warnings.warn(
-                f"endf-parserpy parsing failed: {e}. Trying SANDY.", stacklevel=2
+            _get_active_logger().warning(
+                "endf-parserpy parsing failed: %s. Trying SANDY.", e
             )
-            logger.debug(f"endf-parserpy error: {e}")
+            logger.debug("endf-parserpy error: %s", e)
 
         # Try SANDY second (good for uncertainty quantification)
         try:
@@ -631,10 +629,8 @@ class NuclearDataCache:
             logger.debug("SANDY not available, trying built-in parser")
         except Exception as e:  # pragma: no cover
             reraise_if_system(e)
-            import warnings
-
-            warnings.warn(
-                f"SANDY parsing failed: {e}. Trying SMRForge parser.", stacklevel=2
+            _get_active_logger().warning(
+                "SANDY parsing failed: %s. Trying SMRForge parser.", e
             )
 
         # Try SMRForge's custom ENDF parser (pure Python, no dependencies)
@@ -948,12 +944,10 @@ class NuclearDataCache:
         except ImportError:  # pragma: no cover
             logger.debug("endf-parserpy not available, trying SANDY")
         except Exception as e:  # pragma: no cover
-            import warnings
-
-            warnings.warn(
-                f"endf-parserpy parsing failed: {e}. Trying SANDY.", stacklevel=2
+            _get_active_logger().warning(
+                "endf-parserpy parsing failed: %s. Trying SANDY.", e
             )
-            logger.debug(f"endf-parserpy error: {e}")
+            logger.debug("endf-parserpy error: %s", e)
 
         # Try SANDY second (good for uncertainty quantification)
         try:
@@ -986,10 +980,8 @@ class NuclearDataCache:
             logger.debug("SANDY not available, trying built-in parser")
         except Exception as e:  # pragma: no cover
             reraise_if_system(e)
-            import warnings
-
-            warnings.warn(
-                f"SANDY parsing failed: {e}. Trying SMRForge parser.", stacklevel=2
+            _get_active_logger().warning(
+                "SANDY parsing failed: %s. Trying SMRForge parser.", e
             )
 
         # Try SMRForge's custom ENDF parser (pure Python, no dependencies)

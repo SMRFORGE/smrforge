@@ -4,7 +4,10 @@ Pydantic v2 models for SMRForge with automatic validation.
 Provides type safety, bounds checking, and serialization.
 """
 
+import logging
 import warnings
+
+logger = logging.getLogger(__name__)
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Literal, Optional
@@ -249,9 +252,9 @@ class ReactorSpecification(BaseModel):
         # Reasonable delta-T check
         delta_T = self.outlet_temperature - self.inlet_temperature
         if delta_T < 50:
-            warnings.warn(f"Very small temperature rise: {delta_T:.1f} K")
+            logger.info("Very small temperature rise: %.1f K", delta_T)
         if delta_T > 500:
-            warnings.warn(f"Very large temperature rise: {delta_T:.1f} K")
+            logger.info("Very large temperature rise: %.1f K", delta_T)
 
         return self
 
@@ -261,14 +264,15 @@ class ReactorSpecification(BaseModel):
         enr_pct = self.enrichment * 100
 
         if self.enrichment > 0.20:
-            warnings.warn(
-                f"Enrichment {enr_pct:.1f}% exceeds LEU limit (20%). "
-                f"HEU classification - special licensing required."
+            logger.warning(
+                "Enrichment %.1f%% exceeds LEU limit (20%%). HEU classification - special licensing required.",
+                enr_pct,
             )
         elif self.enrichment > 0.05:
-            warnings.warn(
-                f"Enrichment {enr_pct:.1f}% is HALEU (5-20%). "
-                f"Valid for advanced reactor designs."
+            # Informational only - HALEU is valid for SMR designs
+            logger.info(
+                "Enrichment %.1f%% is HALEU (5-20%%). Valid for advanced reactor designs.",
+                enr_pct,
             )
 
         return self
@@ -279,15 +283,15 @@ class ReactorSpecification(BaseModel):
         aspect_ratio = self.core_height / self.core_diameter
 
         if aspect_ratio < 0.5:
-            warnings.warn(
-                f"Very flat core (H/D = {aspect_ratio:.2f}). "
-                f"May have poor neutron economy."
+            logger.info(
+                "Very flat core (H/D = %.2f). May have poor neutron economy.",
+                aspect_ratio,
             )
 
         if aspect_ratio > 5.0:
-            warnings.warn(
-                f"Very tall core (H/D = {aspect_ratio:.2f}). "
-                f"May have axial power peaking issues."
+            logger.info(
+                "Very tall core (H/D = %.2f). May have axial power peaking issues.",
+                aspect_ratio,
             )
 
         return self
@@ -299,12 +303,12 @@ class ReactorSpecification(BaseModel):
         power_density = self.power_thermal / (volume * 1e-6)  # W/m³
 
         if power_density < 1e5:
-            warnings.warn(f"Very low power density: {power_density/1e6:.2f} MW/m³")
+            logger.info("Very low power density: %.2f MW/m³", power_density / 1e6)
 
         if power_density > 1e7:
-            warnings.warn(
-                f"Very high power density: {power_density/1e6:.2f} MW/m³. "
-                f"May exceed cooling capability."
+            logger.info(
+                "Very high power density: %.2f MW/m³. May exceed cooling capability.",
+                power_density / 1e6,
             )
 
         return self
@@ -319,7 +323,7 @@ class ReactorSpecification(BaseModel):
                 f"Positive feedback is unsafe."
             )
         if v < -1e-4:
-            warnings.warn(f"Very strong Doppler coefficient: {v*1e5:.2f} pcm/K")
+            logger.info("Very strong Doppler coefficient: %.2f pcm/K", v * 1e5)
         return v
 
     # ========================================================================
@@ -442,15 +446,15 @@ class GeometryParameters(BaseModel):
 
     @model_validator(mode="after")
     def validate_mesh_quality(self):
-        """Warn about mesh quality."""
+        """Log mesh quality hints."""
         if self.n_radial_mesh < 10:
-            warnings.warn("Radial mesh is coarse. Consider n_radial >= 10")
+            logger.info("Radial mesh is coarse. Consider n_radial >= 10")
 
         if self.n_axial_mesh < 20:
-            warnings.warn("Axial mesh is coarse. Consider n_axial >= 20")
+            logger.info("Axial mesh is coarse. Consider n_axial >= 20")
 
         if self.n_radial_mesh > 100 or self.n_axial_mesh > 200:
-            warnings.warn("Very fine mesh. May be slow.")
+            logger.info("Very fine mesh. May be slow.")
 
         return self
 
@@ -554,7 +558,7 @@ class CrossSectionData(BaseModel):
 
         # Check reasonable diffusion coefficient
         if np.any(self.D > 20):
-            warnings.warn("Very large diffusion coefficient (> 20 cm)")
+            logger.info("Very large diffusion coefficient (> 20 cm)")
 
         # Validate chi normalization: for fissioning materials, chi must sum to 1.0 per material
         for mat_idx in range(self.n_materials):
@@ -613,11 +617,11 @@ class SolverOptions(BaseModel):
     @field_validator("tolerance")
     @classmethod
     def validate_tolerance(cls, v):
-        """Warn about extreme tolerance values."""
+        """Log hint about extreme tolerance values."""
         if v < 1e-10:
-            warnings.warn(f"Very tight tolerance ({v}). May be slow.")
+            logger.info("Very tight tolerance (%s). May be slow.", v)
         if v > 1e-3:
-            warnings.warn(f"Loose tolerance ({v}). May be inaccurate.")
+            logger.info("Loose tolerance (%s). May be inaccurate.", v)
         return v
 
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
@@ -648,8 +652,10 @@ class MaterialComposition(BaseModel):
             if density < 0:
                 raise ValueError(f"Negative atom density for {nuclide}: {density}")
             if density > 0.2:
-                warnings.warn(
-                    f"Very high atom density for {nuclide}: {density} atoms/b-cm"
+                logger.info(
+                    "Very high atom density for %s: %s atoms/b-cm",
+                    nuclide,
+                    density,
                 )
 
         return self

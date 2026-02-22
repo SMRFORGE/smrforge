@@ -67,15 +67,11 @@ The codebase has addressed most critical items from the Nuclear Industry Analysi
 
 ## 3. Reliability Issues
 
-### 3.1 Physics Fallbacks Without Logging (MEDIUM)
+### 3.1 Physics Fallbacks Without Logging (RESOLVED)
 
-| Location | Issue | Risk |
-|----------|-------|------|
-| `endf_extractors.py` ~623–632 | In `compute_anisotropic_scattering_matrix`, when `elastic_mg` is recomputed for P1 moment and `cache.get_cross_section` or `_collapse_to_multigroup_flux_weighted` fails, falls back to 5 barns **with no logger.warning** | User unaware of incorrect physics; regulatory traceability gap |
-
-**Note:** The main path in `compute_improved_scattering_matrix` (lines 400–410) **does** log the elastic fallback. This is a second code path in the anisotropic scattering function that bypasses `compute_improved_scattering_matrix` for the P1 computation and lacks logging.
-
-**Recommendation:** Add `logger.warning(...)` before `elastic_mg = np.ones(n_groups) * 5.0` in the anisotropic scattering block, matching the pattern in `compute_improved_scattering_matrix`.
+| Location | Issue | Status |
+|----------|-------|--------|
+| `endf_extractors.py` ~634–650 | Elastic cross-section fallback to 5 barns in `compute_anisotropic_scattering_matrix` | ✅ **FIXED** – `logger.warning(...)` added before fallback (lines 643–650). |
 
 ---
 

@@ -12,6 +12,8 @@ from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
 
+from ..utils.logging import get_logger
+
 try:
     from ..safety.transients import (
         PointKineticsParameters,
@@ -23,6 +25,8 @@ try:
     _SAFETY_AVAILABLE = True
 except ImportError:
     _SAFETY_AVAILABLE = False
+
+logger = get_logger("smrforge.convenience.transients")
 
 
 def quick_transient(
@@ -232,11 +236,9 @@ def quick_transient(
                 show_plot=plot and plot_output is None,
             )
         except ImportError as e:
-            import warnings
-
-            warnings.warn(
-                f"Plotting not available: {e}. Install matplotlib or plotly for visualization.",
-                UserWarning,
+            logger.warning(
+                "Plotting not available: %s. Install matplotlib or plotly for visualization.",
+                e,
             )
 
     return result

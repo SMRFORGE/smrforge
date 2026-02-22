@@ -5,8 +5,10 @@ This module tests the validation functions, model validators, properties,
 and utility functions that are not fully covered by other tests.
 """
 
+import logging
 import tempfile
 import warnings
+from unittest.mock import patch
 from pathlib import Path
 
 import numpy as np
@@ -178,114 +180,106 @@ class TestReactorSpecificationValidators:
             )
 
     def test_validate_temperatures_small_delta_t_warning(self, base_spec_dict):
-        """Test warning for very small temperature rise."""
+        """Test logging for very small temperature rise."""
         base_spec_dict["inlet_temperature"] = 823.15
         base_spec_dict["outlet_temperature"] = 860.0  # Delta-T = 36.9 K < 50 K
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            assert "small temperature rise" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "small temperature rise" in calls.lower()
 
     def test_validate_temperatures_large_delta_t_warning(self, base_spec_dict):
-        """Test warning for very large temperature rise."""
+        """Test logging for very large temperature rise."""
         base_spec_dict["inlet_temperature"] = 823.15
         base_spec_dict["outlet_temperature"] = 1400.0  # Delta-T = 576.9 K > 500 K
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            assert "large temperature rise" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "large temperature rise" in calls.lower()
 
     def test_validate_enrichment_heu_warning(self, base_spec_dict):
-        """Test warning for enrichment > 20% (HEU)."""
+        """Test logging for enrichment > 20% (HEU)."""
         base_spec_dict["enrichment"] = 0.25  # 25% > 20%
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            assert "exceeds leu limit" in str(w[0].message).lower()
+            mock_log.warning.assert_called()
+            calls = " ".join(str(c) for c in mock_log.warning.call_args_list)
+            assert "exceeds leu limit" in calls.lower()
 
     def test_validate_enrichment_haleu_warning(self, base_spec_dict):
-        """Test warning for enrichment 5-20% (HALEU)."""
+        """Test logging for enrichment 5-20% (HALEU)."""
         base_spec_dict["enrichment"] = 0.10  # 10% in HALEU range
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            assert "haleu" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "haleu" in calls.lower()
 
     def test_validate_geometry_flat_core_warning(self, base_spec_dict):
-        """Test warning for very flat core (H/D < 0.5)."""
+        """Test logging for very flat core (H/D < 0.5)."""
         base_spec_dict["core_height"] = 40.0  # H/D = 0.4 < 0.5
         base_spec_dict["core_diameter"] = 100.0
-        base_spec_dict["enrichment"] = 0.04  # Avoid HALEU warning
+        base_spec_dict["enrichment"] = 0.04  # Avoid HALEU info message
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            # Check for flat core warning (may be mixed with others)
-            warning_messages = [str(warn.message).lower() for warn in w]
-            assert any("flat core" in msg for msg in warning_messages)
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "flat core" in calls.lower()
 
     def test_validate_geometry_tall_core_warning(self, base_spec_dict):
-        """Test warning for very tall core (H/D > 5.0)."""
+        """Test logging for very tall core (H/D > 5.0)."""
         base_spec_dict["core_height"] = 600.0  # H/D = 6.0 > 5.0
         base_spec_dict["core_diameter"] = 100.0
-        base_spec_dict["enrichment"] = 0.04  # Avoid HALEU warning
+        base_spec_dict["enrichment"] = 0.04  # Avoid HALEU info message
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            # Check for tall core warning (may be mixed with others)
-            warning_messages = [str(warn.message).lower() for warn in w]
-            assert any("tall core" in msg for msg in warning_messages)
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "tall core" in calls.lower()
 
     def test_validate_power_density_low_warning(self, base_spec_dict):
-        """Test warning for very low power density."""
+        """Test logging for very low power density."""
         base_spec_dict["power_thermal"] = 1e5  # Very low power
         base_spec_dict["core_height"] = 2000.0  # Large volume
         base_spec_dict["core_diameter"] = 1000.0
-        base_spec_dict["enrichment"] = 0.04  # Avoid HALEU warning
+        base_spec_dict["enrichment"] = 0.04  # Avoid HALEU info message
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            # Check for low power density warning (may be mixed with others)
-            warning_messages = [str(warn.message).lower() for warn in w]
-            assert any("low power density" in msg for msg in warning_messages)
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "low power density" in calls.lower()
 
     def test_validate_power_density_high_warning(self, base_spec_dict):
-        """Test warning for very high power density."""
+        """Test logging for very high power density."""
         base_spec_dict["power_thermal"] = 100e6  # Very high power
         base_spec_dict["core_height"] = 50.0  # Small volume
         base_spec_dict["core_diameter"] = 50.0
-        base_spec_dict["enrichment"] = 0.04  # Avoid HALEU warning
+        base_spec_dict["enrichment"] = 0.04  # Avoid HALEU info message
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            # Check for high power density warning (may be mixed with others)
-            warning_messages = [str(warn.message).lower() for warn in w]
-            assert any("high power density" in msg for msg in warning_messages)
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "high power density" in calls.lower()
 
     def test_validate_doppler_strong_warning(self, base_spec_dict):
-        """Test warning for very strong Doppler coefficient."""
+        """Test logging for very strong Doppler coefficient."""
         base_spec_dict["doppler_coefficient"] = -2e-4  # < -1e-4
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with patch("smrforge.validation.pydantic_layer.logger") as mock_log:
             ReactorSpecification(**base_spec_dict)
-            assert len(w) > 0
-            assert "strong doppler" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "strong doppler" in calls.lower()
 
 
 class TestReactorSpecificationProperties:
@@ -459,28 +453,36 @@ class TestGeometryParameters:
     """Test GeometryParameters validators."""
 
     def test_validate_mesh_quality_coarse_radial_warning(self):
-        """Test warning for coarse radial mesh."""
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        """Test logging for coarse radial mesh."""
+        with patch(
+            "smrforge.validation.pydantic_layer.logger"
+        ) as mock_log:
             GeometryParameters(n_radial_mesh=5)  # < 10
-            assert len(w) > 0
-            assert "radial mesh is coarse" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "radial mesh is coarse" in calls.lower()
 
     def test_validate_mesh_quality_coarse_axial_warning(self):
-        """Test warning for coarse axial mesh."""
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        """Test logging for coarse axial mesh."""
+        with patch(
+            "smrforge.validation.pydantic_layer.logger"
+        ) as mock_log:
             GeometryParameters(n_axial_mesh=15)  # < 20
-            assert len(w) > 0
-            assert "axial mesh is coarse" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "axial mesh is coarse" in calls.lower()
 
     def test_validate_mesh_quality_fine_warning(self):
-        """Test warning for very fine mesh."""
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            GeometryParameters(n_radial_mesh=150, n_axial_mesh=250)  # > 100 and > 200
-            assert len(w) > 0
-            assert "fine mesh" in str(w[0].message).lower()
+        """Test logging for very fine mesh."""
+        with patch(
+            "smrforge.validation.pydantic_layer.logger"
+        ) as mock_log:
+            GeometryParameters(
+                n_radial_mesh=150, n_axial_mesh=250
+            )  # > 100 and > 200
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "fine mesh" in calls.lower()
 
 
 # ============================================================================
@@ -512,17 +514,19 @@ class TestMaterialComposition:
             )
 
     def test_validate_composition_high_density_warning(self):
-        """Test warning for very high atom density."""
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        """Test logging for very high atom density."""
+        with patch(
+            "smrforge.validation.pydantic_layer.logger"
+        ) as mock_log:
             MaterialComposition(
                 material_id="test",
                 composition={"U235": 0.25},  # > 0.2
                 temperature=900.0,
                 density=2.0,
             )
-            assert len(w) > 0
-            assert "high atom density" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "high atom density" in calls.lower()
 
     def test_total_number_density(self):
         """Test total_number_density property."""
@@ -595,20 +599,24 @@ class TestSolverOptions:
     """Test SolverOptions validators."""
 
     def test_validate_tolerance_tight_warning(self):
-        """Test warning for very tight tolerance."""
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        """Test logging for very tight tolerance."""
+        with patch(
+            "smrforge.validation.pydantic_layer.logger"
+        ) as mock_log:
             SolverOptions(tolerance=1e-12)  # < 1e-10
-            assert len(w) > 0
-            assert "tight tolerance" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "tight tolerance" in calls.lower()
 
     def test_validate_tolerance_loose_warning(self):
-        """Test warning for loose tolerance."""
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        """Test logging for loose tolerance."""
+        with patch(
+            "smrforge.validation.pydantic_layer.logger"
+        ) as mock_log:
             SolverOptions(tolerance=5e-3)  # > 1e-3
-            assert len(w) > 0
-            assert "loose tolerance" in str(w[0].message).lower()
+            mock_log.info.assert_called()
+            calls = " ".join(str(c) for c in mock_log.info.call_args_list)
+            assert "loose tolerance" in calls.lower()
 
 
 # ============================================================================

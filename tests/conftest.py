@@ -558,10 +558,12 @@ def cleanup_parallel_executors():
         if t.is_alive() and t != threading.main_thread()
     ]
     if active_threads:
-        import warnings
+        import logging
 
-        warnings.warn(
-            f"Found {len(active_threads)} active threads after test session: {[t.name for t in active_threads[:5]]}"
+        logging.getLogger("tests.conftest").warning(
+            "Found %d active threads after test session: %s",
+            len(active_threads),
+            [t.name for t in active_threads[:5]],
         )
 
     # Final cleanup

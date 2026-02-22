@@ -15,7 +15,10 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from ..utils.logging import get_logger
 from .reactor_core import Nuclide
+
+logger = get_logger("smrforge.core.photon_parser")
 
 
 @dataclass
@@ -179,9 +182,7 @@ class ENDFPhotonParser:
             )
 
         except Exception as e:
-            import warnings
-
-            warnings.warn(f"Failed to parse photon data from {filepath}: {e}")
+            logger.warning("Failed to parse photon data from %s: %s", filepath, e)
             return None
 
     def _parse_filename(self, filename: str) -> Optional[Tuple[str, int]]:

@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Convenience API consolidation:** Removed legacy `smrforge/convenience.py`; all convenience functionality now lives in `smrforge/convenience/` package. No public API changes—`from smrforge.convenience import create_reactor` and `smrforge.create_reactor` work unchanged.
 
 ### Fixed
+- **Validation warnings:** Downgraded pydantic_layer design-hint validation from `warnings.warn` to `logging.info`/`logger.warning` (HALEU, mesh, temperature, power density, etc.) to eliminate pytest warning noise. HEU (>20% enrichment) remains as `logger.warning` for licensing notice.
+- **Convenience test:** Updated test_solve_keff_with_validation_error to expect logger.warning instead of Python warning (solution validation fallback now uses logging).
+- **pytest.ini:** Added filterwarnings for ImportWarning, Pint/weasyprint/plotting UserWarnings to keep test output clean when -W default is used.
+- **DEPLOYMENT_READINESS_ANALYSIS:** Marked endf_extractors elastic fallback logging as resolved (already implemented).
 - **Dependencies:** Added `pyyaml>=6.0` and `requests>=2.25.0` to `setup.py` install_requires so PyPI installs have YAML support (templates, CLI config) and nuclear data downloads.
 - **Documentation:** Updated `__init__.py` docstring to reference `docs/status/feature-status.md` (was ambiguous FEATURE_STATUS.md).
 - **Coverage:** Removed stale `*/convenience.py` from `.coveragerc` omit list (file no longer exists).

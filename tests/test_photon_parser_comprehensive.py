@@ -286,9 +286,12 @@ class TestENDFPhotonParserComprehensive:
 
         # Mock open to raise exception
         with patch("builtins.open", side_effect=Exception("Read error")):
-            with pytest.warns(UserWarning, match=r"Failed to parse photon data"):
+            with patch(
+                "smrforge.core.photon_parser.logger"
+            ) as mock_logger:
                 result = parser.parse_file(filepath)
                 assert result is None
+                mock_logger.warning.assert_called_once()
 
     def test_parse_filename_invalid_z(self):
         """Test parsing filename with invalid Z."""

@@ -16,6 +16,9 @@ import numpy as np
 
 from ..geometry.core_geometry import PrismaticCore
 from ..neutronics.solver import MultiGroupDiffusion
+from ..utils.logging import get_logger
+
+logger = get_logger("smrforge.convenience")
 
 # Core imports - required for convenience functions
 from ..validation.models import (
@@ -1388,11 +1391,10 @@ class SimpleReactor(_SimpleReactorBase):
             # MagicMock's auto-created attributes as a real k_eff value.
             if isinstance(k_eff_raw, (int, float, np.floating)):
                 k_eff_val = float(k_eff_raw)
-                import warnings
-
-                warnings.warn(
-                    f"Solution validation failed, but returning k_eff = {k_eff_val:.6f}. Error: {e}",
-                    UserWarning,
+                logger.warning(
+                    "Solution validation failed, but returning k_eff = %.6f. Error: %s",
+                    k_eff_val,
+                    e,
                 )
                 return k_eff_val
             raise

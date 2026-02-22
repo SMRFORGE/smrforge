@@ -15,7 +15,10 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from ..utils.logging import get_logger
 from .reactor_core import Nuclide
+
+logger = get_logger("smrforge.core.decay_parser")
 
 
 def _parse_endf_float(field: str) -> float:
@@ -198,10 +201,7 @@ class ENDFDecayParser:
                 beta_spectrum=beta_spectrum,
             )
         except Exception as e:
-            # Log error but return None to allow graceful fallback
-            import warnings
-
-            warnings.warn(f"Failed to parse decay data from {filepath}: {e}")
+            logger.warning("Failed to parse decay data from %s: %s", filepath, e)
             return None
 
     def _parse_filename(self, filename: str) -> Optional[Nuclide]:

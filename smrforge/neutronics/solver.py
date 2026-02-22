@@ -227,13 +227,11 @@ class MultiGroupDiffusion:
                 f"See report above."
             )
 
-        # Warnings are OK, but print them
+        # Log validation warnings
         if result.issues:
-            import warnings
-
             for issue in result.issues:
                 if issue.level.value == "warning":
-                    warnings.warn(str(issue))
+                    logger.warning(str(issue))
 
     def _setup_mesh(self) -> None:
         """Setup computational mesh from geometry."""

@@ -10,12 +10,15 @@ from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 
+from ..utils.logging import get_logger
 from .validators import (
     DataValidator,
     ValidationIssue,
     ValidationLevel,
     ValidationResult,
 )
+
+logger = get_logger("smrforge.validation.integration")
 
 
 def validate_inputs(
@@ -38,7 +41,7 @@ def validate_inputs(
 
     Raises:
         ValueError: If any parameter fails validation (ERROR or CRITICAL level).
-        UserWarning: If any parameter has validation warnings (WARNING level).
+        Validation warnings (WARNING level) are logged via logger.warning.
 
     Example:
         >>> from smrforge.validation.validators import PhysicalValidator
@@ -84,15 +87,12 @@ def validate_inputs(
                 ]
                 raise ValueError(f"Validation failed:\n" + "\n".join(error_msgs))
 
-            # Warn if warnings
-            warnings = [
+            # Log validation warnings
+            warn_issues = [
                 i for i in combined_result.issues if i.level == ValidationLevel.WARNING
             ]
-            if warnings:
-                import warnings as warn_module
-
-                for issue in warnings:
-                    warn_module.warn(str(issue), UserWarning)
+            for issue in warn_issues:
+                logger.warning(str(issue))
 
             return func(*args, **kwargs)
 
