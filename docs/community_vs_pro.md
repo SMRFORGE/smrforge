@@ -16,6 +16,7 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 | Report generator | ✅ Basic (Markdown) | ✅ Full (PDF, traceability) |
 | Regulatory traceability | Basic | Full (10 CFR, IAEA, ANS) |
 | OpenMC tally visualization | ❌ | ✅ |
+| **AI / Surrogate (BYOS)** | ❌ | ✅ Full (ONNX, TorchScript, validation report, sweep --surrogate) |
 | API stability policy | — | ✅ Semver, deprecation |
 | Licensing | MIT (free) | RSA license key |
 
@@ -38,7 +39,7 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 
 Throughout the Community docs, you may see callouts like:
 
-> **Pro:** For Serpent/MCNP export and tally visualization, use SMRForge Pro. OpenMC export/import is available in Community.
+> **Pro:** For Serpent/MCNP export, tally visualization, and AI/surrogate features (BYOS, validation report, `--surrogate` sweep), use SMRForge Pro. OpenMC export/import is available in Community.
 
 These indicate features available in the Pro tier. If you need them, consider upgrading.
 
