@@ -256,10 +256,13 @@ class TestListAnalysisTypes:
 class TestListSurrogates:
     def test_requires_pro(self):
         """Community: list_surrogates raises ImportError (Pro tier only)."""
+        from unittest.mock import patch
+
         from smrforge import list_surrogates
 
-        with pytest.raises(ImportError, match="SMRForge Pro"):
-            list_surrogates()
+        with patch("smrforge.workflows.plugin_registry._PRO_AVAILABLE", False):
+            with pytest.raises(ImportError, match="SMRForge Pro"):
+                list_surrogates()
 
 
 class TestQuickDownloadEndf:

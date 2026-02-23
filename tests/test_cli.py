@@ -4407,6 +4407,17 @@ class TestBatchKeffAndWorkflowHandlers:
 
     def test_workflow_surrogate_requires_pro(self):
         """Community: workflow surrogate exits with Pro upgrade message."""
+        try:
+            from smrforge_pro.workflows.surrogate import surrogate_from_sweep_results
+            has_pro = True
+        except ImportError:
+            has_pro = False
+
+        if has_pro:
+            pytest.skip(
+                "SMRForge Pro is installed; test only verifies Community path"
+            )
+
         args = Mock(sweep_results=Path("/nonexistent.json"), params=["p1"], verbose=False)
         with patch("smrforge.cli._print_error") as mock_err:
             with patch("smrforge.cli.sys.exit") as mock_exit:

@@ -7,6 +7,7 @@ to prevent unit errors and improve code reliability.
 Based on PyRK's approach using Pint for dimensional analysis.
 """
 
+import warnings
 from typing import Any, Optional, Union
 
 from .logging import get_logger
@@ -137,9 +138,9 @@ def check_units(value: Any, expected_unit: Union[str, Any], name: str = "value")
     """
     if not _PINT_AVAILABLE:
         # If Pint not available, return value as-is (backwards compatibility)
-        logger.warning(
-            "Unit checking disabled: Pint not installed. Install with: pip install pint"
-        )
+        msg = "Unit checking disabled: Pint not installed. Install with: pip install pint"
+        logger.warning(msg)
+        warnings.warn(msg, UserWarning, stacklevel=2)
         return value
 
     ureg = get_ureg()  # pragma: no cover - Pint available only
@@ -224,9 +225,9 @@ def with_units(value: float, unit: Union[str, Any]) -> Any:
         >>> temperature = with_units(500.0, "kelvin")
     """
     if not _PINT_AVAILABLE:
-        logger.warning(
-            "Unit attachment disabled: Pint not installed. Install with: pip install pint"
-        )
+        msg = "Unit attachment disabled: Pint not installed. Install with: pip install pint"
+        logger.warning(msg)
+        warnings.warn(msg, UserWarning, stacklevel=2)
         return value
 
     ureg = get_ureg()  # pragma: no cover - Pint available only

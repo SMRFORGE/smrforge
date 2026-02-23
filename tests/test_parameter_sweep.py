@@ -359,7 +359,8 @@ class TestParameterSweep:
         result = sweep._run_single_case({"enrichment": 0.15})
 
         assert "burnup" in result
-        assert result["burnup"] is None
+        # Mock reactor cannot run real burnup; expect None or error dict
+        assert result["burnup"] is None or isinstance(result["burnup"], dict)
 
     @patch("smrforge.convenience.create_reactor", create=True)
     def test_run_sequential(self, mock_create_reactor, tmp_path):

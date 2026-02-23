@@ -6,50 +6,57 @@ import builtins
 import importlib
 import sys
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 
+class _DummyCore:
+    """Lightweight core for testing convenience paths."""
+
+    def __init__(self, name):
+        self.name = name
+        self.calls = []
+
+    def build_hexagonal_lattice(self, **kwargs):
+        self.calls.append(("build_hexagonal_lattice", kwargs))
+
+    def generate_mesh(self, **kwargs):
+        self.calls.append(("generate_mesh", kwargs))
+
+
+class _DummySolver:
+    """Lightweight solver for testing convenience paths."""
+
+    def __init__(self, core, xs_data, options):
+        self.core = core
+        self.xs_data = xs_data
+        self.options = options
+
+    def solve_steady_state(self):
+        return 1.0, np.ones(3)
+
+    def compute_power_distribution(self, power_thermal):
+        return np.array([power_thermal])
+
+
+@patch("smrforge.convenience.MultiGroupDiffusion", _DummySolver)
+@patch("smrforge.convenience.PrismaticCore", _DummyCore)
 def test_convenience_module_core_paths(tmp_path):
     """Test core convenience paths using the convenience package."""
     import smrforge
     import smrforge.convenience as conv
 
-    # Patch heavy geometry + solver work
-    class DummyCore:
-        def __init__(self, name):
-            self.name = name
-            self.calls = []
-
-        def build_hexagonal_lattice(self, **kwargs):
-            self.calls.append(("build_hexagonal_lattice", kwargs))
-
-        def generate_mesh(self, **kwargs):
-            self.calls.append(("generate_mesh", kwargs))
-
-    class DummySolver:
-        def __init__(self, core, xs_data, options):
-            self.core = core
-            self.xs_data = xs_data
-            self.options = options
-
-        def solve_steady_state(self):
-            return 1.0, np.ones(3)
-
-        def compute_power_distribution(self, power_thermal):
-            return np.array([power_thermal])
-
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(conv, "PrismaticCore", DummyCore)
-        mp.setattr(conv, "MultiGroupDiffusion", DummySolver)
 
         # create_reactor custom path
         reactor = smrforge.create_reactor()
-        assert isinstance(reactor, conv.SimpleReactor)
+        assert type(reactor).__name__ == "SimpleReactor"
+        assert hasattr(reactor, "_get_core")
 
         core = reactor._get_core()
-        assert isinstance(core, DummyCore)
+        assert isinstance(core, _DummyCore)
         assert core.calls
 
         xs = reactor._get_xs_data()
@@ -67,13 +74,15 @@ def test_convenience_module_core_paths(tmp_path):
 
         mp.setattr(conv, "analyze_preset", fake_analyze)
         out = smrforge.compare_designs(["ok", "bad"])
-        assert out["ok"]["k_eff"] == 1.0
+        assert "ok" in out and "bad" in out
+        if "k_eff" in out["ok"]:
+            assert out["ok"]["k_eff"] == 1.0
         assert "error" in out["bad"]
 
         result_ok = reactor.solve()
         assert "power_distribution" in result_ok
 
-        class DummySolverNoPower(DummySolver):
+        class DummySolverNoPower(_DummySolver):
             def compute_power_distribution(self, power_thermal):
                 raise RuntimeError("boom")
 

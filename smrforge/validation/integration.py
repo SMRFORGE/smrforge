@@ -6,6 +6,7 @@ Apply to functions/classes to enforce validation rules.
 
 import functools
 import inspect
+import warnings
 from typing import Any, Callable, Dict, Optional
 
 import numpy as np
@@ -87,12 +88,14 @@ def validate_inputs(
                 ]
                 raise ValueError(f"Validation failed:\n" + "\n".join(error_msgs))
 
-            # Log validation warnings
+            # Log validation warnings and emit Python warnings for testability
             warn_issues = [
                 i for i in combined_result.issues if i.level == ValidationLevel.WARNING
             ]
             for issue in warn_issues:
-                logger.warning(str(issue))
+                msg = str(issue)
+                logger.warning(msg)
+                warnings.warn(msg, UserWarning, stacklevel=2)
 
             return func(*args, **kwargs)
 

@@ -323,6 +323,8 @@ def __getattr__(name: str):
     """
     if name == "utils":
         return canonical_import("smrforge.utils")
+    if name in ("core", "presets", "validation"):
+        return canonical_import(f"smrforge.{name}")
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
