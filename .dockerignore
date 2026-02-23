@@ -42,6 +42,7 @@ docs/.doctrees/
 # Backup and redundant directories
 backup_*/
 smrforge-*/
+smrforge_pro/
 
 # Coverage and test artifacts
 .coverage

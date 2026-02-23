@@ -71,7 +71,7 @@ services:
     # Performance optimizations: Numba JIT compilation requires build-essential and python3-dev (already included)
     # Temperature interpolation: scipy.interpolate.RectBivariateSpline (included in scipy)
     # Self-shielding: All dependencies included in requirements.txt
-    # Test suite (133+ test files, 79.2% coverage) includes:
+    # Test suite (5001 tests, 44 skipped) includes:
     #   - Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
     #   - Advanced error handling: file operations, copy failures, validation errors
     #   - Test data generator: testing/generate_test_data.py creates mock data for visualization and sweep tests

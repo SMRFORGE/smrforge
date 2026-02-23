@@ -158,6 +158,7 @@ RUN apt-get update && \
     libxrender1 \
     libfontconfig1 \
     libgomp1 \
+    libffi-dev \
     git \
     vim \
     curl \
@@ -175,6 +176,9 @@ COPY scripts/ /app/scripts/
 # Copy testing infrastructure (manual test scripts and documentation)
 COPY testing/ /app/testing/
 COPY docs/testing/ /app/docs/testing/
+# Copy main test suite and examples (for standalone dev builds; docker-compose mounts over these)
+COPY examples/ /app/examples/
+COPY tests/ /app/tests/
 
 # Install Python dependencies
 RUN pip install --upgrade pip wheel setuptools
@@ -306,7 +310,7 @@ EXPOSE 8050 8888
 #   - General Optimization module (reactor design optimization, loading pattern optimization)
 #   - General I/O Utilities (file readers/writers, format converters for Serpent/OpenMC)
 #   - Advanced interfacial transfer models for two-phase flow
-#   - Comprehensive test suite (194+ test files, 76.7% coverage)
+#   - Comprehensive test suite (5001 tests, 44 skipped; pytest --ignore tests/test_smrforge_pro)
 #     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
 #     * Utility module tests: memory_mapped (100%), parallel_batch (67.2%), error_messages (98.2%), optimization_utils (97.8%), memory_pool (100%), material_mapping (100%), units (improved), logo (improved), logging (improved)
 #     * __init__.py import error path tests: burnup, validation, convenience, presets

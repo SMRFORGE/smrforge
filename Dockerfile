@@ -6,6 +6,7 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
+# - Full test suite: 5001 passed, 44 skipped (pytest --ignore tests/test_smrforge_pro for Community-only).
 # - Coding guidelines: optional deps fallbacks, Rich, convenience APIs, kwargs hygiene, path handling (docs/development/code-style.md).
 # - Discovery and help functions: system_info(), help_topics(), list_constraint_sets(), get_constraint_set(), get_example_path(), list_examples(), list_nuclides(), list_sweepable_params(), get_default_output_dir(). See examples/discovery_help_example.py.
 # - New convenience helpers: get_default_endf_dir(), list_endf_libraries(), list_geometry_types(), list_analysis_types(), list_surrogates(), quick_download_endf(). Also: quick_benchmark(), quick_safety_report(), quick_template_from_preset(), list_export_formats(), list_transient_types(), get_config(). Discovery: list_uq_sampling_methods(), list_optimization_objectives(), list_optimization_methods(), list_distributions(), list_economics_outputs(). Paths: get_default_config_path(), get_benchmark_path(). I/O: list_templates(), quick_export(). See smr.help('convenience').
