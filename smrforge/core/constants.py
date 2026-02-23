@@ -233,6 +233,16 @@ DELAYED_NEUTRON_DATA = {
 }
 
 
+# Average neutrons per fission (nu-bar) by nuclide [thermal/fast typical]
+# Used when ENDF nu data not available. Source: ENDF/B-VIII.0 typical values.
+NU_BY_NUCLIDE = {
+    "U235": 2.43,   # Thermal
+    "U238": 2.50,   # Fast fission
+    "Pu239": 2.88,
+    "Pu241": 2.95,
+    "U233": 2.50,
+}
+
 # Fission spectrum (Watt distribution parameters)
 FISSION_SPECTRUM_PARAMS = {
     "U235_thermal": {"a": 0.988, "b": 2.249},  # MeV

@@ -131,11 +131,10 @@ SMRForge includes **comprehensive performance optimizations**:
   - ✅ **Self-shielding command** - `smrforge data shield` for resonance self-shielding calculations
   - ✅ **GitHub Actions control** - `smrforge github status/enable/disable` for workflow management
 
-**AI/ML & API Extensibility (February 2026):**
-- **Stable API facade** (`smrforge.api`) — Single import for integration partners: `from smrforge.api import fit_surrogate, MultiGroupDiffusion, ...`
-- **Plugin registry** — Register custom surrogates via `register_surrogate()`; `fit_surrogate(method="custom")` uses them
-- **AI audit trail** — `CalculationAuditTrail.ai_models_used` and `record_ai_model()` for regulatory traceability of AI-assisted runs
-- **ML data export** — `export_ml_dataset()` exports design points to Parquet/HDF5 for training pipelines
+**API Extensibility (February 2026):**
+- **Stable API facade** (`smrforge.api`) — Single import: `from smrforge.api import MultiGroupDiffusion, register_hook, ...`
+- **Plugin hooks** — `register_hook()`, `run_hooks()` for before_solve, after_keff, etc.
+- **AI/surrogate** — Pro tier only: fit_surrogate, BYOS, ML export, audit trail. See `docs/community_vs_pro.md`
 
 **See `docs/status/feature-status.md` for detailed status of all features.**
 

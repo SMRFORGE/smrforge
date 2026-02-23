@@ -15,7 +15,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
 from numba import njit, prange
@@ -1162,25 +1162,69 @@ class MultiGroupDiffusion:
         return self._cell_volumes_cache
 
     def compute_reactivity_coefficients(
-        self, delta_T: float = 10.0
+        self,
+        delta_T: float = 10.0,
+        base_temperature: float = 600.0,
+        xs_at_temperature: Optional[
+            Callable[[float], CrossSectionData]
+        ] = None,
     ) -> Dict[str, float]:
         """
         Compute reactivity feedback coefficients.
 
+        When ``xs_at_temperature`` is provided, computes Doppler coefficient via
+        finite-difference: perturb fuel temperature, get new cross-sections, re-solve,
+        and compute α = (k(T+ΔT) - k(T)) / (k·ΔT).
+
         Args:
             delta_T: Temperature perturbation [K]
+            base_temperature: Base fuel temperature [K] for perturbation
+            xs_at_temperature: Optional callback T -> CrossSectionData. When provided,
+                enables temperature-dependent Doppler coefficient. If None, returns
+                tabulated typical values.
 
         Returns:
-            Dict of coefficients [dk/k/K]
+            Dict of coefficients [1/K]: doppler, moderator (if computable), total
         """
         if self.flux is None:
             raise RuntimeError("Must solve for flux first")
 
         k_ref = self.k_eff
+        result: Dict[str, float] = {}
 
-        # Would need temperature-dependent XS in real implementation
-        # This is a placeholder
-        return {"doppler": -3.5e-5, "moderator": -1.0e-5, "total": -4.5e-5}
+        if xs_at_temperature is not None:
+            try:
+                xs_hi = xs_at_temperature(base_temperature + delta_T)
+                xs_lo = xs_at_temperature(base_temperature)
+                # Save current XS, solve at T+ΔT
+                xs_save = self.xs
+                self.xs = xs_hi
+                self._update_xs_maps()
+                k_hi, _ = self.solve_steady_state()
+                # Solve at T
+                self.xs = xs_lo
+                self._update_xs_maps()
+                k_lo, _ = self.solve_steady_state()
+                # Restore original
+                self.xs = xs_save
+                self._update_xs_maps()
+                # α_doppler = (k_hi - k_lo) / (k_ref * delta_T)
+                if k_ref > 0 and delta_T > 0:
+                    result["doppler"] = (float(k_hi) - float(k_lo)) / (
+                        k_ref * delta_T
+                    )
+            except Exception as e:
+                logger.warning(
+                    "Temperature-dependent reactivity coefficient failed: %s. Using tabulated.",
+                    e,
+                )
+                result["doppler"] = -3.5e-5
+        else:
+            result["doppler"] = -3.5e-5
+
+        result["moderator"] = -1.0e-5
+        result["total"] = result["doppler"] + result["moderator"]
+        return result
 
 
 if __name__ == "__main__":

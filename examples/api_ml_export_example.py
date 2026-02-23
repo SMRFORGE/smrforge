@@ -1,70 +1,47 @@
 """
-SMRForge Stable API, ML Export, and AI Audit Example.
+SMRForge Stable API Example (Community tier).
 
 Demonstrates:
-- smrforge.api: Stable facade for integration partners and AI
-- export_ml_dataset: Export design points to Parquet/HDF5 for ML training
-- record_ai_model: AI audit trail for regulatory traceability
-- register_surrogate: Plugin custom surrogate models
+- smrforge.api: Stable facade for integration
+- create_audit_trail: Audit trail for calculations
+- Hooks: register_hook, run_hooks for extensibility
 
-Reference: NUCLEAR_INDUSTRY_ANALYSIS_AND_AI_FUTURE_PROOFING.md
+AI/surrogate features (fit_surrogate, export_ml_dataset, record_ai_model) require
+SMRForge Pro. See docs/community_vs_pro.md.
 """
 
-import numpy as np
 from pathlib import Path
 
 
 def main():
-    # --- 1. Stable API: single import for integration ---
-    from smrforge.api import fit_surrogate, export_ml_dataset, create_audit_trail
+    # --- 1. Stable API: single import ---
+    from smrforge.api import create_audit_trail, register_hook, run_hooks
 
-    # --- 2. Fit surrogate (built-in rbf or linear) ---
-    X = np.array([[0, 0], [1, 0], [0, 1], [1, 1]])
-    y = np.array([0.0, 1.0, 1.0, 2.0])
-    sur = fit_surrogate(X, y, method="linear")
-    print(f"Surrogate predict at (0.5, 0.5): {sur.predict([[0.5, 0.5]])[0]:.4f}")
-
-    # --- 3. Register custom surrogate (Pro/third-party) ---
-    from smrforge.workflows.plugin_registry import (
-        register_surrogate,
-        unregister_surrogate,
-    )
-
-    def mean_factory(X, y, **kwargs):
-        m = float(np.mean(y))
-
-        class DummySurrogate:
-            def predict(self, x):
-                arr = np.atleast_2d(x)
-                return np.full(arr.shape[0], m)
-
-        return DummySurrogate()
-
-    register_surrogate("mean", mean_factory)
-    sur2 = fit_surrogate(X, y, method="mean")
-    print(f"Custom surrogate predict: {sur2.predict([[1, 1]])[0]:.4f}")
-    unregister_surrogate("mean")
-
-    # --- 4. Export ML dataset (Parquet) ---
-    results = [
-        {"parameters": {"x": 0.1, "y": 0.2}, "k_eff": 1.02, "power": 50.0},
-        {"parameters": {"x": 0.2, "y": 0.3}, "k_eff": 1.05, "power": 55.0},
-    ]
-    out = Path("output") / "design_points.parquet"
-    out.parent.mkdir(exist_ok=True)
-    export_ml_dataset(results, out)
-    print(f"Exported to {out}")
-
-    # --- 5. AI audit trail ---
+    # --- 2. Create audit trail (Community) ---
     trail = create_audit_trail(
         "keff",
         inputs={"reactor": "valar-10"},
         outputs={"k_eff": 1.002},
     )
-    from smrforge.ai import record_ai_model
+    print(f"Audit trail: {trail.calculation_id}, k_eff={trail.outputs.get('k_eff')}")
 
-    record_ai_model(trail, "rbf", version="scipy-1.11", config_hash="abc123")
-    print(f"AI models used: {trail.ai_models_used}")
+    # --- 3. Hooks: register callback (Community) ---
+    def log_after_keff(ctx):
+        print(f"  [hook] after_keff: k_eff={ctx.get('k_eff')}")
+
+    register_hook("after_keff", log_after_keff)
+    run_hooks("after_keff", context={"k_eff": 1.05})
+    print("Hooks work in Community.")
+
+    # --- 4. Pro-only: fit_surrogate, export_ml_dataset, record_ai_model ---
+    try:
+        from smrforge.api import fit_surrogate
+        import numpy as np
+        X = np.array([[0, 0], [1, 1]])
+        y = np.array([1.0, 2.0])
+        fit_surrogate(X, y, method="linear")
+    except ImportError as e:
+        print(f"Pro feature (expected in Community): {e}")
 
     print("\nDone.")
 

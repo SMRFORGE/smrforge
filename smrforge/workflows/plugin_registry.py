@@ -1,13 +1,13 @@
 """
 Plugin and hook registry for SMRForge extensibility.
 
-Enables AI/ML surrogates, external solvers, and post-processors to plug in
-without modifying core code. Supports NQA-1 path and AI future-proofing.
+Hooks enable external solvers and post-processors to plug in without modifying core code.
+Surrogate registry is Pro tier only; use SMRForge Pro for AI/surrogate features.
 
 Usage:
-    >>> from smrforge.workflows.plugin_registry import register_surrogate, get_surrogate
-    >>> register_surrogate("my_ml_model", my_factory)
-    >>> surrogate = get_surrogate("my_ml_model")(X, y)
+    >>> from smrforge.workflows.plugin_registry import register_hook, run_hooks
+    >>> register_hook("before_solve", my_callback)
+    >>> run_hooks("before_solve", context={"reactor_spec": spec})
 """
 
 from typing import Any, Callable, Dict, Optional, TypeVar
@@ -18,51 +18,59 @@ logger = get_logger("smrforge.workflows.plugin_registry")
 
 T = TypeVar("T")
 
-# --- Surrogate registry ---
-# Maps name -> factory(X, y, **kwargs) returning a predict(X_new) callable or SurrogateModel-like
-_SURROGATE_REGISTRY: Dict[str, Callable[..., Any]] = {}
+_MSG = (
+    "Surrogate registry requires SMRForge Pro. "
+    "Upgrade at https://smrforge.io or install smrforge-pro."
+)
+
+try:
+    from smrforge_pro.workflows.plugin_registry import (
+        get_surrogate as _get_surrogate,
+        list_surrogates as _list_surrogates,
+        register_surrogate as _register_surrogate,
+        unregister_surrogate as _unregister_surrogate,
+    )
+    _PRO_AVAILABLE = True
+except ImportError:
+    _get_surrogate = None  # type: ignore
+    _list_surrogates = None  # type: ignore
+    _register_surrogate = None  # type: ignore
+    _unregister_surrogate = None  # type: ignore
+    _PRO_AVAILABLE = False
+
+
+def register_surrogate(name: str, factory: Callable[..., Any]) -> None:
+    """Pro tier only."""
+    if _PRO_AVAILABLE:
+        _register_surrogate(name, factory)
+        return
+    raise ImportError(_MSG)
+
+
+def get_surrogate(name: str) -> Optional[Callable[..., Any]]:
+    """Pro tier only."""
+    if _PRO_AVAILABLE:
+        return _get_surrogate(name)
+    raise ImportError(_MSG)
+
+
+def list_surrogates() -> list:
+    """Pro tier only."""
+    if _PRO_AVAILABLE:
+        return _list_surrogates()
+    raise ImportError(_MSG)
+
+
+def unregister_surrogate(name: str) -> bool:
+    """Pro tier only."""
+    if _PRO_AVAILABLE:
+        return _unregister_surrogate(name)
+    raise ImportError(_MSG)
+
 
 # --- Hook registry ---
 # Maps hook_name -> list of callables(上下文) to run before/after key operations
 _HOOK_REGISTRY: Dict[str, list] = {}
-
-
-def register_surrogate(name: str, factory: Callable[..., Any]) -> None:
-    """
-    Register a surrogate model factory.
-
-    Args:
-        name: Unique identifier (e.g., "rbf", "linear", "my_ml_model").
-        factory: Callable(X, y, **kwargs) returning an object with .predict(X_new).
-
-    Example:
-        >>> def my_gp_factory(X, y, **kwargs):
-        ...     from sklearn.gaussian_process import GaussianProcessRegressor
-        ...     gp = GaussianProcessRegressor().fit(X, y)
-        ...     return type('Surrogate', (), {'predict': lambda x: gp.predict(x)})()
-        >>> register_surrogate("gp", my_gp_factory)
-    """
-    if name in _SURROGATE_REGISTRY:
-        logger.warning(f"Overwriting existing surrogate '{name}' in registry")
-    _SURROGATE_REGISTRY[name] = factory
-
-
-def get_surrogate(name: str) -> Optional[Callable[..., Any]]:
-    """Get a surrogate factory by name. Returns None if not registered."""
-    return _SURROGATE_REGISTRY.get(name)
-
-
-def list_surrogates() -> list:
-    """Return list of registered surrogate names."""
-    return list(_SURROGATE_REGISTRY.keys())
-
-
-def unregister_surrogate(name: str) -> bool:
-    """Remove surrogate from registry. Returns True if it existed."""
-    if name in _SURROGATE_REGISTRY:
-        del _SURROGATE_REGISTRY[name]
-        return True
-    return False
 
 
 # --- Hooks ---

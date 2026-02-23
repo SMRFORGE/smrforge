@@ -162,6 +162,33 @@ class TestBurnupSolverComprehensive:
         assert capture_matrix is not None
         assert capture_matrix.shape[0] == len(burnup.nuclides)
 
+    def test_capture_matrix_linear_in_N(self, simple_neutronics, mock_cache):
+        """Capture destruction matrix must be linear in N (per-atom rates).
+
+        Diagonal elements are sigma*phi, not sigma*phi*N, so (A_decay - D_capture)@N
+        scales linearly with N. Verify by comparing D_capture @ N for scaled N.
+        """
+        options = BurnupOptions(
+            time_steps=[0, 30],
+            initial_enrichment=0.195,
+        )
+        burnup = BurnupSolver(simple_neutronics, options, cache=mock_cache)
+
+        burnup.neutronics.flux = np.ones(
+            (burnup.neutronics.nz, burnup.neutronics.nr, burnup.neutronics.ng)
+        )
+        D = burnup._build_capture_matrix(0)
+
+        n = len(burnup.nuclides)
+        N1 = np.ones(n) * 1e20
+        N2 = N1 * 2.0
+
+        dN1 = D.dot(N1)
+        dN2 = D.dot(N2)
+
+        # Must scale linearly: dN2 ≈ 2 * dN1
+        np.testing.assert_allclose(dN2, 2.0 * dN1, rtol=1e-10)
+
     def test_update_cross_sections(self, simple_neutronics, mock_cache):
         """Test updating cross-sections based on composition."""
         options = BurnupOptions(
@@ -660,12 +687,15 @@ class TestBurnupSolverComprehensive:
         # Set all concentrations to zero
         burnup.concentrations[:, 0] = 0.0
 
-        # Should handle zero concentrations gracefully
+        # Capture matrix has per-atom rates (sigma*phi), independent of N.
+        # So diagonal can be non-zero; (D @ N)[i] = sigma_i*phi*N_i is zero when N=0.
         capture_matrix = burnup._build_capture_matrix(0)
 
         assert capture_matrix is not None
-        # Should have zero capture rates when concentrations are zero
-        assert np.all(capture_matrix.data == 0) or capture_matrix.nnz == 0
+        assert capture_matrix.shape[0] == len(burnup.nuclides)
+        # D @ N must be zero when N=0 (matrix-vector product)
+        N_zero = np.zeros(len(burnup.nuclides))
+        np.testing.assert_array_almost_equal(capture_matrix.dot(N_zero), N_zero)
 
     def test_update_burnup_zero_mass_kg(self, simple_neutronics, mock_cache):
         """Test _update_burnup when mass_u_kg is zero."""

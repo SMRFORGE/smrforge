@@ -25,11 +25,7 @@ from smrforge.workflows.scenario_design import (
 )
 from smrforge.workflows.sensitivity import SensitivityRanking, one_at_a_time_from_sweep
 from smrforge.workflows.sobol_indices import sobol_indices_from_sweep_results
-from smrforge.workflows.plugin_registry import (
-    get_surrogate,
-    register_surrogate,
-    unregister_surrogate,
-)
+from smrforge.workflows.plugin_registry import register_surrogate
 from smrforge.workflows.surrogate import fit_surrogate, surrogate_from_sweep_results
 
 
@@ -181,50 +177,47 @@ class TestAuditLog:
 
 
 class TestSurrogate:
-    def test_fit_surrogate_linear(self):
+    def test_fit_surrogate_requires_pro(self):
+        """Community: fit_surrogate raises ImportError when Pro not installed; works when Pro is installed."""
         import numpy as np
 
         X = np.array([[0, 0], [1, 0], [0, 1], [1, 1]])
         y = np.array([0.0, 1.0, 1.0, 2.0])
-        sur = fit_surrogate(X, y, method="linear")
-        pred = sur.predict(np.array([[0.5, 0.5]]))
-        assert pred.shape == (1,)
-        assert 0.5 <= pred[0] <= 2.0
+        try:
+            s = fit_surrogate(X, y, method="linear", param_names=["x0", "x1"])
+            assert s.predict({"x0": 1, "x1": 0}) is not None
+        except ImportError as e:
+            assert "SMRForge Pro" in str(e)
 
-    def test_surrogate_from_sweep_results(self):
+    def test_surrogate_from_sweep_results_requires_pro(self):
+        """Community: surrogate_from_sweep_results raises ImportError when Pro not installed; works when Pro is installed."""
         results = [
             {"parameters": {"x": 0.0}, "k_eff": 1.0},
             {"parameters": {"x": 0.5}, "k_eff": 1.05},
             {"parameters": {"x": 1.0}, "k_eff": 1.1},
         ]
-        sur = surrogate_from_sweep_results(
-            results, ["x"], output_metric="k_eff", method="linear"
-        )
-        assert sur.n_samples == 3
-        assert sur.predict([[0.25]])[0] >= 1.0
-
-    def test_fit_surrogate_uses_registry(self):
-        """Pro/Enterprise can add ML models via register_surrogate without forking."""
-        import numpy as np
-
-        def dummy_factory(X, y, param_names=None, output_name="output", **kwargs):
-            class DummySurrogate:
-                def predict(self, x):
-                    return np.full(len(np.asarray(x).reshape(-1, X.shape[1])), y.mean())
-
-            return DummySurrogate()
-
-        register_surrogate("dummy_ml", dummy_factory)
         try:
-            X = np.array([[0, 0], [1, 1]])
-            y = np.array([1.0, 2.0])
-            sur = fit_surrogate(X, y, method="dummy_ml")
-            assert sur.method == "dummy_ml"
-            pred = sur.predict(np.array([[0.5, 0.5]]))
-            assert pred.shape == (1,)
-            assert pred[0] == 1.5  # mean of [1, 2]
-        finally:
+            s = surrogate_from_sweep_results(
+                results, ["x"], output_metric="k_eff", method="linear"
+            )
+            assert s.predict({"x": 0.5}) is not None
+        except ImportError as e:
+            assert "SMRForge Pro" in str(e)
+
+    def test_register_surrogate_requires_pro(self):
+        """Community: register_surrogate raises ImportError when Pro not installed; works when Pro is installed."""
+        def dummy_factory(X, y, **kwargs):
+            return None
+
+        try:
+            register_surrogate("dummy_ml", dummy_factory)
+            from smrforge.workflows.plugin_registry import list_surrogates
+            names = list_surrogates()
+            assert "dummy_ml" in names
+            from smrforge.workflows.plugin_registry import unregister_surrogate
             unregister_surrogate("dummy_ml")
+        except ImportError as e:
+            assert "SMRForge Pro" in str(e)
 
 
 class TestScenarioDesign:

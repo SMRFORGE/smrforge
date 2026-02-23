@@ -21,6 +21,21 @@ from .reactor_core import Nuclide
 logger = get_logger("smrforge.core.fission_yield_parser")
 
 
+def _parse_endf_float(field: str) -> float:
+    """Parse ENDF-6 style float (e.g. ' 1.234567+5' -> 1.234567e5)."""
+    s = (field or "").strip()
+    if not s:
+        return 0.0
+    s = s.replace(" ", "")
+    if "e" in s.lower():
+        return float(s)
+    pos_plus, pos_minus = s.rfind("+", 1), s.rfind("-", 1)
+    pos = max(pos_plus, pos_minus)
+    if pos > 0:
+        s = s[:pos] + "E" + s[pos:]
+    return float(s)
+
+
 @dataclass
 class FissionYield:
     """Fission yield data for a single product nuclide."""
@@ -207,6 +222,9 @@ class ENDFFissionYieldParser:
         """
         Parse fission yields from ENDF file (MF=8, MT=454 or 459).
 
+        ENDF LIST format: [E1, 0, LE, I, NN, NFP] then Cn = NFP sets of
+        (ZAFP, FPS, Y, DY) with ZAFP=1000*Z+A. Uses first energy point (thermal).
+
         Args:
             lines: List of file lines.
             mt: Material table number (454 for independent, 459 for cumulative).
@@ -214,21 +232,60 @@ class ENDFFissionYieldParser:
         Returns:
             Dictionary mapping product nuclide -> yield (fraction).
         """
-        yields = {}
+        yields: Dict[Nuclide, float] = {}
+        in_section = False
+        values: List[float] = []
+        mt_str = str(mt)
 
-        # Look for MF=8, MT=454 or MT=459 section
-        for i, line in enumerate(lines):
+        for line in lines:
             if len(line) < 75:
                 continue
 
             mf = line[70:72].strip()
-            mt_str = line[72:75].strip()
+            line_mt = line[72:75].strip()
 
-            if mf == "8" and mt_str == str(mt):
-                # Parse yield data
-                # ENDF format: Each data line contains product Z, A, and yield
-                # This is a simplified parser - full ENDF format is more complex
-                # For now, return empty dict (can be enhanced with full parsing)
+            if mf == "8" and line_mt == mt_str:
+                in_section = True
+                # Parse header: C1=E1, C2, L1=LE, L2, N1=NN, N2=NFP
+                try:
+                    nn = int(line[55:66].strip() or 0)
+                    nfp = int(line[66:70].strip() or 0)
+                except (ValueError, IndexError):
+                    nn, nfp = 0, 0
+                values = []
+                # Same line may have start of data; ENDF typically has 6 header values
+                for j in range(6):
+                    start = j * 11
+                    if start + 11 <= len(line):
+                        try:
+                            values.append(_parse_endf_float(line[start : start + 11]))
+                        except (ValueError, TypeError):
+                            pass
+                continue
+
+            if in_section and (mf != "8" or line_mt != mt_str):
                 break
+
+            if in_section and line[0:11].strip():
+                for j in range(6):
+                    start = j * 11
+                    if start + 11 <= len(line):
+                        try:
+                            values.append(_parse_endf_float(line[start : start + 11]))
+                        except (ValueError, TypeError):
+                            pass
+
+        # Process 4-tuples: (ZAFP, FPS, Y, DY). Skip first 6 (header).
+        for idx in range(6, len(values) - 3, 4):
+            zafp = int(round(values[idx]))
+            y_val = float(values[idx + 2])
+            z_daughter = zafp // 1000
+            a_daughter = zafp % 1000
+            if 0 < z_daughter < 120 and 0 < a_daughter < 300 and y_val >= 0:
+                product = Nuclide(Z=z_daughter, A=a_daughter)
+                if product in yields:
+                    yields[product] += y_val  # Sum over isomeric states
+                else:
+                    yields[product] = y_val
 
         return yields

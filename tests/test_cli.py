@@ -4405,26 +4405,15 @@ class TestBatchKeffAndWorkflowHandlers:
             ):
                 cli_module.workflow_atlas(args)
 
-    def test_workflow_surrogate_success(self, tmp_path):
-        sweep = tmp_path / "sweep.json"
-        sweep.write_text(json.dumps({"results": [{"k_eff": 1.0, "p1": 1}]}))
-        out = tmp_path / "surrogate.pkl"
-        args = Mock(
-            sweep_results=sweep,
-            params=["p1"],
-            metric="k_eff",
-            method="rbf",
-            output=out,
-            verbose=False,
-        )
-        mock_sur = Mock(n_samples=1)
-        with patch("smrforge.cli.sys.exit"):
-            with patch(
-                "smrforge.workflows.surrogate.surrogate_from_sweep_results",
-                return_value=mock_sur,
-            ):
+    def test_workflow_surrogate_requires_pro(self):
+        """Community: workflow surrogate exits with Pro upgrade message."""
+        args = Mock(sweep_results=Path("/nonexistent.json"), params=["p1"], verbose=False)
+        with patch("smrforge.cli._print_error") as mock_err:
+            with patch("smrforge.cli.sys.exit") as mock_exit:
                 cli_module.workflow_surrogate(args)
-        assert out.exists()
+        mock_err.assert_called()
+        assert "Pro" in str(mock_err.call_args)
+        mock_exit.assert_called_once_with(1)
 
     def test_data_shield_success_mocked(self, tmp_path):
         from smrforge.core.reactor_core import Nuclide

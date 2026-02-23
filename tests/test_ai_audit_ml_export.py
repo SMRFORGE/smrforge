@@ -1,27 +1,30 @@
-"""Tests for AI audit and ML export (NUCLEAR_INDUSTRY_ANALYSIS § 3.2)."""
+"""Tests for AI audit and ML export (Pro tier; Community has stubs that raise)."""
 
 from pathlib import Path
 
 import pytest
 
-from smrforge.ai.audit import record_ai_model
 from smrforge.validation.regulatory_traceability import (
     CalculationAuditTrail,
     create_audit_trail,
 )
-from smrforge.workflows.ml_export import export_ml_dataset
 
 
 class TestAiAudit:
-    def test_record_ai_model(self):
+    def test_record_ai_model_requires_pro(self):
+        """Community: record_ai_model raises ImportError when Pro not installed; works when Pro is installed."""
+        from smrforge.ai.audit import record_ai_model
+
         trail = create_audit_trail("keff", {}, {"k_eff": 1.0})
-        record_ai_model(trail, "rbf", version="1.0", config_hash="abc")
-        assert len(trail.ai_models_used) == 1
-        assert trail.ai_models_used[0]["name"] == "rbf"
-        assert trail.ai_models_used[0]["version"] == "1.0"
-        assert trail.ai_models_used[0]["config_hash"] == "abc"
+        try:
+            record_ai_model(trail, "rbf", version="1.0", config_hash="abc")
+            assert len(trail.ai_models_used) == 1
+            assert trail.ai_models_used[0]["name"] == "rbf"
+        except ImportError as e:
+            assert "SMRForge Pro" in str(e)
 
     def test_ai_models_used_in_to_dict(self):
+        """CalculationAuditTrail.ai_models_used still serializes (data structure)."""
         trail = create_audit_trail(
             "burnup", {}, {}, ai_models_used=[{"name": "gp", "version": "0.1"}]
         )
@@ -42,7 +45,6 @@ class TestAiAudit:
         )
         p = tmp_path / "old.json"
         trail.save(p)
-        # Manually remove ai_models_used from JSON to simulate old file
         import json
 
         data = json.loads(p.read_text())
@@ -53,27 +55,15 @@ class TestAiAudit:
 
 
 class TestMlExport:
-    def test_export_parquet(self, tmp_path):
+    def test_export_ml_dataset_requires_pro(self, tmp_path):
+        """Community: export_ml_dataset raises ImportError when Pro not installed; works when Pro is installed."""
+        from smrforge.workflows.ml_export import export_ml_dataset
+
         results = [
-            {"parameters": {"x": 0.1, "y": 0.2}, "k_eff": 1.02, "power": 50.0},
-            {"parameters": {"x": 0.2, "y": 0.3}, "k_eff": 1.05, "power": 55.0},
+            {"parameters": {"x": 0.1}, "k_eff": 1.02},
         ]
-        out = export_ml_dataset(results, tmp_path / "design.parquet")
-        assert out.exists()
-        import pandas as pd
-
-        df = pd.read_parquet(out)
-        assert "param_x" in df.columns
-        assert "output_k_eff" in df.columns
-        assert len(df) == 2
-
-    def test_export_hdf5(self, tmp_path):
-        results = [{"parameters": {"a": 1.0}, "k_eff": 1.0}]
-        out = export_ml_dataset(results, tmp_path / "design.h5", format="hdf5")
-        assert out.exists()
-        import h5py
-
-        with h5py.File(out, "r") as f:
-            assert "param_a" in f
-            assert "output_k_eff" in f
-            assert "schema" in f.attrs
+        try:
+            out = export_ml_dataset(results, tmp_path / "design.parquet")
+            assert out.exists()
+        except ImportError as e:
+            assert "SMRForge Pro" in str(e)

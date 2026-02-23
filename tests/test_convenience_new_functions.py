@@ -254,11 +254,12 @@ class TestListAnalysisTypes:
 
 
 class TestListSurrogates:
-    def test_returns_list(self):
+    def test_requires_pro(self):
+        """Community: list_surrogates raises ImportError (Pro tier only)."""
         from smrforge import list_surrogates
 
-        result = list_surrogates()
-        assert isinstance(result, list)
+        with pytest.raises(ImportError, match="SMRForge Pro"):
+            list_surrogates()
 
 
 class TestQuickDownloadEndf:

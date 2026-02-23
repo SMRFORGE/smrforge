@@ -218,20 +218,52 @@ class TestENDFDecayParser:
         assert daughters[u237] == 0.5
 
     def test_parse_gamma_spectrum(self):
-        """Test parsing gamma spectrum."""
+        """Test parsing gamma spectrum with header only returns None."""
         parser = ENDFDecayParser()
 
         lines = [" " * 70 + " 8  460"]
         spectrum = parser._parse_gamma_spectrum(lines)
-        assert spectrum is None  # Simplified parser returns None
+        assert spectrum is None
+
+    def test_parse_gamma_spectrum_from_mt457_rtyp0(self):
+        """Test parsing gamma spectrum from MT=457 decay radiation (RTYP=0)."""
+        parser = ENDFDecayParser()
+        # ENDF 6-tuple: RTYP=0, RFS=0, Q(eV)=661600, D=0, BR=0.85, DBR=0
+        # Energy 661600 eV = 0.6616 MeV. ENDF cols 70-72 MF, 72-75 MT.
+        data = " 0.000000+0 0.000000+0 6.616000+5 0.000000+0 8.500000-1 0.000000+0"
+        lines = [
+            " " * 69 + " 8 457",
+            data + "    8 457",  # 66 data + 9 chars so 72:75="457"
+        ]
+        spectrum = parser._parse_gamma_spectrum(lines)
+        assert spectrum is not None
+        assert len(spectrum.energy) == 1
+        assert abs(spectrum.energy[0] - 0.6616) < 0.001
+        assert abs(spectrum.intensity[0] - 0.85) < 0.01
+        assert spectrum.total_energy > 0
 
     def test_parse_beta_spectrum(self):
-        """Test parsing beta spectrum."""
+        """Test parsing beta spectrum with header only returns None."""
         parser = ENDFDecayParser()
 
         lines = [" " * 70 + " 8  455"]
         spectrum = parser._parse_beta_spectrum(lines)
-        assert spectrum is None  # Simplified parser returns None
+        assert spectrum is None
+
+    def test_parse_beta_spectrum_from_mt457_rtyp1(self):
+        """Test parsing beta spectrum from MT=457 decay radiation (RTYP=1)."""
+        parser = ENDFDecayParser()
+        # RTYP=1 (beta-), RFS, Q(eV)=2500000 (2.5 MeV), D=0, BR=1.0, DBR=0
+        data = " 1.000000+0 9.200000+3 2.500000+6 0.000000+0 1.000000+0 0.000000+0"
+        lines = [
+            " " * 69 + " 8 457",
+            data + "    8 457",
+        ]
+        spectrum = parser._parse_beta_spectrum(lines)
+        assert spectrum is not None
+        assert len(spectrum.energy) == 1
+        assert abs(spectrum.energy[0] - 2.5) < 0.001
+        assert spectrum.endpoint_energy == spectrum.energy[0]
 
     def test_parse_half_life_short_line(self):
         """Test parsing half-life with short line (line 224)."""
@@ -275,6 +307,27 @@ class TestENDFDecayParser:
         lines = ["short line"]
         decay_modes = parser._parse_decay_modes(lines, u235)
         assert isinstance(decay_modes, list)
+
+    def test_parse_decay_modes_with_branching_ratios(self):
+        """Test parsing decay modes and branching ratios from ENDF-style data."""
+        parser = ENDFDecayParser()
+        u235 = Nuclide(Z=92, A=235)
+        th231 = Nuclide(Z=90, A=231)
+
+        # Mock ENDF MF=8 MT=457 with decay radiation (RTYP, RFS, Q, D, BR, DBR)
+        # Each field 11 chars. RTYP=4 (alpha), RFS=90231, BR=1.0
+        # ENDF format: cols 0-10, 11-21, ..., 66+ for MAT/MF/MT
+        line = (
+            " 4.0000000+0 9.0231000+4 0.0000000+0 0.0000000+0 1.0000000+0"
+            " 0.0000000+0" + " " * 8 + " 8  457\n"
+        )
+        lines = [" " * 70 + " 8  457\n", line]
+        decay_modes = parser._parse_decay_modes(lines, u235)
+        assert isinstance(decay_modes, list)
+        if decay_modes:
+            assert all(0 < m.branching_ratio <= 1 for m in decay_modes)
+            if any(m.daughter for m in decay_modes):
+                assert th231 in [m.daughter for m in decay_modes if m.daughter]
 
     def test_parse_filename_metastable_m_only(self):
         """Test parsing filename with metastable 'm' only."""

@@ -285,18 +285,24 @@ class ENDFDecayParser:
 
     def _parse_decay_modes(self, lines: List[str], parent: Nuclide) -> List[DecayMode]:
         """
-        Parse decay modes from ENDF file (MF=8, MT=457).
+        Parse decay modes and branching ratios from ENDF file (MF=8, MT=457).
+
+        Reads decay radiation LIST records: each entry is (RTYP, RFS, Q, D, BR, DBR).
+        RTYP: 0=gamma, 1=beta-, 2=ec/beta+, 3=it, 4=alpha, 5=n, 6=proton, 7=sf.
+        RFS: 1000*Z + A of daughter (0 for gamma/IT). BR: branching ratio.
 
         Args:
             lines: List of file lines.
             parent: Parent nuclide.
 
         Returns:
-            List of DecayMode instances.
+            List of DecayMode instances with branching ratios.
         """
         decay_modes = []
+        in_mf8_mt457 = False
+        n_values_to_read = 0
+        values = []
 
-        # Look for MF=8, MT=457 section
         for i, line in enumerate(lines):
             if len(line) < 75:
                 continue
@@ -305,10 +311,51 @@ class ENDFDecayParser:
             mt = line[72:75].strip()
 
             if mf == "8" and mt == "457":
-                # Decay mode information follows the header
-                # This is a simplified parser - full ENDF format is more complex
-                # For now, return empty list (can be enhanced later)
+                if not in_mf8_mt457:
+                    values = []
+                in_mf8_mt457 = True
+                continue
+
+            if in_mf8_mt457 and (mf != "8" or mt != "457"):
                 break
+
+            if in_mf8_mt457 and line[0:11].strip():
+                # Parse numeric fields (11 chars each, 6 per line)
+                for j in range(6):
+                    start = j * 11
+                    end = start + 11
+                    if end <= len(line):
+                        try:
+                            val = _parse_endf_float(line[start:end])
+                            values.append(val)
+                        except (ValueError, TypeError):
+                            pass
+
+        # Process 6-tuples: (RTYP, RFS, Q, D, BR, DBR)
+        for idx in range(0, len(values) - 5, 6):
+            try:
+                rtyp = int(round(values[idx]))
+                rfs = int(round(values[idx + 1]))
+                br = float(values[idx + 4])
+            except (IndexError, ValueError, TypeError):
+                continue
+
+            if br <= 0 or br > 1.0:
+                continue
+            if rtyp < 0 or rtyp > 8:  # Skip non-decay records (e.g. header)
+                continue
+
+            mode_str = self.decay_mode_map.get(rtyp, "?")
+            daughter = None
+            if rfs > 0 and rtyp in (1, 2, 4, 5, 6, 7, 8):  # Particle decays with daughter
+                z_daughter = rfs // 1000
+                a_daughter = rfs % 1000
+                if 0 < z_daughter < 120 and 0 < a_daughter < 300:
+                    daughter = Nuclide(Z=z_daughter, A=a_daughter)
+
+            decay_modes.append(
+                DecayMode(mode=mode_str, branching_ratio=br, daughter=daughter, q_value=0.0)
+            )
 
         return decay_modes
 
@@ -335,52 +382,147 @@ class ENDFDecayParser:
 
     def _parse_gamma_spectrum(self, lines: List[str]) -> Optional[GammaSpectrum]:
         """
-        Parse gamma-ray spectrum from ENDF file (MF=8, MT=460).
+        Parse gamma-ray spectrum from ENDF file (MF=8, MT=460 or MT=457 decay radiation).
 
-        Args:
-            lines: List of file lines.
-
-        Returns:
-            GammaSpectrum instance if found, None otherwise.
+        Reads energy [MeV] and intensity [photons/decay]. ENDF energies are in eV;
+        converted to MeV. Accepts 6-tuples (RTYP, RFS, Q, D, BR, DBR) with RTYP=0.
         """
-        # Look for MF=8, MT=460 section
-        for i, line in enumerate(lines):
+        energies: List[float] = []
+        intensities: List[float] = []
+        # Try MT=460 first
+        values_460 = self._collect_section_values(lines, "8", "460")
+        if values_460:
+            self._extract_gamma_from_tuples(values_460, energies, intensities)
+
+        # Fallback: MT=457 decay radiation (RTYP=0)
+        if not energies:
+            values_457 = self._collect_section_values(lines, "8", "457")
+            self._extract_gamma_from_tuples(values_457, energies, intensities)
+
+        if not energies and values_460 and len(values_460) >= 2:
+            for i in range(0, len(values_460) - 1, 2):
+                e_val = float(values_460[i]) / 1e6  # eV -> MeV
+                i_val = float(values_460[i + 1])
+                if 0 < e_val < 20 and i_val >= 0:
+                    energies.append(e_val)
+                    intensities.append(i_val)
+
+        if not energies:
+            return None
+        energy_arr = np.array(energies)
+        intensity_arr = np.array(intensities)
+        total = np.sum(energy_arr * intensity_arr)
+        return GammaSpectrum(
+            energy=energy_arr,
+            intensity=intensity_arr,
+            total_energy=float(total),
+        )
+
+    def _collect_section_values(
+        self, lines: List[str], mf: str, mt: str
+    ) -> List[float]:
+        """Collect 11-char numeric fields from ENDF section MF/MT."""
+        values: List[float] = []
+        in_section = False
+
+        for line in lines:
             if len(line) < 75:
                 continue
+            line_mf = line[70:72].strip()
+            line_mt = line[72:75].strip()
 
-            mf = line[70:72].strip()
-            mt = line[72:75].strip()
-
-            if mf == "8" and mt == "460":
-                # Gamma spectrum data follows the header
-                # This is a simplified parser - full ENDF format is more complex
-                # For now, return None (can be enhanced later)
+            if line_mf == mf and line_mt == mt:
+                in_section = True
+            elif in_section:
                 break
+            if in_section and line[0:11].strip():
+                for j in range(6):
+                    start = j * 11
+                    if start + 11 <= len(line):
+                        try:
+                            values.append(_parse_endf_float(line[start : start + 11]))
+                        except (ValueError, TypeError):
+                            pass
+        return values
 
-        return None
+    def _extract_gamma_from_tuples(
+        self,
+        values: List[float],
+        energies: List[float],
+        intensities: List[float],
+    ) -> None:
+        """Extract (E, I) from 6-tuples (RTYP=0, RFS, Q, D, BR, DBR). Q in eV, BR intensity."""
+        for i in range(0, len(values) - 5, 6):
+            try:
+                rtyp = int(round(values[i]))
+            except (ValueError, TypeError):
+                continue
+            if rtyp == 0:  # Gamma
+                e_val = float(values[i + 2]) / 1e6  # eV -> MeV
+                i_val = float(values[i + 4])  # BR = intensity
+                if e_val > 0 and i_val >= 0:
+                    energies.append(e_val)
+                    intensities.append(i_val)
 
     def _parse_beta_spectrum(self, lines: List[str]) -> Optional[BetaSpectrum]:
         """
-        Parse beta emission spectrum from ENDF file (MF=8, MT=455).
+        Parse beta emission spectrum from ENDF file (MF=8, MT=455 or MT=457).
 
-        Args:
-            lines: List of file lines.
-
-        Returns:
-            BetaSpectrum instance if found, None otherwise.
+        Reads energy [MeV] and intensity. Accepts 6-tuples (RTYP=1 beta-, RTYP=8 beta+).
+        Q in eV, converted to MeV.
         """
-        # Look for MF=8, MT=455 section
-        for i, line in enumerate(lines):
-            if len(line) < 75:
+        energies: List[float] = []
+        intensities: List[float] = []
+        values_455 = self._collect_section_values(lines, "8", "455")
+        if values_455:
+            self._extract_beta_from_tuples(values_455, energies, intensities)
+
+        if not energies:
+            values_457 = self._collect_section_values(lines, "8", "457")
+            self._extract_beta_from_tuples(values_457, energies, intensities)
+
+        if not energies and values_455 and len(values_455) >= 2:
+            for i in range(0, len(values_455) - 1, 2):
+                e_val = float(values_455[i]) / 1e6  # eV -> MeV
+                i_val = float(values_455[i + 1])
+                if e_val >= 0 and i_val >= 0:
+                    energies.append(e_val)
+                    intensities.append(i_val)
+
+        if not energies:
+            return None
+
+        energy_arr = np.array(energies)
+        intensity_arr = np.array(intensities)
+        endpoint = float(np.max(energy_arr)) if len(energy_arr) > 0 else 0.0
+        total_int = np.sum(intensity_arr)
+        avg = (
+            float(np.sum(energy_arr * intensity_arr) / total_int)
+            if total_int > 0
+            else 0.0
+        )
+        return BetaSpectrum(
+            energy=energy_arr,
+            intensity=intensity_arr,
+            endpoint_energy=endpoint,
+            average_energy=avg,
+        )
+
+    def _extract_beta_from_tuples(
+        self,
+        values: List[float],
+        energies: List[float],
+        intensities: List[float],
+    ) -> None:
+        """Extract (E, I) from 6-tuples (RTYP=1/8, RFS, Q, D, BR, DBR). Q in eV, BR intensity."""
+        for i in range(0, len(values) - 5, 6):
+            try:
+                rtyp = int(round(values[i]))
+            except (ValueError, TypeError):
                 continue
-
-            mf = line[70:72].strip()
-            mt = line[72:75].strip()
-
-            if mf == "8" and mt == "455":
-                # Beta spectrum data follows the header
-                # This is a simplified parser - full ENDF format is more complex
-                # For now, return None (can be enhanced later)
-                break
-
-        return None
+            if rtyp in (1, 8):  # Beta- or beta+
+                e_val = float(values[i + 2]) / 1e6  # eV -> MeV
+                i_val = float(values[i + 4])  # BR = intensity
+                if e_val >= 0 and i_val >= 0:
+                    energies.append(e_val)
+                    intensities.append(i_val)

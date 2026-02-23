@@ -47,11 +47,11 @@ This document describes which parts of SMRForge are considered **stable** for ex
 | Module / Symbol | Purpose |
 |-----------------|---------|
 | `smrforge.workflows.parameter_sweep.ParameterSweep` | Parameter sweep |
-| `smrforge.workflows.fit_surrogate()` | Fit surrogate model |
-| `smrforge.workflows.register_surrogate()` | Register custom surrogate |
+| `smrforge.workflows.fit_surrogate()` | Fit surrogate model (Pro: full; Community: stub) |
+| `smrforge.workflows.register_surrogate()` | Register custom surrogate (Pro: full; Community: stub) |
 | `smrforge.workflows.register_hook()` | Register event hooks |
 | `smrforge.workflows.run_hooks()` | Run registered hooks |
-| `smrforge.workflows.export_ml_dataset()` | Export design points to Parquet/HDF5 for ML |
+| `smrforge.workflows.export_ml_dataset()` | Export design points to Parquet/HDF5 for ML (Pro: full; Community: stub) |
 
 ### Stable API Facade
 

@@ -35,6 +35,8 @@ class SweepConfig:
         parallel: Whether to run in parallel (default: True)
         max_workers: Maximum number of parallel workers (default: None = auto)
         save_intermediate: Save results after each simulation (default: True)
+        surrogate_path: Optional path to surrogate model (.onnx, .pt, .pkl); Pro: use for fast evaluation
+        seed: Optional random seed for deterministic runs (Pro)
     """
 
     parameters: Dict[str, Union[Tuple[float, float, float], List[float]]]
@@ -44,6 +46,8 @@ class SweepConfig:
     parallel: bool = True
     max_workers: Optional[int] = None
     save_intermediate: bool = True
+    surrogate_path: Optional[Union[Path, str]] = None
+    seed: Optional[int] = None
 
     def get_parameter_values(self, param_name: str) -> np.ndarray:
         """Get array of values for a parameter."""
@@ -110,6 +114,8 @@ class SweepConfig:
             data = {**data, "parameters": normalized}
         if "output_dir" in data:
             data["output_dir"] = Path(data["output_dir"])
+        if "surrogate_path" in data and data["surrogate_path"]:
+            data["surrogate_path"] = Path(data["surrogate_path"])
         return cls(
             **{
                 k: v
@@ -123,6 +129,8 @@ class SweepConfig:
                     "parallel",
                     "max_workers",
                     "save_intermediate",
+                    "surrogate_path",
+                    "seed",
                 )
             }
         )
@@ -218,6 +226,28 @@ class ParameterSweep:
         """
         self.config = config
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        self._surrogate_model = None
+
+    def _get_surrogate(self):
+        """Lazy-load surrogate when surrogate_path is set (Pro)."""
+        if self._surrogate_model is not None:
+            return self._surrogate_model
+        if not self.config.surrogate_path:
+            return None
+        try:
+            from smrforge_pro.ai.surrogates import load_surrogate_from_path
+
+            path = Path(self.config.surrogate_path)
+            param_names = list(self.config.parameters.keys())
+            self._surrogate_model = load_surrogate_from_path(
+                path, param_names=param_names
+            )
+            return self._surrogate_model
+        except ImportError:
+            logger.warning(
+                "surrogate_path set but smrforge_pro not available; using physics"
+            )
+            return None
 
     def _run_single_case(self, params: Dict[str, float]) -> Dict[str, Any]:
         """
@@ -230,6 +260,19 @@ class ParameterSweep:
             Dictionary with results including parameters and analysis outputs
         """
         try:
+            # Pro: use surrogate when surrogate_path is set
+            surrogate = self._get_surrogate()
+            if surrogate is not None:
+                result = {"parameters": params.copy()}
+                for analysis_type in self.config.analysis_types:
+                    if analysis_type == "keff":
+                        pred = surrogate.predict(params)
+                        result["k_eff"] = float(pred)
+                    else:
+                        result[analysis_type] = None
+                result["surrogate"] = True
+                return result
+
             import smrforge as smr
             from smrforge.convenience import create_reactor
 
@@ -247,8 +290,29 @@ class ParameterSweep:
                     k_eff = reactor.solve_keff()
                     result["k_eff"] = float(k_eff)
                 elif analysis_type == "burnup":
-                    # Would need burnup solver setup
-                    result["burnup"] = None  # Placeholder
+                    try:
+                        from smrforge.burnup import BurnupOptions, BurnupSolver
+                        solver = reactor._get_solver()
+                        time_steps = params.get("burnup_days", [0, 365, 730])
+                        if isinstance(time_steps, (int, float)):
+                            time_steps = [0, float(time_steps)]
+                        opts = BurnupOptions(
+                            time_steps=time_steps,
+                            power_density=params.get("power_density", 1e6),
+                            initial_enrichment=params.get("enrichment", 0.195),
+                        )
+                        burnup = BurnupSolver(solver, opts)
+                        burnup.solve()
+                        result["burnup"] = {
+                            "final_k_eff": float(getattr(solver, "k_eff", 0.0)),
+                            "final_burnup_mwd_kg": float(burnup.burnup_mwd_per_kg[-1])
+                            if len(burnup.burnup_mwd_per_kg) > 0 else 0.0,
+                            "n_nuclides": len(burnup.nuclides),
+                            "n_time_steps": len(burnup.time_steps_sec),
+                        }
+                    except Exception as burnup_err:  # pragma: no cover
+                        reraise_if_system(burnup_err)
+                        result["burnup"] = {"error": str(burnup_err)}
                 elif analysis_type == "neutronics":
                     full_results = reactor.solve()
                     result.update(
@@ -298,6 +362,8 @@ class ParameterSweep:
         Returns:
             SweepResult with all results and statistics
         """
+        if self.config.seed is not None:
+            np.random.seed(self.config.seed)
         logger.info(
             f"Starting parameter sweep with {len(self.config.parameters)} parameters"
         )

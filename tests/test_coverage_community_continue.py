@@ -367,6 +367,61 @@ class TestParameterSweepCoverage:
         assert len(result.results) == 2
         assert result.summary_stats is not None
 
+    @patch("smrforge.convenience.create_reactor", create=True)
+    def test_parameter_sweep_burnup_analysis(self, mock_create_reactor, tmp_path):
+        """Test parameter sweep with burnup analysis type (no longer returns None)."""
+        import numpy as np
+
+        from smrforge.geometry import PrismaticCore
+        from smrforge.neutronics.solver import MultiGroupDiffusion
+        from smrforge.validation.models import (
+            CrossSectionData,
+            SolverOptions,
+        )
+        from smrforge.workflows.parameter_sweep import ParameterSweep, SweepConfig
+
+        geom = PrismaticCore(name="T")
+        geom.core_height = 100.0
+        geom.core_diameter = 50.0
+        geom.generate_mesh(n_radial=3, n_axial=2)
+
+        xs = CrossSectionData(
+            n_groups=2,
+            n_materials=1,
+            sigma_t=np.array([[0.5, 0.8]]),
+            sigma_a=np.array([[0.1, 0.2]]),
+            sigma_f=np.array([[0.05, 0.15]]),
+            nu_sigma_f=np.array([[0.125, 0.375]]),
+            sigma_s=np.array([[[0.39, 0.01], [0.0, 0.58]]]),
+            chi=np.array([[1.0, 0.0]]),
+            D=np.array([[1.5, 0.4]]),
+        )
+        solver = MultiGroupDiffusion(geom, xs, SolverOptions(tolerance=1e-5))
+        solver.k_eff = 1.0
+
+        mock_reactor = Mock()
+        mock_reactor._get_solver.return_value = solver
+
+        mock_create_reactor.return_value = mock_reactor
+        out = tmp_path / "out"
+        out.mkdir()
+        config = SweepConfig(
+            parameters={"x": [1.0]},
+            analysis_types=["burnup"],
+            output_dir=out,
+            reactor_template={"name": "test"},
+            parallel=False,
+            save_intermediate=False,
+        )
+        sweep = ParameterSweep(config)
+        result = sweep.run(resume=False, show_progress=False)
+        assert len(result.results) == 1
+        r = result.results[0]
+        assert "burnup" in r
+        assert r["burnup"] is not None
+        assert "final_burnup_mwd_kg" in r["burnup"]
+        assert "n_nuclides" in r["burnup"]
+
 
 class TestOpenMCRunCoverage:
     """Cover io/openmc_run: run_openmc, parse_statepoint, run_and_parse."""

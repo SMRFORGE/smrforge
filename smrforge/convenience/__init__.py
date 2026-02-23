@@ -243,13 +243,10 @@ def list_analysis_types() -> List[str]:
 
 
 def list_surrogates() -> List[str]:
-    """List names of registered surrogate models (from plugin registry)."""
-    try:
-        from ..workflows.plugin_registry import list_surrogates as _list
+    """List names of registered surrogate models. Pro tier only."""
+    from ..workflows.plugin_registry import list_surrogates as _list
 
-        return _list()
-    except ImportError:
-        return []
+    return _list()
 
 
 def quick_download_endf(

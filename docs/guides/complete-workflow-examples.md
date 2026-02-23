@@ -109,23 +109,21 @@ smrforge workflow atlas --output-dir atlas_output --plot atlas_scatter.html
 smrforge workflow atlas --presets valar-10 gt-mhr htr-pm --output-dir atlas_output --plot atlas.png
 ```
 
-### Stable API, ML export, and AI audit (Python)
+### Stable API and hooks (Python)
 
-Use the stable API facade for integration and AI pipelines:
+Use the stable API facade for integration. **AI/surrogate features require SMRForge Pro.**
 
 ```python
-from smrforge.api import fit_surrogate, export_ml_dataset, create_audit_trail
+from smrforge.api import create_audit_trail, register_hook, run_hooks
 
-# Fit surrogate (rbf, linear, or custom via register_surrogate)
-surrogate = fit_surrogate(X, y, method="rbf")
-
-# Export design points for ML training (Parquet or HDF5)
-export_ml_dataset(sweep_results, "design_points.parquet")
-
-# AI audit trail for regulatory traceability
+# Audit trail (Community)
 trail = create_audit_trail("keff", inputs={}, outputs={"k_eff": 1.0})
-from smrforge.ai import record_ai_model
-record_ai_model(trail, "rbf", version="scipy-1.11", config_hash="abc123")
+
+# Hooks for extensibility (Community)
+register_hook("after_keff", lambda ctx: print(f"k_eff={ctx['k_eff']}"))
+run_hooks("after_keff", context={"k_eff": 1.05})
+
+# Pro tier: fit_surrogate, export_ml_dataset, record_ai_model — see docs/community_vs_pro.md
 ```
 
 See `examples/api_ml_export_example.py` for a complete script.

@@ -266,3 +266,12 @@ class TestDelayedNeutronData:
         assert len(data["lambda"]) == 6
         assert np.all(data["beta"] > 0)
         assert np.all(data["lambda"] > 0)
+
+    def test_nu_by_nuclide(self):
+        """Test NU_BY_NUCLIDE has nuclide-specific nu values for burnup."""
+        from smrforge.core.constants import NU_BY_NUCLIDE
+
+        assert "U235" in NU_BY_NUCLIDE
+        assert "Pu239" in NU_BY_NUCLIDE
+        assert 2.0 < NU_BY_NUCLIDE["U235"] < 3.0
+        assert 2.0 < NU_BY_NUCLIDE["Pu239"] < 3.5

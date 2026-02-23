@@ -175,6 +175,17 @@ class TestNuclideInventoryTracker:
         ]
         assert len(u235_names) > 0
 
+    def test_from_dict_extended_elements(self):
+        """Test parsing nuclides with elements from full SYMBOL_TO_Z (Tc, Zr)."""
+        tracker = NuclideInventoryTracker()
+        data = {"Tc99": 1e-6, "Zr90": 2e-5}  # Not in old limited element map
+        tracker.from_dict(data)
+        assert len(tracker.nuclides) == 2
+        tc99 = [n for n in tracker.nuclides if n.Z == 43 and n.A == 99]
+        zr90 = [n for n in tracker.nuclides if n.Z == 40 and n.A == 90]
+        assert len(tc99) == 1
+        assert len(zr90) == 1
+
     def test_burnup_tracking(self):
         """Test burnup and time tracking."""
         tracker = NuclideInventoryTracker()

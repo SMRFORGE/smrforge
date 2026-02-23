@@ -34,6 +34,20 @@ When `flux_energy`/`flux_phi` are not provided, uses 1/E default spectrum. `comp
 
 where φ(E) is the neutron flux spectrum. Implemented in `_collapse_to_multigroup_flux_weighted()`.
 
+## Iterative Flux Passing (Self-Consistency)
+
+For coupled neutronics–burnup or iterative schemes, pass flux from the previous solution:
+
+```python
+# In burnup/neutronics iteration: use flux from previous step for collapse
+flux_energy = group_centers  # eV
+flux_phi = phi_prev         # from solve_steady_state or transport
+sigma_s = compute_improved_scattering_matrix(
+    cache, nuclide, group_structure, temperature,
+    flux_energy=flux_energy, flux_phi=flux_phi
+)
+```
+
 ## Impact Assessment
 
 | Factor | Assessment |
@@ -41,7 +55,7 @@ where φ(E) is the neutron flux spectrum. Implemented in `_collapse_to_multigrou
 | **Accuracy** | Flux-weighting reduces errors vs midpoint interpolation, especially in thermal groups (5–20% improvement). |
 | **Use cases** | Most sensitive for thermal reactors, H₂O moderation, and resonance-heavy nuclides. Less critical for fast spectrum or coarse groups. |
 | **Mitigation** | Use fine group structures (more groups) to reduce error. Pass flux from iteration for self-consistent collapse. |
-| **Future work** | Pass flux from previous iteration for self-consistent collapse in iterative schemes. |
+| **Future work** | Wire flux from BurnupSolver neutronics solution into multi-group collapse when available. |
 
 ## Regulatory Traceability
 

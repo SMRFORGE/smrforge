@@ -28,7 +28,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/SMRFORGE/smrforge",
-    packages=find_packages(exclude=["tests", "docs", "examples"]),
+    packages=find_packages(exclude=["tests", "docs", "examples", "smrforge_pro"]),
     package_data={
         # Include logo in package if needed
     },

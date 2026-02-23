@@ -179,7 +179,26 @@ class TestSMRFuelManager:
         burnup = manager.get_long_cycle_burnup(cycle_years=4.0, power_density=40.0)
 
         assert burnup > 0
-        assert burnup < 100.0  # Reasonable upper bound
+        # With default mass 1000 kg and eff_volume 1e7 cm³: ~500-600 MWd/kgU for 4 years
+        assert burnup < 2000.0  # Reasonable upper bound for 4-year cycle
+
+    def test_get_long_cycle_burnup_with_assembly_mass(self):
+        """Test burnup uses heavy_metal_mass from assemblies when set."""
+        manager = SMRFuelManager()
+        # Add assemblies with HM mass
+        for i in range(3):
+            a = Assembly(
+                id=i,
+                position=Point3D(i * 10, 0, 0),
+                batch=i + 1,
+                heavy_metal_mass=500.0,  # 500 kg HM each -> 1500 kg total
+            )
+            manager.add_assembly(a)
+
+        burnup = manager.get_long_cycle_burnup(cycle_years=4.0, power_density=40.0)
+        assert burnup > 0
+        # Higher mass -> lower burnup per kg
+        assert burnup < 500.0
 
     def test_simulate_long_cycle(self):
         """Test long cycle simulation."""

@@ -3916,6 +3916,10 @@ def sweep_run(args):
                 config.parallel = False  # pragma: no cover
             if getattr(args, "workers", None) is not None:  # pragma: no cover
                 config.max_workers = args.workers  # pragma: no cover
+            if getattr(args, "surrogate", None) is not None:  # pragma: no cover
+                config.surrogate_path = Path(args.surrogate)  # pragma: no cover
+            if getattr(args, "seed", None) is not None:  # pragma: no cover
+                config.seed = args.seed  # pragma: no cover
         else:
             if not getattr(args, "params", None) or not args.params:
                 _print_error(
@@ -3948,6 +3952,8 @@ def sweep_run(args):
                 output_dir=Path(args.output) if args.output else Path("sweep_results"),
                 parallel=not getattr(args, "no_parallel", False),
                 max_workers=getattr(args, "workers", None),
+                surrogate_path=getattr(args, "surrogate", None),
+                seed=getattr(args, "seed", None),
             )
 
         sweep = ParameterSweep(config)
@@ -5000,51 +5006,36 @@ def workflow_atlas(args):
 
 
 def workflow_surrogate(args):
-    """Fit surrogate model from sweep results for fast evaluation."""
+    """Fit surrogate model from sweep results for fast evaluation. Pro tier only."""
     try:
-        from smrforge.workflows.surrogate import surrogate_from_sweep_results
-
-        p = Path(getattr(args, "sweep_results", None) or "")
-        if not p.exists():
-            _print_error("--sweep-results FILE.json required")  # pragma: no cover
-            sys.exit(1)  # pragma: no cover
-        with open(p, encoding="utf-8") as f:
-            data = json.load(f)
-        results = data.get("results", data) if isinstance(data, dict) else data
-        if not isinstance(results, list):
-            results = [results]  # pragma: no cover
-        params = getattr(args, "params", None) or []
-        if not params and results and isinstance(results[0], dict):
-            p0 = results[0].get("parameters", results[0])  # pragma: no cover
-            params = [
-                k for k in p0 if isinstance(p0.get(k), (int, float))
-            ]  # pragma: no cover
-        if not params:
-            _print_error("--params name1 name2 ... required")  # pragma: no cover
-            sys.exit(1)  # pragma: no cover
-        metric = getattr(args, "metric", "k_eff")
-        method = getattr(args, "method", "rbf")
-        sur = surrogate_from_sweep_results(
-            results, params, output_metric=metric, method=method
+        from smrforge_pro.workflows.surrogate import surrogate_from_sweep_results
+    except ImportError:
+        _print_error(
+            "Surrogate workflow requires SMRForge Pro. Upgrade at https://smrforge.io"
         )
-        _print_success(
-            f"Surrogate fitted ({method}, n={sur.n_samples}). Use programmatically: sur.predict(X)."
-        )
-        out = getattr(args, "output", None)
-        if out:
-            import pickle
-
-            Path(out).parent.mkdir(parents=True, exist_ok=True)
-            with open(out, "wb") as f:
-                pickle.dump(sur, f)
-            _print_success(f"Surrogate saved to {out}")  # pragma: no cover
-    except Exception as e:
-        _print_error(f"Surrogate failed: {e}")
-        if getattr(args, "verbose", False):
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
         sys.exit(1)
+    p = Path(getattr(args, "sweep_results", None) or "")
+    if not p.exists():
+        _print_error(f"Sweep results file not found: {p}")
+        sys.exit(1)
+    import json
+    with open(p) as f:
+        data = json.load(f)
+    results = data.get("results", data) if isinstance(data, dict) else data
+    params = getattr(args, "params", None) or []
+    if not params:
+        _print_error("--params name1 name2 ... required")
+        sys.exit(1)
+    metric = getattr(args, "metric", "k_eff") or "k_eff"
+    method = getattr(args, "method", "rbf") or "rbf"
+    out_path = getattr(args, "output", None)
+    surr = surrogate_from_sweep_results(
+        results, params, output_metric=metric, method=method, output_path=out_path
+    )
+    if out_path:
+        _print_success(f"Surrogate saved to {out_path}")
+    else:
+        _print_success("Surrogate fitted successfully (use --output to save)")
 
 
 def workflow_requirements_to_constraints(args):
@@ -6447,6 +6438,16 @@ Note: All features are also available via Python API:
     )
     sweep_parser.add_argument(
         "--progress", action="store_true", help="Show progress bar (Rich)"
+    )
+    sweep_parser.add_argument(
+        "--surrogate",
+        type=Path,
+        help="Path to surrogate model (.onnx, .pt, .pkl) for fast evaluation (Pro)",
+    )
+    sweep_parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed for deterministic runs",
     )
     sweep_parser.set_defaults(func=sweep_run)
 

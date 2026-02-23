@@ -241,7 +241,10 @@ class SMRFuelManager(AssemblyManager):
         self, cycle_years: float, power_density: float = 40.0
     ) -> float:
         """
-        Calculate burnup for a long cycle.
+        Calculate burnup increment for a long cycle.
+
+        Burnup [MWd/kgU] = (power [W] * time [s]) / (mass [kg] * 8.64e10 J/MWd).
+        Uses heavy_metal_mass from assemblies when available; otherwise typical SMR mass.
 
         Args:
             cycle_years: Cycle length in years
@@ -250,17 +253,22 @@ class SMRFuelManager(AssemblyManager):
         Returns:
             Burnup increment [MWd/kgU]
         """
-        # Simplified burnup calculation
-        # Burnup = (power * time) / (fuel mass)
-        # For typical SMR: ~40 W/cm³, 4-year cycle
-
-        cycle_days = cycle_years * 365.25
-        # Assume typical fuel density and volume
-        # This is simplified - actual calculation would use actual fuel mass
-        burnup_increment = (power_density * cycle_days * 24 * 3600) / (
-            1e6 * 1000
-        )  # MWd/kgU
-
+        cycle_sec = cycle_years * 365.25 * 24 * 3600
+        mass_kg = sum(
+            a.heavy_metal_mass for a in self.assemblies
+            if a.heavy_metal_mass > 0 and a.batch >= 0
+        )
+        if mass_kg <= 0:
+            # Fallback: typical SMR ~15–30 assemblies, ~500 kg HM total
+            mass_kg = 1000.0
+        # Power = power_density * volume; assume V from mass (UO2 ~10 g/cm³, 0.88 U fraction)
+        # V ≈ mass / (10000 * 0.88) g/cm³ -> rough. Simpler: P = power_density * effective_V
+        # Use power_density as W/cm³; for burnup need total energy. Assume ~1e7 cm³ typical.
+        eff_volume_cm3 = 1e7  # Typical SMR active core
+        total_power_W = power_density * eff_volume_cm3
+        energy_J = total_power_W * cycle_sec
+        J_per_MWd = 8.64e10
+        burnup_increment = energy_J / (mass_kg * J_per_MWd)
         return burnup_increment
 
     def simulate_long_cycle(

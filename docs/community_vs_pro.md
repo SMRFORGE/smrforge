@@ -16,7 +16,7 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 | Report generator | ✅ Basic (Markdown) | ✅ Full (PDF, traceability) |
 | Regulatory traceability | Basic | Full (10 CFR, IAEA, ANS) |
 | OpenMC tally visualization | ❌ | ✅ |
-| **AI / Surrogate (BYOS)** | ❌ | ✅ Full (ONNX, TorchScript, validation report, sweep --surrogate) |
+| **AI / Surrogate** | ❌ None | ✅ Full (RBF/linear fit, BYOS ONNX/TorchScript, validation report, sweep --surrogate, ML export, audit trail) |
 | API stability policy | — | ✅ Semver, deprecation |
 | Licensing | MIT (free) | RSA license key |
 
@@ -34,12 +34,13 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 - **Regulatory traceability:** 10 CFR 50, IAEA SSR-2/1, ANS-5.1 presets
 - **Professional reports:** PDF reports with traceability matrices
 - **OpenMC integration:** Community has full export/import and statepoint parsing; Pro adds tally visualization
+- **AI/surrogate workflows:** fit_surrogate, BYOS (ONNX/TorchScript/pickle), validation report, sweep with --surrogate, ML export, audit trail
 
 ## Pro Feature Callouts
 
 Throughout the Community docs, you may see callouts like:
 
-> **Pro:** For Serpent/MCNP export, tally visualization, and AI/surrogate features (BYOS, validation report, `--surrogate` sweep), use SMRForge Pro. OpenMC export/import is available in Community.
+> **Pro:** For Serpent/MCNP export, tally visualization, and all AI/surrogate features (fit_surrogate, BYOS, validation report, ML export, audit trail, `--surrogate` sweep), use SMRForge Pro. OpenMC export/import is available in Community.
 
 These indicate features available in the Pro tier. If you need them, consider upgrading.
 

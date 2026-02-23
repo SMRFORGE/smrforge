@@ -26,8 +26,16 @@ _YELLOW = "\033[33m" if _tty else ""
 _BOLD = "\033[1m" if _tty else ""
 _RESET = "\033[0m" if _tty else ""
 
-# Whitelisted: smrforge/io/converters.py may contain try/except import smrforge_pro for delegation
-WHITELIST_SMRFORGE_PRO = {"smrforge/io/converters.py"}
+# Whitelisted: files may contain try/except import smrforge_pro for delegation
+WHITELIST_SMRFORGE_PRO = {
+    "smrforge/io/converters.py",
+    "smrforge/workflows/plugin_registry.py",
+    "smrforge/workflows/ml_export.py",
+    "smrforge/workflows/surrogate.py",
+    "smrforge/workflows/parameter_sweep.py",
+    "smrforge/ai/audit.py",
+    "smrforge/cli.py",
+}
 
 
 def run_rg(pattern: str, path: str, extra: list | None = None) -> tuple[list[str], str]:

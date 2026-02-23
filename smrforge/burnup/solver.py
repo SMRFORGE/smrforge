@@ -877,21 +877,22 @@ class BurnupSolver:
         Build production vector from capture transmutation (parent + n -> daughter).
 
         E.g. U238+n->U239, U235+n->U236, Pu239+n->Pu240, Pu240+n->Pu241.
+        Uses volume-averaged scalar flux with proper spatial integration.
         """
         P = np.zeros(len(self.nuclides))
         flux_arr, scalar_flux = self._get_flux_or_scalar(time_index)
+        total_vol = self._get_fuel_volume() or 1e6
         if flux_arr is not None:
-            total_flux = np.sum(
-                flux_arr
-                * (
-                    self.neutronics._cell_volumes()[:, :, np.newaxis]
-                    if hasattr(self.neutronics, "_cell_volumes")
-                    else 1.0
-                )
+            cell_volumes = (
+                self.neutronics._cell_volumes()
+                if hasattr(self.neutronics, "_cell_volumes")
+                else np.ones(flux_arr.shape[:2])
             )
+            total_vol = np.sum(cell_volumes)
+            flux_integrated = np.sum(flux_arr * cell_volumes[:, :, np.newaxis])
+            phi_avg = flux_integrated / total_vol if total_vol > 0 else scalar_flux
         else:
-            V = self._get_fuel_volume() or 1e6
-            total_flux = scalar_flux * V
+            phi_avg = scalar_flux
 
         transmutation_map = {
             Nuclide(Z=92, A=238): Nuclide(Z=92, A=239),
@@ -917,7 +918,8 @@ class BurnupSolver:
             except Exception as e:  # pragma: no cover
                 reraise_if_system(e)
                 sigma_avg = 1e-24
-            capture_rate = sigma_avg * total_flux * N_parent
+            # R = sigma * phi * N * V [1/s]
+            capture_rate = sigma_avg * phi_avg * N_parent * total_vol
             j = self.nuclides.index(daughter)
             P[j] += capture_rate
         return P
@@ -925,6 +927,10 @@ class BurnupSolver:
     def _build_capture_matrix(self, time_index: int) -> csr_matrix:
         """
         Build capture destruction matrix. Uses flux or power-density-derived scalar.
+
+        Diagonal elements are per-atom capture rates (sigma * phi) so that
+        dN_i/dt includes -sigma_i * phi * N_i (linear in N). Flux is
+        volume-averaged scalar flux [n/cm²/s].
         """
         from scipy.sparse import csr_matrix, diags
 
@@ -932,18 +938,15 @@ class BurnupSolver:
         flux_arr, scalar_flux = self._get_flux_or_scalar(time_index)
         if flux_arr is not None:
             cell_volumes = self.neutronics._cell_volumes()
-            total_flux = np.sum(flux_arr * cell_volumes[:, :, np.newaxis])
+            # Volume- and energy-integrated flux; convert to volume-averaged scalar flux
+            total_vol = np.sum(cell_volumes)
+            flux_integrated = np.sum(flux_arr * cell_volumes[:, :, np.newaxis])
+            phi_avg = flux_integrated / total_vol if total_vol > 0 else scalar_flux
         else:
-            total_flux = scalar_flux * (self._get_fuel_volume() or 1e6)
+            phi_avg = scalar_flux
 
-        capture_rates = np.zeros(n)
+        capture_rates = np.zeros(n)  # Per-atom rates: sigma * phi [1/s]
         temp = self.options.fuel_temperature
-        transmutation_map = {
-            Nuclide(Z=92, A=238): Nuclide(Z=92, A=239),  # U238 → U239
-            Nuclide(Z=92, A=235): Nuclide(Z=92, A=236),  # U235 → U236
-            Nuclide(Z=94, A=239): Nuclide(Z=94, A=240),  # Pu239 → Pu240
-            Nuclide(Z=94, A=240): Nuclide(Z=94, A=241),
-        }
         fuel_material_idx = 0
         sigma_capture_g = np.zeros(1)
         if hasattr(self.neutronics, "xs") and self.neutronics.xs is not None:
@@ -969,11 +972,10 @@ class BurnupSolver:
                 sigma_capture_avg = (
                     np.mean(sigma_capture_g) if len(sigma_capture_g) > 0 else 1e-24
                 )
-            N_nuclide = self.concentrations[i, time_index]
-            if N_nuclide > 0 and sigma_capture_avg > 0:
-                capture_rates[i] = sigma_capture_avg * total_flux * N_nuclide
+            if sigma_capture_avg > 0:
+                capture_rates[i] = sigma_capture_avg * phi_avg
 
-        # Build sparse diagonal matrix
+        # Build sparse diagonal matrix (destruction coefficients)
         return diags(capture_rates, format="csr")
 
     def _get_fission_yield_data(self, nuclide: Nuclide):
@@ -1043,8 +1045,11 @@ class BurnupSolver:
                 sigma_a_nuc = np.mean(sigma_capture) if len(sigma_capture) > 0 else 0.0
                 sigma_f_nuc = np.mean(sigma_fission) if len(sigma_fission) > 0 else 0.0
 
-                # Get nu (neutrons per fission) - simplified
-                nu = 2.5 if nuclide in self.options.fissile_nuclides else 0.0
+                # Get nu (neutrons per fission) from constants or fallback
+                nu = 0.0
+                if nuclide in self.options.fissile_nuclides:
+                    from ..core.constants import NU_BY_NUCLIDE
+                    nu = NU_BY_NUCLIDE.get(nuclide.name, 2.5)
 
                 # Scattering (simplified: assume elastic scattering)
                 sigma_s_nuc = np.mean(sigma_total) - sigma_a_nuc - sigma_f_nuc
