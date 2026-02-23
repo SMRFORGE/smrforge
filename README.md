@@ -13,7 +13,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 ## Features
 
 ### ✅ Stable & Production Ready
-- **Neutronics**: Multi-group diffusion solver with power iteration and Arnoldi methods
+- **Neutronics**: Multi-group diffusion solver with power iteration and Arnoldi methods; reactivity coefficients (Doppler, temperature-dependent cross-sections)
 - **Nuclear Data**: ENDF file parsing with manual setup and bulk storage
   - **Interactive setup wizard** - step-by-step guide for setting up ENDF files
   - **Manual file placement** - easy directory-based setup with validation
@@ -35,6 +35,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
     - **Thermal scattering laws (TSL)**: MF=7 parsing for H2O, graphite, D2O, BeO
     - **Nuclide inventory tracking**: Atom density tracking for burnup calculations
     - **Decay chain utilities**: Bateman equation solver, chain visualization
+    - **Decay parser gamma/beta spectra**: ENDF MF=8 MT=460 (gamma), MT=455/457 (beta) spectrum parsing
 - **Geometry**: Prismatic and pebble bed core geometries with mesh generation
   - **NEW: LWR SMR Support** (January 2026):
     - PWR SMR cores (NuScale-style, square lattice assemblies)
@@ -481,6 +482,11 @@ See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`e
 - **[Dashboard Guide](docs/guides/dashboard-guide.md)** - Web dashboard usage
 - **[Docker Guide](docs/guides/docker.md)** - Docker usage and troubleshooting
 - **[CLI Guide](docs/guides/cli-guide.md)** - Command-line interface
+
+**Tier Comparison:**
+- **[Community vs Pro](docs/community_vs_pro.md)** - Tier comparison and upgrade path
+- **[Community Docs](docs/community/README.md)** - Community tier features and workflows
+- **[Pro Docs](docs/pro/README.md)** - Pro tier features (Serpent/MCNP, benchmarks, AI/surrogate)
 
 **Reference:**
 - **[API Documentation](https://SMRFORGE.github.io/smrforge/)** - Complete API reference
