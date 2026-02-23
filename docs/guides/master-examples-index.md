@@ -1,6 +1,6 @@
 # SMRForge Master Examples Index
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026
 
 Complete index of all example code and tutorials in SMRForge documentation.
 
@@ -640,14 +640,36 @@ for name, specs in reactors.items():
 
 All example files are in the `examples/` directory:
 
-- `complete_smr_workflow_example.py` - **NEW**: Complete end-to-end workflow
+- `complete_integration_example.py` - Complete workflow (geometry, neutronics, thermal)
+- `complete_smr_workflow_example.py` - End-to-end SMR workflow
 - `advanced_features_examples.py` - Advanced features showcase
-- `lwr_smr_example.py` - LWR SMR specific examples
+- `api_ml_export_example.py` - ML dataset export (Parquet/HDF5)
+- `assembly_refueling_example.py` - Assembly refueling
+- `basic_neutronics.py` - Basic neutronics
 - `burnup_example.py` - Basic burnup analysis
+- `community_benchmark_example.py` - Community benchmarks
+- `control_rods_example.py` - Control rod geometry
+- `convenience_methods_example.py` - Convenience API
+- `custom_reactor.py` - Custom reactor creation
+- `dashboard_example.py` - Web dashboard
+- `data_downloader_example.py` - Data downloader usage
+- `decay_heat_example.py` - Decay heat
+- `discovery_help_example.py` - Discovery and help system
+- `gamma_source_integration_example.py` - Gamma source integration
+- `gamma_transport_example.py` - Gamma transport
+- `geometry_import_example.py` - Geometry import/export
+- `help_system_example.py` - Help system
+- `integrated_safety_uq.py` - Safety and UQ
+- `lwr_smr_example.py` - LWR SMR examples
+- `mesh_3d_example.py` - 3D mesh
+- `openmc_export_example.py` - OpenMC export
+- `openmc_visualization_examples.py` - OpenMC-inspired visualizations
+- `preset_designs.py` - Preset designs
+- `thermal_analysis.py` - Thermal analysis
+- `thermal_scattering_example.py` - Thermal scattering
+- `tsl_file_discovery_example.py` - TSL file discovery
 - `visualization_examples.py` - 2D visualization
 - `visualization_3d_example.py` - 3D visualization
-- `openmc_visualization_examples.py` - OpenMC-inspired visualizations
-- `data_downloader_example.py` - Data downloader usage
 
 ---
 

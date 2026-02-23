@@ -1,6 +1,7 @@
 # Testing and Coverage Guide
 
-**Last Updated:** January 29, 2026  
+**Last Updated:** February 2026  
+**Test Suite**: 5001 tests, 44 skipped (`pytest --ignore tests/test_smrforge_pro`)  
 **Current Overall Coverage**: **~89.7%** (12,948 / 14,284 statements with standard exclusions)  
 **Target Coverage**: 90% for in-scope modules  
 **Progress**: Most priority modules exceed 75-80%; overall target 90% nearly reached  

@@ -1,6 +1,6 @@
 # SMRForge Usage Guide
 
-**Last Updated:** February 10, 2026
+**Last Updated:** February 2026
 
 This guide shows how to use SMRForge with simple one-liners and easy-to-use APIs.
 

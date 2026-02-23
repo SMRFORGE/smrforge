@@ -55,7 +55,7 @@ SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis,
 - **Validation**: Pydantic-based input validation with physics checks
 - **Presets**: Reference HTGR designs (Valar-10, GT-MHR, HTR-PM, Micro-HTGR)
 - **Convenience API**: One-liner functions for quick analysis
-- **Quality Assurance**: ~90% test coverage overall (with standard exclusions), 75–80%+ on priority modules, comprehensive manual testing framework; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md)
+- **Quality Assurance**: 5001 tests, 44 skipped; 75–80%+ coverage on priority modules; comprehensive manual testing framework; see [COVERAGE_TRACKING.md](COVERAGE_TRACKING.md)
 - **NEW: Web Dashboard** (January 2026):
   - Interactive web-based interface
   - Reactor builder with preset support

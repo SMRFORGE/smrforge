@@ -1,6 +1,6 @@
 # SMRForge Feature Status
 
-**Last Updated:** February 10, 2026
+**Last Updated:** February 2026
 
 This document describes the implementation status and stability of SMRForge modules.
 

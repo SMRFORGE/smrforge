@@ -1,6 +1,6 @@
 # SMRForge Tutorial: Getting Started
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026
 
 This tutorial will teach you how to use SMRForge step-by-step, even if you're completely new to Python or nuclear reactor analysis.
 

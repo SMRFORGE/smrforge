@@ -1,4 +1,4 @@
-# examples/complete_workflow.py
+# examples/complete_integration_example.py
 """
 Complete SMRForge workflow demonstration.
 Shows integration of all modules: geometry, neutronics, thermal, analysis.

@@ -1,5 +1,6 @@
 # SMRForge API Stability Policy
 
+**Last Updated:** February 2026  
 **Purpose:** Document public API surface and deprecation policy for integration partners and AI/automation.  
 **Reference:** NUCLEAR_INDUSTRY_ANALYSIS_AND_AI_FUTURE_PROOFING.md § 1.7
 
@@ -23,7 +24,8 @@ This document describes which parts of SMRForge are considered **stable** for ex
 
 | Module / Symbol | Purpose |
 |-----------------|---------|
-| `smrforge.convenience.run_reactor()` | High-level reactor run |
+| `smrforge.convenience.create_reactor()` | Create reactor from preset or kwargs |
+| `smrforge.convenience.quick_keff()` | One-liner k-eff analysis |
 | `smrforge.neutronics.solver.MultiGroupDiffusion` | Multi-group diffusion solver |
 | `MultiGroupDiffusion.solve_steady_state(audit_trail_path=...)` | k-eff and flux |
 | `smrforge.burnup.solver.BurnupSolver` | Coupled neutronics-burnup |
