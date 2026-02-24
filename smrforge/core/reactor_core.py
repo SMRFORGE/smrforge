@@ -1708,11 +1708,12 @@ class NuclearDataCache:
                 error_msg += (
                     "ENDF files must be set up manually. To set up ENDF data:\n\n"
                 )
-                error_msg += "1. Run the setup wizard:\n"
+                error_msg += "1. Run setup wizard or data download (recommended):\n"
+                error_msg += "   smrforge data setup\n"
+                error_msg += "   smrforge data download --library ENDF-B-VIII.1 --nuclide-set quickstart  # or common_smr\n\n"
+                error_msg += "   Or programmatically:\n"
                 error_msg += "   from smrforge.core.endf_setup import setup_endf_data_interactive\n"
-                error_msg += "   setup_endf_data_interactive()\n\n"
-                error_msg += "   Or from command line:\n"
-                error_msg += "   python -m smrforge.core.endf_setup\n\n"
+                error_msg += "   setup_endf_data_interactive()  # or: python -m smrforge.core.endf_setup\n\n"
                 error_msg += "2. Download ENDF files manually:\n"
                 error_msg += "   - Visit https://www.nndc.bnl.gov/endf/\n"
                 error_msg += "   - Download ENDF/B-VIII.1 or ENDF/B-VIII.0\n"
@@ -3742,9 +3743,13 @@ def get_delayed_neutron_data(
                 lam = mt455_data.get("lambda_i") or mt455_data.get("lambda")
                 if bi is not None and lam is not None:
                     return {
-                        "beta": float(np.sum(bi)) if hasattr(bi, "__len__") else float(bi),
+                        "beta": (
+                            float(np.sum(bi)) if hasattr(bi, "__len__") else float(bi)
+                        ),
                         "beta_i": list(bi) if hasattr(bi, "__len__") else [float(bi)],
-                        "lambda_i": list(lam) if hasattr(lam, "__len__") else [float(lam)],
+                        "lambda_i": (
+                            list(lam) if hasattr(lam, "__len__") else [float(lam)]
+                        ),
                         "chi_d": mt455_data.get("chi_d"),
                     }
             # Fallback: use tabulated if same element

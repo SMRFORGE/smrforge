@@ -10,6 +10,8 @@
 
 SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis, and optimization with a focus on Small Modular Reactors (SMRs).
 
+**Quick links:** [Quickstart (5 min)](docs/guides/quickstart.md) | [Community vs Pro](docs/community_vs_pro.md) | [FAQ](docs/FAQ.md) | [Troubleshooting](docs/guides/troubleshooting.md)
+
 ## Features
 
 ### ✅ Stable & Production Ready

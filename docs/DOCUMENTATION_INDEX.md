@@ -27,9 +27,13 @@ This document provides a comprehensive index of all SMRForge documentation files
 ## 📖 User Guides (`guides/`)
 
 ### Getting Started
+- **[Quickstart (First 5 Minutes)](guides/quickstart.md)** - Get running in under 5 minutes
 - **[Installation Guide](guides/installation.md)** - Installation instructions for all platforms
 - **[Tutorial](guides/tutorial.md)** - Step-by-step tutorial for beginners
 - **[Usage Guide](guides/usage.md)** - Usage guide with examples
+- **[Community vs Pro](community_vs_pro.md)** - Tier comparison
+- **[FAQ](FAQ.md)** - Frequently asked questions
+- **[Troubleshooting](guides/troubleshooting.md)** - Common issues and fixes
 
 ### Additional Guides
 - **[CLI Guide](guides/cli-guide.md)** - Command-line reference including workflow subcommands
@@ -156,6 +160,7 @@ See [Implementation Summaries Index](implementation/README.md) for a complete li
 ## ✅ Validation Documents (`validation/`)
 
 - **[Validation Summary](validation/validation-summary.md)** - Validation framework summary
+- **[Validation Execution Guide](validation/validation-execution-guide.md)** - Run validation with real ENDF, populate benchmark DB, IAEA/ANS reference values
 - **[ENDF Workflow Validation](validation/endf-workflow-validation.md)** - ENDF workflow validation
 - **[ENDF File Types Analysis](validation/endf-file-types-analysis.md)** - Analysis of ENDF-B-VIII.1 file types
 

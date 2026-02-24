@@ -562,9 +562,11 @@ class BurnupSolver:
                 },
                 outputs={
                     "final_k_eff": float(k_eff) if k_eff is not None else None,
-                    "burnup_mwd_kg": float(self.burnup_mwd_per_kg[-1])
-                    if len(self.burnup_mwd_per_kg) > 0
-                    else None,
+                    "burnup_mwd_kg": (
+                        float(self.burnup_mwd_per_kg[-1])
+                        if len(self.burnup_mwd_per_kg) > 0
+                        else None
+                    ),
                     "n_nuclides": len(self.nuclides),
                     "n_time_steps": len(self.time_steps_sec),
                 },
@@ -618,7 +620,10 @@ class BurnupSolver:
 
             logger.info(f"Checkpoint saved: {checkpoint_file}")
         except ImportError:  # pragma: no cover
-            logger.warning("h5py not available, cannot save checkpoint")
+            logger.warning(
+                "h5py not available, cannot save checkpoint. "
+                "Install with: pip install h5py. Burnup will continue without checkpointing."
+            )
         except Exception as e:  # pragma: no cover
             reraise_if_system(e)
             logger.warning(f"Failed to save checkpoint: {e}")
@@ -1049,6 +1054,7 @@ class BurnupSolver:
                 nu = 0.0
                 if nuclide in self.options.fissile_nuclides:
                     from ..core.constants import NU_BY_NUCLIDE
+
                     nu = NU_BY_NUCLIDE.get(nuclide.name, 2.5)
 
                 # Scattering (simplified: assume elastic scattering)

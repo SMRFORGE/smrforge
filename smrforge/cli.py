@@ -5019,6 +5019,7 @@ def workflow_surrogate(args):
         _print_error(f"Sweep results file not found: {p}")
         sys.exit(1)
     import json
+
     with open(p) as f:
         data = json.load(f)
     results = data.get("results", data) if isinstance(data, dict) else data
@@ -5310,7 +5311,9 @@ def thermal_lumped(args):
                     "heat_source", "lambda t: 0.0"
                 )  # pragma: no cover
                 if isinstance(heat_source_str, str):  # pragma: no cover
-                    heat_source = _parse_heat_source_safe(heat_source_str)  # pragma: no cover
+                    heat_source = _parse_heat_source_safe(
+                        heat_source_str
+                    )  # pragma: no cover
                 else:  # pragma: no cover
                     heat_source = lambda t: float(heat_source_str)  # pragma: no cover
 
@@ -5988,7 +5991,10 @@ Note: All features are also available via Python API:
         "--library", type=str, default="ENDF-B-VIII.1", help="ENDF library name"
     )
     download_parser.add_argument(
-        "--nuclide-set", type=str, dest="nuclide_set", help="Predefined nuclide set"
+        "--nuclide-set",
+        type=str,
+        dest="nuclide_set",
+        help="Predefined nuclide set: quickstart (U235,U238,Pu239), common_smr (~30 nuclides)",
     )
     download_parser.add_argument(
         "--nuclides", nargs="+", help="Specific nuclides to download"

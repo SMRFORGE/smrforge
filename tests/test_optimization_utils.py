@@ -1,11 +1,16 @@
 """
 Unit tests for optimization utilities.
+
+These tests are marked @pytest.mark.isolated because they can time out when run
+in the full suite due to resource contention. They pass reliably individually.
 """
 
 import gc
 
 import numpy as np
 import pytest
+
+pytestmark = [pytest.mark.isolated]
 
 from smrforge.utils.optimization_utils import (
     batch_vectorized_operations,

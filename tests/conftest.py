@@ -598,6 +598,10 @@ def pytest_configure(config):
         "markers",
         "performance: marks tests as performance benchmarks (deselect with '-m \"not performance\"'; use --run-performance to run)",
     )
+    config.addinivalue_line(
+        "markers",
+        "isolated: marks tests that need isolation (run serially to avoid resource contention)",
+    )
 
 
 def pytest_addoption(parser):
@@ -620,13 +624,15 @@ def pytest_collection_modifyitems(config, items):
             if item.get_closest_marker("performance"):
                 item.add_marker(skip_perf)
 
-    # Add serial marker to parallel_batch tests if pytest-xdist is being used
+    # Add serial marker to parallel_batch and isolated tests if pytest-xdist is used
     try:
         from xdist import is_xdist_worker
 
         if is_xdist_worker(config):
             for item in items:
-                if item.get_closest_marker("parallel_batch"):
+                if item.get_closest_marker("parallel_batch") or item.get_closest_marker(
+                    "isolated"
+                ):
                     item.add_marker(pytest.mark.serial)
     except ImportError:
         pass

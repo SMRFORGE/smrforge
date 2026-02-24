@@ -366,9 +366,11 @@ class MultiGroupDiffusion:
                         "nr": self.nr,
                         "ng": self.ng,
                     },
-                    "solver_options": self.options.model_dump()
-                    if hasattr(self.options, "model_dump")
-                    else str(self.options),
+                    "solver_options": (
+                        self.options.model_dump()
+                        if hasattr(self.options, "model_dump")
+                        else str(self.options)
+                    ),
                 },
                 outputs={
                     "k_eff": float(self.k_eff),
@@ -387,9 +389,7 @@ class MultiGroupDiffusion:
         Checks for NaN, Inf, negative flux, reasonable k_eff.
         """
         # Centralized NaN/Inf validation (safety-critical boundary)
-        num_result = validate_safety_critical_outputs(
-            k_eff=self.k_eff, flux=self.flux
-        )
+        num_result = validate_safety_critical_outputs(k_eff=self.k_eff, flux=self.flux)
         if num_result.has_errors():
             logger.error("Solution validation failed (NaN/Inf or invalid range)")
             num_result.print_report()
@@ -616,7 +616,9 @@ class MultiGroupDiffusion:
             error_msg += "Flux is too small - check source terms and cross-sections."
         else:
             error_msg += (
-                "Consider increasing max_iterations or checking cross-section data."
+                " Suggestions: try SolverOptions(max_iterations=200, tolerance=1e-4), "
+                "verify cross-section data from ENDF (run 'smrforge data download "
+                "--library ENDF-B-VIII.1'), or try eigen_method='arnoldi'."
             )
 
         raise RuntimeError(error_msg)
@@ -1165,9 +1167,7 @@ class MultiGroupDiffusion:
         self,
         delta_T: float = 10.0,
         base_temperature: float = 600.0,
-        xs_at_temperature: Optional[
-            Callable[[float], CrossSectionData]
-        ] = None,
+        xs_at_temperature: Optional[Callable[[float], CrossSectionData]] = None,
     ) -> Dict[str, float]:
         """
         Compute reactivity feedback coefficients.
@@ -1210,9 +1210,7 @@ class MultiGroupDiffusion:
                 self._update_xs_maps()
                 # α_doppler = (k_hi - k_lo) / (k_ref * delta_T)
                 if k_ref > 0 and delta_T > 0:
-                    result["doppler"] = (float(k_hi) - float(k_lo)) / (
-                        k_ref * delta_T
-                    )
+                    result["doppler"] = (float(k_hi) - float(k_lo)) / (k_ref * delta_T)
             except Exception as e:
                 logger.warning(
                     "Temperature-dependent reactivity coefficient failed: %s. Using tabulated.",

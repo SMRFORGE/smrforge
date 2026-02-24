@@ -18,7 +18,8 @@ def ensure_plotly_available(is_available: bool) -> None:
     """Raise a clear ImportError if Plotly isn't installed."""
     if not is_available:
         raise ImportError(
-            "plotly is required for this visualization. Install with: pip install plotly"
+            "plotly is required for this visualization. Install with: pip install plotly. "
+            "Visualization will be skipped if plotly is not available."
         )
 
 
@@ -26,7 +27,8 @@ def ensure_matplotlib_available(is_available: bool) -> None:
     """Raise a clear ImportError if Matplotlib isn't installed."""
     if not is_available:
         raise ImportError(
-            "matplotlib is required for this visualization. Install with: pip install matplotlib"
+            "matplotlib is required for this visualization. Install with: pip install matplotlib. "
+            "Visualization will be skipped if matplotlib is not available."
         )
 
 

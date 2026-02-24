@@ -1,313 +1,82 @@
 # Validation Execution Guide
 
-**Date:** January 2026  
-**Status:** Framework Complete - Ready for Execution
-
----
-
-## Overview
-
-This guide describes how to execute validation tests with real ENDF files, add benchmark values, compare results, and document validation results.
+**Last Updated:** February 2026  
+**Purpose:** How to run validation with real ENDF files and populate the benchmark database
 
 ---
 
 ## Prerequisites
 
-### Required Software
-- Python 3.8+
-- SMRForge installed (`pip install -e .`)
-- ENDF-B-VIII.1 library files
-- pytest for running tests
+1. **ENDF data** — Download nuclear data:
+   ```bash
+   smrforge data download --library ENDF-B-VIII.1 --nuclide-set common_smr
+   ```
 
-### Required Data
-- ENDF-B-VIII.1 directory with subdirectories:
-  - `neutrons-version.VIII.1/`
-  - `decay-version.VIII.1/`
-  - `nfy-version.VIII.1/`
-  - `thermal_scatt-version.VIII.1/`
-  - `photoat-version.VIII.1/`
-  - `gammas-version.VIII.1/`
-
-### Optional (for Benchmarking)
-- Reference benchmark values (ANSI/ANS standards, MCNP results, IAEA benchmarks)
-- Comparison data from other codes
+2. **Set ENDF directory** — Ensure `SMRFORGE_ENDF_DIR` points to your ENDF location:
+   ```bash
+   export SMRFORGE_ENDF_DIR=/path/to/ENDF-Data
+   ```
 
 ---
 
-## Running Validation Tests
-
-### Method 1: Using the Validation Runner Script
+## Running Community Benchmarks
 
 ```bash
-# Run all validation tests
-python scripts/run_validation.py --endf-dir /path/to/ENDF-B-VIII.1
+# Run all community benchmark cases
+smrforge validate benchmark
 
-# Run with custom output file (use output/validation/ to keep reports organized)
-python scripts/run_validation.py --endf-dir /path/to/ENDF-B-VIII.1 --output output/validation/my_report.txt --json-output output/validation/my_report.json
+# With custom benchmarks file
+smrforge validate benchmark --benchmarks-file benchmarks/community_benchmarks.json
 
-# Run specific test files
-python scripts/run_validation.py --endf-dir /path/to/ENDF-B-VIII.1 --tests tests/test_validation_comprehensive.py
-
-# Verbose output
-python scripts/run_validation.py --endf-dir /path/to/ENDF-B-VIII.1 --verbose
+# Run full validation suite (neutronics + burnup + decay heat)
+smrforge validate run --endf-dir $SMRFORGE_ENDF_DIR --output validation_report.json
 ```
 
-### Method 2: Using pytest Directly
+---
 
-```bash
-# Run all validation tests
-pytest tests/test_validation_comprehensive.py tests/test_endf_workflows_e2e.py -v
+## IAEA/ANS Reference Values
 
-# Run specific test class
-pytest tests/test_validation_comprehensive.py::TestTSLValidationComprehensive -v
+| Benchmark | Reference | Source | Typical k-eff | Tolerance |
+|-----------|-----------|--------|--------------|-----------|
+| Valar-10 | ~1.0–1.1 | SMRForge regression | — | 10% rel |
+| GT-MHR-350 | ~1.0 | SMRForge regression | — | 15% rel |
+| HTR-PM-200 | ~1.0 | SMRForge regression | — | 15% rel |
+| U-235 decay heat | ANSI/ANS-5.1 | Standard | — | 20% rel |
+| Pu-239 decay heat | ANSI/ANS-5.1 | Standard | — | 20% rel |
+| Single-step burnup | IAEA CRP | SMRForge baseline | — | 15% rel |
 
-# Run with ENDF directory environment variable
-export LOCAL_ENDF_DIR=/path/to/ENDF-B-VIII.1
-pytest tests/test_validation_comprehensive.py -v
-```
+**Note:** Community tier includes 3 benchmark cases. Pro tier has 10+ cases with full IAEA/ANS reference data.
 
-### Method 3: Using ValidationBenchmarker in Python
+---
+
+## Generating Validation Reports
 
 ```python
-from pathlib import Path
-from smrforge.core.reactor_core import NuclearDataCache
-from tests.validation_benchmarks import ValidationBenchmarker
+from smrforge import quick_benchmark
 
-# Create cache with ENDF directory
-cache = NuclearDataCache(local_endf_dir=Path("/path/to/ENDF-B-VIII.1"))
-
-# Create benchmarker
-benchmarker = ValidationBenchmarker(cache)
-
-# Run validations
-# (See test_validation_comprehensive.py for examples)
-
-# Generate report
-report = benchmarker.generate_report(output_file=Path("validation_report.txt"))
-print(report)
+# Run benchmarks and get report
+out = quick_benchmark(benchmarks_file="benchmarks/community_benchmarks.json")
+print(f"Passed: {out['passed']}/{out['total']}")
+print(out.get("report", ""))
 ```
 
 ---
 
-## Adding Benchmark Values
+## Populating the Benchmark Database
 
-### Step 1: Create Benchmark Data File
+The benchmark database is defined in `benchmarks/community_benchmarks.json`. To add new reference values:
 
-Create a JSON file with benchmark values (or use the provided structure):
-
-```python
-from tests.validation_benchmark_data import (
-    BenchmarkDatabase,
-    DecayHeatBenchmark,
-    GammaTransportBenchmark,
-    BurnupBenchmark,
-    BenchmarkValue,
-)
-
-# Create database
-db = BenchmarkDatabase()
-
-# Add decay heat benchmark (ANSI/ANS-5.1)
-decay_heat_bm = DecayHeatBenchmark(
-    test_case="U235_shutdown_1day",
-    nuclides={"U235": 1e20},
-    initial_power=100.0,  # MW
-    shutdown_time=0.0,  # seconds
-    time_points=[3600, 86400, 604800],  # seconds
-    benchmark_values=[
-        BenchmarkValue(value=1.234, uncertainty=0.01, unit="MW", source="ANSI/ANS-5.1"),
-        BenchmarkValue(value=0.567, uncertainty=0.005, unit="MW", source="ANSI/ANS-5.1"),
-        BenchmarkValue(value=0.234, uncertainty=0.002, unit="MW", source="ANSI/ANS-5.1"),
-    ],
-)
-db.add_decay_heat_benchmark(decay_heat_bm)
-
-# Add gamma transport benchmark (MCNP)
-gamma_bm = GammaTransportBenchmark(
-    test_case="simple_shielding",
-    geometry_description="Cylindrical geometry, 10 cm radius",
-    source_description="Point source at center, 1 MeV gamma",
-    energy_groups=[0.1, 1.0, 10.0],
-    benchmark_flux=[
-        BenchmarkValue(value=1e10, uncertainty=1e8, unit="photons/cm²/s", source="MCNP 6.2"),
-    ],
-    benchmark_dose_rate=BenchmarkValue(
-        value=1.23, uncertainty=0.01, unit="Sv/h", source="MCNP 6.2"
-    ),
-    reference_code="MCNP",
-    reference_version="6.2",
-)
-db.add_gamma_transport_benchmark(gamma_bm)
-
-# Save database
-db.save(Path("validation_benchmarks.json"))
-```
-
-### Step 2: Load and Use Benchmark Values
-
-```python
-from tests.validation_benchmark_data import BenchmarkDatabase, compare_with_benchmark
-
-# Load database
-db = BenchmarkDatabase(Path("validation_benchmarks.json"))
-
-# Get benchmark
-benchmark = db.decay_heat_benchmarks["U235_shutdown_1day"]
-
-# Compare calculated value with benchmark
-calculated_value = 1.245  # From your calculation
-comparison = compare_with_benchmark(
-    calculated_value,
-    benchmark.benchmark_values[0],
-    tolerance=0.05,  # 5% tolerance
-)
-
-print(f"Relative error: {comparison['relative_error_percent']:.2f}%")
-print(f"Within tolerance: {comparison['within_tolerance']}")
-```
+1. Run the calculation with verified ENDF data
+2. Record the obtained value (e.g., k-eff, decay heat at t=1h)
+3. Update the JSON with `reference_value`, `reference_source`, and `tolerance_rel`
+4. Re-run `smrforge validate benchmark` to confirm
 
 ---
 
-## Comparing Results with Benchmarks
+## Troubleshooting
 
-### Using Comparison Utilities
-
-```python
-from tests.validation_benchmark_data import compare_with_benchmark, BenchmarkValue
-
-# Compare single value
-calculated = 1.234
-benchmark = BenchmarkValue(value=1.200, uncertainty=0.01, unit="MW")
-comparison = compare_with_benchmark(calculated, benchmark, tolerance=0.05)
-
-print(f"Calculated: {comparison['calculated']}")
-print(f"Benchmark: {comparison['benchmark']}")
-print(f"Relative error: {comparison['relative_error_percent']:.2f}%")
-print(f"Within tolerance: {comparison['within_tolerance']}")
-```
-
-### Comparing Time Series
-
-```python
-import numpy as np
-from tests.validation_benchmark_data import BenchmarkDatabase
-
-db = BenchmarkDatabase(Path("validation_benchmarks.json"))
-benchmark = db.decay_heat_benchmarks["U235_shutdown_1day"]
-
-# Your calculated values
-calculated_values = np.array([1.245, 0.570, 0.238])
-
-# Compare at each time point
-for i, (calc_val, bench_val) in enumerate(zip(calculated_values, benchmark.benchmark_values)):
-    comparison = compare_with_benchmark(calc_val, bench_val)
-    print(f"Time {benchmark.time_points[i]}s: Error = {comparison['relative_error_percent']:.2f}%")
-```
-
----
-
-## Documenting Validation Results
-
-### Step 1: Use the Validation Results Template
-
-Copy the template:
-```bash
-cp docs/validation/validation-results-template.md docs/validation/validation-results-YYYYMMDD.md
-```
-
-### Step 2: Fill in Results
-
-1. Update executive summary with overall status
-2. Fill in test results tables
-3. Add comparison data with benchmarks
-4. Document performance metrics
-5. Add accuracy metrics summary
-6. Document any issues or limitations
-7. Add conclusions and recommendations
-
-### Step 3: Generate Reports Programmatically
-
-```python
-from tests.validation_benchmarks import ValidationBenchmarker
-from pathlib import Path
-
-# Run validations and generate report
-benchmarker = ValidationBenchmarker(cache)
-# ... run validations ...
-
-# Generate text report
-report_text = benchmarker.generate_report(output_file=Path("validation_report.txt"))
-
-# Generate JSON for further processing
-import json
-results_json = {
-    "results": [
-        {
-            "test_name": r.test_name,
-            "passed": r.passed,
-            "message": r.message,
-            "metrics": r.metrics,
-            "timing": {
-                "elapsed_time": r.timing.elapsed_time if r.timing else None,
-                "average_time": r.timing.average_time if r.timing else None,
-            } if r.timing else None,
-        }
-        for r in benchmarker.results
-    ]
-}
-Path("validation_results.json").write_text(json.dumps(results_json, indent=2))
-```
-
----
-
-## Workflow Summary
-
-1. **Prepare ENDF Files**
-   - Download ENDF-B-VIII.1 if not available
-   - Organize files in required directory structure
-
-2. **Run Validation Tests**
-   - Use validation runner script or pytest directly
-   - Tests will skip gracefully if ENDF files not found
-
-3. **Collect Benchmark Values** (if available)
-   - Gather reference values from standards/benchmarks
-   - Create benchmark database using provided structures
-   - Save to JSON file for reuse
-
-4. **Compare Results**
-   - Use comparison utilities to compare calculated vs. benchmark values
-   - Calculate relative errors and check tolerances
-   - Generate comparison reports
-
-5. **Document Results**
-   - Fill in validation results template
-   - Generate reports (text, JSON, markdown)
-   - Document accuracy metrics and conclusions
-
----
-
-## Next Steps
-
-1. **Execute validation tests** when ENDF files are available
-2. **Add benchmark values** as they become available from:
-   - ANSI/ANS-5.1 standard (decay heat)
-   - MCNP calculations (gamma transport)
-   - IAEA benchmark problems (burnup)
-3. **Compare results** and document accuracy
-4. **Iterate** to improve accuracy if needed
-
----
-
-## Related Documentation
-
-- `docs/validation/validation-implementation-summary.md` - Framework implementation details
-- `docs/validation/validation-summary.md` - Original validation summary
-- `docs/validation/endf-workflow-validation.md` - Validation test documentation
-- `tests/validation_benchmarks.py` - Validation utilities
-- `tests/validation_benchmark_data.py` - Benchmark data structures
-- `scripts/run_validation.py` - Validation runner script
-
----
-
-*This guide provides the framework for validation execution. Actual execution requires ENDF files and benchmark data to be available.*
+| Issue | Fix |
+|-------|-----|
+| Benchmarks skip (no ENDF) | Run `smrforge data download` and set `SMRFORGE_ENDF_DIR` |
+| k-eff out of tolerance | Verify ENDF files; try different solver options |
+| Decay heat mismatch | Check decay data (MF=8) and fission yield (MF=8 MT=454/459) |

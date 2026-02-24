@@ -61,6 +61,9 @@ logger = get_logger("smrforge.data_downloader")
 _source_cache: Dict[str, str] = {}  # library.value -> "iaea" or "nndc"
 
 
+# Quick-start nuclides (U235, U238, Pu239) — minimal set for first-time setup
+QUICKSTART_NUCLIDES = ["U235", "U238", "Pu239"]
+
 # Common SMR nuclides for pre-selected sets
 COMMON_SMR_NUCLIDES = [
     "H1",
@@ -519,7 +522,10 @@ def download_endf_data(
     # Determine nuclides to download
     nuclide_list: List[Nuclide] = []
 
-    if nuclide_set == "common_smr":
+    if nuclide_set == "quickstart":
+        nuclide_list = [_parse_isotope_string(iso) for iso in QUICKSTART_NUCLIDES]
+        nuclide_list = [n for n in nuclide_list if n is not None]
+    elif nuclide_set == "common_smr":
         nuclide_list = [_parse_isotope_string(iso) for iso in COMMON_SMR_NUCLIDES]
         nuclide_list = [n for n in nuclide_list if n is not None]
     elif nuclides:
