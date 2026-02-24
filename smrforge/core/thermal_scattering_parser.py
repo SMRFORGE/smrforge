@@ -206,6 +206,18 @@ class ThermalScatteringParser:
         "Zr_in_ZrH": "Zr in ZrH",
     }
 
+    # ENDF-B-VIII.1 filename variants -> standard material name (for get_tsl_file lookup)
+    FILENAME_TO_STANDARD = {
+        "HinH2O": "H_in_H2O",
+        "hinH2O": "H_in_H2O",
+        "hinh2o": "H_in_H2O",
+        "crystalline-graphite": "C_in_graphite",
+        "graphiteSd": "C_in_graphite",
+        "reactor-graphite-10P": "C_in_graphite",
+        "reactor-graphite-20P": "C_in_graphite",
+        "reactor-graphite-30P": "C_in_graphite",
+    }
+
     def parse_file(self, filepath: Path) -> Optional[ScatteringLawData]:
         """
         Parse thermal scattering law data from ENDF file (MF=7).
@@ -542,6 +554,10 @@ class ThermalScatteringParser:
 
         # Remove prefix (tsl-, thermal-, etc.)
         name = re.sub(r"^(tsl-|thermal-|ts-)", "", name, flags=re.IGNORECASE)
+
+        # Map ENDF-B-VIII.1 filename variants to standard names (for index lookup)
+        if name in self.FILENAME_TO_STANDARD:
+            return self.FILENAME_TO_STANDARD[name]
 
         # Map to standard name
         if name in self.MATERIAL_MAPPINGS:

@@ -18,7 +18,9 @@ This document describes which parts of SMRForge are considered **stable** for ex
 | **Provisional** | May change based on feedback; not yet frozen | Best-effort compatibility |
 | **Internal** | Not part of public API; may change without notice | No commitment |
 
-## Stable Public API
+---
+
+## Tier 1: Stable Public API
 
 ### Core Entry Points
 
@@ -44,32 +46,83 @@ This document describes which parts of SMRForge are considered **stable** for ex
 | `CalculationAuditTrail.save(path)` | Save to JSON |
 | `CalculationAuditTrail.load(path)` | Load from JSON |
 
-### Workflows
+### Workflows (Stable)
 
 | Module / Symbol | Purpose |
 |-----------------|---------|
 | `smrforge.workflows.parameter_sweep.ParameterSweep` | Parameter sweep |
-| `smrforge.workflows.fit_surrogate()` | Fit surrogate model (Pro: full; Community: stub) |
-| `smrforge.workflows.register_surrogate()` | Register custom surrogate (Pro: full; Community: stub) |
 | `smrforge.workflows.register_hook()` | Register event hooks |
 | `smrforge.workflows.run_hooks()` | Run registered hooks |
-| `smrforge.workflows.export_ml_dataset()` | Export design points to Parquet/HDF5 for ML (Pro: full; Community: stub) |
 
 ### Stable API Facade
 
 | Import | Purpose |
 |--------|---------|
-| `from smrforge.api import fit_surrogate, register_surrogate, ...` | Single import for stable symbols |
+| `from smrforge.api import ...` | Single import for stable symbols |
 
-### Plugin Registry
+### Plugin Registry (Stable)
+
+| Symbol | Purpose |
+|--------|---------|
+| `register_hook(name, callback)` | Register hook callback |
+| `run_hooks(name, context, **kwargs)` | Run hooks |
+
+### Dependencies (Stable)
+
+| Package | Role | Commitment |
+|---------|------|------------|
+| numpy, scipy | Numerical core | Pinned in requirements-lock.txt for releases |
+| pydantic, pydantic-settings | Validation, schemas | Version-locked for reproducibility |
+| h5py, zarr | Data I/O | Stable within major version |
+| pandas, polars | Data processing | Best-effort compatibility |
+
+---
+
+## Tier 2: Provisional (Best-Effort)
+
+Symbols in this tier are part of the public surface but may evolve based on feedback. Use with awareness that signatures or behavior may change.
+
+### Workflows (Provisional)
+
+| Module / Symbol | Purpose | Note |
+|-----------------|---------|------|
+| `smrforge.workflows.fit_surrogate()` | Fit surrogate model | Pro: full; Community: stub |
+| `smrforge.workflows.register_surrogate()` | Register custom surrogate | Pro: full; Community: stub |
+| `smrforge.workflows.export_ml_dataset()` | Export design points to Parquet/HDF5 | Pro: full; Community: stub |
+
+### Plugin Registry (Provisional)
 
 | Symbol | Purpose |
 |--------|---------|
 | `register_surrogate(name, factory)` | Register surrogate factory |
 | `get_surrogate(name)` | Get surrogate factory |
 | `list_surrogates()` | List registered surrogates |
-| `register_hook(name, callback)` | Register hook callback |
-| `run_hooks(name, context, **kwargs)` | Run hooks |
+
+### Dependencies (Provisional)
+
+| Package | Role | Note |
+|---------|------|------|
+| plotly, pyvista, dash | Visualization, dashboard | May add/remove optional backends |
+| scikit-learn, SALib, seaborn | ML, UQ, sensitivity | Optional extras; API may evolve |
+| requests, httpx, tqdm, pyyaml | Data download, config | Fallback paths when unavailable |
+
+---
+
+## Tier 3: Internal / Unstable
+
+- `smrforge.cli` — CLI entry points; schema may change with CLI evolution.
+- `smrforge.gui` — Web app; internal structure may change.
+- Private attributes (leading underscore) and modules not listed above — no stability guarantee.
+- Pydantic model internals — `model_dump()`, `model_validate()` are stable; internal fields may evolve.
+
+### Dependencies (Internal)
+
+| Package | Role | Note |
+|---------|------|------|
+| pytest, black, isort, mypy, flake8 | Development, testing, linting | requirements-dev.txt only |
+| numba | JIT optimization | Internal; version affects performance |
+
+---
 
 ## Deprecation Policy
 
@@ -78,13 +131,6 @@ This document describes which parts of SMRForge are considered **stable** for ex
 3. **Replacement:** When deprecating, a replacement API will be provided and documented.
 4. **Breaking changes:** Reserved for major version bumps (e.g., 1.0 → 2.0).
 
-## Internal / Unstable
-
-- `smrforge.cli` — CLI entry points; schema may change with CLI evolution.
-- `smrforge.gui` — Web app; internal structure may change.
-- Private attributes (leading underscore) and modules not listed above — no stability guarantee.
-- Pydantic model internals — `model_dump()`, `model_validate()` are stable; internal fields may evolve.
-
 ## Versioning
 
 - **Semantic versioning:** MAJOR.MINOR.PATCH
@@ -92,7 +138,16 @@ This document describes which parts of SMRForge are considered **stable** for ex
 - **MINOR:** New features, backward-compatible
 - **PATCH:** Bug fixes, no API changes
 
+## Air-Gapped Deployment
+
+For environments without internet access, use the strategy in **[Air-Gapped Deployment Guide](guides/air-gapped-deployment.md)**. Summary:
+
+- **Python packages:** Use `requirements-lock.txt` with `pip download` + `pip install --no-index`.
+- **Nuclear data (ENDF):** Pre-stage to local directory; SMRForge uses built-in parser (no network).
+- **Reproducibility:** Pin versions; document validated environment in V&V plan.
+
 ## References
 
 - NUCLEAR_INDUSTRY_ANALYSIS_AND_AI_FUTURE_PROOFING.md
 - docs/PLUGIN_ARCHITECTURE.md
+- docs/guides/air-gapped-deployment.md

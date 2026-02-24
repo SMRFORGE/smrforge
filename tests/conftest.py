@@ -32,6 +32,17 @@ def _get_endf_root_dir():
     return None
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _set_endf_env_for_session():
+    """
+    Autouse: set SMRFORGE_ENDF_DIR at session start when ENDF dir exists.
+    Ensures NuclearDataCache() and cache_with_endf get the env without requesting endf_root_dir.
+    """
+    root = _get_endf_root_dir()
+    if root is not None:
+        os.environ["SMRFORGE_ENDF_DIR"] = str(root)
+
+
 @pytest.fixture(scope="session")
 def test_data_dir():
     """Fixture providing path to test data directory."""

@@ -111,6 +111,16 @@ class TestThermalScatteringParser:
             == "C in graphite"
         )
         assert parser._extract_material_name("ts-D_in_D2O.endf") == "D in D2O"
+        # ENDF-B-VIII.1 filename variants (FILENAME_TO_STANDARD)
+        assert parser._extract_material_name("tsl-HinH2O.endf") == "H_in_H2O"
+        assert (
+            parser._extract_material_name("tsl-crystalline-graphite.endf")
+            == "C_in_graphite"
+        )
+        assert (
+            parser._extract_material_name("tsl-reactor-graphite-10P.endf")
+            == "C_in_graphite"
+        )
 
     def test_create_placeholder_data(self):
         """Test placeholder data creation."""

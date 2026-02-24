@@ -139,6 +139,12 @@ pip install -e .
 
 ---
 
+## Air-Gapped Installation
+
+For environments without internet access, see **[Air-Gapped Deployment Guide](air-gapped-deployment.md)**. Dependencies can be pre-downloaded on a connected machine and transferred for offline installation.
+
+---
+
 ## Requirements
 
 All dependencies are standard Python packages available on PyPI:

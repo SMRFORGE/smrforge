@@ -6,6 +6,8 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
+# - Dependency alignment: setup.py, requirements.txt, requirements-lock.txt now consistent (httpx, tqdm in all).
+# - For reproducible production builds: docker build --build-arg USE_LOCKED=1 -t smrforge:prod .
 # - Full test suite: 5001 passed, 44 skipped (pytest --ignore tests/test_smrforge_pro for Community-only).
 # - Coding guidelines: optional deps fallbacks, Rich, convenience APIs, kwargs hygiene, path handling (docs/development/code-style.md).
 # - Discovery and help functions: system_info(), help_topics(), list_constraint_sets(), get_constraint_set(), get_example_path(), list_examples(), list_nuclides(), list_sweepable_params(), get_default_output_dir(). See examples/discovery_help_example.py.
@@ -193,8 +195,11 @@ RUN apt-get update && \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency manifest first (better layer caching)
-COPY requirements.txt /app/requirements.txt
+# Copy dependency manifests (requirements-lock.txt for reproducible builds)
+COPY requirements.txt requirements-lock.txt /app/
+
+# Build arg for reproducible production: USE_LOCKED=1 uses requirements-lock.txt
+ARG USE_LOCKED=0
 
 # Copy package metadata first (for better layer caching)
 COPY setup.py pyproject.toml README.md README_PYPI.md MANIFEST.in /app/
@@ -204,8 +209,10 @@ COPY scripts/ /app/scripts/
 
 # Install Python dependencies
 # Upgrade pip and install wheel first (helps with some packages)
+# Use requirements-lock.txt when USE_LOCKED=1 for reproducible production builds
 RUN pip install --upgrade pip wheel setuptools && \
-    pip install --no-cache-dir -r /app/requirements.txt
+    if [ "$USE_LOCKED" = "1" ]; then pip install --no-cache-dir -r /app/requirements-lock.txt; \
+    else pip install --no-cache-dir -r /app/requirements.txt; fi
 
 # Install SMRForge with all dependencies from setup.py
 # This includes visualization dependencies (plotly, pyvista, dash) which are now required

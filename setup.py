@@ -42,6 +42,8 @@ setup(
         "pydantic-settings>=2.0.0",
         "pyyaml>=6.0",  # YAML config (cli, workflows.templates, parameter_sweep)
         "requests>=2.25.0",  # Nuclear data downloads (data_downloader)
+        "httpx>=0.24.0",  # Async HTTP client for parallel downloads
+        "tqdm>=4.65.0",  # Progress bars for downloads
         "pint>=0.20.0",  # Required for unit checking (smrforge.utils.units)
         "pandas>=1.3.0",
         "h5py>=3.0.0",
