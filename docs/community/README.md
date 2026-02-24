@@ -3,7 +3,7 @@
 **Tier:** Community (free, open-source)  
 **Scope:** Core reactor physics, multi-group diffusion, burnup, decay heat, gamma transport, geometry, presets, validation, economics, fuel cycle, and visualization.
 
-> **Pro:** For Serpent/MCNP export, full benchmark suite (10+ cases), PDF reports with traceability, OpenMC tally visualization, and AI/surrogate workflows, see [Community vs Pro](../../community_vs_pro.md). Community includes full OpenMC export/import and Serpent run+parse (round-trip with Pro export).
+> **Pro:** For Serpent/MCNP export, full benchmark suite, PDF reports with traceability, OpenMC tally visualization, AI/surrogate workflows, natural-language design, code-to-code verification, regulatory package, benchmark reproduction, multi-objective optimization, and physics-informed surrogates, see [Community vs Pro](../../community_vs_pro.md). Community includes full OpenMC export/import and Serpent run+parse.
 
 ---
 

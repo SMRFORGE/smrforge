@@ -18,6 +18,12 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 | Report generator | ✅ Basic (Markdown) | ✅ Full (PDF, traceability) |
 | Regulatory traceability | Basic | Full (10 CFR, IAEA, ANS) |
 | **AI / Surrogate** | ❌ None | ✅ Full (RBF/linear fit, BYOS ONNX/TorchScript, validation report, sweep --surrogate, ML export, audit trail) |
+| **Natural-language design** | ❌ | ✅ Parse "10 MW HTGR, k-eff 1.0-1.05" → reactor spec |
+| **Code-to-code verification** | ❌ | ✅ Diffusion, MC, OpenMC, Serpent, MCNP comparison |
+| **Regulatory package** | Basic | ✅ Full (NRC/IAEA submission package, traceability matrix) |
+| **Benchmark reproduction** | — | ✅ One-click reproduce, compare to reference |
+| **Multi-objective optimization** | — | ✅ Optimize k_eff, safety, economics |
+| **Physics-informed surrogates** | — | ✅ UQ + physics constraints (k_eff > 0) |
 | API stability policy | — | ✅ Semver, deprecation |
 | Licensing | MIT (free) | RSA license key |
 
@@ -36,12 +42,18 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 - **Professional reports:** PDF reports with traceability matrices
 - **OpenMC integration:** Community has full export/import and statepoint parsing; Pro adds tally visualization
 - **AI/surrogate workflows:** fit_surrogate, BYOS (ONNX/TorchScript/pickle), validation report, sweep with --surrogate, ML export, audit trail
+- **Natural-language design:** Parse "10 MW HTGR with k-eff 1.0-1.05, enrichment <20%" → reactor spec
+- **Code-to-code verification:** Run same reactor through diffusion, MC, OpenMC, Serpent, MCNP; unified comparison
+- **Regulatory submission package:** NRC/IAEA-ready package (inputs, outputs, traceability matrix)
+- **Benchmark reproduction:** One-click run and compare to reference
+- **Multi-objective optimization:** Optimize neutronics, safety, economics in one framework
+- **Physics-informed surrogates:** Surrogate with UQ and physics checks (e.g., k_eff > 0)
 
 ## Pro Feature Callouts
 
 Throughout the Community docs, you may see callouts like:
 
-> **Pro:** For Serpent/MCNP export, tally visualization, and all AI/surrogate features (fit_surrogate, BYOS, validation report, ML export, audit trail, `--surrogate` sweep), use SMRForge Pro. OpenMC export/import is available in Community.
+> **Pro:** For Serpent/MCNP export, tally visualization, AI/surrogate features, natural-language design, code-to-code verification, regulatory package, benchmark reproduction, multi-objective optimization, and physics-informed surrogates, use SMRForge Pro. OpenMC export/import is available in Community.
 
 These indicate features available in the Pro tier. If you need them, consider upgrading.
 

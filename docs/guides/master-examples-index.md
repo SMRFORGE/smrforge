@@ -636,6 +636,72 @@ for name, specs in reactors.items():
 
 ---
 
+## Pro Tier Examples
+
+**Path:** `examples/pro/` — Requires Pro license.
+
+| Example | Description |
+|---------|-------------|
+| `nl_design_example.py` | Natural-language design: "10 MW HTGR, k-eff 1.0-1.05" → reactor spec |
+| `code_verification_example.py` | Code-to-code verification (diffusion, MC, OpenMC, Serpent, MCNP) |
+| `regulatory_package_example.py` | NRC/IAEA regulatory submission package |
+| `benchmark_reproduction_example.py` | One-click benchmark reproduce and compare |
+| `multi_objective_optimization_example.py` | Multi-objective design optimization |
+| `physics_informed_surrogate_example.py` | Physics-informed surrogate with UQ |
+| `serpent_export_example.py` | Export reactor to Serpent |
+| `openmc_export_example.py` | Export reactor to OpenMC |
+| `benchmark_suite_example.py` | Run benchmark suite |
+| `report_generator_example.py` | Generate PDF report |
+
+See [Pro Examples Index](pro/pro-examples-index.md) for details.
+
+**Natural-language design:**
+```python
+from smrforge_pro.ai.nl_design import design_from_nl, parse_nl_design
+
+intent = parse_nl_design("10 MW HTGR with k-eff 1.0-1.05, enrichment <20%")
+result = design_from_nl("10 MW HTGR", run_analysis=True)
+```
+
+**Code-to-code verification:**
+```python
+from smrforge_pro.workflows.code_verification import run_code_verification
+
+report = run_code_verification("valar-10", output_dir=Path("verification_output"))
+```
+
+**Regulatory package:**
+```python
+from smrforge_pro.workflows.regulatory_package import generate_regulatory_package
+
+path = generate_regulatory_package(reactor, output_dir=Path("regulatory_package"))
+```
+
+**Benchmark reproduction:**
+```python
+from smrforge_pro.workflows.benchmark_reproduction import list_benchmarks, reproduce_benchmark
+
+for bid in list_benchmarks():
+    result = reproduce_benchmark(bid, output_dir=Path("benchmark_output"))
+```
+
+**Multi-objective optimization:**
+```python
+from smrforge_pro.workflows.multi_objective_optimization import multi_objective_optimize
+
+result = multi_objective_optimize(reactor_from_x, bounds, param_names, max_evaluations=50)
+```
+
+**Physics-informed surrogate:**
+```python
+from smrforge_pro.ai.physics_informed import physics_informed_surrogate_from_sweep
+
+predictor = physics_informed_surrogate_from_sweep(results, ["enrichment"], output_metric="k_eff")
+pred = predictor(np.array([0.19]))
+```
+
+---
+
 ## Example Files Location
 
 All example files are in the `examples/` directory:

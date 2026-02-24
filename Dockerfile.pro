@@ -6,7 +6,10 @@
 #
 # Requires: SMRForge Pro license for production use.
 # Last Updated: February 2026
-# Includes: Serpent/MCNP converters, OpenMC tally viz, AI/surrogate, validation reports, ML export.
+# Tier: Pro (SMRFORGE_TIER=pro)
+# Includes: Serpent/MCNP converters, OpenMC tally viz, AI/surrogate, validation reports, ML export,
+# natural-language design, code-to-code verification, regulatory package, benchmark reproduction,
+# multi-objective optimization, physics-informed surrogates.
 
 FROM python:3.11-slim
 
@@ -75,4 +78,9 @@ EXPOSE 8050
 # smrforge workflow surrogate --sweep-results sweep.json --params enrichment power --output surr.pkl
 # smrforge workflow ml-export --results sweep.json --output design.parquet
 # smrforge report validation --predictions pred.txt --reference ref.txt --output report.json --pdf
+# Pro workflows: nl-design, code-verify, regulatory-package, benchmark, multi-optimize
+# smrforge workflow nl-design --text "10 MW HTGR"
+# smrforge workflow code-verify --reactor valar-10 --output verification_output
+# smrforge workflow regulatory-package --reactor valar-10 --output regulatory_package
+# smrforge workflow benchmark --id valar10_preset --output benchmark_output
 CMD ["smrforge", "serve", "--host", "0.0.0.0", "--port", "8050"]

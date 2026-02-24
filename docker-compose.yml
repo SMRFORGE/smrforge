@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: smrforge:latest
+    # Tier: Community — for Pro (NL design, code verification, regulatory, etc.) use smrforge-pro service
     # Avoid pinning container_name to prevent name collisions across projects.
     volumes:
       # Mount your data directory
@@ -36,6 +37,7 @@ services:
       context: .
       dockerfile: Dockerfile.pro
     image: smrforge-pro:latest
+    # Tier: Pro — NL design, code verification, regulatory package, benchmark reproduction, multi-objective, physics-informed surrogates
     volumes:
       - ./data:/app/data:rw
       - ./output:/app/output:rw

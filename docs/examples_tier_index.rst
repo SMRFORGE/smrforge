@@ -32,8 +32,13 @@ Pro Examples
 Pro examples cover:
 - Serpent export/import
 - OpenMC export/import
-- Benchmark suite
+- Benchmark suite and benchmark reproduction
 - Report generator
+- Natural-language design
+- Code-to-code verification
+- Regulatory submission package
+- Multi-objective optimization
+- Physics-informed surrogates
 
 See: ``examples/pro/README.md`` for the full index.
 
@@ -42,9 +47,15 @@ See: ``examples/pro/README.md`` for the full index.
    python examples/pro/serpent_export_example.py
    python examples/pro/openmc_export_example.py
    python examples/pro/benchmark_suite_example.py
+   python examples/pro/nl_design_example.py
+   python examples/pro/code_verification_example.py
+   python examples/pro/regulatory_package_example.py
+   python examples/pro/benchmark_reproduction_example.py
+   python examples/pro/multi_objective_optimization_example.py
+   python examples/pro/physics_informed_surrogate_example.py
 
 Documentation
 -------------
 
 * Community: :doc:`community/README <community/README>` — Feature matrix, workflows, required data
-* Pro: :doc:`pro/README <pro/README>` — Serpent/OpenMC, benchmarks, reporting
+* Pro: :doc:`pro/README <pro/README>` — Serpent/OpenMC, benchmarks, NL design, code verification, regulatory package
