@@ -138,6 +138,39 @@ Symbols in this tier are part of the public surface but may evolve based on feed
 - **MINOR:** New features, backward-compatible
 - **PATCH:** Bug fixes, no API changes
 
+## SMRForge Pro (Licensed Tier)
+
+Pro extends Community with additional symbols and optional extras. Same stability levels apply; Pro-specific APIs follow the deprecation policy above.
+
+### Pro Stable Symbols
+
+| Module / Symbol | Purpose |
+|-----------------|---------|
+| `smrforge_pro.converters.OpenMCConverter` | OpenMC export/import (delegates to Community; Pro adds tally viz docs) |
+| `smrforge_pro.converters.SerpentConverter` | Serpent export/import (export full; import basic) |
+| `smrforge_pro.converters.MCNPConverter` | MCNP export (full) |
+| `smrforge_pro.visualization.visualize_openmc_tallies` | OpenMC mesh tally visualization |
+| `smrforge_pro.workflows.fit_surrogate` | Fit RBF/linear surrogate |
+| `smrforge_pro.workflows.surrogate_from_sweep_results` | Fit surrogate from sweep JSON |
+| `smrforge_pro.workflows.export_ml_dataset` | Export to Parquet/HDF5 |
+| `smrforge_pro.ai.validation_report.SurrogateValidationReport` | Surrogate validation report |
+| `smrforge_pro.ai.validation_report.generate_validation_report` | Compare pred vs reference |
+| `smrforge_pro.ai.audit.record_ai_model` | Record AI model in audit trail |
+
+### Pro Optional Extras
+
+| Extra | Packages | Purpose |
+|-------|----------|---------|
+| `[ai]` | onnxruntime, torch | ONNX/TorchScript surrogate loading |
+| `[reporting]` | reportlab | PDF export for validation reports |
+| `[ml]` | pyarrow, tables | Parquet, HDF5 for ML export |
+| `[all]` | All above | Full Pro feature set |
+
+### Pro–Community Compatibility
+
+- **Version pinning:** Pro version X.Y is tested with Community version ≥ X.Y (same major). Document validated combinations in release notes.
+- **Import path:** Pro features are reached via `smrforge.api` when Pro is installed; `smrforge_pro` is a direct import for Pro-only code.
+
 ## Air-Gapped Deployment
 
 For environments without internet access, use the strategy in **[Air-Gapped Deployment Guide](guides/air-gapped-deployment.md)**. Summary:
@@ -145,9 +178,11 @@ For environments without internet access, use the strategy in **[Air-Gapped Depl
 - **Python packages:** Use `requirements-lock.txt` with `pip download` + `pip install --no-index`.
 - **Nuclear data (ENDF):** Pre-stage to local directory; SMRForge uses built-in parser (no network).
 - **Reproducibility:** Pin versions; document validated environment in V&V plan.
+- **Pro:** See `docs/guides/air-gapped-deployment.md` for Pro pip download and install.
 
 ## References
 
 - NUCLEAR_INDUSTRY_ANALYSIS_AND_AI_FUTURE_PROOFING.md
 - docs/PLUGIN_ARCHITECTURE.md
 - docs/guides/air-gapped-deployment.md
+- docs/community_vs_pro.md

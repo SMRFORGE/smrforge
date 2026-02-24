@@ -8,14 +8,15 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 |------------|-----------|-----|
 | Multi-group diffusion | ✅ | ✅ |
 | Monte Carlo (built-in) | ✅ | ✅ |
-| Serpent export/import | ❌ | ✅ Full |
-| Serpent run+parse (round-trip with Pro export) | ✅ | ✅ |
-| OpenMC export/import | ✅ Full | ✅ Full (Pro: tally viz) |
-| MCNP export | ❌ | ✅ Full |
-| Benchmark suite | ✅ 3 cases | ✅ 10+ cases |
+| Serpent export | ❌ | ✅ Full |
+| Serpent import | ❌ | ✅ Basic (materials, surfaces, cells) |
+| Serpent run+parse (round-trip) | ✅ | ✅ |
+| OpenMC export/import | ✅ Full | ✅ Full |
+| OpenMC tally visualization | ❌ | ✅ |
+| MCNP export | Placeholder | ✅ Full |
+| Benchmark suite | ✅ 3 cases | ✅ Same + extended (planned) |
 | Report generator | ✅ Basic (Markdown) | ✅ Full (PDF, traceability) |
 | Regulatory traceability | Basic | Full (10 CFR, IAEA, ANS) |
-| OpenMC tally visualization | ❌ | ✅ |
 | **AI / Surrogate** | ❌ None | ✅ Full (RBF/linear fit, BYOS ONNX/TorchScript, validation report, sweep --surrogate, ML export, audit trail) |
 | API stability policy | — | ✅ Semver, deprecation |
 | Licensing | MIT (free) | RSA license key |
@@ -50,3 +51,4 @@ These indicate features available in the Pro tier. If you need them, consider up
 - **Pro docs:** Available with SMRForge Pro license
 - **Install Community:** `pip install smrforge`
 - **Install Pro:** `pip install smrforge-pro` (requires license)
+- **Pro optional extras:** `pip install smrforge-pro[ai,reporting,ml]` for ONNX/Torch, PDF reports, Parquet/HDF5

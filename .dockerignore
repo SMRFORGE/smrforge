@@ -42,7 +42,7 @@ docs/.doctrees/
 # Backup and redundant directories
 backup_*/
 smrforge-*/
-smrforge_pro/
+# smrforge_pro/ included for Dockerfile.pro
 
 # Coverage and test artifacts
 .coverage

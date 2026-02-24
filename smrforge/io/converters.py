@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from ..utils.logging import get_logger
+from ..workflows.plugin_registry import run_hooks
 
 logger = get_logger("smrforge.io.converters")
 
@@ -24,11 +25,15 @@ try:
     from smrforge_pro.converters.serpent import (
         SerpentConverter as _ProSerpentConverter,  # pragma: no cover
     )
+    from smrforge_pro.converters.mcnp import (
+        MCNPConverter as _ProMCNPConverter,  # pragma: no cover
+    )
 
     _PRO_AVAILABLE = True  # pragma: no cover
 except ImportError:  # pragma: no cover
     _ProSerpentConverter = None  # type: ignore
     _ProOpenMCConverter = None  # type: ignore
+    _ProMCNPConverter = None  # type: ignore
     _PRO_AVAILABLE = False
 
 _UPGRADE_MSG = (
@@ -59,6 +64,7 @@ class SerpentConverter:
         Raises:
             OSError: If the output file cannot be written.
         """
+        run_hooks("pre_export", context={"format": "serpent", "reactor": reactor, "output_file": output_file})
         if _PRO_AVAILABLE and _ProSerpentConverter is not None:  # pragma: no cover
             _ProSerpentConverter.export_reactor(reactor, Path(output_file))
             return
@@ -159,7 +165,7 @@ class MCNPConverter:
     """
     Converter for MCNP format.
 
-    Community: placeholder export; full implementation in SMRForge Pro.
+    Community: placeholder export; Pro: full implementation. Delegate to Pro when available.
     """
 
     @staticmethod
@@ -174,6 +180,10 @@ class MCNPConverter:
         Raises:
             OSError: If the output file cannot be written.
         """
+        run_hooks("pre_export", context={"format": "mcnp", "reactor": reactor, "output_file": output_file})
+        if _PRO_AVAILABLE and _ProMCNPConverter is not None:  # pragma: no cover
+            _ProMCNPConverter.export_reactor(reactor, Path(output_file))
+            return
         output_file = Path(output_file)
         output_file.parent.mkdir(parents=True, exist_ok=True)
         with open(output_file, "w") as f:

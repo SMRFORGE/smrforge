@@ -255,6 +255,31 @@ jobs:
           path: security_reports/
           retention-days: 30
 
+  test-pro:
+    name: Test Pro Integration
+    runs-on: ubuntu-latest
+    needs: check-enabled
+    if: needs.check-enabled.outputs.enabled == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gfortran cmake pkg-config \
+            libhdf5-dev libblas-dev liblapack-dev libxml2-dev libpng-dev git
+      - name: Install SMRForge Community
+        run: pip install -e .
+      - name: Install SMRForge Pro
+        run: pip install -e ./smrforge_pro
+      - name: Run Pro integration tests
+        run: pytest tests/test_pro_integration.py -v --tb=short -x
+
   build:
     name: Build Package
     runs-on: ubuntu-latest

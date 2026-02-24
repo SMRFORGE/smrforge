@@ -35,14 +35,16 @@ run_hooks("before_solve", context={"reactor_spec": spec, "solver": "diffusion"})
 run_hooks("after_keff", context={"k_eff": k_eff, "flux_shape": flux.shape})
 ```
 
-### Standard Hook Names (proposed)
+### Standard Hook Names
 
-| Hook Name      | When Called           | Context Keys           |
-|----------------|-----------------------|------------------------|
-| `before_solve` | Before eigenvalue solve| reactor_spec, solver   |
-| `after_keff`   | After k-eff converges | k_eff, flux_shape      |
-| `after_burnup` | After burnup complete | inventory, burnup_mwd  |
-| `after_transient` | After transient solve | time, temperature   |
+| Hook Name        | When Called              | Context Keys                    |
+|------------------|--------------------------|---------------------------------|
+| `before_solve`   | Before eigenvalue solve   | reactor_spec, solver            |
+| `after_keff`    | After k-eff converges    | k_eff, flux_shape               |
+| `after_burnup`  | After burnup complete     | inventory, burnup_mwd           |
+| `after_transient` | After transient solve  | time, temperature               |
+| `pre_export`    | Before Serpent/MCNP export | format, reactor, output_file  |
+| `post_sweep`    | After parameter sweep    | result, config                  |
 
 ## Pro Tier: Surrogate Registry and AI Audit
 

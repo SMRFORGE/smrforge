@@ -6,6 +6,8 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
+# - Pro enhancements: Serpent import, MCNP converter, CLI (convert, ml-export, report validation), workflow hooks (pre_export, post_sweep), CHANGELOG_PRO.md, API_STABILITY Pro section. Use Dockerfile.pro for Pro.
+# - OpenMC tally visualization: Pro tier (smrforge visualize tally --statepoint X). See Dockerfile.pro.
 # - Dependency alignment: setup.py, requirements.txt, requirements-lock.txt now consistent (httpx, tqdm in all).
 # - For reproducible production builds: docker build --build-arg USE_LOCKED=1 -t smrforge:prod .
 # - Full test suite: 5001 passed, 44 skipped (pytest --ignore tests/test_smrforge_pro for Community-only).

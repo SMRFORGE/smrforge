@@ -17,6 +17,7 @@ import pandas as pd
 
 from ..utils.exception_handling import reraise_if_system
 from ..utils.logging import get_logger
+from .plugin_registry import run_hooks
 
 logger = get_logger("smrforge.workflows")
 
@@ -413,12 +414,14 @@ class ParameterSweep:
         if n_cases == 0:
             logger.info("No remaining cases to run (resume: all done)")
             summary_stats = self._calculate_summary_stats(results)
-            return SweepResult(
+            result = SweepResult(
                 config=self.config,
                 results=results,
                 failed_cases=failed_cases,
                 summary_stats=summary_stats,
             )
+            run_hooks("post_sweep", context={"result": result, "config": self.config})
+            return result
         logger.info(f"Cases to run: {n_cases} (total {n_total})")
 
         # Resolve max_workers (env SMRFORGE_MAX_BATCH_WORKERS can cap)
@@ -538,12 +541,14 @@ class ParameterSweep:
         # Calculate summary statistics
         summary_stats = self._calculate_summary_stats(results)
 
-        return SweepResult(
+        result = SweepResult(
             config=self.config,
             results=results,
             failed_cases=failed_cases,
             summary_stats=summary_stats,
         )
+        run_hooks("post_sweep", context={"result": result, "config": self.config})
+        return result
 
     def _save_intermediate(
         self, results: List[Dict], failed: List[Dict], case_num: int

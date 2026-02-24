@@ -105,6 +105,21 @@ docker run -v /path/to/ENDF-B-VIII.1:/data/endf -e SMRFORGE_ENDF_DIR=/data/endf 
 
 ---
 
+## SMRForge Pro (Licensed)
+
+For air-gapped deployment of SMRForge Pro:
+
+1. On a connected machine, download the Pro package and its dependencies:
+   ```bash
+   pip download smrforge-pro -d ./offline-wheels
+   pip download smrforge -d ./offline-wheels  # Pro depends on Community
+   ```
+2. Transfer the wheel directory to the air-gapped system.
+3. Install: `pip install --no-index --find-links ./offline-wheels smrforge-pro`
+4. Pro optional extras (ai, reporting, ml) require additional packages; include them in the download step if needed.
+
+---
+
 ## Nuclear Data (ENDF)
 
 SMRForge does **not** require network access for nuclear data at runtime when using local files:

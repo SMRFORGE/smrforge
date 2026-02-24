@@ -2108,6 +2108,36 @@ def visualize_geometry(args):
         return  # pragma: no cover
 
 
+def visualize_tally(args):
+    """Visualize OpenMC mesh tally from statepoint. Pro tier only."""
+    try:
+        from smrforge_pro.visualization.openmc_tally_viz import visualize_openmc_tallies
+    except ImportError:
+        _print_error(
+            "OpenMC tally visualization requires SMRForge Pro. "
+            "pip install smrforge-pro[openmc]"
+        )
+        sys.exit(1)
+    statepoint = Path(getattr(args, "statepoint", None) or "")
+    if not statepoint.exists():
+        _print_error(f"Statepoint not found: {statepoint}")
+        sys.exit(1)
+    try:
+        fig = visualize_openmc_tallies(
+            statepoint,
+            tally_id=getattr(args, "tally_id", None),
+            score=getattr(args, "score", None),
+            output_path=getattr(args, "output", None),
+            backend=getattr(args, "backend", "plotly"),
+            show_uncertainty=not getattr(args, "no_uncertainty", False),
+        )
+        if fig is not None:
+            _print_success("Tally visualization complete")
+    except Exception as e:
+        _print_error(f"Tally visualization failed: {e}")
+        sys.exit(1)
+
+
 def visualize_flux(args):
     """Plot flux distribution."""
     try:
@@ -5039,6 +5069,128 @@ def workflow_surrogate(args):
         _print_success("Surrogate fitted successfully (use --output to save)")
 
 
+def convert_export(args):
+    """Export reactor to Serpent, OpenMC, or MCNP. Pro tier for Serpent/MCNP full export."""
+    try:
+        from smrforge.convenience import create_reactor
+    except ImportError:
+        _print_error("SMRForge convenience module not available")
+        sys.exit(1)
+    reactor_spec = getattr(args, "reactor", None)
+    output = getattr(args, "output", None)
+    fmt = getattr(args, "format", "").lower()
+    if not reactor_spec or not output:
+        _print_error("--reactor and --output required")
+        sys.exit(1)
+    try:
+        if Path(reactor_spec).exists():
+            import json
+            with open(reactor_spec) as f:
+                data = json.load(f)
+            reactor = create_reactor(**data)
+        else:
+            reactor = create_reactor(str(reactor_spec))
+    except Exception as e:
+        _print_error(f"Failed to create reactor: {e}")
+        sys.exit(1)
+    output = Path(output)
+    try:
+        if fmt == "serpent":
+            from smrforge.io.converters import SerpentConverter
+            if output.suffix not in (".serp", ".inp", ""):
+                output = output.with_suffix(".serp")
+            SerpentConverter.export_reactor(reactor, output)
+        elif fmt == "openmc":
+            from smrforge.io.converters import OpenMCConverter
+            output.mkdir(parents=True, exist_ok=True)
+            OpenMCConverter.export_reactor(
+                reactor, output,
+                particles=getattr(args, "particles", 1000),
+                batches=getattr(args, "batches", 20),
+            )
+        elif fmt == "mcnp":
+            from smrforge.io.converters import MCNPConverter
+            if output.suffix not in (".mcnp", ".inp", ""):
+                output = output.with_suffix(".mcnp")
+            MCNPConverter.export_reactor(reactor, output)
+        else:
+            _print_error(f"Unsupported format: {fmt}. Use serpent, openmc, or mcnp")
+            sys.exit(1)
+        _print_success(f"Exported to {output}")
+    except Exception as e:
+        _print_error(f"Export failed: {e}")
+        sys.exit(1)
+
+
+def workflow_ml_export(args):
+    """Export sweep results to Parquet/HDF5 for ML. Pro tier only."""
+    try:
+        from smrforge.workflows.ml_export import export_ml_dataset
+    except ImportError:
+        _print_error(
+            "ML export requires SMRForge Pro. Upgrade at https://smrforge.io"
+        )
+        sys.exit(1)
+    results_path = Path(getattr(args, "results", None) or "")
+    output_path = getattr(args, "output", None)
+    if not results_path.exists():
+        _print_error(f"Results file not found: {results_path}")
+        sys.exit(1)
+    output_path = Path(output_path) if output_path else results_path.parent / "design_points.parquet"
+    import json
+    with open(results_path) as f:
+        data = json.load(f)
+    results = data.get("results", data) if isinstance(data, dict) else data
+    if not isinstance(results, list):
+        _print_error("Results must be a list of design points")
+        sys.exit(1)
+    try:
+        out = export_ml_dataset(results, output_path)
+        _print_success(f"ML dataset saved to {out}")
+    except Exception as e:
+        _print_error(f"ML export failed: {e}")
+        sys.exit(1)
+
+
+def report_validation(args):
+    """Generate surrogate validation report (pred vs ref). Pro tier only."""
+    try:
+        from smrforge_pro.ai.validation_report import (
+            generate_validation_report,
+            SurrogateValidationReport,
+        )
+    except ImportError:
+        _print_error(
+            "Validation report requires SMRForge Pro. Upgrade at https://smrforge.io"
+        )
+        sys.exit(1)
+    import numpy as np
+    pred_path = Path(getattr(args, "predictions", None) or "")
+    ref_path = Path(getattr(args, "reference", None) or "")
+    output = Path(getattr(args, "output", None) or "validation_report.json")
+    if not pred_path.exists() or not ref_path.exists():
+        _print_error("--predictions and --reference files required")
+        sys.exit(1)
+    if pred_path.suffix == ".npy":
+        pred = np.load(pred_path)
+    else:
+        pred = np.loadtxt(pred_path, delimiter="," if pred_path.suffix == ".csv" else None)
+    if ref_path.suffix == ".npy":
+        ref = np.load(ref_path)
+    else:
+        ref = np.loadtxt(ref_path, delimiter="," if ref_path.suffix == ".csv" else None)
+    pred = np.asarray(pred).flatten()
+    ref = np.asarray(ref).flatten()
+    report = generate_validation_report(pred, ref, metric_name=getattr(args, "metric", "output"))
+    report.save_json(output)
+    if getattr(args, "pdf", False):
+        pdf_path = output.with_suffix(".pdf")
+        report.save_pdf(pdf_path)
+        _print_success(f"Reports saved to {output} and {pdf_path}")
+    else:
+        _print_success(f"Report saved to {output}")
+
+
 def workflow_requirements_to_constraints(args):
     """Parse requirements YAML/JSON into ConstraintSet and save."""
     try:
@@ -5841,6 +5993,19 @@ Note: All features are also available via Python API:
     sur_parser.add_argument("--output", type=Path, help="Save pickle surrogate")
     sur_parser.set_defaults(func=workflow_surrogate)
 
+    # workflow ml-export (Pro)
+    ml_export_parser = workflow_subparsers.add_parser(
+        "ml-export",
+        help="Export sweep results to Parquet/HDF5 for ML. Pro tier.",
+    )
+    ml_export_parser.add_argument(
+        "--results", type=Path, required=True, help="Sweep results JSON"
+    )
+    ml_export_parser.add_argument(
+        "--output", type=Path, help="Output Parquet or HDF5 file (default: design_points.parquet)"
+    )
+    ml_export_parser.set_defaults(func=workflow_ml_export)
+
     # workflow requirements-to-constraints
     req_parser = workflow_subparsers.add_parser(
         "requirements-to-constraints",
@@ -5857,6 +6022,34 @@ Note: All features are also available via Python API:
         "--output", type=Path, required=True, help="Output constraint set JSON"
     )
     req_parser.set_defaults(func=workflow_requirements_to_constraints)
+
+    # Convert subcommands (Serpent, OpenMC, MCNP export)
+    convert_parser = subparsers.add_parser(
+        "convert",
+        help="Export reactor to external code format (Serpent, OpenMC, MCNP)",
+    )
+    convert_subparsers = convert_parser.add_subparsers(
+        dest="convert_command", help="Export format"
+    )
+    for fmt in ("serpent", "openmc", "mcnp"):
+        p = convert_subparsers.add_parser(fmt, help=f"Export to {fmt.upper()}")
+        p.add_argument(
+            "--reactor",
+            type=str,
+            required=True,
+            help="Reactor preset name or JSON file path",
+        )
+        p.add_argument(
+            "--output",
+            "-o",
+            type=Path,
+            required=True,
+            help="Output file or directory (for OpenMC)",
+        )
+        if fmt == "openmc":
+            p.add_argument("--particles", type=int, default=1000)
+            p.add_argument("--batches", type=int, default=20)
+        p.set_defaults(format=fmt, func=convert_export)
 
     # Reactor subcommands
     reactor_parser = subparsers.add_parser("reactor", help="Reactor operations")
@@ -6406,6 +6599,38 @@ Note: All features are also available via Python API:
     visualize_flux_parser.add_argument("--group", type=int, help="Energy group index")
     visualize_flux_parser.set_defaults(func=visualize_flux)
 
+    # visualize tally (Pro - OpenMC mesh tally)
+    visualize_tally_parser = visualize_subparsers.add_parser(
+        "tally",
+        help="Visualize OpenMC mesh tally from statepoint. Pro tier (requires openmc).",
+    )
+    visualize_tally_parser.add_argument(
+        "--statepoint", type=Path, required=True, help="Path to statepoint.N.h5"
+    )
+    visualize_tally_parser.add_argument(
+        "--tally-id", type=int, help="Tally ID (default: first mesh tally)"
+    )
+    visualize_tally_parser.add_argument(
+        "--score", type=str, help="Score type (flux, fission, etc.)"
+    )
+    visualize_tally_parser.add_argument(
+        "--output", type=Path, help="Output file (HTML or PNG)"
+    )
+    visualize_tally_parser.add_argument(
+        "--backend",
+        type=str,
+        choices=["plotly", "matplotlib", "pyvista"],
+        default="plotly",
+        help="Visualization backend",
+    )
+    visualize_tally_parser.add_argument(
+        "--no-uncertainty",
+        action="store_true",
+        dest="no_uncertainty",
+        help="Do not show uncertainty",
+    )
+    visualize_tally_parser.set_defaults(func=visualize_tally)
+
     # Sweep subcommands
     sweep_parser = subparsers.add_parser(
         "sweep", help="Parameter sweep and sensitivity analysis"
@@ -6541,6 +6766,28 @@ Note: All features are also available via Python API:
         help="Output Markdown file",
     )
     report_design_parser.set_defaults(func=report_design)
+
+    # report validation (Pro)
+    report_validation_parser = report_subparsers.add_parser(
+        "validation",
+        help="Generate surrogate validation report (pred vs ref). Pro tier.",
+    )
+    report_validation_parser.add_argument(
+        "--predictions", type=Path, required=True, help="Predictions file (.txt, .npy, .csv)"
+    )
+    report_validation_parser.add_argument(
+        "--reference", type=Path, required=True, help="Reference values file"
+    )
+    report_validation_parser.add_argument(
+        "--output", type=Path, default=Path("validation_report.json"), help="Output JSON"
+    )
+    report_validation_parser.add_argument(
+        "--metric", type=str, default="output", help="Metric name for report"
+    )
+    report_validation_parser.add_argument(
+        "--pdf", action="store_true", help="Also save PDF report"
+    )
+    report_validation_parser.set_defaults(func=report_validation)
 
     config_parser = subparsers.add_parser("config", help="Configuration management")
     config_subparsers = config_parser.add_subparsers(
