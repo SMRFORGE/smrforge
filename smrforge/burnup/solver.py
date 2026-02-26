@@ -444,137 +444,145 @@ class BurnupSolver:
         Returns:
             NuclideInventory with concentrations over time
         """
-        # Resume from checkpoint if provided
-        if resume_from_checkpoint:
-            self._load_checkpoint(resume_from_checkpoint)
-            start_step = self._checkpoint_step
-            logger.info(f"Resuming from checkpoint at step {start_step}")
-        else:
-            start_step = 1
-            logger.info("Starting burnup calculation...")
+        from ..utils.progress import phase_progress
 
-            # Solve neutronics for initial flux
-            logger.info("Solving initial neutronics...")
-            k_eff, flux = self.neutronics.solve_steady_state()
-            logger.info(f"Initial k-eff: {k_eff:.6f}")
+        phases = ["Initial neutronics", "Burnup steps", "Finalizing"]
+        with phase_progress(phases, verbose=True) as set_phase:
+            # Resume from checkpoint if provided
+            if resume_from_checkpoint:
+                self._load_checkpoint(resume_from_checkpoint)
+                start_step = self._checkpoint_step
+                logger.info(f"Resuming from checkpoint at step {start_step}")
+                set_phase(1)
+            else:
+                start_step = 1
+                logger.info("Starting burnup calculation...")
+                set_phase(0)
 
-        # Time stepping
-        for step in range(start_step, len(self.time_steps_sec)):
-            t_start = self.time_steps_sec[step - 1]
-            t_end = self.time_steps_sec[step]
-            dt = t_end - t_start
+                # Solve neutronics for initial flux
+                logger.info("Solving initial neutronics...")
+                k_eff, flux = self.neutronics.solve_steady_state()
+                logger.info(f"Initial k-eff: {k_eff:.6f}")
+                set_phase(1)
 
-            logger.info(
-                f"Time step {step}/{len(self.time_steps_sec)-1}: "
-                f"t = {t_end / (24*3600):.1f} days"
-            )
+            # Time stepping
+            for step in range(start_step, len(self.time_steps_sec)):
+                t_start = self.time_steps_sec[step - 1]
+                t_end = self.time_steps_sec[step]
+                dt = t_end - t_start
 
-            # Solve for nuclide evolution over this time step
-            self._solve_time_step(step, t_start, t_end, dt)
-
-            # Update cross-sections based on new composition
-            self._update_cross_sections(step)
-
-            # Re-solve neutronics with updated cross-sections
-            # (Optional: can be done every N steps for performance)
-            if (
-                step % max(1, len(self.time_steps_sec) // 10) == 0
-                or step == len(self.time_steps_sec) - 1
-            ):
                 logger.info(
-                    f"Re-solving neutronics at step {step} with updated composition..."
+                    f"Time step {step}/{len(self.time_steps_sec)-1}: "
+                    f"t = {t_end / (24*3600):.1f} days"
                 )
-                try:
-                    k_eff_new, flux_new = self.neutronics.solve_steady_state()
-                    logger.info(
-                        f"Updated k-eff: {k_eff_new:.6f} (was {self.neutronics.k_eff:.6f})"
-                    )
-                except Exception as e:  # pragma: no cover
-                    reraise_if_system(e)
-                    logger.warning(
-                        f"Failed to re-solve neutronics: {e}. Continuing with previous flux."
-                    )
 
-            # Update adaptive nuclide tracking
-            if self.options.adaptive_tracking:
-                self._update_adaptive_nuclides(step)
+                # Solve for nuclide evolution over this time step
+                self._solve_time_step(step, t_start, t_end, dt)
 
-            # Apply control rod effects if available
-            if self.control_rod_shadowing is not None:
-                self._apply_control_rod_effects(step)
+                # Update cross-sections based on new composition
+                self._update_cross_sections(step)
 
-            # Calculate burnup
-            self._update_burnup(step)
-
-            # Progress callback
-            if self.options.progress_callback:
-                t_days = self.time_steps_sec[step] / (24 * 3600)
-                k_eff = getattr(self.neutronics, "k_eff", None)
-                self.options.progress_callback(step, t_days, k_eff)
-            if self.options.cancellation_check and self.options.cancellation_check():
-                logger.info("Burnup cancelled by user")
-                break
-            if self.options.diagnostic_mode:
-                self._dump_diagnostic(step)
-
-            # Checkpoint if enabled
-            if self.options.checkpoint_interval is not None:
-                t_days = self.time_steps_sec[step] / (24 * 3600)
+                # Re-solve neutronics with updated cross-sections
+                # (Optional: can be done every N steps for performance)
                 if (
-                    step
-                    % max(1, int(self.options.checkpoint_interval / dt * (24 * 3600)))
-                    == 0
+                    step % max(1, len(self.time_steps_sec) // 10) == 0
                     or step == len(self.time_steps_sec) - 1
                 ):
-                    self._save_checkpoint(step, t_days)
+                    logger.info(
+                        f"Re-solving neutronics at step {step} with updated composition..."
+                    )
+                    try:
+                        k_eff_new, flux_new = self.neutronics.solve_steady_state()
+                        logger.info(
+                            f"Updated k-eff: {k_eff_new:.6f} (was {self.neutronics.k_eff:.6f})"
+                        )
+                    except Exception as e:  # pragma: no cover
+                        reraise_if_system(e)
+                        logger.warning(
+                            f"Failed to re-solve neutronics: {e}. Continuing with previous flux."
+                        )
 
-        logger.info("Burnup calculation complete!")
+                # Update adaptive nuclide tracking
+                if self.options.adaptive_tracking:
+                    self._update_adaptive_nuclides(step)
 
-        inventory = NuclideInventory(
-            nuclides=self.nuclides,
-            concentrations=self.concentrations,
-            times=self.time_steps_sec,
-            burnup=self.burnup_mwd_per_kg,
-        )
-        inventory._solver = self  # For export, validation
+                # Apply control rod effects if available
+                if self.control_rod_shadowing is not None:
+                    self._apply_control_rod_effects(step)
 
-        # Centralized NaN/Inf validation at safety-critical boundary
-        k_eff_val = getattr(self.neutronics, "k_eff", None)
-        if k_eff_val is not None:
-            num_result = validate_safety_critical_outputs(k_eff=float(k_eff_val))
-            if num_result.has_errors():
-                logger.error("Burnup: safety-critical output validation failed")
-                num_result.print_report()
-                raise ValueError(
-                    "Burnup solution has invalid k_eff (NaN/Inf or out of range)"
-                )
+                # Calculate burnup
+                self._update_burnup(step)
 
-        # Auto-attach audit trail when path provided (regulatory traceability)
-        if audit_trail_path is not None:
-            k_eff = getattr(self.neutronics, "k_eff", None)
-            trail = create_audit_trail(
-                calculation_type="burnup",
-                inputs={
-                    "time_steps_days": self.options.time_steps,
-                    "power_density": str(self.options.power_density),
-                    "fuel_temperature": self.options.fuel_temperature,
-                    "track_xe_sm": self.options.track_xe_sm,
-                },
-                outputs={
-                    "final_k_eff": float(k_eff) if k_eff is not None else None,
-                    "burnup_mwd_kg": (
-                        float(self.burnup_mwd_per_kg[-1])
-                        if len(self.burnup_mwd_per_kg) > 0
-                        else None
-                    ),
-                    "n_nuclides": len(self.nuclides),
-                    "n_time_steps": len(self.time_steps_sec),
-                },
-                solver_method="coupled_neutronics_burnup",
+                # Progress callback
+                if self.options.progress_callback:
+                    t_days = self.time_steps_sec[step] / (24 * 3600)
+                    k_eff = getattr(self.neutronics, "k_eff", None)
+                    self.options.progress_callback(step, t_days, k_eff)
+                if self.options.cancellation_check and self.options.cancellation_check():
+                    logger.info("Burnup cancelled by user")
+                    break
+                if self.options.diagnostic_mode:
+                    self._dump_diagnostic(step)
+
+                # Checkpoint if enabled
+                if self.options.checkpoint_interval is not None:
+                    t_days = self.time_steps_sec[step] / (24 * 3600)
+                    if (
+                        step
+                        % max(1, int(self.options.checkpoint_interval / dt * (24 * 3600)))
+                        == 0
+                        or step == len(self.time_steps_sec) - 1
+                    ):
+                        self._save_checkpoint(step, t_days)
+
+            logger.info("Burnup calculation complete!")
+
+            set_phase(2)
+            inventory = NuclideInventory(
+                nuclides=self.nuclides,
+                concentrations=self.concentrations,
+                times=self.time_steps_sec,
+                burnup=self.burnup_mwd_per_kg,
             )
-            trail.save(audit_trail_path)
+            inventory._solver = self  # For export, validation
 
-        return inventory
+            # Centralized NaN/Inf validation at safety-critical boundary
+            k_eff_val = getattr(self.neutronics, "k_eff", None)
+            if k_eff_val is not None:
+                num_result = validate_safety_critical_outputs(k_eff=float(k_eff_val))
+                if num_result.has_errors():
+                    logger.error("Burnup: safety-critical output validation failed")
+                    num_result.print_report()
+                    raise ValueError(
+                        "Burnup solution has invalid k_eff (NaN/Inf or out of range)"
+                    )
+
+            # Auto-attach audit trail when path provided (regulatory traceability)
+            if audit_trail_path is not None:
+                k_eff = getattr(self.neutronics, "k_eff", None)
+                trail = create_audit_trail(
+                    calculation_type="burnup",
+                    inputs={
+                        "time_steps_days": self.options.time_steps,
+                        "power_density": str(self.options.power_density),
+                        "fuel_temperature": self.options.fuel_temperature,
+                        "track_xe_sm": self.options.track_xe_sm,
+                    },
+                    outputs={
+                        "final_k_eff": float(k_eff) if k_eff is not None else None,
+                        "burnup_mwd_kg": (
+                            float(self.burnup_mwd_per_kg[-1])
+                            if len(self.burnup_mwd_per_kg) > 0
+                            else None
+                        ),
+                        "n_nuclides": len(self.nuclides),
+                        "n_time_steps": len(self.time_steps_sec),
+                    },
+                    solver_method="coupled_neutronics_burnup",
+                )
+                trail.save(audit_trail_path)
+
+            return inventory
 
     def _save_checkpoint(self, step: int, t_days: float):
         """Save checkpoint to file."""

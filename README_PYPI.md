@@ -1,6 +1,6 @@
 # SMRForge
 
-![SMRForge Logo](https://raw.githubusercontent.com/SMRFORGE/smrforge/main/docs/logo/nukepy-logo.png)
+![SMRForge Logo](https://raw.githubusercontent.com/SMRFORGE/smrforge/main/docs/logo/smrforge-logo.png)
 
 **Small Modular Reactor Design and Analysis Toolkit**
 

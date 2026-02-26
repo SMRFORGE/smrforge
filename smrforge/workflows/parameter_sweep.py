@@ -437,7 +437,13 @@ class ParameterSweep:
             max_workers = min(n_cases, 8)
 
         try:
-            from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+            from rich.progress import (
+                BarColumn,
+                Progress,
+                SpinnerColumn,
+                TextColumn,
+                TimeElapsedColumn,
+            )
 
             _RICH_AVAILABLE = True
         except ImportError:  # pragma: no cover
@@ -464,9 +470,12 @@ class ParameterSweep:
                     TextColumn("[progress.description]{task.description}"),
                     BarColumn(),
                     TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                    TimeElapsedColumn(),
                 ) as progress:
-                    task_id = progress.add_task("Sweep...", total=n_cases)
-                    progress_cb = lambda n: progress.update(task_id, advance=1)
+                    task_id = progress.add_task("Sweep…", total=n_cases)
+                    progress_cb = lambda n: progress.update(
+                        task_id, advance=1, description=f"Sweep ({n}/{n_cases})…"
+                    )
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
                         futures = {
                             executor.submit(self._run_single_case, params): params
@@ -517,9 +526,12 @@ class ParameterSweep:
                     TextColumn("[progress.description]{task.description}"),
                     BarColumn(),
                     TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                    TimeElapsedColumn(),
                 ) as progress:
-                    task_id = progress.add_task("Sweep...", total=n_cases)
-                    progress_cb = lambda n: progress.update(task_id, advance=1)
+                    task_id = progress.add_task("Sweep…", total=n_cases)
+                    progress_cb = lambda n: progress.update(
+                        task_id, advance=1, description=f"Sweep ({n}/{n_cases})…"
+                    )
                     for params in combinations:
                         result = self._run_single_case(params)
                         if "error" in result:

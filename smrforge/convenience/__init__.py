@@ -1397,21 +1397,30 @@ class SimpleReactor(_SimpleReactorBase):
             raise
 
     def solve(self) -> Dict:
-        solver = self._get_solver()
-        k_eff, flux = solver.solve_steady_state()
+        from ..utils.progress import phase_progress
 
-        results: Dict[str, object] = {
-            "k_eff": float(k_eff),
-            "flux": flux,
-            "name": self.spec.name,
-            "power_thermal_mw": self.spec.power_thermal / 1e6,
-        }
+        with phase_progress(
+            ["Geometry & cross-sections", "Solving", "Power distribution"],
+            verbose=True,
+        ) as set_phase:
+            set_phase(0)
+            solver = self._get_solver()
+            set_phase(1)
+            k_eff, flux = solver.solve_steady_state()
 
-        try:
-            power = solver.compute_power_distribution(self.spec.power_thermal)
-            results["power_distribution"] = power
-        except Exception:
-            pass
+            results: Dict[str, object] = {
+                "k_eff": float(k_eff),
+                "flux": flux,
+                "name": self.spec.name,
+                "power_thermal_mw": self.spec.power_thermal / 1e6,
+            }
+
+            set_phase(2)
+            try:
+                power = solver.compute_power_distribution(self.spec.power_thermal)
+                results["power_distribution"] = power
+            except Exception:
+                pass
 
         return results
 

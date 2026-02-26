@@ -53,6 +53,7 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[ENDF Improvements Implemented](technical/endf-improvements-implemented.md)** - Implemented ENDF improvements
 
 ### System Documentation
+- **[Platform Notes: Parallelism and Performance](technical/platform-parallelism.md)** - ProcessPoolExecutor/ThreadPoolExecutor on Windows, `if __name__ == "__main__"`, Numba prange/OpenMP
 - **[Logging Usage](technical/logging-usage.md)** - Logging system usage
 - **[Coupling Reduction](technical/coupling-reduction.md)** - Architecture and coupling reduction notes
 - **[API Stability](API_STABILITY.md)** - Public API surface and deprecation policy (smrforge.api, workflows)

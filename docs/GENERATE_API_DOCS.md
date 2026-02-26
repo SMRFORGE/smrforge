@@ -118,7 +118,7 @@ If you get import errors during generation:
 Common issues:
 - **Missing extensions**: Install required Sphinx extensions
 - **Theme issues**: Ensure `sphinx-rtd-theme` is installed
-- **Logo missing**: Ensure `docs/logo/nukepy-logo.png` exists
+- **Logo missing**: Ensure `docs/logo/smrforge-logo.png` exists
 
 ## Next Steps
 

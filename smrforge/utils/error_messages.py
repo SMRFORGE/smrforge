@@ -3,10 +3,13 @@ Helpful error message utilities for better user experience.
 
 This module provides functions to generate user-friendly error messages
 with suggestions and corrections, improving upon OpenMC's limitations
-in error messaging.
+in error messaging. Integrates with smrforge.utils.error_codes for
+SMR-Exxx codes and doc links.
 """
 
 from typing import Any, Dict, List, Optional, Tuple
+
+from .error_codes import format_error, get_error_code
 
 
 def format_validation_error(
@@ -138,23 +141,25 @@ def format_solver_error(
     error_msg: str,
     solver_type: str = "diffusion",
     suggestions: Optional[List[str]] = None,
+    use_error_code: bool = True,
 ) -> str:
     """
-    Format helpful solver error message.
+    Format helpful solver error message with optional SMR-Exxx code and doc link.
 
     Args:
         error_msg: Original error message
         solver_type: Type of solver (diffusion, monte_carlo, etc.)
         suggestions: Optional list of suggestions
+        use_error_code: If True, prepend SMR-E001/E002 and doc link
 
     Returns:
         Formatted error message
     """
     base_msg = f"{solver_type.capitalize()} solver error: {error_msg}"
+    extra_suggestions: List[str] = []
 
     if "convergence" in error_msg.lower() or "converged" in error_msg.lower():
-        suggestions = suggestions or []
-        suggestions.extend(
+        extra_suggestions.extend(
             [
                 "Increase max_iterations",
                 "Relax tolerance (e.g., 1e-5 instead of 1e-6)",
@@ -162,10 +167,11 @@ def format_solver_error(
                 "Verify geometry is physical",
             ]
         )
+        if use_error_code:
+            return format_error("E001", detail=error_msg, suggestions_extra=extra_suggestions)
 
     if "nan" in error_msg.lower() or "inf" in error_msg.lower():
-        suggestions = suggestions or []
-        suggestions.extend(
+        extra_suggestions.extend(
             [
                 "Check for negative cross sections",
                 "Verify all input values are finite",
@@ -173,9 +179,14 @@ def format_solver_error(
                 "Ensure power density is positive",
             ]
         )
+        if use_error_code:
+            return format_error("E002", detail=error_msg, suggestions_extra=extra_suggestions)
 
     if suggestions:
-        return f"{base_msg}\nSuggestions:\n  - " + "\n  - ".join(suggestions)
+        extra_suggestions.extend(suggestions)
+
+    if extra_suggestions:
+        return f"{base_msg}\nRecovery suggestions:\n  - " + "\n  - ".join(extra_suggestions)
 
     return base_msg
 
@@ -198,34 +209,41 @@ def suggest_install_pro(feature: str = "", extra: str = "openmc") -> str:
     return f"{base} Install with: {cmd}"
 
 
-def format_geometry_error(error_msg: str, geometry_type: str = "prismatic") -> str:
+def format_geometry_error(
+    error_msg: str, geometry_type: str = "prismatic", use_error_code: bool = True
+) -> str:
     """
-    Format helpful geometry error message.
+    Format helpful geometry error message with optional SMR-E008.
 
     Args:
         error_msg: Original error message
         geometry_type: Type of geometry
+        use_error_code: If True, use SMR-E008 with doc link
 
     Returns:
         Formatted error message
     """
     base_msg = f"{geometry_type.capitalize()} geometry error: {error_msg}"
+    suggestions: List[str] = []
 
     if "mesh" in error_msg.lower():
-        return (
-            f"{base_msg}\n"
-            f"Suggestions:\n"
-            f"  - Call geometry.build_mesh() before solving\n"
-            f"  - Check mesh dimensions (n_radial, n_axial) are positive\n"
-            f"  - Verify geometry dimensions (core_height, core_diameter) are valid"
+        suggestions.extend(
+            [
+                "Call geometry.build_mesh() before solving",
+                "Check mesh dimensions (n_radial, n_axial) are positive",
+                "Verify geometry dimensions (core_height, core_diameter) are valid",
+            ]
+        )
+    elif "material" in error_msg.lower():
+        suggestions.extend(
+            [
+                "Check material_map is valid",
+                "Verify cross-section data matches material IDs",
+            ]
         )
 
-    if "material" in error_msg.lower():
-        return (
-            f"{base_msg}\n"
-            f"Suggestions:\n"
-            f"  - Check material_map is valid\n"
-            f"  - Verify cross-section data matches material IDs"
-        )
-
+    if use_error_code and suggestions:
+        return format_error("E008", detail=error_msg, suggestions_extra=suggestions)
+    if suggestions:
+        return f"{base_msg}\nRecovery suggestions:\n  - " + "\n  - ".join(suggestions)
     return base_msg

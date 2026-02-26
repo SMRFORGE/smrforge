@@ -18,7 +18,7 @@ class TestGetLogoPath:
         # Create mock logo file structure
         docs_dir = tmp_path / "docs" / "logo"
         docs_dir.mkdir(parents=True)
-        logo_file = docs_dir / "nukepy-logo.png"
+        logo_file = docs_dir / "smrforge-logo.png"
         logo_file.write_bytes(b"fake logo data")
 
         with patch("smrforge.utils.logo.Path") as mock_path:
@@ -30,7 +30,7 @@ class TestGetLogoPath:
 
             # Actually test with real path manipulation
             package_root = Path(__file__).parent.parent
-            logo_path = package_root / "docs" / "logo" / "nukepy-logo.png"
+            logo_path = package_root / "docs" / "logo" / "smrforge-logo.png"
 
             # If logo doesn't exist, create it for test
             if not logo_path.exists():
@@ -67,7 +67,7 @@ class TestGetLogoData:
         # Create mock logo file
         docs_dir = tmp_path / "docs" / "logo"
         docs_dir.mkdir(parents=True)
-        logo_file = docs_dir / "nukepy-logo.png"
+        logo_file = docs_dir / "smrforge-logo.png"
         logo_data = b"fake logo data"
         logo_file.write_bytes(logo_data)
 

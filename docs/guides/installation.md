@@ -217,6 +217,13 @@ SMRForge will automatically use available backends in priority order: SANDY (if 
 
 Numba is used for performance optimization. If it fails to install, the library will still work but may be slower. You can install without numba optimizations if needed.
 
+### Issue: Parallel runs slow on Windows or macOS
+
+- **Windows:** Batch processing uses ThreadPoolExecutor (not ProcessPoolExecutor); the GIL limits CPU-bound speedup. For faster CPU-bound runs, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/) and run `python -m smrforge` inside WSL.
+- **macOS:** Numba parallel loops (`prange`) need OpenMP. Install with `brew install libomp` if you see no speedup from parallel solvers.
+
+See **[Platform Notes: Parallelism and Performance](../technical/platform-parallelism.md)** for details.
+
 ### Issue: "Package conflicts"
 
 If you encounter dependency conflicts:

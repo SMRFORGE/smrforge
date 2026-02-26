@@ -64,6 +64,7 @@ except ImportError:
     _RICH_AVAILABLE = False
     Progress = None
 
+from ..utils.error_codes import SMRForgeError, format_error
 from ..utils.logging import get_logger
 from ..validation.numerical_validation import validate_safety_critical_outputs
 from ..validation.regulatory_traceability import create_audit_trail
@@ -341,9 +342,15 @@ class MultiGroupDiffusion:
             elif self.options.eigen_method == "arnoldi":
                 self.k_eff, self.flux = self._arnoldi_method()
             else:
-                raise ValueError(f"Unknown method: {self.options.eigen_method}")
+                raise SMRForgeError(
+                    "E005",
+                    detail=f"Unknown eigen_method: {self.options.eigen_method}",
+                    suggestions_extra=["Use 'power' or 'arnoldi'"],
+                )
+        except SMRForgeError:
+            raise
         except Exception as e:
-            raise RuntimeError(f"Solver failed: {e}")
+            raise SMRForgeError("E001", detail=str(e))
 
         elapsed = time.time() - start_time
 
@@ -393,11 +400,9 @@ class MultiGroupDiffusion:
         if num_result.has_errors():
             logger.error("Solution validation failed (NaN/Inf or invalid range)")
             num_result.print_report()
-            raise ValueError(
-                f"Solution validation failed. "
-                f"k_eff={self.k_eff:.6f}, "
-                f"flux_max={np.max(self.flux):.3e}, "
-                f"flux_min={np.min(self.flux):.3e}"
+            raise SMRForgeError(
+                "E004",
+                detail=f"k_eff={self.k_eff:.6f}, flux_max={np.max(self.flux):.3e}, flux_min={np.min(self.flux):.3e}",
             )
 
         validator = DataValidator()
@@ -408,11 +413,9 @@ class MultiGroupDiffusion:
         if result.has_errors():
             logger.error("Solution validation failed")
             result.print_report()
-            raise ValueError(
-                f"Solution validation failed. "
-                f"k_eff={self.k_eff:.6f}, "
-                f"flux_max={np.max(self.flux):.3e}, "
-                f"flux_min={np.min(self.flux):.3e}"
+            raise SMRForgeError(
+                "E004",
+                detail=f"k_eff={self.k_eff:.6f}, flux_max={np.max(self.flux):.3e}, flux_min={np.min(self.flux):.3e}",
             )
 
     def _power_iteration(self) -> Tuple[float, np.ndarray]:
@@ -491,11 +494,13 @@ class MultiGroupDiffusion:
                 self.flux = np.ones_like(self.flux)
                 # Try to continue with a better initial guess
                 if iteration == 0:
-                    # First iteration failed - likely source term issue
-                    raise RuntimeError(
-                        "Flux became zero on first iteration. "
-                        "Check that fission cross-sections (nu_sigma_f) are non-zero "
-                        "and that source terms are properly initialized."
+                    raise SMRForgeError(
+                        "E002",
+                        detail="Flux became zero on first iteration. Check nu_sigma_f and source terms.",
+                        suggestions_extra=[
+                            "Check that fission cross-sections (nu_sigma_f) are non-zero",
+                            "Verify source terms are properly initialized",
+                        ],
                     )
 
             k_new = self._compute_k_eff()
@@ -515,10 +520,9 @@ class MultiGroupDiffusion:
                     f"Source stats: min={np.min(self.source):.3e}, max={np.max(self.source):.3e}, "
                     f"has_nan={np.any(np.isnan(self.source))}"
                 )
-                raise RuntimeError(
-                    f"k_eff calculation produced invalid value (NaN/Inf) at iteration {iteration}. "
-                    f"This usually indicates numerical instability. Check cross-section data and "
-                    f"ensure all values are physically reasonable."
+                raise SMRForgeError(
+                    "E002",
+                    detail=f"k_eff NaN/Inf at iteration {iteration}. k_old={k_old:.6f}, k_new={k_new}",
                 )
 
             # Check for NaN in flux
@@ -527,10 +531,9 @@ class MultiGroupDiffusion:
                     f"Flux contains NaN/Inf at iteration {iteration}. "
                     f"k_eff={k_new:.6f}, max_flux={max_flux:.3e}"
                 )
-                raise RuntimeError(
-                    f"Flux became invalid (NaN/Inf) at iteration {iteration}. "
-                    f"This indicates numerical instability in the solver. "
-                    f"Check cross-section data and mesh quality."
+                raise SMRForgeError(
+                    "E002",
+                    detail=f"Flux NaN/Inf at iteration {iteration}. k_eff={k_new:.6f}",
                 )
 
             # Calculate error (handle division by zero)
@@ -552,9 +555,9 @@ class MultiGroupDiffusion:
                     f"Error calculation produced NaN/Inf at iteration {iteration}. "
                     f"k_old={k_old:.6f}, k_new={k_new:.6f}"
                 )
-                raise RuntimeError(
-                    f"Convergence error calculation failed (NaN/Inf) at iteration {iteration}. "
-                    f"k_old={k_old:.6f}, k_new={k_new:.6f}"
+                raise SMRForgeError(
+                    "E002",
+                    detail=f"Convergence error NaN/Inf at iteration {iteration}. k_old={k_old:.6f}, k_new={k_new:.6f}",
                 )
 
             # Update progress bar if available
@@ -621,7 +624,7 @@ class MultiGroupDiffusion:
                 "--library ENDF-B-VIII.1'), or try eigen_method='arnoldi'."
             )
 
-        raise RuntimeError(error_msg)
+        raise SMRForgeError("E001", detail=error_msg)
 
     def _update_fission_source(self, k_eff: float) -> None:
         """
@@ -1112,9 +1115,10 @@ class MultiGroupDiffusion:
 
         except Exception as e:
             logger.error(f"Arnoldi method failed: {e}")
-            raise RuntimeError(
-                f"Arnoldi method failed: {e}. "
-                f"Try using power iteration method (eigen_method='power') instead."
+            raise SMRForgeError(
+                "E001",
+                detail=str(e),
+                suggestions_extra=["Try eigen_method='power' instead of 'arnoldi'"],
             ) from e
 
     def compute_power_distribution(self, total_power: float) -> np.ndarray:

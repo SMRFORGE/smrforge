@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/logo/nukepy-logo.png" alt="SMRForge Logo" width="400"/>
+  <img src="docs/logo/smrforge-logo.png" alt="SMRForge Logo" width="400"/>
   
   # SMRForge
   

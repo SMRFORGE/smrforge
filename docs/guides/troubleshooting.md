@@ -121,6 +121,16 @@ pip install polars
 
 ---
 
+## Parallelism and Performance (Windows, macOS, Linux)
+
+For platform-specific behavior of batch processing, multiprocessing, and Numba parallel loops, see **[Platform Notes: Parallelism and Performance](../technical/platform-parallelism.md)**. It covers:
+
+- **Windows:** ProcessPoolExecutor fallback to ThreadPoolExecutor (GIL limits CPU-bound speedup); use WSL for better performance
+- **Windows:** Need for `if __name__ == "__main__":` in scripts that use multiprocessing
+- **All platforms:** Numba `prange` and OpenMP library availability (e.g. `brew install libomp` on macOS)
+
+---
+
 ## Common Pitfalls
 
 | Pitfall | Recommendation |

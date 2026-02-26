@@ -1,7 +1,7 @@
 SMRForge Documentation
 ======================
 
-.. image:: logo/nukepy-logo.png
+.. image:: logo/smrforge-logo.png
    :alt: SMRForge Logo
    :align: center
    :width: 400

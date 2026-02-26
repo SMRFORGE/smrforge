@@ -74,8 +74,8 @@ class TestSolverCoverageGaps:
         # Bypass Pydantic validation by setting the underlying dict
         solver.options.__dict__["eigen_method"] = "invalid_method"
 
-        # The ValueError is wrapped in RuntimeError
-        with pytest.raises(RuntimeError, match="Solver failed"):
+        # Unknown method raises SMRForgeError (E005) with recovery suggestions
+        with pytest.raises(RuntimeError, match="E005|Unknown eigen_method|Invalid input"):
             solver.solve_steady_state()
 
     def test_bicgstab_failure(self, simple_geometry, simple_xs_data):

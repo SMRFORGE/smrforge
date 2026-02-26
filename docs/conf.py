@@ -62,8 +62,8 @@ html_theme_options = {
 }
 
 # Logo for HTML output
-html_logo = "logo/nukepy-logo.png"
-html_favicon = "logo/nukepy-logo.png"
+html_logo = "logo/smrforge-logo.png"
+html_favicon = "logo/smrforge-logo.png"
 
 # Static files
 html_static_path = ["_static"]

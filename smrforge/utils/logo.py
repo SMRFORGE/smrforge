@@ -15,7 +15,7 @@ def get_logo_path() -> Path:
     """
     # Logo is in docs/logo/ relative to package root
     package_root = Path(__file__).parent.parent.parent
-    logo_path = package_root / "docs" / "logo" / "nukepy-logo.png"
+    logo_path = package_root / "docs" / "logo" / "smrforge-logo.png"
 
     if not logo_path.exists():
         raise FileNotFoundError(
