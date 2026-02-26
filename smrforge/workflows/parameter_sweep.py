@@ -3,17 +3,20 @@ Parameter sweep and sensitivity analysis workflow utilities.
 
 This module provides automated parameter sweeps for reactor analysis,
 enabling systematic exploration of design parameter space.
+
+Uses Pydantic for config validation and Polars for fast DataFrame operations.
 """
 
 import json
 import os
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import pandas as pd
+
+from pydantic import BaseModel, field_validator
 
 from ..utils.exception_handling import reraise_if_system
 from ..utils.logging import get_logger
@@ -21,11 +24,43 @@ from .plugin_registry import run_hooks
 
 logger = get_logger("smrforge.workflows")
 
+# Optional: use Polars for fast DataFrame ops (fallback to pandas)
+try:
+    import polars as pl
+    _POLARS_AVAILABLE = True
+except ImportError:
+    pl = None  # type: ignore
+    _POLARS_AVAILABLE = False
 
-@dataclass
-class SweepConfig:
+try:
+    import pandas as pd
+    _PANDAS_AVAILABLE = True
+except ImportError:
+    pd = None  # type: ignore
+    _PANDAS_AVAILABLE = False
+
+
+def _normalize_param_spec(spec: Any) -> Union[Tuple[float, float, float], List[float]]:
+    """Normalize parameter spec to (start, end, step) or list of values."""
+    if isinstance(spec, (list, tuple)):
+        arr = list(spec)
+        if len(arr) == 3 and all(isinstance(x, (int, float)) for x in arr):
+            a, b, c = float(arr[0]), float(arr[1]), float(arr[2])
+            # Heuristic: (start, end, step) has step <= range; else treat as 3 distinct values
+            rng = b - a
+            if c > 0 and rng > 0 and c <= rng + 1e-12:
+                return (a, b, c)
+            return [a, b, c]
+        return [float(x) for x in arr]
+    raise ValueError(
+        f"Invalid parameter specification for {spec!r}: "
+        "must be [start, end, step] or list of values"
+    )
+
+
+class SweepConfig(BaseModel):
     """
-    Configuration for parameter sweep.
+    Configuration for parameter sweep (Pydantic-validated).
 
     Attributes:
         parameters: Dictionary mapping parameter names to sweep ranges.
@@ -40,15 +75,33 @@ class SweepConfig:
         seed: Optional random seed for deterministic runs (Pro)
     """
 
+    model_config = {"arbitrary_types_allowed": True}
+
     parameters: Dict[str, Union[Tuple[float, float, float], List[float]]]
-    analysis_types: List[str] = field(default_factory=lambda: ["keff"])
-    reactor_template: Optional[Union[Dict, Path, str]] = None
+    analysis_types: List[str] = ["keff"]
+    reactor_template: Optional[Union[Dict[str, Any], Path, str]] = None
     output_dir: Path = Path("sweep_results")
     parallel: bool = True
     max_workers: Optional[int] = None
     save_intermediate: bool = True
     surrogate_path: Optional[Union[Path, str]] = None
     seed: Optional[int] = None
+
+    @field_validator("parameters", mode="before")
+    @classmethod
+    def _validate_parameters(cls, v: Any) -> Dict[str, Union[Tuple[float, float, float], List[float]]]:
+        if not isinstance(v, dict):
+            raise ValueError("parameters must be a dict")
+        return {k: _normalize_param_spec(spec) for k, spec in v.items()}
+
+    @field_validator("output_dir", "surrogate_path", mode="before")
+    @classmethod
+    def _validate_path(cls, v: Any) -> Any:
+        if v is None or v == "":
+            return v
+        if isinstance(v, str):
+            return Path(v)
+        return v
 
     def get_parameter_values(self, param_name: str) -> np.ndarray:
         """Get array of values for a parameter."""
@@ -99,42 +152,18 @@ class SweepConfig:
             data = json.loads(text)
         if not isinstance(data, dict):
             raise ValueError("Config file must contain a single dict")
-        # Normalize parameters: [a,b,c] or [start,end,step] -> tuple/list
-        params = data.get("parameters", {})
-        if params:
-            normalized = {}
-            for name, spec in params.items():
-                if isinstance(spec, (list, tuple)):
-                    arr = list(spec)
-                    if len(arr) == 3 and all(isinstance(x, (int, float)) for x in arr):
-                        normalized[name] = (float(arr[0]), float(arr[1]), float(arr[2]))
-                    else:
-                        normalized[name] = [float(x) for x in arr]
-                else:
-                    normalized[name] = spec
-            data = {**data, "parameters": normalized}
-        if "output_dir" in data:
-            data["output_dir"] = Path(data["output_dir"])
-        if "surrogate_path" in data and data["surrogate_path"]:
-            data["surrogate_path"] = Path(data["surrogate_path"])
-        return cls(
-            **{
-                k: v
-                for k, v in data.items()
-                if k
-                in (
-                    "parameters",
-                    "analysis_types",
-                    "reactor_template",
-                    "output_dir",
-                    "parallel",
-                    "max_workers",
-                    "save_intermediate",
-                    "surrogate_path",
-                    "seed",
-                )
-            }
+        allowed = (
+            "parameters",
+            "analysis_types",
+            "reactor_template",
+            "output_dir",
+            "parallel",
+            "max_workers",
+            "save_intermediate",
+            "surrogate_path",
+            "seed",
         )
+        return cls(**{k: v for k, v in data.items() if k in allowed})
 
 
 @dataclass
@@ -154,24 +183,63 @@ class SweepResult:
     failed_cases: List[Dict[str, Any]] = field(default_factory=list)
     summary_stats: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dataframe(self) -> pd.DataFrame:
-        """Convert results to pandas DataFrame."""
-        if not self.results:
-            return pd.DataFrame()
+    def to_polars(self):
+        """Convert results to Polars DataFrame (fast for large sweeps)."""
+        if not _POLARS_AVAILABLE or not self.results:
+            return None
+        return pl.DataFrame(self.results)
 
-        return pd.DataFrame(self.results)
+    def to_dataframe(self, engine: str = "pandas"):
+        """
+        Convert results to DataFrame.
+
+        Args:
+            engine: "polars" for pl.DataFrame, "pandas" for pd.DataFrame (default).
+
+        Returns:
+            Polars or pandas DataFrame. Falls back to pandas if Polars unavailable.
+        """
+        if not self.results:
+            if engine == "polars" and _POLARS_AVAILABLE:
+                return pl.DataFrame()
+            return pd.DataFrame() if _PANDAS_AVAILABLE else None
+
+        if engine == "polars" and _POLARS_AVAILABLE:
+            return pl.DataFrame(self.results)
+        if _PANDAS_AVAILABLE:
+            return pd.DataFrame(self.results)
+        raise ImportError("pandas or polars required for to_dataframe")
 
     def save(self, output_path: Path):
-        """Save results to file (JSON or Parquet)."""
+        """Save results to file (JSON or Parquet). Uses Polars for Parquet when available."""
         output_path = Path(output_path)
 
         if output_path.suffix == ".parquet":
-            df = self.to_dataframe()
-            df.to_parquet(output_path, index=False)
+            if _POLARS_AVAILABLE and self.results:
+                pl.DataFrame(self.results).write_parquet(output_path)
+            elif _PANDAS_AVAILABLE:
+                pd.DataFrame(self.results).to_parquet(output_path, index=False)
+            else:
+                raise ImportError("polars or pandas with pyarrow required for Parquet export")
         else:
             # JSON format
+            config_dict = (
+                self.config.model_dump(mode="json")
+                if hasattr(self.config, "model_dump")
+                else {
+                    "parameters": self.config.parameters,
+                    "analysis_types": self.config.analysis_types,
+                    "reactor_template": self.config.reactor_template,
+                    "output_dir": str(self.config.output_dir),
+                    "parallel": self.config.parallel,
+                    "max_workers": self.config.max_workers,
+                    "save_intermediate": self.config.save_intermediate,
+                    "surrogate_path": str(self.config.surrogate_path) if self.config.surrogate_path else None,
+                    "seed": self.config.seed,
+                }
+            )
             data = {
-                "config": asdict(self.config),
+                "config": config_dict,
                 "results": self.results,
                 "failed_cases": self.failed_cases,
                 "summary_stats": self.summary_stats,
@@ -574,35 +642,62 @@ class ParameterSweep:
             json.dump(data, f, indent=2, default=str)
 
     def _calculate_summary_stats(self, results: List[Dict]) -> Dict[str, Any]:
-        """Calculate summary statistics from results."""
+        """Calculate summary statistics from results. Uses Polars when available for performance."""
         if not results:
             return {}
 
-        df = pd.DataFrame(results)
-        stats = {}
+        if _POLARS_AVAILABLE:
+            df = pl.DataFrame(results)
+            numeric_cols = [
+                c for c in df.columns
+                if df[c].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
+                and c != "success"
+            ]
+            stats = {}
+            for col in numeric_cols:
+                if col in df.columns:
+                    s = df[col]
+                    stats[col] = {
+                        "mean": float(s.mean()),
+                        "std": float(s.std()) if s.len() > 1 else 0.0,
+                        "min": float(s.min()),
+                        "max": float(s.max()),
+                        "median": float(s.median()),
+                    }
+            param_cols = [
+                c for c in df.columns
+                if c.startswith("parameters_") or c in self.config.parameters
+            ]
+            if param_cols and numeric_cols:
+                try:
+                    sub = df.select([c for c in param_cols + numeric_cols if c in df.columns])
+                    corr = sub.to_pandas().corr()
+                    stats["correlations"] = corr.to_dict()
+                except Exception:
+                    stats["correlations"] = {}
+            return stats
 
-        # Extract numeric columns (metrics)
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        numeric_cols = [col for col in numeric_cols if col != "success"]
+        if _PANDAS_AVAILABLE:
+            df = pd.DataFrame(results)
+            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            numeric_cols = [col for col in numeric_cols if col != "success"]
+            stats = {}
+            for col in numeric_cols:
+                if col in df.columns:
+                    stats[col] = {
+                        "mean": float(df[col].mean()),
+                        "std": float(df[col].std()),
+                        "min": float(df[col].min()),
+                        "max": float(df[col].max()),
+                        "median": float(df[col].median()),
+                    }
+            param_cols = [
+                col for col in df.columns
+                if col.startswith("parameters_") or col in self.config.parameters
+            ]
+            if param_cols and numeric_cols:
+                correlations = df[param_cols + numeric_cols].corr()
+                stats["correlations"] = correlations.to_dict()
+            return stats
 
-        for col in numeric_cols:
-            if col in df.columns:
-                stats[col] = {
-                    "mean": float(df[col].mean()),
-                    "std": float(df[col].std()),
-                    "min": float(df[col].min()),
-                    "max": float(df[col].max()),
-                    "median": float(df[col].median()),
-                }
-
-        # Calculate correlations between parameters and results
-        param_cols = [
-            col
-            for col in df.columns
-            if col.startswith("parameters_") or col in self.config.parameters
-        ]
-        if param_cols and numeric_cols:
-            correlations = df[param_cols + numeric_cols].corr()
-            stats["correlations"] = correlations.to_dict()
-
-        return stats
+        return {}

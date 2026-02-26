@@ -4,6 +4,8 @@ Parameter sweep visualization helpers.
 Designed to work with `smrforge.workflows.parameter_sweep.SweepResult` and
 to return either Plotly figures (for dashboards) or Matplotlib figures
 (for static docs/scripts).
+
+Uses Polars for fast DataFrame construction when available (performance-critical).
 """
 
 from __future__ import annotations
@@ -12,7 +14,22 @@ from dataclasses import asdict, is_dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-import pandas as pd
+
+try:
+    import polars as pl
+
+    _POLARS_AVAILABLE = True
+except ImportError:
+    pl = None  # type: ignore
+    _POLARS_AVAILABLE = False
+
+try:
+    import pandas as pd
+
+    _PANDAS_AVAILABLE = True
+except ImportError:
+    pd = None  # type: ignore
+    _PANDAS_AVAILABLE = False
 
 try:
     import matplotlib.pyplot as plt
@@ -36,6 +53,8 @@ from ._viz_common import ensure_matplotlib_available, ensure_plotly_available
 def _maybe_asdict(obj: Any) -> Any:
     if is_dataclass(obj):
         return asdict(obj)
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump(mode="json")
     return obj
 
 
@@ -69,18 +88,61 @@ def _flatten_parameters_column(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([df.drop(columns=["parameters"]), expanded], axis=1)
 
 
+def _flatten_parameters_polars(pdf: "pl.DataFrame") -> "pl.DataFrame":
+    """Flatten parameters column using Polars (faster for large datasets)."""
+    if "parameters" not in pdf.columns:
+        return pdf
+    try:
+        nested = pdf["parameters"]
+        if nested.null_count() == nested.len():
+            return pdf.drop("parameters")
+        expanded = pdf.unnest("parameters")
+        # Rename unnested columns that conflict with existing
+        other_cols = {c for c in pdf.columns if c != "parameters"}
+        renames = {}
+        for col in expanded.columns:
+            if col in other_cols:
+                renames[col] = f"param_{col}"
+        if renames:
+            expanded = expanded.rename(renames)
+        return expanded
+    except Exception:
+        return pdf
+
+
 def _to_dataframe(
     sweep_result: Any,
     *,
     include_failed: bool = False,
 ) -> pd.DataFrame:
     """
-    Convert a SweepResult (or compatible inputs) into a flat DataFrame.
+    Convert a SweepResult (or compatible inputs) into a flat pandas DataFrame.
+    Uses Polars for fast construction when available (performance-critical path).
     """
-    if sweep_result is None:
-        return pd.DataFrame()
+    if sweep_result is None or not _PANDAS_AVAILABLE:
+        return pd.DataFrame() if _PANDAS_AVAILABLE else None
 
-    # SweepResult has .to_dataframe() in our codebase.
+    # Fast path: SweepResult with .results and Polars available
+    results_list = None
+    if _POLARS_AVAILABLE:
+        if hasattr(sweep_result, "results") and isinstance(
+            getattr(sweep_result, "results", None), list
+        ):
+            results_list = sweep_result.results
+        elif isinstance(sweep_result, dict) and "results" in sweep_result:
+            results_list = sweep_result["results"]
+
+    if results_list is not None and results_list:
+        try:
+            pdf = pl.DataFrame(results_list)
+            pdf = _flatten_parameters_polars(pdf)
+            if not include_failed and "success" in pdf.columns:
+                pdf = pdf.filter(pl.col("success") != False)
+            return pdf.to_pandas()
+        except Exception:
+            pass  # Fall through to pandas path
+
+    # Standard path
     to_df = getattr(sweep_result, "to_dataframe", None)
     if callable(to_df):
         df = to_df()
@@ -89,7 +151,6 @@ def _to_dataframe(
     elif isinstance(sweep_result, (list, tuple)):
         df = pd.DataFrame([_maybe_asdict(r) for r in sweep_result])
     elif isinstance(sweep_result, dict):
-        # Accept {"results": [...], ...} shapes
         if "results" in sweep_result and isinstance(sweep_result["results"], list):
             df = pd.DataFrame([_maybe_asdict(r) for r in sweep_result["results"]])
         else:
@@ -103,7 +164,6 @@ def _to_dataframe(
     df = _flatten_parameters_column(df)
 
     if not include_failed and "success" in df.columns:
-        # Some cases may omit success; keep them unless explicitly False.
         df = df[df["success"] != False]  # noqa: E712
 
     return df

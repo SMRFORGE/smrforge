@@ -458,8 +458,6 @@ def workflow_doe(args):
 def workflow_pareto(args):
     """Compute and export Pareto front from sweep results."""
     try:
-        import pandas as pd
-
         from smrforge.visualization.sweep_plots import _pareto_front_mask, _to_dataframe
 
         p = Path(getattr(args, "sweep_results", None) or "")
@@ -469,10 +467,10 @@ def workflow_pareto(args):
         with open(p, encoding="utf-8") as f:
             data = json.load(f)
         results = data.get("results", data) if isinstance(data, dict) else data
-        df = (
-            pd.DataFrame(results)
-            if isinstance(results, list)
-            else pd.DataFrame([results])
+        # Use _to_dataframe for consistent handling (supports Polars fast path)
+        df = _to_dataframe(
+            {"results": results} if isinstance(results, list) else results,
+            include_failed=True,
         )
         if df.empty:
             _print_error("No results in sweep file")  # pragma: no cover
@@ -491,6 +489,7 @@ def workflow_pareto(args):
                 f"Metrics {mx}, {my} not in results. Columns: {list(df.columns)}"
             )  # pragma: no cover
             sys.exit(1)  # pragma: no cover
+        import pandas as pd
         x = pd.to_numeric(df[mx], errors="coerce").to_numpy()
         y = pd.to_numeric(df[my], errors="coerce").to_numpy()
         ok = np.isfinite(x) & np.isfinite(y)
@@ -1435,9 +1434,16 @@ def workflow_benchmark(args):
     output = getattr(args, "output", None)
     try:
         result = reproduce_benchmark(bid, output_dir=output)
-        status = "PASS" if result.passed else "FAIL"
-        _print_success(f"Benchmark {bid}: {status}")
-        _print_info(f"Report: {result.output_dir / 'report.json'}")
+        if isinstance(result, tuple):
+            results_list, out_path = result
+            n_pass = sum(1 for r in results_list if getattr(r, "passed", False))
+            n_total = len(results_list)
+            _print_success(f"Benchmark suite {bid}: {n_pass}/{n_total} passed")
+            _print_info(f"Report: {out_path / 'BENCHMARK_SUMMARY.md'}")
+        else:
+            status = "PASS" if result.passed else "FAIL"
+            _print_success(f"Benchmark {bid}: {status}")
+            _print_info(f"Report: {result.output_dir / 'report.json'}")
     except Exception as e:
         _print_error(f"Benchmark failed: {e}")
         sys.exit(1)

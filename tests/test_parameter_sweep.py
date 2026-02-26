@@ -44,13 +44,13 @@ class TestSweepConfig:
         np.testing.assert_array_equal(values, expected)
 
     def test_get_parameter_values_invalid(self):
-        """Test invalid parameter specification raises error."""
-        config = SweepConfig(
-            parameters={"invalid": "not a tuple or list"}, analysis_types=["keff"]
-        )
+        """Test invalid parameter specification raises error (at construction)."""
+        from pydantic import ValidationError
 
-        with pytest.raises(ValueError, match="Invalid parameter specification"):
-            config.get_parameter_values("invalid")
+        with pytest.raises((ValueError, ValidationError), match="Invalid parameter"):
+            SweepConfig(
+                parameters={"invalid": "not a tuple or list"}, analysis_types=["keff"]
+            )
 
     def test_get_all_combinations_single_param(self):
         """Test combination generation with single parameter."""
@@ -156,6 +156,35 @@ class TestSweepResult:
         df = result.to_dataframe()
         assert len(df) == 2
         assert "k_eff" in df.columns
+
+    def test_to_polars_when_available(self):
+        """Test to_polars returns Polars DataFrame when polars is installed."""
+        import polars as pl
+
+        config = SweepConfig(parameters={"x": [1, 2]}, analysis_types=["keff"])
+        result = SweepResult(
+            config=config,
+            results=[
+                {"parameters": {"x": 1}, "k_eff": 1.0},
+                {"parameters": {"x": 2}, "k_eff": 1.1},
+            ],
+        )
+        pdf = result.to_polars()
+        assert pdf is not None
+        assert isinstance(pdf, pl.DataFrame)
+        assert len(pdf) == 2
+
+    def test_to_dataframe_engine_polars(self):
+        """Test to_dataframe(engine='polars') returns Polars DataFrame."""
+        import polars as pl
+
+        config = SweepConfig(parameters={"x": [1]}, analysis_types=["keff"])
+        result = SweepResult(
+            config=config, results=[{"parameters": {"x": 1}, "k_eff": 1.0}]
+        )
+        df = result.to_dataframe(engine="polars")
+        assert isinstance(df, pl.DataFrame)
+        assert len(df) == 1
 
     def test_save_json(self, tmp_path):
         """Test saving results to JSON."""

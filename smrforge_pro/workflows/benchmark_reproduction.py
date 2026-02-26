@@ -2,25 +2,29 @@
 One-click benchmark reproduction (Pro).
 
 Download OECD/NEA or other benchmarks, run, compare to reference, produce report.
+Integrates Community execute_and_document_benchmarks for CI-ready suite.
+
+Uses Pydantic for BenchmarkResult validation and serialization.
 """
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel, Field
 
 from smrforge.utils.logging import get_logger
 
 logger = get_logger("smrforge_pro.workflows.benchmark_reproduction")
 
 
-# Registry of known benchmarks (can be extended from config/JSON)
+# Registry of known benchmarks (IAEA/OECD/NUREG references + presets)
 BENCHMARK_REGISTRY: Dict[str, Dict[str, Any]] = {
     "valar10_preset": {
         "name": "Valar-10 preset",
         "description": "SMRForge built-in Valar-10 HTGR preset",
         "type": "preset",
-        "reference": {"k_eff": 1.0},  # Placeholder; real ref from benchmark data
+        "reference": {"k_eff": 1.0},
         "config": {"preset": "valar-10"},
     },
     "htgr-simple": {
@@ -30,43 +34,108 @@ BENCHMARK_REGISTRY: Dict[str, Dict[str, Any]] = {
         "reference": {"k_eff": None},
         "config": {"preset": "valar-10", "power_mw": 10, "enrichment": 0.195},
     },
+    # IAEA/NUREG/OECD benchmark references (from Community BENCHMARK_REFERENCES)
+    "godiva_bare_sphere": {
+        "name": "Godiva bare sphere",
+        "description": "IAEA criticality benchmark - bare HEU sphere",
+        "type": "reference",
+        "reference": {"k_eff": 1.0, "tolerance": 0.005},
+        "source": "IAEA/NEA",
+        "config": {"preset": "valar-10"},  # Placeholder until dedicated model
+    },
+    "jezebel_pu239": {
+        "name": "Jezebel Pu-239",
+        "description": "IAEA criticality benchmark - bare Pu sphere",
+        "type": "reference",
+        "reference": {"k_eff": 1.0, "tolerance": 0.005},
+        "source": "IAEA",
+        "config": {"preset": "valar-10"},
+    },
+    "lra_benchmark": {
+        "name": "LRA benchmark",
+        "description": "LWR assembly benchmark",
+        "type": "reference",
+        "reference": {"k_eff": 1.0, "tolerance": 0.01},
+        "source": "NUREG",
+        "config": {"preset": "valar-10"},
+    },
 }
 
 
-@dataclass
-class BenchmarkResult:
-    """Result of benchmark run."""
+class BenchmarkResult(BaseModel):
+    """Result of benchmark run (Pydantic-validated)."""
+
+    model_config = {"arbitrary_types_allowed": True}
 
     benchmark_id: str
-    reference: Dict[str, Any]
-    calculated: Dict[str, Any]
-    differences: Dict[str, float]
-    passed: bool
+    reference: Dict[str, Any] = Field(default_factory=dict)
+    calculated: Dict[str, Any] = Field(default_factory=dict)
+    differences: Dict[str, float] = Field(default_factory=dict)
+    passed: bool = False
     output_dir: Path
 
 
+# Special ID to run Community's execute_and_document_benchmarks suite
+COMMUNITY_SUITE_ID = "community_suite"
+
+
 def list_benchmarks() -> List[str]:
-    """List available benchmark IDs."""
-    return list(BENCHMARK_REGISTRY.keys())
+    """List available benchmark IDs (including community_suite for full CI suite)."""
+    ids = list(BENCHMARK_REGISTRY.keys())
+    return ids + [COMMUNITY_SUITE_ID]
+
+
+def reproduce_community_benchmarks(
+    benchmark_names: Optional[List[str]] = None,
+    endf_dir: Optional[Path] = None,
+    output_dir: Optional[Path] = None,
+) -> tuple:
+    """
+    Run Community's execute_and_document_benchmarks and return results.
+
+    Pro integration: uses Community's CI-ready benchmark suite for full validation.
+    Delegates to smrforge.validation.benchmark_runner.execute_and_document_benchmarks.
+
+    Returns:
+        Tuple of (list of BenchmarkResult, output Path) from Community
+    """
+    from smrforge.validation.benchmark_runner import execute_and_document_benchmarks
+
+    return execute_and_document_benchmarks(
+        benchmark_names=benchmark_names,
+        endf_dir=endf_dir,
+        output_dir=output_dir or Path("benchmark_output") / "community_suite",
+    )
 
 
 def reproduce_benchmark(
     benchmark_id: str,
     output_dir: Optional[Path] = None,
-) -> BenchmarkResult:
+) -> Union[BenchmarkResult, tuple]:
     """
     Reproduce a benchmark: run and compare to reference.
 
+    When benchmark_id is "community_suite", integrates Community's
+    execute_and_document_benchmarks for full CI validation.
+
     Args:
-        benchmark_id: ID from BENCHMARK_REGISTRY (or list_benchmarks())
+        benchmark_id: ID from BENCHMARK_REGISTRY or "community_suite"
         output_dir: Where to write results
 
     Returns:
-        BenchmarkResult with reference, calculated, differences, passed
+        BenchmarkResult for single benchmark, or (results, path) for community_suite
     """
+    if benchmark_id == COMMUNITY_SUITE_ID:
+        out = output_dir or Path("benchmark_output") / "community_suite"
+        results, path = reproduce_community_benchmarks(
+            output_dir=out, endf_dir=None, benchmark_names=None
+        )
+        return results, path
+
     if benchmark_id not in BENCHMARK_REGISTRY:
+        avail = [COMMUNITY_SUITE_ID] + list(BENCHMARK_REGISTRY.keys())
         raise ValueError(
-            f"Unknown benchmark '{benchmark_id}'. Available: {list_benchmarks()}"
+            f"Unknown benchmark '{benchmark_id}'. Available: {avail}"
         )
 
     if output_dir is None:

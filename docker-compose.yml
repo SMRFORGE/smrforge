@@ -89,7 +89,7 @@ services:
     # CLI dependencies (rich, pyyaml) are already in requirements.txt
     # Rich logging: Colorized console output (level colors, rich tracebacks). Set NO_COLOR=1 to disable.
     # Visualization dependencies (plotly, pyvista, dash) are now required and included automatically
-    # Parameter sweep dependencies (pandas) are already in requirements.txt
+    # Parameter sweep: SweepConfig (Pydantic), Polars for fast DataFrame/Parquet
     # Performance optimizations: Numba JIT compilation requires build-essential and python3-dev (already included)
     # Temperature interpolation: scipy.interpolate.RectBivariateSpline (included in scipy)
     # Self-shielding: All dependencies included in requirements.txt

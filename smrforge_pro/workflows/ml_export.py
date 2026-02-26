@@ -2,13 +2,29 @@
 ML-friendly data export for SMRForge - Parquet and HDF5.
 
 Pro tier: Full implementation of export_ml_dataset.
+Uses Polars for fast Parquet export when available (performance-critical).
 """
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-import pandas as pd
+
+try:
+    import polars as pl
+
+    _POLARS_AVAILABLE = True
+except ImportError:
+    pl = None  # type: ignore
+    _POLARS_AVAILABLE = False
+
+try:
+    import pandas as pd
+
+    _PANDAS_AVAILABLE = True
+except ImportError:
+    pd = None  # type: ignore
+    _PANDAS_AVAILABLE = False
 
 
 def export_ml_dataset(
@@ -61,8 +77,6 @@ def export_ml_dataset(
                 row[m] = np.nan
         rows.append(row)
 
-    df = pd.DataFrame(rows)
-
     fmt = format or output_path.suffix.lower().lstrip(".")
     if fmt in ("parquet", ""):
         fmt = "parquet"
@@ -75,7 +89,14 @@ def export_ml_dataset(
         if output_path.suffix.lower() != ".parquet":
             output_path = output_path.with_suffix(".parquet")
         try:
-            df.to_parquet(output_path, index=False)
+            if _POLARS_AVAILABLE and rows:
+                pl.DataFrame(rows).write_parquet(output_path)
+            elif _PANDAS_AVAILABLE:
+                pd.DataFrame(rows).to_parquet(output_path, index=False)
+            else:
+                raise ImportError(
+                    "Parquet export requires polars or pandas+pyarrow. pip install polars or pyarrow"
+                )
         except ImportError as e:
             raise ImportError(
                 "Parquet export requires pyarrow or fastparquet. pip install pyarrow or smrforge-pro[ml]"
@@ -84,7 +105,9 @@ def export_ml_dataset(
         if output_path.suffix.lower() not in (".h5", ".hdf5"):
             output_path = output_path.with_suffix(".h5")
         try:
-            df.to_hdf(output_path, key="data", mode="w", format="table")
+            if not _PANDAS_AVAILABLE:
+                raise ImportError("HDF5 export requires pandas. pip install pandas")
+            pd.DataFrame(rows).to_hdf(output_path, key="data", mode="w", format="table")
         except ImportError as e:
             raise ImportError(
                 "HDF5 export requires pytables. pip install tables"
