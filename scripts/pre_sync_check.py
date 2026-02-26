@@ -34,7 +34,9 @@ WHITELIST_SMRFORGE_PRO = {
     "smrforge/workflows/surrogate.py",
     "smrforge/workflows/parameter_sweep.py",
     "smrforge/ai/audit.py",
-    "smrforge/cli.py",
+    "smrforge/cli/commands/workflow.py",
+    "smrforge/cli/commands/report.py",
+    "smrforge/cli/commands/visualize.py",
 }
 
 

@@ -1,5 +1,5 @@
 """
-SMRForge Pro workflows - surrogate fitting, ML export, plugin registry.
+SMRForge Pro workflows - surrogate, ML export, code verification, regulatory package, benchmark.
 """
 
 from .ml_export import export_ml_dataset

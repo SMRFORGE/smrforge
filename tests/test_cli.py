@@ -23,8 +23,8 @@ class TestCLIHelperFunctions:
 
     def test_print_warning_with_rich(self):
         """Test _print_warning with Rich available."""
-        with patch("smrforge.cli._RICH_AVAILABLE", True):
-            with patch("smrforge.cli.console") as mock_console:
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+            with patch("smrforge.cli.utils.console") as mock_console:
                 cli_module._print_warning("Warning message")
                 mock_console.print.assert_called_once()
                 call_args = mock_console.print.call_args[0][0]
@@ -32,7 +32,7 @@ class TestCLIHelperFunctions:
 
     def test_print_warning_without_rich(self, capsys):
         """Test _print_warning without Rich."""
-        with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
             cli_module._print_warning("Warning message")
             captured = capsys.readouterr()
             assert "⚠" in captured.out
@@ -40,8 +40,8 @@ class TestCLIHelperFunctions:
 
     def test_print_success_with_rich(self):
         """Test _print_success with Rich available."""
-        with patch("smrforge.cli._RICH_AVAILABLE", True):
-            with patch("smrforge.cli.console") as mock_console:
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+            with patch("smrforge.cli.utils.console") as mock_console:
                 cli_module._print_success("Test message")
                 mock_console.print.assert_called_once()
                 call_args = mock_console.print.call_args[0][0]
@@ -49,7 +49,7 @@ class TestCLIHelperFunctions:
 
     def test_print_success_without_rich(self, capsys):
         """Test _print_success without Rich."""
-        with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
             cli_module._print_success("Test message")
             captured = capsys.readouterr()
             assert "✓" in captured.out
@@ -57,8 +57,8 @@ class TestCLIHelperFunctions:
 
     def test_print_error_with_rich(self):
         """Test _print_error with Rich available."""
-        with patch("smrforge.cli._RICH_AVAILABLE", True):
-            with patch("smrforge.cli.console") as mock_console:
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+            with patch("smrforge.cli.utils.console") as mock_console:
                 cli_module._print_error("Error message")
                 mock_console.print.assert_called_once()
                 call_args = mock_console.print.call_args[0][0]
@@ -66,7 +66,7 @@ class TestCLIHelperFunctions:
 
     def test_print_error_without_rich(self, capsys):
         """Test _print_error without Rich."""
-        with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
             cli_module._print_error("Error message")
             captured = capsys.readouterr()
             assert "✗" in captured.out
@@ -74,8 +74,8 @@ class TestCLIHelperFunctions:
 
     def test_print_info_with_rich(self):
         """Test _print_info with Rich available."""
-        with patch("smrforge.cli._RICH_AVAILABLE", True):
-            with patch("smrforge.cli.console") as mock_console:
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+            with patch("smrforge.cli.utils.console") as mock_console:
                 cli_module._print_info("Info message")
                 mock_console.print.assert_called_once()
                 call_args = mock_console.print.call_args[0][0]
@@ -83,7 +83,7 @@ class TestCLIHelperFunctions:
 
     def test_print_info_without_rich(self, capsys):
         """Test _print_info without Rich."""
-        with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
             cli_module._print_info("Info message")
             captured = capsys.readouterr()
             assert "ℹ" in captured.out
@@ -103,8 +103,8 @@ class TestServeDashboard:
             return __import__(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=import_side_effect):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
-                with patch("smrforge.cli.sys.exit") as mock_exit:
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
+                with patch("sys.exit") as mock_exit:
                     cli_module.serve_dashboard(args)
                     mock_exit.assert_called_once_with(1)
 
@@ -113,8 +113,8 @@ class TestServeDashboard:
         args = Mock(host="127.0.0.1", port=8050, debug=False)
 
         mock_run_server = Mock()
-        with patch("smrforge.cli._RICH_AVAILABLE", True):
-            with patch("smrforge.cli.console") as mock_console:
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+            with patch("smrforge.cli.utils.console") as mock_console:
                 with patch("smrforge.gui.run_server", mock_run_server):
                     # Mock dash imports
                     with patch.dict(
@@ -131,7 +131,7 @@ class TestServeDashboard:
         args = Mock(host="0.0.0.0", port=9000, debug=True)
 
         mock_run_server = Mock()
-        with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
             with patch("smrforge.gui.run_server", mock_run_server):
                 with patch.dict(
                     "sys.modules", {"dash": Mock(), "dash_bootstrap_components": Mock()}
@@ -145,7 +145,7 @@ class TestServeDashboard:
         """Test serve_dashboard when GUI module import fails."""
         args = Mock(host="127.0.0.1", port=8050, debug=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch.dict(
                 "sys.modules", {"dash": Mock(), "dash_bootstrap_components": Mock()}
             ):
@@ -192,9 +192,9 @@ class TestReactorCreateOutput:
         mock_list_presets = Mock(return_value=["valar-10"])
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.yaml") as mock_yaml:
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("smrforge.cli.utils.yaml") as mock_yaml:
                     with patch("smrforge.create_reactor", mock_create_reactor):
                         with patch("smrforge.list_presets", mock_list_presets):
                             cli_module.reactor_create(args)
@@ -232,7 +232,7 @@ class TestReactorCreateOutput:
         mock_list_presets = Mock(return_value=["valar-10"])
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
@@ -266,15 +266,15 @@ class TestReactorCreateOutput:
         mock_list_presets = Mock(return_value=["valar-10"])
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch(
                     "smrforge.convenience.list_presets", mock_list_presets, create=True
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", True):
-                        with patch("smrforge.cli.console") as mock_console:
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                        with patch("smrforge.cli.utils.console") as mock_console:
                             cli_module.reactor_create(args)
                             assert mock_console.print.called
 
@@ -302,14 +302,14 @@ class TestReactorCreateOutput:
         mock_list_presets = Mock(return_value=["valar-10"])
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch(
                     "smrforge.convenience.list_presets", mock_list_presets, create=True
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         with patch("builtins.print") as mock_print:
                             cli_module.reactor_create(args)
                             assert mock_print.called
@@ -348,7 +348,7 @@ class TestReactorCreate:
         mock_create_reactor = Mock(return_value=mock_reactor)
         mock_list_presets = Mock(return_value=["valar-10", "other-preset"])
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.create_reactor", mock_create_reactor):
                 with patch("smrforge.list_presets", mock_list_presets):
                     cli_module.reactor_create(args)
@@ -372,7 +372,7 @@ class TestReactorCreate:
 
         mock_list_presets = Mock(return_value=["valar-10"])
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch("smrforge.create_reactor"):
                 with patch("smrforge.list_presets", mock_list_presets):
                     cli_module.reactor_create(args)
@@ -414,7 +414,7 @@ class TestReactorCreate:
 
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.create_reactor", mock_create_reactor):
                 with patch("smrforge.list_presets", Mock(return_value=[])):
                     cli_module.reactor_create(args)
@@ -454,10 +454,10 @@ class TestReactorCreate:
 
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli._YAML_AVAILABLE", True):
-            with patch("smrforge.cli.yaml") as mock_yaml:
+        with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+            with patch("smrforge.cli.utils.yaml") as mock_yaml:
                 mock_yaml.safe_load.return_value = {"power_mw": 100, "enrichment": 0.05}
-                with patch("smrforge.cli.sys.exit"):
+                with patch("sys.exit"):
                     with patch("smrforge.create_reactor", mock_create_reactor):
                         with patch("smrforge.list_presets", Mock(return_value=[])):
                             cli_module.reactor_create(args)
@@ -482,8 +482,8 @@ class TestReactorCreate:
             verbose=False,
         )
 
-        with patch("smrforge.cli._YAML_AVAILABLE", False):
-            with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("smrforge.cli.utils._YAML_AVAILABLE", False):
+            with patch("sys.exit") as mock_exit:
                 cli_module.reactor_create(args)
                 mock_exit.assert_called_once_with(1)
 
@@ -516,7 +516,7 @@ class TestReactorCreate:
 
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.create_reactor", mock_create_reactor):
                 with patch("smrforge.list_presets", Mock(return_value=[])):
                     cli_module.reactor_create(args)
@@ -563,7 +563,7 @@ class TestReactorCreate:
         mock_create_reactor = Mock(return_value=mock_reactor)
         mock_list_presets = Mock(return_value=["valar-10"])
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.create_reactor", mock_create_reactor):
                 with patch("smrforge.list_presets", mock_list_presets):
                     cli_module.reactor_create(args)
@@ -591,7 +591,7 @@ class TestReactorCreate:
         mock_list_presets = Mock(return_value=[])
         mock_create_reactor = Mock()
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch(
                 "smrforge.convenience.list_presets", mock_list_presets, create=True
             ):
@@ -623,7 +623,7 @@ class TestReactorAnalyze:
             verbose=False,
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.reactor_analyze(args)
             mock_exit.assert_called_once_with(1)
 
@@ -643,7 +643,7 @@ class TestReactorAnalyze:
             verbose=False,
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.reactor_analyze(args)
             mock_exit.assert_called_once_with(1)
 
@@ -661,7 +661,7 @@ class TestReactorAnalyze:
             verbose=False,
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.reactor_analyze(args)
             mock_exit.assert_called_once_with(1)
 
@@ -686,12 +686,12 @@ class TestReactorAnalyze:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", True):
-                    with patch("smrforge.cli.console") as mock_console:
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                    with patch("smrforge.cli.utils.console") as mock_console:
                         cli_module.reactor_analyze(args)
                         assert mock_reactor.solve_keff.called
 
@@ -716,11 +716,11 @@ class TestReactorAnalyze:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     with patch("builtins.print") as mock_print:
                         cli_module.reactor_analyze(args)
                         assert mock_reactor.solve_keff.called
@@ -746,11 +746,11 @@ class TestReactorAnalyze:
         mock_reactor.solve.return_value = {"flux": [1, 2, 3]}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.reactor_analyze(args)
                     assert mock_reactor.solve.called
 
@@ -776,11 +776,11 @@ class TestReactorAnalyze:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.reactor_analyze(args)
                     assert output_file.exists()
 
@@ -805,12 +805,12 @@ class TestReactorAnalyze:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", True):
-                    with patch("smrforge.cli.console") as mock_console:
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                    with patch("smrforge.cli.utils.console") as mock_console:
                         cli_module.reactor_analyze(args)
                         assert mock_console.print.called
 
@@ -835,11 +835,11 @@ class TestReactorAnalyze:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     with patch("builtins.print") as mock_print:
                         cli_module.reactor_analyze(args)
                         assert mock_print.called
@@ -866,11 +866,11 @@ class TestReactorAnalyze:
         mock_reactor.solve.return_value = {"k_eff": 1.0, "flux": [1, 2, 3]}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.reactor_analyze(args)
                     assert mock_reactor.solve_keff.called
                     assert mock_reactor.solve.called
@@ -885,12 +885,12 @@ class TestReactorList:
 
         mock_list_presets = Mock(return_value=["valar-10", "other-preset"])
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.list_presets", mock_list_presets, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", True):
-                    with patch("smrforge.cli.console") as mock_console:
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                    with patch("smrforge.cli.utils.console") as mock_console:
                         cli_module.reactor_list(args)
                         assert mock_console.print.called
 
@@ -906,15 +906,15 @@ class TestReactorList:
         mock_spec.fuel_type = "triso"
         mock_get_preset = Mock(return_value=mock_spec)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.list_presets", mock_list_presets, create=True
             ):
                 with patch(
                     "smrforge.convenience.get_preset", mock_get_preset, create=True
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", True):
-                        with patch("smrforge.cli.console") as mock_console:
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                        with patch("smrforge.cli.utils.console") as mock_console:
                             cli_module.reactor_list(args)
                             assert mock_console.print.called
 
@@ -928,7 +928,7 @@ class TestDataSetup:
 
         mock_setup = Mock()
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.core.endf_setup.setup_endf_data_interactive", mock_setup
             ):
@@ -944,7 +944,7 @@ class TestDataSetup:
 
         mock_setup = Mock()
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.core.endf_setup.setup_endf_data_interactive", mock_setup
             ):
@@ -957,7 +957,7 @@ class TestDataSetup:
 
         args = Mock(endf_dir=endf_dir, verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch(
                 "smrforge.core.endf_setup.setup_endf_data_interactive",
                 side_effect=Exception("Interactive mode failed"),
@@ -993,10 +993,10 @@ class TestDataDownload:
             }
         )
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.data_downloader.download_endf_data", mock_download):
-                with patch("smrforge.cli._RICH_AVAILABLE", True):
-                    with patch("smrforge.cli.console") as mock_console:
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                    with patch("smrforge.cli.utils.console") as mock_console:
                         cli_module.data_download(args)
                         mock_download.assert_called_once()
                         assert mock_console.print.called
@@ -1025,7 +1025,7 @@ class TestDataDownload:
             }
         )
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.data_downloader.download_endf_data", mock_download):
                 cli_module.data_download(args)
                 call_kwargs = mock_download.call_args[1]
@@ -1056,10 +1056,10 @@ class TestDataValidate:
             }
         )
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.core.reactor_core.scan_endf_directory", mock_scan):
-                with patch("smrforge.cli._RICH_AVAILABLE", True):
-                    with patch("smrforge.cli.console") as mock_console:
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                    with patch("smrforge.cli.utils.console") as mock_console:
                         cli_module.data_validate(args)
                         mock_scan.assert_called_once_with(endf_dir)
                         assert mock_console.print.called
@@ -1073,19 +1073,19 @@ class TestDataValidate:
 
         args = Mock(endf_dir=None, files=[file1, file2], output=None, verbose=False)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.core.reactor_core.NuclearDataCache._validate_endf_file",
                 return_value=True,
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.data_validate(args)
 
     def test_data_validate_no_options(self):
         """Test data_validate with no options."""
         args = Mock(endf_dir=None, files=None, output=None, verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.data_validate(args)
             mock_exit.assert_called_once_with(1)
 
@@ -1112,8 +1112,8 @@ class TestMainFunction:
         with patch(
             "sys.argv", ["smrforge", "serve", "--host", "0.0.0.0", "--port", "9000"]
         ):
-            with patch("smrforge.cli.serve_dashboard", mock_serve):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.commands.serve.serve_dashboard", mock_serve):
+                with patch("sys.exit"):
                     cli_module.main()
                     # Note: This may not work perfectly due to argparse behavior,
                     # but we're testing that the command is registered
@@ -1123,8 +1123,8 @@ class TestMainFunction:
         with patch(
             "sys.argv", ["smrforge", "reactor", "create", "--preset", "valar-10"]
         ):
-            with patch("smrforge.cli.reactor_create") as mock_create:
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.commands.reactor.reactor_create") as mock_create:
+                with patch("sys.exit"):
                     try:
                         cli_module.main()
                     except SystemExit:
@@ -1138,7 +1138,7 @@ class TestBurnupRun:
         """Test burnup_run without reactor file."""
         args = Mock(reactor=None, time_steps=[], output=None, verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.burnup_run(args)
             mock_exit.assert_called_once_with(1)
 
@@ -1150,7 +1150,7 @@ class TestBurnupRun:
             reactor=reactor_file, time_steps=[0, 365], output=None, verbose=False
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.burnup_run(args)
             mock_exit.assert_called_once_with(1)
 
@@ -1175,11 +1175,11 @@ class TestBurnupRun:
         mock_reactor = Mock()
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.burnup_run(args)
                     # burnup_run prints "use Python API" and does not run solve; must not exit(1)
                     mock_exit.assert_not_called()
@@ -1206,11 +1206,11 @@ class TestBurnupRun:
         mock_reactor = Mock()
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.burnup_run(args)
                     assert output_file.exists()
 
@@ -1231,7 +1231,7 @@ class TestConfigCommands:
         mock_home.__truediv__ = lambda self, other: mock_config_dir
 
         with patch("pathlib.Path.home", return_value=mock_home):
-            with patch("smrforge.cli._print_info") as mock_info:
+            with patch("smrforge.cli.utils._print_info") as mock_info:
                 cli_module.config_show(args)
                 assert mock_info.called
 
@@ -1245,9 +1245,9 @@ class TestConfigCommands:
         args = Mock(key=None, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._RICH_AVAILABLE", True):
-                with patch("smrforge.cli.console") as mock_console:
-                    with patch("smrforge.cli._YAML_AVAILABLE", True):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                with patch("smrforge.cli.utils.console") as mock_console:
+                    with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                         cli_module.config_show(args)
                         assert mock_console.print.called
 
@@ -1261,9 +1261,9 @@ class TestConfigCommands:
         args = Mock(key="endf_dir", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._RICH_AVAILABLE", True):
-                with patch("smrforge.cli.console") as mock_console:
-                    with patch("smrforge.cli._YAML_AVAILABLE", True):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                with patch("smrforge.cli.utils.console") as mock_console:
+                    with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                         cli_module.config_show(args)
                         assert mock_console.print.called
 
@@ -1277,8 +1277,8 @@ class TestConfigCommands:
         args = Mock(key="nonexistent_key", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit") as mock_exit:
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit") as mock_exit:
                     cli_module.config_show(args)
                     mock_exit.assert_called_once_with(1)
 
@@ -1300,8 +1300,8 @@ settings:
         args = Mock(key=None, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
-                with patch("smrforge.cli._YAML_AVAILABLE", True):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                     with patch("builtins.print") as mock_print:
                         cli_module.config_show(args)
                         assert mock_print.called
@@ -1316,8 +1316,8 @@ settings:
         args = Mock(key="endf_dir", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
-                with patch("smrforge.cli._YAML_AVAILABLE", True):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                     with patch("builtins.print") as mock_print:
                         cli_module.config_show(args)
                         assert mock_print.called
@@ -1332,9 +1332,9 @@ settings:
         args = Mock(key="endf_dir", value="/path/to/endf", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
-                    with patch("smrforge.cli._print_success") as mock_success:
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
+                    with patch("smrforge.cli.utils._print_success") as mock_success:
                         cli_module.config_set(args)
                         assert mock_success.called
                         assert config_file.exists()
@@ -1349,8 +1349,8 @@ settings:
         args = Mock(key="new_key", value="new_value", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_set(args)
                     # Config should be updated
                     assert config_file.exists()
@@ -1365,8 +1365,8 @@ settings:
         args = Mock(key="paths.new_key", value="new_value", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_set(args)
                     assert config_file.exists()
 
@@ -1380,8 +1380,8 @@ settings:
         args = Mock(key="max_workers", value="4", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_set(args)
                     assert config_file.exists()
 
@@ -1395,8 +1395,8 @@ settings:
         args = Mock(key="threshold", value="0.75", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_set(args)
                     assert config_file.exists()
 
@@ -1410,8 +1410,8 @@ settings:
         args = Mock(key="verbose", value="true", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_set(args)
                     assert config_file.exists()
 
@@ -1422,8 +1422,8 @@ settings:
         args = Mock(key="endf_dir", value="/path/to/endf", verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_set(args)
                     config_file = config_dir / "config.yaml"
                     assert config_file.exists()
@@ -1435,9 +1435,9 @@ settings:
         args = Mock(template="default", force=False, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
-                    with patch("smrforge.cli._print_success") as mock_success:
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
+                    with patch("smrforge.cli.utils._print_success") as mock_success:
                         cli_module.config_init(args)
                         config_file = config_dir / "config.yaml"
                         assert config_file.exists()
@@ -1450,8 +1450,8 @@ settings:
         args = Mock(template="production", force=False, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_init(args)
                     config_file = config_dir / "config.yaml"
                     assert config_file.exists()
@@ -1469,8 +1469,8 @@ settings:
         args = Mock(template="development", force=False, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_init(args)
                     config_file = config_dir / "config.yaml"
                     assert config_file.exists()
@@ -1491,8 +1491,8 @@ settings:
         args = Mock(template="default", force=True, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
                     cli_module.config_init(args)
                     # Should overwrite existing file
                     assert config_file.exists()
@@ -1507,8 +1507,8 @@ settings:
         args = Mock(template="default", force=False, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit") as mock_exit:
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit") as mock_exit:
                     cli_module.config_init(args)
                     mock_exit.assert_called_once_with(1)
 
@@ -1519,9 +1519,9 @@ settings:
         args = Mock(template="default", force=False, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli.sys.exit"):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("sys.exit"):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         with patch("builtins.print") as mock_print:
                             cli_module.config_init(args)
                             assert mock_print.called
@@ -1536,7 +1536,7 @@ class TestShellInteractive:
 
         mock_embed = Mock()
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch.dict("sys.modules", {"IPython": Mock(embed=mock_embed)}):
                 with patch("builtins.__import__", return_value=Mock(embed=mock_embed)):
                     try:
@@ -1553,9 +1553,9 @@ class TestShellInteractive:
         mock_interpreter = Mock()
         mock_code.InteractiveInterpreter = Mock(return_value=mock_interpreter)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("builtins.__import__", side_effect=[ImportError, mock_code]):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     try:
                         cli_module.shell_interactive(args)
                     except (SystemExit, KeyboardInterrupt, Exception):
@@ -1571,7 +1571,7 @@ class TestWorkflowRun:
 
         args = Mock(workflow=workflow_file, verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.workflow_run(args)
             # May be called multiple times due to error handling
             assert mock_exit.called
@@ -1584,8 +1584,8 @@ class TestWorkflowRun:
 
         args = Mock(workflow=workflow_file, verbose=False)
 
-        with patch("smrforge.cli._YAML_AVAILABLE", False):
-            with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("smrforge.cli.utils._YAML_AVAILABLE", False):
+            with patch("sys.exit") as mock_exit:
                 cli_module.workflow_run(args)
                 # May be called multiple times due to error handling
                 assert mock_exit.called
@@ -1611,15 +1611,15 @@ steps:
         )
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
                     with patch(
-                        "smrforge.cli.smr",
+                        "smrforge.cli.commands.reactor.smr",
                         Mock(create_reactor=mock_create_reactor),
                         create=True,
                     ):
@@ -1648,15 +1648,15 @@ steps:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
                     with patch(
-                        "smrforge.cli.smr",
+                        "smrforge.cli.commands.reactor.smr",
                         Mock(create_reactor=mock_create_reactor),
                         create=True,
                     ):
@@ -1685,15 +1685,15 @@ steps:
         )
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
                     with patch(
-                        "smrforge.cli.smr",
+                        "smrforge.cli.commands.reactor.smr",
                         Mock(create_reactor=mock_create_reactor),
                         create=True,
                     ):
@@ -1714,9 +1714,9 @@ steps:
         args = Mock(workflow=workflow_file, verbose=False)
 
         # _print_warning might not be defined, so we'll patch it if needed
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli._print_warning", create=True) as mock_warning:
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("smrforge.cli.utils._print_warning", create=True) as mock_warning:
                     cli_module.workflow_run(args)
                     # Should warn about unknown step type
                     assert mock_warning.called or True  # May not be defined
@@ -1746,15 +1746,15 @@ steps:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
                     with patch(
-                        "smrforge.cli.smr",
+                        "smrforge.cli.commands.reactor.smr",
                         Mock(create_reactor=mock_create_reactor),
                         create=True,
                     ):
@@ -1775,9 +1775,9 @@ steps:
 
         args = Mock(workflow=workflow_file, verbose=False)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli._print_info") as mock_info:
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("smrforge.cli.utils._print_info") as mock_info:
                     cli_module.workflow_run(args)
                     assert mock_info.called
 
@@ -1803,15 +1803,15 @@ steps:
         mock_reactor.solve.return_value = {"flux": [1, 2, 3]}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
                     with patch(
-                        "smrforge.cli.smr",
+                        "smrforge.cli.commands.reactor.smr",
                         Mock(create_reactor=mock_create_reactor),
                         create=True,
                     ):
@@ -1841,15 +1841,15 @@ steps:
         mock_reactor.solve.return_value = {"k_eff": 1.0, "flux": [1, 2, 3]}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
                     with patch(
-                        "smrforge.cli.smr",
+                        "smrforge.cli.commands.reactor.smr",
                         Mock(create_reactor=mock_create_reactor),
                         create=True,
                     ):
@@ -1884,15 +1884,15 @@ steps:
         mock_reactor.spec = mock_spec
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
                     with patch(
-                        "smrforge.cli.smr",
+                        "smrforge.cli.commands.reactor.smr",
                         Mock(create_reactor=mock_create_reactor),
                         create=True,
                     ):
@@ -1934,9 +1934,9 @@ steps:
 
         args = Mock(workflow=workflow_file, verbose=False)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._YAML_AVAILABLE", True):
-                with patch("smrforge.cli._print_error") as mock_error:
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+                with patch("smrforge.cli.utils._print_error") as mock_error:
                     cli_module.workflow_run(args)
                     assert mock_error.called
 
@@ -1947,8 +1947,8 @@ steps:
 
         args = Mock(workflow=workflow_file, verbose=False)
 
-        with patch("smrforge.cli._YAML_AVAILABLE", True):
-            with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
+            with patch("sys.exit") as mock_exit:
                 cli_module.workflow_run(args)
                 # May be called multiple times due to error handling
                 assert mock_exit.called
@@ -1975,7 +1975,7 @@ class TestTransientRun:
 
         mock_quick_transient = Mock(return_value=mock_result)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.transients.quick_transient", mock_quick_transient
             ):
@@ -2007,7 +2007,7 @@ class TestThermalLumped:
 
         mock_class = Mock(return_value=mock_solver)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.thermal.lumped.LumpedThermalHydraulics", mock_class):
                 cli_module.thermal_lumped(args)
                 # Check that solver was created and solve was called
@@ -2023,7 +2023,7 @@ class TestValidateDesign:
             reactor=None, preset=None, constraints=None, output=None, verbose=False
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.validate_design(args)
             mock_exit.assert_called_once_with(1)
 
@@ -2039,7 +2039,7 @@ class TestValidateDesign:
             verbose=False,
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.validate_design(args)
             mock_exit.assert_called_once_with(1)
 
@@ -2065,7 +2065,7 @@ class TestValidateDesign:
         mock_validator = Mock()
         mock_validator.validate.return_value = mock_validation
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
@@ -2077,7 +2077,7 @@ class TestValidateDesign:
                         "smrforge.validation.constraints.ConstraintSet.get_regulatory_limits",
                         return_value=Mock(),
                     ):
-                        with patch("smrforge.cli._print_success") as mock_success:
+                        with patch("smrforge.cli.utils._print_success") as mock_success:
                             cli_module.validate_design(args)
                             assert mock_success.called
 
@@ -2107,7 +2107,7 @@ class TestValidateDesign:
         mock_validator = Mock()
         mock_validator.validate.return_value = mock_validation
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
@@ -2151,7 +2151,7 @@ class TestValidateDesign:
         mock_validator = Mock()
         mock_validator.validate.return_value = mock_validation
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
@@ -2163,7 +2163,7 @@ class TestValidateDesign:
                         "smrforge.validation.constraints.ConstraintSet.get_regulatory_limits",
                         return_value=Mock(),
                     ):
-                        with patch("smrforge.cli._print_error") as mock_error:
+                        with patch("smrforge.cli.utils._print_error") as mock_error:
                             cli_module.validate_design(args)
                             assert mock_error.called
 
@@ -2186,8 +2186,8 @@ class TestReactorAnalyzeBatch:
             verbose=False,
         )
 
-        with patch("smrforge.cli.glob.glob", return_value=[]):
-            with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[]):
+            with patch("sys.exit") as mock_exit:
                 cli_module._reactor_analyze_batch(args)
                 mock_exit.assert_called_once_with(1)
 
@@ -2217,16 +2217,16 @@ class TestReactorAnalyzeBatch:
         mock_create_reactor = Mock(return_value=mock_reactor)
 
         with patch(
-            "smrforge.cli.glob.glob",
+            "smrforge.cli.commands.reactor.glob.glob",
             return_value=[str(reactor_file1), str(reactor_file2)],
         ):
-            with patch("smrforge.cli.sys.exit"):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module._reactor_analyze_batch(args)
                         assert mock_create_reactor.called
 
@@ -2258,15 +2258,15 @@ class TestReactorAnalyzeBatch:
         mock_progress.__enter__ = Mock(return_value=mock_progress)
         mock_progress.__exit__ = Mock(return_value=None)
 
-        with patch("smrforge.cli.glob.glob", return_value=[str(reactor_file1)]):
-            with patch("smrforge.cli.sys.exit"):
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[str(reactor_file1)]):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", True):
-                        with patch("smrforge.cli.Progress", return_value=mock_progress):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                        with patch("rich.progress.Progress", return_value=mock_progress):
                             cli_module._reactor_analyze_batch(args)
                             assert mock_create_reactor.called
 
@@ -2306,19 +2306,19 @@ class TestReactorAnalyzeBatch:
         mock_future2.result.return_value = (reactor_file2, {"k_eff": 1.0}, None)
 
         with patch(
-            "smrforge.cli.glob.glob",
+            "smrforge.cli.commands.reactor.glob.glob",
             return_value=[str(reactor_file1), str(reactor_file2)],
         ):
-            with patch("smrforge.cli.sys.exit"):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", True):
-                        with patch("smrforge.cli.Progress", return_value=mock_progress):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                        with patch("rich.progress.Progress", return_value=mock_progress):
                             with patch(
-                                "smrforge.cli.ThreadPoolExecutor"
+                                "smrforge.cli.commands.reactor.ThreadPoolExecutor"
                             ) as mock_executor:
                                 mock_executor_instance = Mock()
                                 mock_executor_instance.submit.side_effect = [
@@ -2332,7 +2332,7 @@ class TestReactorAnalyzeBatch:
                                     Mock()
                                 )
                                 with patch(
-                                    "smrforge.cli.as_completed",
+                                    "smrforge.cli.commands.reactor.as_completed",
                                     return_value=[mock_future1, mock_future2],
                                 ):
                                     cli_module._reactor_analyze_batch(args)
@@ -2368,15 +2368,15 @@ class TestReactorAnalyzeBatch:
         mock_future = Mock()
         mock_future.result.return_value = (reactor_file1, {"k_eff": 1.0}, None)
 
-        with patch("smrforge.cli.glob.glob", return_value=[str(reactor_file1)]):
-            with patch("smrforge.cli.sys.exit"):
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[str(reactor_file1)]):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
-                        with patch("smrforge.cli.ThreadPoolExecutor") as mock_executor:
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
+                        with patch("smrforge.cli.commands.reactor.ThreadPoolExecutor") as mock_executor:
                             mock_executor.return_value.__enter__.return_value.submit.return_value = (
                                 mock_future
                             )
@@ -2384,7 +2384,7 @@ class TestReactorAnalyzeBatch:
                                 Mock()
                             )
                             with patch(
-                                "smrforge.cli.as_completed", return_value=[mock_future]
+                                "smrforge.cli.commands.reactor.as_completed", return_value=[mock_future]
                             ):
                                 with patch("builtins.print") as mock_print:
                                     cli_module._reactor_analyze_batch(args)
@@ -2413,14 +2413,14 @@ class TestReactorAnalyzeBatch:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.glob.glob", return_value=[str(reactor_file1)]):
-            with patch("smrforge.cli.sys.exit"):
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[str(reactor_file1)]):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module._reactor_analyze_batch(args)
                         assert output_dir.exists()
                         assert (output_dir / "batch_results.json").exists()
@@ -2449,9 +2449,9 @@ class TestReactorAnalyzeBatch:
                 return reactor_file1, None, "Test error"
             return reactor_file1, {"k_eff": 1.0}, None
 
-        with patch("smrforge.cli.glob.glob", return_value=[str(reactor_file1)]):
-            with patch("smrforge.cli.sys.exit"):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[str(reactor_file1)]):
+            with patch("sys.exit"):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     # Mock the process_reactor function inside _reactor_analyze_batch
                     with patch(
                         "smrforge.convenience.create_reactor",
@@ -2483,15 +2483,15 @@ class TestReactorAnalyzeBatch:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.glob.glob", return_value=[str(reactor_file1)]):
-            with patch("smrforge.cli.sys.exit"):
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[str(reactor_file1)]):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", True):
-                        with patch("smrforge.cli.console") as mock_console:
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                        with patch("smrforge.cli.utils.console") as mock_console:
                             cli_module._reactor_analyze_batch(args)
                             # Should display summary table
                             assert mock_console.print.called
@@ -2529,17 +2529,17 @@ class TestReactorAnalyzeBatch:
                 raise Exception("Test error")
 
         with patch(
-            "smrforge.cli.glob.glob",
+            "smrforge.cli.commands.reactor.glob.glob",
             return_value=[str(reactor_file1), str(reactor_file2)],
         ):
-            with patch("smrforge.cli.sys.exit"):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     side_effect=create_reactor_side_effect,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", True):
-                        with patch("smrforge.cli.console") as mock_console:
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                        with patch("smrforge.cli.utils.console") as mock_console:
                             cli_module._reactor_analyze_batch(args)
                             # Should display summary with errors
                             assert mock_console.print.called
@@ -2566,15 +2566,15 @@ class TestReactorAnalyzeBatch:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.glob.glob", return_value=[str(reactor_file1)]):
-            with patch("smrforge.cli.sys.exit"):
-                with patch("smrforge.cli._YAML_AVAILABLE", True):
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[str(reactor_file1)]):
+            with patch("sys.exit"):
+                with patch("smrforge.cli.utils._YAML_AVAILABLE", True):
                     with patch(
                         "smrforge.convenience.create_reactor",
                         mock_create_reactor,
                         create=True,
                     ):
-                        with patch("smrforge.cli._RICH_AVAILABLE", False):
+                        with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                             cli_module._reactor_analyze_batch(args)
                             assert mock_create_reactor.called
 
@@ -2596,9 +2596,9 @@ class TestReactorAnalyzeBatch:
             verbose=False,
         )
 
-        with patch("smrforge.cli.glob.glob", return_value=[str(reactor_file1)]):
-            with patch("smrforge.cli.sys.exit"):
-                with patch("smrforge.cli._YAML_AVAILABLE", False):
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[str(reactor_file1)]):
+            with patch("sys.exit"):
+                with patch("smrforge.cli.utils._YAML_AVAILABLE", False):
                     # Should handle YAML not available gracefully
                     cli_module._reactor_analyze_batch(args)
                     # Function should complete (may have errors, but should not crash)
@@ -2625,14 +2625,14 @@ class TestReactorAnalyzeBatch:
         mock_reactor.solve_keff.return_value = 1.0
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.glob.glob", return_value=[str(reactor_file1)]):
-            with patch("smrforge.cli.sys.exit"):
+        with patch("smrforge.cli.commands.reactor.glob.glob", return_value=[str(reactor_file1)]):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     mock_create_reactor,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         with patch("builtins.print") as mock_print:
                             cli_module._reactor_analyze_batch(args)
                             assert mock_print.called
@@ -2679,17 +2679,17 @@ class TestReactorAnalyzeBatch:
                 raise Exception("Test error")
 
         with patch(
-            "smrforge.cli.glob.glob",
+            "smrforge.cli.commands.reactor.glob.glob",
             return_value=[str(reactor_file1), str(reactor_file2)],
         ):
-            with patch("smrforge.cli.sys.exit"):
+            with patch("sys.exit"):
                 with patch(
                     "smrforge.convenience.create_reactor",
                     side_effect=create_reactor_side_effect,
                     create=True,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
-                        with patch("smrforge.cli._print_warning") as mock_warning:
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
+                        with patch("smrforge.cli.utils._print_warning") as mock_warning:
                             cli_module._reactor_analyze_batch(args)
                             # Should warn about errors
                             assert mock_warning.called
@@ -2704,7 +2704,7 @@ class TestReactorCompare:
             presets=None, reactors=None, metrics=None, output=None, verbose=False
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.reactor_compare(args)
             mock_exit.assert_called_once_with(1)
 
@@ -2722,12 +2722,12 @@ class TestReactorCompare:
         mock_reactor.solve.return_value = {"k_eff": 1.0}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch("smrforge.convenience.compare_designs", Mock(), create=True):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.reactor_compare(args)
                         # Should create reactors for each preset
                         assert mock_create_reactor.call_count >= 1
@@ -2751,12 +2751,12 @@ class TestReactorCompare:
         mock_reactor.solve.return_value = {"k_eff": 1.0}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch("smrforge.convenience.compare_designs", Mock(), create=True):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.reactor_compare(args)
                         # Should create reactors for each file
                         assert mock_create_reactor.call_count >= 1
@@ -2777,12 +2777,12 @@ class TestReactorCompare:
         mock_reactor.solve.return_value = {"k_eff": 1.0}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch("smrforge.convenience.compare_designs", Mock(), create=True):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.reactor_compare(args)
                         # Output file should be created
                         assert output_file.exists()
@@ -2801,12 +2801,12 @@ class TestReactorCompare:
         mock_reactor.solve.return_value = {"power": np.array([1.0, 2.0, 3.0])}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch("smrforge.convenience.compare_designs", Mock(), create=True):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.reactor_compare(args)
                         assert mock_create_reactor.called
 
@@ -2824,12 +2824,12 @@ class TestReactorCompare:
         mock_reactor.solve.return_value = {"temperature": np.array([500, 600, 700])}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch("smrforge.convenience.compare_designs", Mock(), create=True):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.reactor_compare(args)
                         assert mock_create_reactor.called
 
@@ -2849,12 +2849,12 @@ class TestReactorCompare:
         mock_reactor.solve.return_value = {"k_eff": 1.0}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch("smrforge.convenience.compare_designs", Mock(), create=True):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.reactor_compare(args)
                         assert output_file.exists()
                         assert "<html>" in output_file.read_text().lower()
@@ -2873,13 +2873,13 @@ class TestReactorCompare:
         mock_reactor.solve.return_value = {"k_eff": 1.0}
         mock_create_reactor = Mock(return_value=mock_reactor)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
                 with patch("smrforge.convenience.compare_designs", Mock(), create=True):
-                    with patch("smrforge.cli._RICH_AVAILABLE", True):
-                        with patch("smrforge.cli.console") as mock_console:
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", True):
+                        with patch("smrforge.cli.utils.console") as mock_console:
                             cli_module.reactor_compare(args)
                             assert mock_console.print.called
 
@@ -2902,7 +2902,7 @@ class TestValidateRun:
             )
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 0
-                with patch("smrforge.cli.sys.exit"):
+                with patch("sys.exit"):
                     cli_module.validate_run(args)
                     # Should fallback to pytest
                     assert mock_run.called
@@ -2927,7 +2927,7 @@ class TestValidateRun:
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 0
                 mock_run.return_value.stdout = None
-                with patch("smrforge.cli.sys.exit"):
+                with patch("sys.exit"):
                     cli_module.validate_run(args)
                     assert mock_run.called
 
@@ -2949,7 +2949,7 @@ class TestValidateRun:
         with patch.object(cli_module, "__file__", str(fake_file)):
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=0, stdout=b"", stderr=b"")
-                with patch("smrforge.cli.sys.exit"):
+                with patch("sys.exit"):
                     cli_module.validate_run(args)
                 assert mock_run.called
                 call_args = mock_run.call_args[0][0]
@@ -2975,7 +2975,7 @@ class TestValidateRun:
         with patch.object(cli_module, "__file__", str(fake_file)):
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=0, stdout=b"", stderr=b"")
-                with patch("smrforge.cli.sys.exit"):
+                with patch("sys.exit"):
                     cli_module.validate_run(args)
                 call_args = mock_run.call_args[0][0]
                 assert "--output" in call_args
@@ -2998,7 +2998,7 @@ class TestValidateRun:
         with patch.object(cli_module, "__file__", str(fake_file)):
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=1, stdout=b"", stderr=b"err")
-                with patch("smrforge.cli.sys.exit") as mock_exit:
+                with patch("sys.exit") as mock_exit:
                     cli_module.validate_run(args)
                     mock_exit.assert_called_once_with(1)
 
@@ -3027,8 +3027,8 @@ class TestValidateBenchmark:
                 "case2": (True, 1.1, None),
             }
             mock_runner.generate_report.side_effect = _write_report
-            with patch("smrforge.cli._print_success"):
-                with patch("smrforge.cli.sys.exit"):
+            with patch("smrforge.cli.utils._print_success"):
+                with patch("sys.exit"):
                     cli_module.validate_benchmark(args)
                     assert out_file.exists()
 
@@ -3045,7 +3045,7 @@ class TestValidateBenchmark:
             mock_runner.run_all.return_value = {
                 "case1": (False, 0.5, "Outside tolerance")
             }
-            with patch("smrforge.cli.sys.exit") as mock_exit:
+            with patch("sys.exit") as mock_exit:
                 cli_module.validate_benchmark(args)
                 mock_exit.assert_called_once_with(1)
 
@@ -3059,7 +3059,7 @@ class TestReportDesign:
         args.preset = None
         args.reactor = None
         args.output = Path("design_report.md")
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.report_design(args)
             mock_exit.assert_called_with(1)
 
@@ -3070,7 +3070,7 @@ class TestReportDesign:
         args.reactor = None
         args.output = tmp_path / "design_report.md"
         with patch("smrforge.analyze_preset", return_value={"k_eff": 1.05}):
-            with patch("smrforge.cli._print_success"):
+            with patch("smrforge.cli.utils._print_success"):
                 cli_module.report_design(args)
                 assert (tmp_path / "design_report.md").exists()
 
@@ -3092,7 +3092,7 @@ class TestVisualizeGeometry:
             verbose=False,
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.visualize_geometry(args)
             mock_exit.assert_called_once_with(1)
 
@@ -3118,7 +3118,7 @@ class TestVisualizeGeometry:
         mock_fig = Mock()
         mock_plot = Mock(return_value=mock_fig)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
@@ -3150,7 +3150,7 @@ class TestVisualizeGeometry:
         mock_fig = Mock()
         mock_plot = Mock(return_value=mock_fig)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
@@ -3185,7 +3185,7 @@ class TestVisualizeGeometry:
         mock_plot = Mock(return_value=mock_fig)
         mock_export = Mock()
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
@@ -3222,7 +3222,7 @@ class TestVisualizeGeometry:
         mock_fig.show = Mock()
         mock_plot = Mock(return_value=mock_fig)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.create_reactor", mock_create_reactor, create=True
             ):
@@ -3243,7 +3243,7 @@ class TestVisualizeFlux:
 
         args = Mock(results=results_file, output=None, verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.visualize_flux(args)
             # May be called multiple times due to error handling
             assert mock_exit.called
@@ -3256,8 +3256,8 @@ class TestVisualizeFlux:
 
         args = Mock(results=results_file, output=None, verbose=False)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._print_info") as mock_info:
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._print_info") as mock_info:
                 cli_module.visualize_flux(args)
                 assert mock_info.called
 
@@ -3271,7 +3271,7 @@ class TestBurnupVisualize:
 
         args = Mock(results=results_file, output=None, format="png", verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.burnup_visualize(args)
             # May be called multiple times due to error handling
             assert mock_exit.called
@@ -3286,8 +3286,8 @@ class TestBurnupVisualize:
 
         args = Mock(results=results_file, output=None, format="png", verbose=False)
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                 cli_module.burnup_visualize(args)
 
     def test_burnup_visualize_with_burnup_plot(self, tmp_path):
@@ -3314,7 +3314,7 @@ class TestBurnupVisualize:
         mock_ax = Mock()
         mock_plt.subplots.return_value = (mock_fig, mock_ax)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("matplotlib.pyplot", mock_plt, create=True):
                 try:
                     cli_module.burnup_visualize(args)
@@ -3337,9 +3337,9 @@ class TestBurnupVisualize:
             verbose=False,
         )
 
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
-                with patch("smrforge.cli._print_info") as mock_info:
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._print_info") as mock_info:
                     cli_module.burnup_visualize(args)
                     assert mock_info.called
 
@@ -3367,7 +3367,7 @@ class TestBurnupVisualize:
         mock_ax = Mock()
         mock_plt.subplots.return_value = (mock_fig, mock_ax)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("matplotlib.pyplot", mock_plt, create=True):
                 try:
                     cli_module.burnup_visualize(args)
@@ -3382,7 +3382,7 @@ class TestBurnupVisualize:
 
         args = Mock(results=results_file, output=None, format="png", verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.burnup_visualize(args)
             # May be called multiple times due to error handling
             assert mock_exit.called
@@ -3396,7 +3396,7 @@ class TestBurnupVisualize:
         args = Mock(results=results_file, output=None, format="png", verbose=False)
 
         # Use sys.modules patching instead of __import__ to avoid recursion
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch.dict("sys.modules", {"h5py": None}):
                 cli_module.burnup_visualize(args)
                 # May be called multiple times due to error handling, just check it was called
@@ -3430,7 +3430,7 @@ class TestSweepRun:
         mock_results.save = Mock()
         mock_sweep.run.return_value = mock_results
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.workflows.ParameterSweep", return_value=mock_sweep):
                 cli_module.sweep_run(args)
                 assert mock_sweep.run.called
@@ -3460,7 +3460,7 @@ class TestSweepRun:
         mock_results.save = Mock()
         mock_sweep.run.return_value = mock_results
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.workflows.ParameterSweep", return_value=mock_sweep):
                 cli_module.sweep_run(args)
                 assert mock_sweep.run.called
@@ -3487,7 +3487,7 @@ class TestSweepRun:
         mock_results.save = Mock()
         mock_sweep.run.return_value = mock_results
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.workflows.ParameterSweep", return_value=mock_sweep):
                 cli_module.sweep_run(args)
                 assert mock_sweep.run.called
@@ -3508,7 +3508,7 @@ class TestTemplateCreate:
             verbose=False,
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             cli_module.template_create(args)
             # May be called multiple times due to error handling
             assert mock_exit.called
@@ -3533,7 +3533,7 @@ class TestTemplateCreate:
         mock_template.save = Mock()
         mock_from_preset = Mock(return_value=mock_template)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.workflows.templates.ReactorTemplate.from_preset",
                 mock_from_preset,
@@ -3551,7 +3551,7 @@ class TestTemplateModify:
 
         args = Mock(template=template_file, param=None, verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch(
                 "smrforge.workflows.templates.ReactorTemplate.load",
                 side_effect=FileNotFoundError,
@@ -3572,7 +3572,7 @@ class TestTemplateModify:
         mock_template.save = Mock()
         mock_load = Mock(return_value=mock_template)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.workflows.templates.ReactorTemplate.load", mock_load):
                 cli_module.template_modify(args)
                 assert mock_template.save.called
@@ -3592,9 +3592,9 @@ class TestTemplateValidate:
         mock_template.validate.return_value = []
         mock_load = Mock(return_value=mock_template)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.workflows.templates.ReactorTemplate.load", mock_load):
-                with patch("smrforge.cli._print_success") as mock_success:
+                with patch("smrforge.cli.utils._print_success") as mock_success:
                     cli_module.template_validate(args)
                     assert mock_success.called
 
@@ -3609,7 +3609,7 @@ class TestTemplateValidate:
         mock_template.validate.return_value = ["Error 1", "Error 2"]
         mock_load = Mock(return_value=mock_template)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("sys.exit") as mock_exit:
             with patch("smrforge.workflows.templates.ReactorTemplate.load", mock_load):
                 cli_module.template_validate(args)
                 mock_exit.assert_called_once_with(1)
@@ -3624,11 +3624,11 @@ class TestAdditionalCLIPaths:
 
         mock_list_presets = Mock(return_value=["valar-10"])
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.list_presets", mock_list_presets, create=True
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     with patch("builtins.print") as mock_print:
                         cli_module.reactor_list(args)
                         assert mock_print.called
@@ -3640,15 +3640,15 @@ class TestAdditionalCLIPaths:
         mock_list_presets = Mock(return_value=["valar-10"])
         mock_get_preset = Mock()  # get_preset is also imported
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.list_presets", mock_list_presets, create=True
             ):
                 with patch(
                     "smrforge.convenience.get_preset", mock_get_preset, create=True
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
-                        with patch("smrforge.cli._print_info") as mock_info:
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
+                        with patch("smrforge.cli.utils._print_info") as mock_info:
                             cli_module.reactor_list(args)
                             assert mock_info.called
 
@@ -3666,14 +3666,14 @@ class TestAdditionalCLIPaths:
         mock_spec.core_diameter = 3.0
         mock_get_preset = Mock(return_value=mock_spec)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.list_presets", mock_list_presets, create=True
             ):
                 with patch(
                     "smrforge.convenience.get_preset", mock_get_preset, create=True
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         with patch("builtins.print") as mock_print:
                             cli_module.reactor_list(args)
                             assert mock_print.called
@@ -3688,8 +3688,8 @@ class TestAdditionalCLIPaths:
         args = Mock(key=None, verbose=False)
 
         with patch("pathlib.Path.home", return_value=tmp_path):
-            with patch("smrforge.cli._YAML_AVAILABLE", False):
-                with patch("smrforge.cli.sys.exit") as mock_exit:
+            with patch("smrforge.cli.utils._YAML_AVAILABLE", False):
+                with patch("sys.exit") as mock_exit:
                     cli_module.config_show(args)
                     # May be called multiple times due to error handling
                     assert mock_exit.called
@@ -3699,8 +3699,8 @@ class TestAdditionalCLIPaths:
         """Test config_set when YAML not available."""
         args = Mock(key="test_key", value="test_value", verbose=False)
 
-        with patch("smrforge.cli._YAML_AVAILABLE", False):
-            with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("smrforge.cli.utils._YAML_AVAILABLE", False):
+            with patch("sys.exit") as mock_exit:
                 cli_module.config_set(args)
                 mock_exit.assert_called_once_with(1)
 
@@ -3734,11 +3734,11 @@ class TestAdditionalCLIPaths:
 
         mock_quick_transient = Mock(return_value=mock_result)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.transients.quick_transient", mock_quick_transient
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.transient_run(args)
                     assert output_file.exists()
                     mock_quick_transient.assert_called_once()
@@ -3770,11 +3770,11 @@ class TestAdditionalCLIPaths:
 
         mock_quick_transient = Mock(return_value=mock_result)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.convenience.transients.quick_transient", mock_quick_transient
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     with patch("builtins.print") as mock_print:
                         cli_module.transient_run(args)
                         assert mock_print.called
@@ -3803,7 +3803,7 @@ class TestAdditionalCLIPaths:
 
         mock_class = Mock(return_value=mock_solver)
 
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.thermal.lumped.LumpedThermalHydraulics", mock_class):
                 cli_module.thermal_lumped(args)
                 # Check that solver was created
@@ -3823,8 +3823,8 @@ class TestAdditionalCLIPaths:
             verbose=False,
         )
 
-        with patch("smrforge.cli._YAML_AVAILABLE", False):
-            with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("smrforge.cli.utils._YAML_AVAILABLE", False):
+            with patch("sys.exit") as mock_exit:
                 cli_module.thermal_lumped(args)
                 # May be called multiple times due to error handling
                 assert mock_exit.called
@@ -3950,8 +3950,8 @@ class TestDataInterpolate:
             plot_output=None,
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit) as mock_exit:
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with patch("smrforge.cli.utils._print_error"):
                 with patch("smrforge.convenience_utils.get_nuclide", return_value=None):
                     with pytest.raises(SystemExit):
                         cli_module.data_interpolate(args)
@@ -3975,14 +3975,14 @@ class TestDataInterpolate:
         u235 = Nuclide(Z=92, A=235)
         energy = np.linspace(1e-5, 10, 50)
         xs = np.ones(50) * 1.5
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.convenience_utils.get_nuclide", return_value=u235):
                 with patch("smrforge.core.reactor_core.NuclearDataCache", Mock()):
                     with patch(
                         "smrforge.core.temperature_interpolation.interpolate_cross_section_temperature",
                         return_value=(energy, xs),
                     ):
-                        with patch("smrforge.cli._RICH_AVAILABLE", False):
+                        with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                             cli_module.data_interpolate(args)
         assert (tmp_path / "out.json").exists()
 
@@ -4003,8 +4003,8 @@ class TestDataShield:
             plot_output=None,
             compare=False,
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with patch("smrforge.convenience_utils.get_nuclide", return_value=None):
                     with pytest.raises(SystemExit):
                         cli_module.data_shield(args)
@@ -4023,8 +4023,8 @@ class TestDecayHeatCalculate:
             verbose=False,
             endf_dir=None,
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.decay_heat_calculate(args)
 
@@ -4038,8 +4038,8 @@ class TestDecayHeatCalculate:
             verbose=False,
             endf_dir=None,
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.decay_heat_calculate(args)
 
@@ -4068,12 +4068,12 @@ class TestDecayHeatCalculate:
             backend="plotly",
             format="png",
         )
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.convenience_utils.get_nuclide", return_value=u235):
                 with patch("smrforge.decay_heat.DecayHeatCalculator") as MockCalc:
                     inst = MockCalc.return_value
                     inst.calculate_decay_heat.return_value = mock_result
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.decay_heat_calculate(args)
         assert (tmp_path / "decay.json").exists()
 
@@ -4086,8 +4086,8 @@ class TestGitHubActionsCLI:
         not_dir = tmp_path / "file.txt"
         not_dir.write_text("x")
         args = Mock(repo_root=str(not_dir), output=None, verbose=False)
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.github_actions_status(args)
 
@@ -4095,13 +4095,13 @@ class TestGitHubActionsCLI:
         (tmp_path / ".github").mkdir()
         (tmp_path / ".github" / "workflows-enabled").write_text("true\n")
         args = Mock(repo_root=str(tmp_path), output=None, verbose=False)
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                 cli_module.github_actions_status(args)
 
     def test_github_actions_enable_success(self, tmp_path):
         args = Mock(repo_root=str(tmp_path), verbose=False)
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             cli_module.github_actions_enable(args)
         assert (
             tmp_path / ".github" / "workflows-enabled"
@@ -4111,7 +4111,7 @@ class TestGitHubActionsCLI:
         (tmp_path / ".github").mkdir(parents=True)
         (tmp_path / ".github" / "workflows-enabled").write_text("true\n")
         args = Mock(repo_root=str(tmp_path), verbose=False)
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             cli_module.github_actions_disable(args)
         assert (
             tmp_path / ".github" / "workflows-enabled"
@@ -4119,16 +4119,16 @@ class TestGitHubActionsCLI:
 
     def test_github_actions_list_success(self, tmp_path):
         args = Mock(repo_root=str(tmp_path), verbose=False)
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                 cli_module.github_actions_list(args)
 
     def test_github_actions_set_unknown_feature(self):
         args = Mock(
             repo_root=None, feature="unknown-feature", value="on", verbose=False
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with patch("pathlib.Path.cwd", return_value=Path(".")):
                     with pytest.raises(SystemExit):
                         cli_module.github_actions_set(args)
@@ -4137,26 +4137,26 @@ class TestGitHubActionsCLI:
         (tmp_path / ".github").mkdir(parents=True)
         (tmp_path / ".github" / "workflows-config.json").write_text('{"ci": true}\n')
         args = Mock(repo_root=str(tmp_path), feature="ci", value="off", verbose=False)
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             cli_module.github_actions_set(args)
         data = json.loads((tmp_path / ".github" / "workflows-config.json").read_text())
         assert data.get("ci") is False
 
     def test_github_actions_configure_with_flags(self, tmp_path):
         args = Mock(repo_root=str(tmp_path), ci=True, verbose=False)
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             cli_module.github_actions_configure(args)
         assert (tmp_path / ".github" / "workflows-config.json").exists()
 
     def test_main_github_status(self, tmp_path):
         (tmp_path / ".github").mkdir()
         (tmp_path / ".github" / "workflows-enabled").write_text("true\n")
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "sys.argv",
                 ["smrforge", "github", "status", "--repo-root", str(tmp_path)],
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.main()
 
 
@@ -4173,8 +4173,8 @@ class TestWorkflowCLI:
             output=out,
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                 cli_module.workflow_doe(args)
         assert out.exists()
         data = json.loads(out.read_text())
@@ -4191,8 +4191,8 @@ class TestWorkflowCLI:
             output=out,
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                 cli_module.workflow_doe(args)
         assert out.exists()
 
@@ -4200,22 +4200,22 @@ class TestWorkflowCLI:
         args = Mock(
             method="lhs", factors=[], samples=5, seed=None, output=None, verbose=False
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.workflow_doe(args)
 
     def test_workflow_design_point_success(self, tmp_path):
         out = tmp_path / "point.json"
         args = Mock(reactor="valar-10", output=out, verbose=False)
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._load_reactor_from_args") as mock_load:
+        with patch("sys.exit"):
+            with patch("smrforge.cli.commands.reactor._load_reactor_from_args") as mock_load:
                 mock_load.return_value = Mock()
                 with patch(
                     "smrforge.convenience.get_design_point",
                     return_value={"k_eff": 1.0, "power": 50.0},
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.workflow_design_point(args)
         assert out.exists()
 
@@ -4226,13 +4226,13 @@ class TestWorkflowCLI:
         report.to_dict.return_value = {"passed": True, "margins": []}
         report.passed = True
         report.margins = []
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._load_reactor_from_args", return_value=Mock()):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.commands.reactor._load_reactor_from_args", return_value=Mock()):
                 with patch(
                     "smrforge.validation.safety_report.safety_margin_report",
                     return_value=report,
                 ):
-                    with patch("smrforge.cli._RICH_AVAILABLE", False):
+                    with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                         cli_module.workflow_safety_report(args)
         assert out.exists()
 
@@ -4252,8 +4252,8 @@ class TestWorkflowCLI:
             plot=None,
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._RICH_AVAILABLE", False):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                 cli_module.workflow_pareto(args)
         assert out.exists()
 
@@ -4263,7 +4263,7 @@ class TestWorkflowCLI:
         out = tmp_path / "constraints.json"
         args = Mock(requirements=reqs, name="test", output=out, verbose=False)
         mock_cs = Mock()
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.validation.requirements_parser.parse_requirements_to_constraint_set",
                 return_value=mock_cs,
@@ -4286,8 +4286,8 @@ class TestBatchKeffAndWorkflowHandlers:
             output=None,
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.batch_keff_run(args)
 
@@ -4302,9 +4302,9 @@ class TestBatchKeffAndWorkflowHandlers:
             output=tmp_path / "out.json",
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._print_info"):
-                with patch("smrforge.cli._print_success"):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.utils._print_info"):
+                with patch("smrforge.cli.utils._print_success"):
                     with patch(
                         "smrforge.convenience.create_reactor", return_value=Mock()
                     ):
@@ -4317,8 +4317,8 @@ class TestBatchKeffAndWorkflowHandlers:
 
     def test_workflow_variant_success(self, tmp_path):
         args = Mock(reactor="valar-10", name="v1", output_dir=tmp_path, verbose=False)
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._load_reactor_from_args", return_value=Mock()):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.commands.reactor._load_reactor_from_args", return_value=Mock()):
                 with patch(
                     "smrforge.convenience.save_variant",
                     return_value=tmp_path / "v1.json",
@@ -4338,12 +4338,12 @@ class TestBatchKeffAndWorkflowHandlers:
             verbose=False,
         )
         mock_rank = Mock(parameter="p1", effect=0.5, rank=1)
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.workflows.sensitivity.one_at_a_time_from_sweep",
                 return_value=[mock_rank],
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.workflow_sensitivity(args)
         assert out.exists()
 
@@ -4356,8 +4356,8 @@ class TestBatchKeffAndWorkflowHandlers:
             plot=None,
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.workflow_sensitivity(args)
 
@@ -4373,12 +4373,12 @@ class TestBatchKeffAndWorkflowHandlers:
             plot=None,
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.workflows.sobol_indices.sobol_indices_from_sweep_results",
                 return_value={"S1": [0.1, 0.2], "ST": [0.2, 0.3]},
             ):
-                with patch("smrforge.cli._RICH_AVAILABLE", False):
+                with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                     cli_module.workflow_sobol(args)
         assert out.exists()
 
@@ -4391,15 +4391,15 @@ class TestBatchKeffAndWorkflowHandlers:
             plot=None,
             verbose=False,
         )
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.workflow_sobol(args)
 
     def test_workflow_atlas_success(self, tmp_path):
         args = Mock(output_dir=tmp_path, presets=None, plot=None, verbose=False)
         mock_entry = Mock(passed=True)
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch(
                 "smrforge.workflows.atlas.build_atlas", return_value=[mock_entry]
             ):
@@ -4419,8 +4419,8 @@ class TestBatchKeffAndWorkflowHandlers:
             )
 
         args = Mock(sweep_results=Path("/nonexistent.json"), params=["p1"], verbose=False)
-        with patch("smrforge.cli._print_error") as mock_err:
-            with patch("smrforge.cli.sys.exit") as mock_exit:
+        with patch("smrforge.cli.utils._print_error") as mock_err:
+            with patch("sys.exit") as mock_exit:
                 cli_module.workflow_surrogate(args)
         mock_err.assert_called()
         assert "Pro" in str(mock_err.call_args)
@@ -4444,14 +4444,14 @@ class TestBatchKeffAndWorkflowHandlers:
             plot_output=None,
             compare=False,
         )
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.convenience_utils.get_nuclide", return_value=u235):
                 with patch("smrforge.core.reactor_core.NuclearDataCache", Mock()):
                     with patch(
                         "smrforge.core.self_shielding_integration.get_cross_section_with_self_shielding",
                         return_value=(energy, xs),
                     ):
-                        with patch("smrforge.cli._RICH_AVAILABLE", False):
+                        with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                             cli_module.data_shield(args)
         assert (tmp_path / "shield.json").exists()
 
@@ -4469,8 +4469,8 @@ class TestBatchKeffAndWorkflowHandlers:
         report.to_dict.return_value = {"passed": True, "margins": []}
         report.passed = True
         report.margins = []
-        with patch("smrforge.cli.sys.exit"):
-            with patch("smrforge.cli._load_reactor_from_args", return_value=Mock()):
+        with patch("sys.exit"):
+            with patch("smrforge.cli.commands.reactor._load_reactor_from_args", return_value=Mock()):
                 with patch("smrforge.convenience.get_design_point", return_value=point):
                     with patch(
                         "smrforge.validation.safety_report.safety_margin_report",
@@ -4482,8 +4482,8 @@ class TestBatchKeffAndWorkflowHandlers:
 
     def test_workflow_optimize_no_reactor(self):
         args = Mock(reactor=None, params=[], output=None, verbose=False)
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.workflow_optimize(args)
 
@@ -4502,7 +4502,7 @@ class TestBatchKeffAndWorkflowHandlers:
             verbose=False,
         )
         mock_result = Mock(f_opt=-1.05, success=True, x_opt=np.array([0.05]))
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.convenience.create_reactor", return_value=Mock()):
                 with patch(
                     "smrforge.convenience.get_design_point", return_value={"k_eff": 1.0}
@@ -4516,8 +4516,8 @@ class TestBatchKeffAndWorkflowHandlers:
 
     def test_workflow_uq_no_reactor(self):
         args = Mock(reactor=None, params=[], samples=10, output=None, verbose=False)
-        with patch("smrforge.cli.sys.exit", side_effect=SystemExit):
-            with patch("smrforge.cli._print_error"):
+        with patch("sys.exit", side_effect=SystemExit):
+            with patch("smrforge.cli.utils._print_error"):
                 with pytest.raises(SystemExit):
                     cli_module.workflow_uq(args)
 
@@ -4535,7 +4535,7 @@ class TestBatchKeffAndWorkflowHandlers:
         )
         mock_results = Mock()
         mock_results.summary_dict = {"mean": {"k_eff": 1.0}, "std": {"k_eff": 0.01}}
-        with patch("smrforge.cli.sys.exit"):
+        with patch("sys.exit"):
             with patch("smrforge.convenience.create_reactor", return_value=Mock()):
                 with patch(
                     "smrforge.convenience.get_design_point", return_value={"k_eff": 1.0}
@@ -4545,6 +4545,6 @@ class TestBatchKeffAndWorkflowHandlers:
                             "smrforge.uncertainty.uq.UncertaintyPropagation"
                         ) as MockUQ:
                             MockUQ.return_value.propagate.return_value = mock_results
-                            with patch("smrforge.cli._RICH_AVAILABLE", False):
+                            with patch("smrforge.cli.utils._RICH_AVAILABLE", False):
                                 cli_module.workflow_uq(args)
         assert out.exists()

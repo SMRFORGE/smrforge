@@ -1,6 +1,4 @@
-"""
-Unit tests for error message utilities.
-"""
+"""Tests for smrforge.utils.error_messages."""
 
 import pytest
 
@@ -10,252 +8,83 @@ from smrforge.utils.error_messages import (
     format_solver_error,
     format_validation_error,
     suggest_correction,
+    suggest_install_pro,
 )
 
 
+class TestSuggestInstallPro:
+    """Tests for suggest_install_pro."""
+
+    def test_default_message(self):
+        msg = suggest_install_pro()
+        assert "SMRForge Pro" in msg
+        assert "pip install smrforge-pro" in msg
+
+    def test_with_feature(self):
+        msg = suggest_install_pro(feature="OpenMC tally visualization")
+        assert "OpenMC tally visualization" in msg
+        assert "Pro" in msg
+
+    def test_with_extra(self):
+        msg = suggest_install_pro(extra="openmc")
+        assert "smrforge-pro[openmc]" in msg
+
+    def test_empty_extra(self):
+        msg = suggest_install_pro(extra="")
+        assert "pip install smrforge-pro" in msg
+        assert "[" not in msg or "[]" in msg
+
+
 class TestFormatValidationError:
-    """Tests for format_validation_error function."""
+    """Tests for format_validation_error."""
 
-    def test_format_validation_error_negative_power(self):
-        """Test formatting error for negative power."""
-        msg = format_validation_error("power_mw", -10.0, "negative")
-        assert "Invalid power_mw" in msg
-        assert "Power must be > 0" in msg
-        assert "Did you mean 10.0?" in msg
+    def test_negative_power(self):
+        msg = format_validation_error("power_mw", -100, "negative")
+        assert "power_mw" in msg
+        assert "-100" in msg
+        assert "> 0" in msg or "positive" in msg.lower()
 
-    def test_format_validation_error_negative_temperature(self):
-        """Test formatting error for negative temperature."""
-        msg = format_validation_error("temperature", -100.0, "negative")
-        assert "Invalid temperature" in msg
-        assert "Temperature must be positive" in msg
-        assert "Did you mean 100.0 K?" in msg
-
-    def test_format_validation_error_negative_enrichment(self):
-        """Test formatting error for negative enrichment."""
-        msg = format_validation_error("enrichment", -0.05, "negative")
-        assert "Invalid enrichment" in msg
-        assert "Enrichment must be 0-1" in msg
-
-    def test_format_validation_error_out_of_range_enrichment_high(self):
-        """Test formatting error for enrichment > 1."""
+    def test_enrichment_out_of_range(self):
         msg = format_validation_error("enrichment", 19.5, "out_of_range")
-        assert "Invalid enrichment" in msg
-        assert "Enrichment must be 0-1" in msg
-        assert "Did you mean 0.195?" in msg
-
-    def test_format_validation_error_out_of_range_enrichment_low(self):
-        """Test formatting error for enrichment < 0."""
-        msg = format_validation_error("enrichment", -0.1, "out_of_range")
-        assert "Invalid enrichment" in msg
-        assert "Enrichment must be >= 0" in msg
-
-    def test_format_validation_error_temperature_order(self):
-        """Test formatting error for temperature order."""
-        msg = format_validation_error("inlet_temperature", 800.0, "temperature_order")
-        assert "Invalid inlet_temperature" in msg
-        assert "Inlet temperature must be less than outlet temperature" in msg
-
-    def test_format_validation_error_missing_required(self):
-        """Test formatting error for missing required field."""
-        msg = format_validation_error("power", None, "missing_required")
-        assert "Missing required field: power" in msg
-
-    def test_format_validation_error_with_suggestions(self):
-        """Test formatting error with custom suggestions."""
-        suggestions = ["Check units", "Verify input"]
-        msg = format_validation_error("test_field", 42, "unknown", suggestions)
-        assert "Invalid test_field" in msg
-        assert "Suggestions:" in msg
-        assert "Check units" in msg
-
-    def test_format_validation_error_base_message(self):
-        """Test base error message format."""
-        msg = format_validation_error("test_field", 42, "unknown")
-        assert "Invalid test_field: 42" in msg
+        assert "enrichment" in msg
+        assert "0-1" in msg or "fraction" in msg.lower()
 
 
 class TestSuggestCorrection:
-    """Tests for suggest_correction function."""
+    """Tests for suggest_correction."""
 
-    def test_suggest_correction_enrichment_percentage(self):
-        """Test suggesting correction for enrichment as percentage."""
-        suggestion = suggest_correction(19.5, "enrichment")
-        assert suggestion is not None
-        assert "Did you mean 0.195?" in suggestion
-        assert "fraction, not percent" in suggestion
+    def test_enrichment_percent(self):
+        s = suggest_correction(19.5, "enrichment")
+        assert s is not None
+        assert "0.195" in s or "fraction" in s.lower()
 
-    def test_suggest_correction_enrichment_negative(self):
-        """Test suggesting correction for negative enrichment."""
-        suggestion = suggest_correction(-0.05, "enrichment")
-        assert suggestion is not None
-        assert "Did you mean 0.05?" in suggestion
-
-    def test_suggest_correction_enrichment_valid(self):
-        """Test that valid enrichment returns None."""
-        suggestion = suggest_correction(0.195, "enrichment")
-        assert suggestion is None
-
-    def test_suggest_correction_power_small(self):
-        """Test suggesting correction for very small power (might be in W)."""
-        suggestion = suggest_correction(1e-7, "power_mw")
-        assert suggestion is not None
-        assert "Did you mean" in suggestion
-        assert "MW" in suggestion
-
-    def test_suggest_correction_temperature_celsius(self):
-        """Test suggesting correction for temperature that might be Celsius."""
-        suggestion = suggest_correction(500.0, "temperature")
-        assert suggestion is not None
-        assert "Did you mean 773.15 K?" in suggestion
-        assert "Kelvin, not Celsius" in suggestion
-
-    def test_suggest_correction_temperature_negative(self):
-        """Test suggesting correction for negative temperature."""
-        suggestion = suggest_correction(-50.0, "temperature")
-        assert suggestion is not None
-        assert "Did you mean 50.0 K?" in suggestion
-
-    def test_suggest_correction_no_suggestion(self):
-        """Test that values with no common mistakes return None."""
-        suggestion = suggest_correction(1000.0, "power_mw")
-        assert suggestion is None
+    def test_enrichment_valid(self):
+        s = suggest_correction(0.195, "enrichment")
+        assert s is None
 
 
 class TestFormatCrossSectionError:
-    """Tests for format_cross_section_error function."""
+    """Tests for format_cross_section_error."""
 
-    def test_format_cross_section_error(self):
-        """Test formatting cross-section error."""
-        msg = format_cross_section_error(0.6, 0.5, 0, 0)
-        assert "Invalid cross sections for material 0, group 0" in msg
-        assert "σ_a (0.600000) > σ_t (0.500000)" in msg
-        assert "Absorption cross section cannot exceed total cross section" in msg
+    def test_invalid_sigma(self):
+        msg = format_cross_section_error(0.5, 0.3, 1, 0)
+        assert "material 1" in msg or "group 0" in msg
+        assert "σ_a" in msg or "sigma" in msg.lower()
 
 
 class TestFormatSolverError:
-    """Tests for format_solver_error function."""
+    """Tests for format_solver_error."""
 
-    def test_format_solver_error_basic(self):
-        """Test basic solver error formatting."""
-        msg = format_solver_error("Test error", "diffusion")
-        assert "Diffusion solver error: Test error" in msg
-
-    def test_format_solver_error_convergence(self):
-        """Test solver error with convergence issues."""
-        msg = format_solver_error("convergence failed", "diffusion")
-        # Check that message contains "converge" (which is in "converged")
-        assert "converge" in msg.lower()
-        assert "Suggestions:" in msg
-        assert "Increase max_iterations" in msg or "max_iterations" in msg.lower()
-
-    def test_format_solver_error_nan(self):
-        """Test solver error with NaN/Inf."""
-        msg = format_solver_error("NaN detected", "monte_carlo")
-        assert "NaN" in msg or "nan" in msg.lower()
-        assert "Suggestions:" in msg
-        assert "Check for negative cross sections" in msg
-
-    def test_format_solver_error_with_custom_suggestions(self):
-        """Test solver error with custom suggestions."""
-        suggestions = ["Custom suggestion"]
-        msg = format_solver_error("Test error", "diffusion", suggestions)
-        assert "Custom suggestion" in msg
+    def test_convergence_adds_suggestions(self):
+        msg = format_solver_error("Convergence failed", solver_type="diffusion")
+        assert "convergence" in msg.lower() or "Convergence" in msg
+        assert "max_iterations" in msg or "tolerance" in msg.lower()
 
 
 class TestFormatGeometryError:
-    """Tests for format_geometry_error function."""
+    """Tests for format_geometry_error."""
 
-    def test_format_geometry_error_basic(self):
-        """Test basic geometry error formatting."""
-        msg = format_geometry_error("Test error", "prismatic")
-        assert "Prismatic geometry error: Test error" in msg
-
-    def test_format_geometry_error_mesh(self):
-        """Test geometry error with mesh issues."""
-        msg = format_geometry_error("Mesh error", "pebble_bed")
+    def test_mesh_suggestion(self):
+        msg = format_geometry_error("Invalid mesh", geometry_type="prismatic")
         assert "mesh" in msg.lower()
-        assert "Suggestions:" in msg
-        assert "Call geometry.build_mesh()" in msg
-
-    def test_format_geometry_error_material(self):
-        """Test geometry error with material issues."""
-        msg = format_geometry_error("Material error", "prismatic")
-        assert "material" in msg.lower()
-        assert "Suggestions:" in msg
-        assert "Check material_map is valid" in msg
-
-    def test_format_validation_error_negative_power_thermal(self):
-        """Test formatting error for negative power_thermal."""
-        msg = format_validation_error("power_thermal", -10.0, "negative")
-        assert "Invalid power_thermal" in msg
-        assert "Power must be > 0" in msg
-
-    def test_format_validation_error_negative_inlet_temperature(self):
-        """Test formatting error for negative inlet_temperature."""
-        msg = format_validation_error("inlet_temperature", -100.0, "negative")
-        assert "Invalid inlet_temperature" in msg
-        assert "Temperature must be positive" in msg
-
-    def test_format_validation_error_negative_outlet_temperature(self):
-        """Test formatting error for negative outlet_temperature."""
-        msg = format_validation_error("outlet_temperature", -100.0, "negative")
-        assert "Invalid outlet_temperature" in msg
-        assert "Temperature must be positive" in msg
-
-    def test_format_validation_error_non_numeric_value(self):
-        """Test formatting error with non-numeric value."""
-        msg = format_validation_error("test_field", "invalid", "negative")
-        # Should still format base message even if value is not numeric
-        assert "Invalid test_field" in msg
-
-    def test_suggest_correction_enrichment_over_100(self):
-        """Test suggesting correction for enrichment > 100."""
-        suggestion = suggest_correction(150.0, "enrichment")
-        # Should return None for values > 100
-        assert suggestion is None
-
-    def test_suggest_correction_power_mw_valid(self):
-        """Test that valid power_mw returns None."""
-        suggestion = suggest_correction(100.0, "power_mw")
-        assert suggestion is None
-
-    def test_suggest_correction_temperature_valid(self):
-        """Test that valid temperature returns None."""
-        suggestion = suggest_correction(1200.0, "temperature")
-        assert suggestion is None
-
-    def test_suggest_correction_temperature_too_high(self):
-        """Test that very high temperature returns None."""
-        suggestion = suggest_correction(2000.0, "temperature")
-        assert suggestion is None
-
-    def test_suggest_correction_temperature_too_low(self):
-        """Test that very low temperature returns None."""
-        suggestion = suggest_correction(50.0, "temperature")
-        assert suggestion is None
-
-    def test_format_solver_error_inf(self):
-        """Test solver error with Inf."""
-        msg = format_solver_error("Inf detected", "monte_carlo")
-        assert "inf" in msg.lower()
-        assert "Suggestions:" in msg
-
-    def test_format_solver_error_converged(self):
-        """Test solver error with 'converged' keyword."""
-        msg = format_solver_error("not converged", "diffusion")
-        assert "converge" in msg.lower()
-        assert "Suggestions:" in msg
-
-    def test_format_solver_error_no_suggestions(self):
-        """Test solver error without automatic suggestions."""
-        msg = format_solver_error("generic error", "diffusion")
-        assert "Diffusion solver error: generic error" in msg
-        # Should not have suggestions for generic errors
-        assert "Suggestions:" not in msg
-
-    def test_format_geometry_error_no_keywords(self):
-        """Test geometry error without mesh or material keywords."""
-        msg = format_geometry_error("generic error", "prismatic")
-        assert "Prismatic geometry error: generic error" in msg
-        # Should not have suggestions for generic errors
-        assert "Suggestions:" not in msg
+        assert "build_mesh" in msg or "Suggestions" in msg

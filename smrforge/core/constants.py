@@ -8,6 +8,7 @@ This module provides:
 - Standard energy group structures for nuclear calculations
 """
 
+from functools import lru_cache
 from typing import Dict
 
 import numpy as np
@@ -279,9 +280,12 @@ HTGR_CONSTANTS = {
 }
 
 
+@lru_cache(maxsize=256)
 def parse_nuclide_string(name: str) -> tuple:
     """
     Parse nuclide string like 'U235', 'Am242m' into (Z, A, m).
+
+    Cached for performance when called repeatedly with same nuclide names.
 
     Examples:
         'U235' -> (92, 235, 0)

@@ -4,14 +4,49 @@ Comprehensive data validation framework for SMRForge.
 Ensures physical correctness, consistency, and bounds checking.
 """
 
+import re
 import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from rich.console import Console
-from rich.table import Table
+
+try:
+    from rich.console import Console
+    from rich.table import Table
+
+    _RICH_AVAILABLE = True
+except ImportError:
+    _RICH_AVAILABLE = False
+
+    class _PlainConsole:
+        def print(self, msg: str) -> None:
+            plain = re.sub(r"\[/?[^\]]+\]", "", str(msg))
+            print(plain)
+
+    class _PlainTable:
+        def __init__(self, title: str = "", show_header: bool = True):
+            self.title = title
+            self._rows: List[List[str]] = []
+            self._headers: List[str] = []
+
+        def add_column(self, name: str, **kwargs) -> None:
+            self._headers.append(name)
+
+        def add_row(self, *cells: str) -> None:
+            self._rows.append([str(c) for c in cells])
+
+        def __str__(self) -> str:
+            lines = [self.title] if self.title else []
+            if self._headers:
+                lines.append("  ".join(self._headers))
+            for row in self._rows:
+                lines.append("  ".join(row))
+            return "\n".join(lines)
+
+    Console = _PlainConsole  # type: ignore
+    Table = _PlainTable  # type: ignore
 
 
 class ValidationLevel(Enum):

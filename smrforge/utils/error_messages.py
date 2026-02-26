@@ -180,6 +180,24 @@ def format_solver_error(
     return base_msg
 
 
+def suggest_install_pro(feature: str = "", extra: str = "openmc") -> str:
+    """
+    Return a helpful message suggesting SMRForge Pro installation.
+
+    Args:
+        feature: Optional feature name (e.g. "OpenMC tally visualization")
+        extra: Optional pip extra to suggest (e.g. "openmc", "ai", "reporting")
+
+    Returns:
+        Formatted suggestion string
+    """
+    base = "SMRForge Pro is required for this feature."
+    if feature:
+        base = f"{feature} requires SMRForge Pro."
+    cmd = f"pip install smrforge-pro[{extra}]" if extra else "pip install smrforge-pro"
+    return f"{base} Install with: {cmd}"
+
+
 def format_geometry_error(error_msg: str, geometry_type: str = "prismatic") -> str:
     """
     Format helpful geometry error message.

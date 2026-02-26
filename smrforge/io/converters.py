@@ -8,7 +8,7 @@ OpenMC has full Community export/import.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 
@@ -53,7 +53,7 @@ class SerpentConverter:
     """
 
     @staticmethod
-    def export_reactor(reactor, output_file: Path):
+    def export_reactor(reactor: Any, output_file: Union[str, Path]) -> None:
         """
         Export reactor to Serpent format.
 
@@ -80,7 +80,7 @@ class SerpentConverter:
             f.write("% Material definitions would go here\n")
 
     @staticmethod
-    def import_reactor(input_file: Path) -> Dict[str, Any]:
+    def import_reactor(input_file: Union[str, Path]) -> Dict[str, Any]:
         """
         Import reactor from Serpent format.
 
@@ -107,8 +107,11 @@ class OpenMCConverter:
 
     @staticmethod
     def export_reactor(
-        reactor, output_dir: Path, particles: int = 1000, batches: int = 20
-    ):
+        reactor: Any,
+        output_dir: Union[str, Path],
+        particles: int = 1000,
+        batches: int = 20,
+    ) -> None:
         """
         Export reactor to OpenMC format.
 
@@ -136,7 +139,8 @@ class OpenMCConverter:
 
     @staticmethod
     def import_reactor(
-        geometry_file: Path, materials_file: Optional[Path] = None
+        geometry_file: Union[str, Path],
+        materials_file: Optional[Union[str, Path]] = None,
     ) -> Dict[str, Any]:
         """
         Import reactor from OpenMC format.
@@ -169,7 +173,7 @@ class MCNPConverter:
     """
 
     @staticmethod
-    def export_reactor(reactor, output_file: Path) -> None:
+    def export_reactor(reactor: Any, output_file: Union[str, Path]) -> None:
         """
         Export reactor to MCNP format.
 

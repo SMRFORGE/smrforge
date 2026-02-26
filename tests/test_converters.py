@@ -15,6 +15,7 @@ import pytest
 
 from smrforge.geometry.core_geometry import PrismaticCore
 from smrforge.io.converters import MCNPConverter, OpenMCConverter, SerpentConverter
+from smrforge.workflows.plugin_registry import clear_hooks, register_hook
 
 
 def _prismatic_reactor():
@@ -67,6 +68,26 @@ class TestSerpentConverter:
         input_file.write_text("")
         with pytest.raises(NotImplementedError, match="Serpent"):
             SerpentConverter.import_reactor(input_file)
+
+    def test_export_runs_pre_export_hook(self, tmp_path):
+        """Test that pre_export hook is invoked before Serpent export."""
+        seen = {}
+
+        def capture(ctx):
+            seen["format"] = ctx.get("format")
+            seen["output_file"] = str(ctx.get("output_file"))
+            seen["reactor"] = ctx.get("reactor")
+
+        try:
+            register_hook("pre_export", capture)
+            mock_reactor = Mock()
+            output_file = tmp_path / "hook_test.serp"
+            SerpentConverter.export_reactor(mock_reactor, output_file)
+            assert seen.get("format") == "serpent"
+            assert "hook_test" in seen.get("output_file", "")
+            assert seen.get("reactor") is mock_reactor
+        finally:
+            clear_hooks("pre_export")
 
 
 class TestMCNPConverter:

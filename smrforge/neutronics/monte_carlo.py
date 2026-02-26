@@ -4,6 +4,7 @@ Monte Carlo neutron transport for SMRForge.
 Simplified implementation for design studies and validation.
 """
 
+import re
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -11,9 +12,42 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 from numba import jit, njit, prange
-from rich.console import Console
-from rich.progress import Progress, track
-from rich.table import Table
+
+try:
+    from rich.console import Console
+    from rich.progress import Progress, track
+    from rich.table import Table
+
+    _RICH_AVAILABLE = True
+except ImportError:
+    _RICH_AVAILABLE = False
+
+    class _PlainConsole:
+        """Fallback when Rich not available."""
+
+        def print(self, msg: str) -> None:
+            # Strip Rich markup for plain output
+            plain = re.sub(r"\[/?[^\]]+\]", "", str(msg))
+            print(plain)
+
+    class _NoOpProgress:
+        """No-op Progress fallback."""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def add_task(self, *args, **kwargs):
+            return 0
+
+        def update(self, *args, **kwargs):
+            pass
+
+    Console = _PlainConsole  # type: ignore
+    Progress = _NoOpProgress  # type: ignore
+    Table = None  # type: ignore
 
 from ..utils.logging import get_logger
 from ..validation.models import CrossSectionData, ReactorSpecification
@@ -613,23 +647,30 @@ class MonteCarloSolver:
 
         return source
 
-    def print_results(self):
+    def print_results(self) -> None:
         """Print formatted results."""
-        table = Table(title="Monte Carlo Tallies")
-        table.add_column("Tally", style="cyan")
-        table.add_column("Mean", justify="right")
-        table.add_column("Std Dev", justify="right")
-        table.add_column("Rel. Error", justify="right")
-
-        for name, tally in self.tallies.items():
-            table.add_row(
-                name,
-                f"{tally.mean:.4e}",
-                f"{tally.std:.4e}",
-                f"{tally.relative_error*100:.2f}%",
-            )
-
-        self.console.print(table)
+        if _RICH_AVAILABLE and Table is not None:
+            table = Table(title="Monte Carlo Tallies")
+            table.add_column("Tally", style="cyan")
+            table.add_column("Mean", justify="right")
+            table.add_column("Std Dev", justify="right")
+            table.add_column("Rel. Error", justify="right")
+            for name, tally in self.tallies.items():
+                table.add_row(
+                    name,
+                    f"{tally.mean:.4e}",
+                    f"{tally.std:.4e}",
+                    f"{tally.relative_error*100:.2f}%",
+                )
+            self.console.print(table)
+        else:
+            print("Monte Carlo Tallies")
+            print(f"{'Tally':<20} {'Mean':>12} {'Std Dev':>12} {'Rel. Error':>12}")
+            for name, tally in self.tallies.items():
+                print(
+                    f"{name:<20} {tally.mean:>12.4e} {tally.std:>12.4e} "
+                    f"{tally.relative_error*100:>11.2f}%"
+                )
 
 
 if __name__ == "__main__":

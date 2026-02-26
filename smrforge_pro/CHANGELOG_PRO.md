@@ -12,6 +12,12 @@ Pro follows the same [Semantic Versioning](https://semver.org/spec/v2.0.0.html) 
 ## [Unreleased]
 
 ### Added
+- **Natural-language design:** `workflow nl-design --text "10 MW HTGR with k-eff 1.0-1.05"` - parse intent and create reactor.
+- **Code-to-code verification:** `workflow code-verify --reactor X` - run through diffusion, MC, OpenMC, Serpent, MCNP and compare.
+- **Regulatory package:** `workflow regulatory-package --reactor X` - generate NRC/IAEA submission package with inputs, outputs, traceability.
+- **Benchmark reproduction:** `workflow benchmark --id X` - one-click run and compare to reference.
+- **Multi-objective optimization:** `workflow multi-optimize` - optimize across neutronics, safety, economics.
+- **Physics-informed surrogates:** `physics_informed_surrogate_from_sweep()` with UQ and physics checks.
 - **Serpent import:** Basic parsing of materials, surfaces, and cells for round-trip workflows.
 - **MCNP converter:** Full MCNP export in Pro; Community delegates to Pro when installed.
 - **Pro CLI commands:** `convert serpent/openmc/mcnp`, `workflow ml-export`, `report validation` (Pro features).

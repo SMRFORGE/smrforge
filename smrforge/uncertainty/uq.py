@@ -17,9 +17,63 @@ try:
 except ImportError:
     go = None  # Optional dependency
 from numba import njit, prange
-from rich.console import Console
-from rich.progress import Progress
-from rich.table import Table
+
+try:
+    from rich.console import Console
+    from rich.progress import Progress
+    from rich.table import Table
+
+    _RICH_AVAILABLE = True
+except ImportError:
+    import re
+
+    _RICH_AVAILABLE = False
+
+    class _PlainConsole:
+        def print(self, msg: str) -> None:
+            plain = re.sub(r"\[/?[^\]]+\]", "", str(msg))
+            print(plain)
+
+    class _NoOpProgress:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def add_task(self, *args, **kwargs):
+            return 0
+
+        def update(self, *args, **kwargs):
+            pass
+
+    class _PlainTable:
+        def __init__(self, title: str = ""):
+            self.title = title
+            self._rows: List[List[str]] = []
+            self._columns: List[str] = []
+
+        def add_column(self, *args, **kwargs):
+            pass
+
+        def add_row(self, *cells: str) -> None:
+            self._rows.append([str(c) for c in cells])
+
+        def __str__(self) -> str:
+            if not self._rows:
+                return self.title or ""
+            widths = [
+                max(len(str(r[i])) for r in self._rows)
+                for i in range(len(self._rows[0]))
+            ]
+            lines = [self.title] if self.title else []
+            for row in self._rows:
+                lines.append("  ".join(str(c).ljust(w) for c, w in zip(row, widths)))
+            return "\n".join(lines)
+
+    Console = _PlainConsole  # type: ignore
+    Progress = _NoOpProgress  # type: ignore
+    Table = _PlainTable  # type: ignore
 
 # Optional dependencies for sensitivity analysis
 try:
