@@ -57,8 +57,10 @@ result = reproduce_benchmark("valar-10", output_dir=Path("benchmark_out"))
 
 For regulated environments without internet:
 
+- **Storage:** Pro and air-gapped bundles use **GitHub Packages** (Releases for wheels, `ghcr.io` for Docker)
 - **Bundle scripts:** `./scripts/airgap/bundle_wheels.sh`, `./scripts/airgap/bundle_docker.sh`
-- **Releases:** Air-gap bundles attached to GitHub Releases (`airgap-bundle-*.zip`)
+- **Releases:** Air-gap bundles attached to [Releases](https://github.com/SMRFORGE/smrforge-pro/releases) (`airgap-bundle-*.zip`)
+- **Docker:** `docker pull ghcr.io/smrforge/smrforge-pro` (requires authenticated access)
 - **Docs:** [Air-Gapped Pro](docs/deployment/air-gapped-pro.md)
 
 ## Documentation

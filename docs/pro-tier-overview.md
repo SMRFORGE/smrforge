@@ -17,7 +17,10 @@ SMRForge Pro extends the Community tier with:
 ## Getting Pro
 
 - **Repository:** [github.com/SMRFORGE/smrforge-pro](https://github.com/SMRFORGE/smrforge-pro) (private)
-- **Install:** Requires Pro license; typically `pip install smrforge-pro` from private PyPI
+- **Distribution:** Pro and air-gapped bundles are delivered via **GitHub Packages** when you purchase a paid tier:
+  - **Docker images:** `ghcr.io/smrforge/smrforge-pro` (GitHub Container Registry)
+  - **Wheel bundles:** Attached to [Releases](https://github.com/SMRFORGE/smrforge-pro/releases) for offline install
+- **Install:** Requires Pro license; `pip install smrforge-pro` or `docker pull ghcr.io/smrforge/smrforge-pro` with authenticated access
 - **Contact:** Inquiries at [smrforge.io](https://smrforge.io) or your sales contact
 
 ## Comparison

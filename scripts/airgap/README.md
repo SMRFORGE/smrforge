@@ -31,3 +31,19 @@ docker run -v /path/to/ENDF:/app/endf-data:ro -e SMRFORGE_ENDF_DIR=/app/endf-dat
 ```
 
 See [Air-Gapped Deployment](../../docs/guides/air-gapped-deployment.md) and [Pro Deployment](../../docs/deployment/air-gapped-pro.md) for full details.
+
+## Syncing to smrforge-pro
+
+To copy these scripts, docs, and the release workflow into the Pro repo (for Pro air-gap releases):
+
+```bash
+# From smrforge (Community) repo root
+./scripts/airgap/copy_to_pro.sh /path/to/smrforge-pro
+```
+
+```powershell
+# PowerShell (from smrforge repo root)
+.\scripts\airgap\copy_to_pro.ps1 -ProPath C:\path\to\smrforge-pro
+```
+
+This copies `scripts/airgap/`, `docs/deployment/air-gapped-pro.md`, and `.github/workflows/release-airgap.yml` into the Pro repo.

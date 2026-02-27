@@ -1,8 +1,8 @@
-# Build air-gap bundle and attach to Release.
+# Build air-gap bundle and attach to Release (GitHub Packages storage for paid tiers).
 # Runs on release publish; produces wheels + install instructions for offline install.
 #
 # Community repo: bundles smrforge (Community)
-# Pro repo: bundles smrforge-pro (copy this workflow to smrforge-pro)
+# Pro repo: bundles smrforge-pro — wheel bundle on Releases; paid users access via GitHub Packages
 
 name: Release Air-Gap Bundle
 

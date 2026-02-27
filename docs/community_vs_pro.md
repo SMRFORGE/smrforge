@@ -66,6 +66,8 @@ These indicate features available in the Pro tier. If you need them, consider up
 
 Community is open-source; Pro is developed in a separate private repo and distributed under license.
 
+**Pro distribution:** Paid-tier Pro and air-gapped bundles are delivered via **GitHub Packages**—wheel bundles on Releases, Docker images on `ghcr.io/smrforge/smrforge-pro`. Access requires Pro license and authenticated GitHub credentials.
+
 ## Learn More
 
 - **Community docs:** [smrforge.readthedocs.io](https://smrforge.readthedocs.io)

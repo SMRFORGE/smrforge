@@ -9,6 +9,8 @@
 
 Pro supports full air-gapped deployment: wheels, Docker images, and nuclear data can be pre-staged on a connected machine and transferred via approved process. Licensing validation runs offline (RSA-signed keys, no phone-home).
 
+**Distribution:** Paid-tier Pro and air-gapped bundles use **GitHub Packages** for storage—wheel bundles on GitHub Releases, Docker images on `ghcr.io/smrforge/smrforge-pro`. Access requires a Pro license and authenticated GitHub access.
+
 ---
 
 ## Option 1: Wheel Bundle (Recommended)
@@ -63,14 +65,28 @@ docker run -v /path/to/ENDF:/app/endf-data:ro \
 
 ---
 
-## Option 3: GitHub Release Bundle
+## Option 3: GitHub Packages (Releases + GHCR)
 
-When Pro releases are tagged, an automated workflow can attach an air-gap bundle to the GitHub Release:
+Pro and air-gapped bundles are stored in **GitHub Packages** for paid-tier customers:
 
-- `smrforge-pro-airgap-v1.0.0.zip` — wheels + install instructions
-- Optional: `smrforge-pro-1.0.0-docker.tar` (large)
+| Asset | Location | Auth |
+|-------|----------|------|
+| Wheel bundle | [Releases](https://github.com/SMRFORGE/smrforge-pro/releases) — `airgap-bundle-*.zip` | GitHub PAT with `repo` (or org package read) |
+| Docker image | `ghcr.io/smrforge/smrforge-pro` | `docker login ghcr.io` with PAT (`read:packages`) |
 
-Download from [Releases](https://github.com/SMRFORGE/smrforge-pro/releases) on a connected machine, then transfer to the air-gapped system.
+When Pro releases are tagged, an automated workflow attaches an air-gap bundle to the GitHub Release. Download on a connected machine, then transfer to the air-gapped system.
+
+**Authenticating for paid-tier access:**
+
+```bash
+# Docker (pull from GitHub Container Registry)
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+
+# Releases (browser or gh CLI)
+gh release download <tag> --repo SMRFORGE/smrforge-pro
+```
+
+Use a GitHub Personal Access Token (PAT) with `read:packages` for Docker and `repo` for Releases. Your sales contact provides access and token scopes.
 
 ---
 
