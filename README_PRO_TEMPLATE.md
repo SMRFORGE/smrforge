@@ -55,7 +55,7 @@ result = reproduce_benchmark("valar-10", output_dir=Path("benchmark_out"))
 
 ## Air-Gapped Deployment
 
-For regulated environments without internet:
+Air-gap scripts, docs, and the release workflow live in this repo (smrforge-pro). For regulated environments without internet:
 
 - **Storage:** Pro and air-gapped bundles use **GitHub Packages** (Releases for wheels, `ghcr.io` for Docker)
 - **Bundle scripts:** `./scripts/airgap/bundle_wheels.sh`, `./scripts/airgap/bundle_docker.sh`

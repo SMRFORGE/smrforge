@@ -1,6 +1,6 @@
 # SMRForge Pro Tier — Overview
 
-**Pro tier code and documentation live in the separate private repository:** [github.com/SMRFORGE/smrforge-pro](https://github.com/SMRFORGE/smrforge-pro)
+**Pro tier code, documentation, and the air-gapped Pro version live in the Pro-tier repository:** [https://github.com/SMRFORGE/smrforge-pro](https://github.com/SMRFORGE/smrforge-pro). To bootstrap air-gap files into a new Pro repo, run `./scripts/setup_pro_airgap.sh /path/to/smrforge-pro` from the Community repo.
 
 ## What Pro Adds
 
