@@ -1,0 +1,103 @@
+# Build air-gap bundle and attach to Release.
+# Runs on release publish; produces wheels + install instructions for offline install.
+#
+# Community repo: bundles smrforge (Community)
+# Pro repo: bundles smrforge-pro (copy this workflow to smrforge-pro)
+
+name: Release Air-Gap Bundle
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-bundle:
+    name: Build air-gap bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install build tools
+        run: pip install --upgrade pip wheel build
+
+      - name: Detect package name
+        id: pkg
+        run: |
+          if [ -d "smrforge_pro" ]; then
+            echo "name=smrforge-pro" >> $GITHUB_OUTPUT
+            echo "label=Pro" >> $GITHUB_OUTPUT
+          else
+            echo "name=smrforge" >> $GITHUB_OUTPUT
+            echo "label=Community" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create offline-wheels directory
+        run: mkdir -p offline-wheels
+
+      - name: Download dependencies
+        run: |
+          REQ="requirements-lock.txt"
+          [ -f "$REQ" ] || REQ="requirements.txt"
+          pip download -r "$REQ" -d offline-wheels
+          pip download . -d offline-wheels
+
+      - name: Add Community for Pro
+        if: steps.pkg.outputs.name == 'smrforge-pro'
+        run: pip download smrforge -d offline-wheels || true
+
+      - name: Create INSTALL.md
+        run: |
+          cat > offline-wheels/INSTALL.md << 'EOF'
+          # Air-Gap Installation
+
+          **On the air-gapped machine:**
+
+          ```
+          pip install --no-index --find-links ./offline-wheels -r requirements-lock.txt
+          pip install --no-index --find-links ./offline-wheels .
+          ```
+
+          If requirements-lock.txt is missing, use requirements.txt.
+          Set SMRFORGE_ENDF_DIR for nuclear data. See docs/guides/air-gapped-deployment.md
+          EOF
+
+      - name: Create bundle zip
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}" || VERSION="snapshot"
+          zip -r airgap-bundle-$VERSION.zip offline-wheels/
+          echo "BUNDLE_ZIP=airgap-bundle-$VERSION.zip" >> $GITHUB_ENV
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: airgap-bundle
+          path: airgap-bundle-*.zip
+
+  # Attach to release if this is a release event
+  attach-release:
+    name: Attach to release
+    runs-on: ubuntu-latest
+    needs: build-bundle
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - name: Download bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: airgap-bundle
+
+      - name: Upload to Release
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          gh release upload "$TAG" airgap-bundle-*.zip --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

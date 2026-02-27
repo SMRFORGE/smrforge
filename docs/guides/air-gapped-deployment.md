@@ -107,16 +107,14 @@ docker run -v /path/to/ENDF-B-VIII.1:/data/endf -e SMRFORGE_ENDF_DIR=/data/endf 
 
 ## SMRForge Pro (Licensed)
 
-For air-gapped deployment of SMRForge Pro:
+Pro lives in [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro). For air-gapped deployment:
 
-1. On a connected machine, download the Pro package and its dependencies:
-   ```bash
-   pip download smrforge-pro -d ./offline-wheels
-   pip download smrforge -d ./offline-wheels  # Pro depends on Community
-   ```
-2. Transfer the wheel directory to the air-gapped system.
-3. Install: `pip install --no-index --find-links ./offline-wheels smrforge-pro`
-4. Pro optional extras (ai, reporting, ml) require additional packages; include them in the download step if needed.
+1. **Use bundle scripts** (in smrforge-pro repo): `./scripts/airgap/bundle_wheels.sh`
+2. **Or from Releases**: Download `airgap-bundle-*.zip` from [Pro Releases](https://github.com/SMRFORGE/smrforge-pro/releases)
+3. Transfer to air-gapped system.
+4. Install: `pip install --no-index --find-links ./offline-wheels -r requirements-lock.txt` then `pip install --no-index --find-links ./offline-wheels .`
+
+See **[Air-Gapped Pro](../deployment/air-gapped-pro.md)** for full Pro deployment guide.
 
 ---
 

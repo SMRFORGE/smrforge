@@ -53,9 +53,18 @@ from smrforge_pro.workflows.benchmark_reproduction import reproduce_benchmark
 result = reproduce_benchmark("valar-10", output_dir=Path("benchmark_out"))
 ```
 
+## Air-Gapped Deployment
+
+For regulated environments without internet:
+
+- **Bundle scripts:** `./scripts/airgap/bundle_wheels.sh`, `./scripts/airgap/bundle_docker.sh`
+- **Releases:** Air-gap bundles attached to GitHub Releases (`airgap-bundle-*.zip`)
+- **Docs:** [Air-Gapped Pro](docs/deployment/air-gapped-pro.md)
+
 ## Documentation
 
 - **Pro guides:** See `docs/pro/` and `docs/guides/pro/` in this repo
+- **Air-gapped Pro:** [docs/deployment/air-gapped-pro.md](docs/deployment/air-gapped-pro.md)
 - **Community vs Pro:** [Community repo docs](https://github.com/SMRFORGE/smrforge/blob/main/docs/community_vs_pro.md)
 
 ## License

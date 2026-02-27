@@ -30,6 +30,7 @@ This document provides a comprehensive index of all SMRForge documentation files
 - **[Quickstart (First 5 Minutes)](guides/quickstart.md)** - Get running in under 5 minutes
 - **[Installation Guide](guides/installation.md)** - Installation instructions for all platforms
 - **[Air-Gapped Deployment](guides/air-gapped-deployment.md)** - Offline installation and dependency strategy
+- **[Air-Gapped Pro](deployment/air-gapped-pro.md)** - Pro deployment in regulated/air-gapped environments
 - **[Tutorial](guides/tutorial.md)** - Step-by-step tutorial for beginners
 - **[Usage Guide](guides/usage.md)** - Usage guide with examples
 - **[Community vs Pro](community_vs_pro.md)** - Tier comparison
