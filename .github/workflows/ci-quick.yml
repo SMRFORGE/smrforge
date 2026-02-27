@@ -21,6 +21,8 @@ jobs:
       enabled: ${{ steps.check.outputs.enabled }}
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure no Pro air-gap files in Community
+        run: python3 scripts/check_no_pro_airgap.py
       - name: Set up Python (for workflow check)
         uses: actions/setup-python@v5
         with:

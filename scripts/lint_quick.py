@@ -25,6 +25,11 @@ def run(cmd: List[str]) -> int:
 def main() -> int:
     fix = "--fix" in sys.argv or "-w" in sys.argv
 
+    # Pro air-gap guard: must not exist in Community repo
+    code = run([sys.executable, str(PROJECT_ROOT / "scripts" / "check_no_pro_airgap.py")])
+    if code != 0:
+        return 1
+
     # black
     black_args = ["black", "--check", "smrforge", "tests", "examples"]
     if fix:

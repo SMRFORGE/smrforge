@@ -21,6 +21,8 @@ smrforge github disable             # turn off all workflows (global)
 
 **Feature IDs:** `ci`, `ci-quick`, `docs`, `performance`, `security`, `release`, `nightly`, `docker`, `dependabot`, `stale`. Omit `workflows-config.json` to use only the global switch (all workflows follow it).
 
+**Pro air-gap guard:** `scripts/check_no_pro_airgap.py` runs in CI to ensure Pro air-gap files (`scripts/airgap/`, `docs/deployment/air-gapped-pro.md`, `release-airgap.yml`) do not exist in the Community repo—they belong in [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro). Also runs in `lint_quick.py`.
+
 ## Workflows
 
 | Workflow | Feature ID | Triggers |
