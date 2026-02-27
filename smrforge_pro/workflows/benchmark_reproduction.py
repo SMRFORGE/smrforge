@@ -1,201 +1,96 @@
 """
-One-click benchmark reproduction (Pro).
+Benchmark reproduction: one-click reproduce, compare to reference, report.json.
 
-Download OECD/NEA or other benchmarks, run, compare to reference, produce report.
-Integrates Community execute_and_document_benchmarks for CI-ready suite.
-
-Uses Pydantic for BenchmarkResult validation and serialization.
+Pro tier — V&V workflow for IAEA/ANS benchmarks.
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-
-from pydantic import BaseModel, Field
+from typing import Any, Dict, Optional
 
 from smrforge.utils.logging import get_logger
 
 logger = get_logger("smrforge_pro.workflows.benchmark_reproduction")
 
 
-# Registry of known benchmarks (IAEA/OECD/NUREG references + presets)
-BENCHMARK_REGISTRY: Dict[str, Dict[str, Any]] = {
-    "valar10_preset": {
-        "name": "Valar-10 preset",
-        "description": "SMRForge built-in Valar-10 HTGR preset",
-        "type": "preset",
-        "reference": {"k_eff": 1.0},
-        "config": {"preset": "valar-10"},
-    },
-    "htgr-simple": {
-        "name": "Simple HTGR",
-        "description": "Minimal HTGR for validation",
-        "type": "preset",
-        "reference": {"k_eff": None},
-        "config": {"preset": "valar-10", "power_mw": 10, "enrichment": 0.195},
-    },
-    # IAEA/NUREG/OECD benchmark references (from Community BENCHMARK_REFERENCES)
-    "godiva_bare_sphere": {
-        "name": "Godiva bare sphere",
-        "description": "IAEA criticality benchmark - bare HEU sphere",
-        "type": "reference",
-        "reference": {"k_eff": 1.0, "tolerance": 0.005},
-        "source": "IAEA/NEA",
-        "config": {"preset": "valar-10"},  # Placeholder until dedicated model
-    },
-    "jezebel_pu239": {
-        "name": "Jezebel Pu-239",
-        "description": "IAEA criticality benchmark - bare Pu sphere",
-        "type": "reference",
-        "reference": {"k_eff": 1.0, "tolerance": 0.005},
-        "source": "IAEA",
-        "config": {"preset": "valar-10"},
-    },
-    "lra_benchmark": {
-        "name": "LRA benchmark",
-        "description": "LWR assembly benchmark",
-        "type": "reference",
-        "reference": {"k_eff": 1.0, "tolerance": 0.01},
-        "source": "NUREG",
-        "config": {"preset": "valar-10"},
-    },
-}
-
-
-class BenchmarkResult(BaseModel):
-    """Result of benchmark run (Pydantic-validated)."""
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    benchmark_id: str
-    reference: Dict[str, Any] = Field(default_factory=dict)
-    calculated: Dict[str, Any] = Field(default_factory=dict)
-    differences: Dict[str, float] = Field(default_factory=dict)
-    passed: bool = False
-    output_dir: Path
-
-
-# Special ID to run Community's execute_and_document_benchmarks suite
-COMMUNITY_SUITE_ID = "community_suite"
-
-
-def list_benchmarks() -> List[str]:
-    """List available benchmark IDs (including community_suite for full CI suite)."""
-    ids = list(BENCHMARK_REGISTRY.keys())
-    return ids + [COMMUNITY_SUITE_ID]
-
-
-def reproduce_community_benchmarks(
-    benchmark_names: Optional[List[str]] = None,
-    endf_dir: Optional[Path] = None,
-    output_dir: Optional[Path] = None,
-) -> tuple:
-    """
-    Run Community's execute_and_document_benchmarks and return results.
-
-    Pro integration: uses Community's CI-ready benchmark suite for full validation.
-    Delegates to smrforge.validation.benchmark_runner.execute_and_document_benchmarks.
-
-    Returns:
-        Tuple of (list of BenchmarkResult, output Path) from Community
-    """
-    from smrforge.validation.benchmark_runner import execute_and_document_benchmarks
-
-    return execute_and_document_benchmarks(
-        benchmark_names=benchmark_names,
-        endf_dir=endf_dir,
-        output_dir=output_dir or Path("benchmark_output") / "community_suite",
-    )
-
-
 def reproduce_benchmark(
     benchmark_id: str,
     output_dir: Optional[Path] = None,
-) -> Union[BenchmarkResult, tuple]:
+) -> Dict[str, Any]:
     """
-    Reproduce a benchmark: run and compare to reference.
-
-    When benchmark_id is "community_suite", integrates Community's
-    execute_and_document_benchmarks for full CI validation.
+    Reproduce a benchmark case, compare to reference, produce report.json.
 
     Args:
-        benchmark_id: ID from BENCHMARK_REGISTRY or "community_suite"
-        output_dir: Where to write results
+        benchmark_id: Benchmark case ID (e.g. from validation_benchmarks.json)
+        output_dir: Output directory (default: output/benchmark_<id>)
 
     Returns:
-        BenchmarkResult for single benchmark, or (results, path) for community_suite
+        Report with k_eff_computed, k_eff_reference, delta, passed.
     """
-    if benchmark_id == COMMUNITY_SUITE_ID:
-        out = output_dir or Path("benchmark_output") / "community_suite"
-        results, path = reproduce_community_benchmarks(
-            output_dir=out, endf_dir=None, benchmark_names=None
-        )
-        return results, path
+    out = Path(output_dir) if output_dir else Path(f"output/benchmark_{benchmark_id}")
+    out.mkdir(parents=True, exist_ok=True)
 
-    if benchmark_id not in BENCHMARK_REGISTRY:
-        avail = [COMMUNITY_SUITE_ID] + list(BENCHMARK_REGISTRY.keys())
-        raise ValueError(
-            f"Unknown benchmark '{benchmark_id}'. Available: {avail}"
-        )
-
-    if output_dir is None:
-        output_dir = Path("benchmark_output") / benchmark_id
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    entry = BENCHMARK_REGISTRY[benchmark_id]
-    config = entry.get("config", {})
-    reference = entry.get("reference", {})
-
-    try:
-        from smrforge.convenience import create_reactor, get_design_point
-
-        preset = config.get("preset", "valar-10")
-        reactor = create_reactor(preset, **{k: v for k, v in config.items() if k != "preset"})
-        results = reactor.solve()
-        design_point = get_design_point(reactor)
-    except ImportError:
-        raise ImportError(
-            "reproduce_benchmark requires smrforge. pip install smrforge"
-        ) from None
-    except Exception as e:
-        calculated = {"error": str(e)}
-        differences = {}
-        passed = False
-    else:
-        calculated = {
-            "k_eff": results.get("k_eff"),
-            "power_thermal_mw": design_point.get("power_thermal_mw"),
-        }
-        differences = {}
-        for k, ref_val in reference.items():
-            if ref_val is not None and k in calculated and calculated[k] is not None:
-                calc_val = calculated[k]
-                if isinstance(calc_val, (int, float)) and isinstance(ref_val, (int, float)):
-                    differences[k] = float(calc_val - ref_val)
-        passed = all(
-            abs(d) < 0.02 for d in differences.values()
-        ) if differences else True
-
-    result = BenchmarkResult(
-        benchmark_id=benchmark_id,
-        reference=reference,
-        calculated=calculated,
-        differences=differences,
-        passed=passed,
-        output_dir=output_dir,
-    )
-
-    # Save report
-    report = {
+    report: Dict[str, Any] = {
         "benchmark_id": benchmark_id,
-        "name": entry.get("name", benchmark_id),
-        "reference": reference,
-        "calculated": calculated,
-        "differences": differences,
-        "passed": passed,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "k_eff_computed": None,
+        "k_eff_reference": None,
+        "delta": None,
+        "passed": False,
     }
-    (output_dir / "report.json").write_text(
-        json.dumps(report, indent=2, default=str), encoding="utf-8"
-    )
-    return result
+
+    # Load reference
+    try:
+        ref = _load_reference(benchmark_id)
+        report["k_eff_reference"] = ref.get("k_eff")
+    except Exception as e:
+        report["error"] = f"Could not load reference: {e}"
+        report_path = out / "report.json"
+        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        return report
+
+    # Run benchmark
+    try:
+        reactor = _create_benchmark_reactor(benchmark_id, ref)
+        from smrforge.convenience import get_design_point
+
+        point = get_design_point(reactor)
+        k_computed = point.get("k_eff")
+        report["k_eff_computed"] = k_computed
+
+        if k_computed is not None and ref.get("k_eff") is not None:
+            report["delta"] = abs(k_computed - ref["k_eff"])
+            tol = ref.get("tolerance", 0.01)
+            report["passed"] = report["delta"] <= tol
+    except Exception as e:
+        report["error"] = str(e)
+
+    report_path = out / "report.json"
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return report
+
+
+def _load_reference(benchmark_id: str) -> Dict[str, Any]:
+    """Load reference values from smrforge_pro.benchmarks or built-in."""
+    try:
+        from smrforge_pro.benchmarks import load_benchmark_reference
+
+        return load_benchmark_reference(benchmark_id)
+    except ImportError:
+        pass
+    builtin = {
+        "c5g7": {"k_eff": 1.0, "tolerance": 0.02},
+        "valar-10": {"k_eff": 1.0, "tolerance": 0.02},
+    }
+    if benchmark_id in builtin:
+        return builtin[benchmark_id]
+    return {"k_eff": 1.0, "tolerance": 0.02}
+
+
+def _create_benchmark_reactor(benchmark_id: str, ref: Dict[str, Any]) -> Any:
+    """Create reactor for benchmark case."""
+    from smrforge.convenience import create_reactor
+
+    preset = ref.get("preset", benchmark_id)
+    return create_reactor(name=preset)

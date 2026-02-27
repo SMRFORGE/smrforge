@@ -42,8 +42,8 @@ setup(
         "pydantic-settings>=2.0.0",
         "pyyaml>=6.0",  # YAML config (cli, workflows.templates, parameter_sweep)
         "requests>=2.25.0",  # Nuclear data downloads (data_downloader)
-        "httpx>=0.24.0",  # Async HTTP client for parallel downloads
-        "tqdm>=4.65.0",  # Progress bars for downloads
+        "httpx>=0.24.0",  # Async HTTP client for parallel downloads (data_downloader)
+        "tqdm>=4.65.0",  # Progress bars for downloads (data_downloader)
         "pint>=0.20.0",  # Required for unit checking (smrforge.utils.units)
         "pandas>=1.3.0",
         "h5py>=3.0.0",
@@ -70,9 +70,24 @@ setup(
         "dev": [
             "pytest>=7.0",
             "pytest-cov>=3.0",
+            "pytest-xdist>=2.5",
+            "pytest-asyncio>=0.21.0",
+            "pytest-timeout>=2.0",
             "black>=22.0",
             "flake8>=4.0",
             "mypy>=0.950",
+            "pylint>=2.13",
+            "pip-audit>=2.6.0",
+            "bandit[toml]>=1.7.5",
+            "sphinx>=4.5",
+            "sphinx-rtd-theme>=1.0",
+            "sphinx-autodoc-typehints>=1.18",
+            "jupyter>=1.0",
+            "ipykernel>=6.0",
+            "pyarrow",
+            "Pillow",
+            "imageio",
+            "memory_profiler>=0.61",
         ],
         "docs": [
             "sphinx>=4.5",

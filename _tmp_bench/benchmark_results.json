@@ -1,0 +1,34 @@
+[
+  {
+    "name": "godiva_bare_sphere",
+    "passed": false,
+    "k_eff_calculated": 1.32818372420891,
+    "k_eff_reference": 1.0,
+    "relative_error": 0.32818372420891007,
+    "message": "Error 32.82% exceeds tolerance 0.50%"
+  },
+  {
+    "name": "jezebel_pu239",
+    "passed": false,
+    "k_eff_calculated": 1.32818372420891,
+    "k_eff_reference": 1.0,
+    "relative_error": 0.32818372420891007,
+    "message": "Error 32.82% exceeds tolerance 0.50%"
+  },
+  {
+    "name": "lra_benchmark",
+    "passed": false,
+    "k_eff_calculated": 1.32818372420891,
+    "k_eff_reference": 1.0,
+    "relative_error": 0.32818372420891007,
+    "message": "Error 32.82% exceeds tolerance 1.00%"
+  },
+  {
+    "name": "ans_5_1_decay_heat_u235",
+    "passed": false,
+    "k_eff_calculated": null,
+    "k_eff_reference": null,
+    "relative_error": null,
+    "message": "Benchmark not yet implemented"
+  }
+]

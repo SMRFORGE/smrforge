@@ -1,32 +1,24 @@
-"""SMRForge CLI command handlers."""
+"""
+Data command handlers: setup, download, validate, interpolate, shield.
+"""
 
 import json
 import sys
-
-import numpy as np
 from pathlib import Path
 
-from ..utils import (
-    _GLYPH_ERROR,
-    _GLYPH_SUCCESS,
+from smrforge.cli.common import (
+    Table,
     _RICH_AVAILABLE,
-    _YAML_AVAILABLE,
     _print_error,
     _print_info,
     _print_success,
     _print_warning,
-    _save_workflow_plot,
     _to_jsonable,
     console,
-    rprint,
-    yaml,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
+
+import numpy as np
+
 
 def data_setup(args):
     """Setup ENDF data directory (integrate existing command)."""
@@ -60,8 +52,6 @@ def data_setup(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)
-
-
 
 
 def data_download(args):
@@ -121,8 +111,6 @@ def data_download(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def data_validate(args):
@@ -239,8 +227,6 @@ def data_validate(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def data_interpolate(args):
@@ -399,8 +385,6 @@ def data_interpolate(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def data_shield(args):
@@ -631,5 +615,3 @@ def data_shield(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-

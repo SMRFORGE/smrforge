@@ -1,30 +1,21 @@
-"""SMRForge CLI command handlers."""
+"""
+Config command handlers: config_show, config_set, config_init.
+"""
 
-import json
 import sys
 from pathlib import Path
 
-from ..utils import (
-    _GLYPH_ERROR,
-    _GLYPH_SUCCESS,
+from smrforge.cli.common import (
+    Table,
     _RICH_AVAILABLE,
     _YAML_AVAILABLE,
     _print_error,
     _print_info,
     _print_success,
-    _print_warning,
-    _save_workflow_plot,
-    _to_jsonable,
     console,
-    rprint,
     yaml,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
+
 
 def config_show(args):
     """Show current configuration."""
@@ -105,8 +96,6 @@ def config_show(args):
         sys.exit(1)
 
 
-
-
 def config_set(args):
     """Set configuration value."""
     try:
@@ -174,8 +163,6 @@ def config_set(args):
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
         return  # pragma: no cover
-
-
 
 
 def config_init(args):
@@ -264,5 +251,3 @@ def config_init(args):
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
         return  # pragma: no cover
-
-

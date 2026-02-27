@@ -30,6 +30,7 @@ from .plugin_registry import (
     unregister_surrogate,
 )
 from .surrogate import SurrogateModel, fit_surrogate, surrogate_from_sweep_results
+from .surrogate_validation import generate_surrogate_validation_report
 
 __all__ = [
     "ParameterSweep",
@@ -50,6 +51,7 @@ __all__ = [
     "append_run",
     "SurrogateModel",
     "fit_surrogate",
+    "generate_surrogate_validation_report",
     "surrogate_from_sweep_results",
     "ScenarioResult",
     "run_scenario_design",

@@ -48,17 +48,17 @@ def register_surrogate(name: str, factory: Callable[..., Any]) -> None:
 
 
 def get_surrogate(name: str) -> Optional[Callable[..., Any]]:
-    """Pro tier only."""
+    """Return surrogate factory by name. Returns None if Pro not installed."""
     if _PRO_AVAILABLE:
         return _get_surrogate(name)
-    raise ImportError(_MSG)
+    return None
 
 
 def list_surrogates() -> list:
-    """Pro tier only."""
+    """Return names of registered surrogates. Returns [] if Pro not installed."""
     if _PRO_AVAILABLE:
         return _list_surrogates()
-    raise ImportError(_MSG)
+    return []
 
 
 def unregister_surrogate(name: str) -> bool:

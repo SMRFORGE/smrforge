@@ -194,16 +194,25 @@ class ThermalScatteringParser:
     - Example: tsl-H_in_H2O.endf, tsl-C_in_graphite.endf
     """
 
-    # Material name mappings (common TSL materials)
+    # Material name mappings (common TSL materials).
+    # Keys: filename stems from ENDF-B (IAEA) or alternative naming.
+    # Values: canonical names for index lookup (get_tsl_file("H_in_H2O"), etc.)
     MATERIAL_MAPPINGS = {
-        "H_in_H2O": "H in H2O",
-        "H_in_D2O": "H in D2O",
-        "D_in_D2O": "D in D2O",
-        "C_in_graphite": "C in graphite",
-        "Be_in_BeO": "Be in BeO",
-        "O_in_H2O": "O in H2O",
-        "O_in_UO2": "O in UO2",
-        "Zr_in_ZrH": "Zr in ZrH",
+        # Standard names (exact match)
+        "H_in_H2O": "H_in_H2O",
+        "H_in_D2O": "H_in_D2O",
+        "D_in_D2O": "D_in_D2O",
+        "C_in_graphite": "C_in_graphite",
+        "Be_in_BeO": "Be_in_BeO",
+        "O_in_H2O": "O_in_H2O",
+        "O_in_UO2": "O_in_UO2",
+        "Zr_in_ZrH": "Zr_in_ZrH",
+        # IAEA ENDF-B-VIII.1 naming (e.g. tsl-HinH2O.endf, tsl-crystalline-graphite.endf)
+        "HinH2O": "H_in_H2O",
+        "DinD2O": "D_in_D2O",
+        "crystalline-graphite": "C_in_graphite",
+        "graphiteSd": "C_in_graphite",
+        "CinUC": "C_in_graphite",
     }
 
     # ENDF-B-VIII.1 filename variants -> standard material name (for get_tsl_file lookup)

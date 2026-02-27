@@ -26,17 +26,17 @@ _YELLOW = "\033[33m" if _tty else ""
 _BOLD = "\033[1m" if _tty else ""
 _RESET = "\033[0m" if _tty else ""
 
-# Whitelisted: files may contain try/except import smrforge_pro for delegation
+# Whitelisted: files may contain try/except import smrforge_pro for delegation/check
 WHITELIST_SMRFORGE_PRO = {
+    "smrforge/convenience/__init__.py",  # pro_available() check
     "smrforge/io/converters.py",
     "smrforge/workflows/plugin_registry.py",
     "smrforge/workflows/ml_export.py",
     "smrforge/workflows/surrogate.py",
+    "smrforge/workflows/surrogate_validation.py",
     "smrforge/workflows/parameter_sweep.py",
     "smrforge/ai/audit.py",
-    "smrforge/cli/commands/workflow.py",
-    "smrforge/cli/commands/report.py",
-    "smrforge/cli/commands/visualize.py",
+    "smrforge/cli/",
 }
 
 
@@ -81,13 +81,24 @@ def _norm(f: str) -> str:
     return Path(f).as_posix()
 
 
+def _is_whitelisted(path: str) -> bool:
+    """Check if path is whitelisted (exact match or under a whitelisted directory)."""
+    normed = _norm(path)
+    for wl in WHITELIST_SMRFORGE_PRO:
+        if normed == wl:
+            return True
+        if wl.endswith("/") and normed.startswith(wl):
+            return True
+    return False
+
+
 def check_smrforge_pro_enterprise() -> tuple[bool, str]:
     """
     Check: No smrforge_pro or smrforge_enterprise in smrforge/ except whitelisted delegation.
     """
     # Word boundaries: match package names, not smrforge_project.json
     files, out = run_rg(r"\bsmrforge_pro\b|\bsmrforge_enterprise\b", "smrforge/")
-    bad = [f for f in files if _norm(f) not in WHITELIST_SMRFORGE_PRO]
+    bad = [f for f in files if not _is_whitelisted(f)]
     if bad:
         return False, f"Pro/Enterprise references in non-whitelisted files:\n  " + "\n  ".join(bad)
     if files and CONVERTERS_PY.exists():

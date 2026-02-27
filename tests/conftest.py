@@ -22,7 +22,9 @@ def _get_endf_root_dir():
         p = Path(env_dir).expanduser().resolve()
         if p.exists():
             return p
+    project_root = Path(__file__).resolve().parent.parent
     for candidate in [
+        project_root / ".endf_minimal",
         Path(r"C:\Users\cmwha\Downloads\ENDF-B-VIII.1"),
         Path.home() / "Downloads" / "ENDF-B-VIII.1",
         Path("/data/ENDF-B-VIII.1"),
@@ -55,13 +57,33 @@ def test_data_dir():
 def endf_root_dir():
     """
     Session fixture: first existing ENDF root directory (e.g. ENDF-B-VIII.1).
-    Uses SMRFORGE_ENDF_DIR or LOCAL_ENDF_DIR env, or C:\\Users\\cmwha\\Downloads\\ENDF-B-VIII.1, or ~/Downloads/ENDF-B-VIII.1.
+    Uses SMRFORGE_ENDF_DIR or LOCAL_ENDF_DIR env, or .endf_minimal, or known paths.
     Returns None if no directory found (tests that need ENDF should skip).
     """
     root = _get_endf_root_dir()
     if root is not None:
         os.environ["SMRFORGE_ENDF_DIR"] = str(root)
+        os.environ["LOCAL_ENDF_DIR"] = str(root)
     return root
+
+
+@pytest.fixture(scope="session")
+def cache_with_endf(endf_root_dir):
+    """
+    Session fixture: NuclearDataCache with ENDF directory if available.
+
+    Uses endf_root_dir (from SMRFORGE_ENDF_DIR, LOCAL_ENDF_DIR, .endf_minimal, or known paths).
+    Skips if no ENDF directory found. Use in test_endf_validation, test_endf_workflows_e2e,
+    test_validation_comprehensive, etc.
+    """
+    if endf_root_dir is None:
+        pytest.skip(
+            "ENDF-B-VIII.1 directory not found. Set SMRFORGE_ENDF_DIR or LOCAL_ENDF_DIR, "
+            "or run scripts/setup_minimal_endf.py to create .endf_minimal."
+        )
+    from smrforge.core.reactor_core import NuclearDataCache
+
+    return NuclearDataCache(local_endf_dir=endf_root_dir)
 
 
 @pytest.fixture(scope="session")

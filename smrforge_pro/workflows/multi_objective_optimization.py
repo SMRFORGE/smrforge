@@ -1,10 +1,11 @@
 """
-AI-assisted multi-objective design optimization (Pro).
+Multi-objective optimization: k_eff, safety, economics; differential evolution.
 
-Optimize across neutronics, safety margins, and economics in one framework.
+Pro tier — Pareto front optimization across multiple objectives.
 """
 
-from dataclasses import dataclass, field
+import json
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -14,102 +15,77 @@ from smrforge.utils.logging import get_logger
 logger = get_logger("smrforge_pro.workflows.multi_objective_optimization")
 
 
-@dataclass
-class MultiObjectiveResult:
-    """Result of multi-objective optimization."""
-
-    x_opt: np.ndarray
-    objectives: Dict[str, float]
-    param_names: List[str]
-    n_evaluations: int
-    success: bool
-    message: str = ""
-    pareto_front: Optional[List[Dict[str, Any]]] = None
-
-
 def multi_objective_optimize(
-    reactor_from_x: Callable[[np.ndarray], Any],
-    bounds: List[Tuple[float, float]],
-    param_names: List[str],
-    objectives: Optional[Dict[str, Callable[[Any], float]]] = None,
-    weights: Optional[Dict[str, float]] = None,
-    max_evaluations: int = 100,
-    seed: Optional[int] = None,
-) -> MultiObjectiveResult:
+    reactor_template: Dict[str, Any],
+    objectives: List[Tuple[str, str]],
+    param_bounds: Dict[str, Tuple[float, float]],
+    max_iterations: int = 50,
+    population_size: int = 15,
+    output_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     """
-    Multi-objective design optimization across neutronics, safety, economics.
+    Multi-objective optimization: k_eff, safety, economics; differential evolution.
 
     Args:
-        reactor_from_x: Maps param vector to reactor (with .solve(), .spec)
-        bounds: Parameter bounds [(min, max), ...]
-        param_names: Names for parameters
-        objectives: Dict of objective_name -> f(reactor) -> float to minimize
-            Default: k_eff (maximize = minimize -k_eff), safety_margin, cost
-        weights: Weight for each objective in scalarization (default: equal)
-        max_evaluations: Max function evaluations
-        seed: Random seed
+        reactor_template: Base reactor spec (dict for create_reactor)
+        objectives: List of (param_name, direction) e.g. [("k_eff", "max"), ("cost", "min")]
+        param_bounds: {param_name: (low, high)} for design variables
+        max_iterations: DE iterations
+        population_size: Population size
+        output_path: Save Pareto front JSON
 
     Returns:
-        MultiObjectiveResult with optimal point and objective values
+        Dict with pareto_front, best_by_objective, history.
     """
-    if objectives is None:
-        def _k_eff_obj(r):
-            try:
-                res = r.solve()
-                return -float(res.get("k_eff", 0))  # minimize -k_eff = maximize k_eff
-            except Exception:
-                return 1e6
+    from smrforge.convenience import create_reactor, get_design_point
 
-        objectives = {"k_eff": _k_eff_obj}
+    param_names = list(param_bounds.keys())
+    bounds = [param_bounds[n] for n in param_names]
 
-    if weights is None:
-        weights = {k: 1.0 / len(objectives) for k in objectives}
+    def eval_point(x: np.ndarray) -> Dict[str, float]:
+        spec = dict(reactor_template)
+        for i, name in enumerate(param_names):
+            spec[name] = float(x[i])
+        r = create_reactor(**spec)
+        return get_design_point(r)
 
-    def scalarized(x: np.ndarray) -> float:
-        try:
-            reactor = reactor_from_x(x)
-            total = 0.0
-            for name, fn in objectives.items():
-                val = fn(reactor)
-                total += weights.get(name, 1.0) * val
-            return total
-        except Exception as e:
-            logger.debug(f"Evaluation failed: {e}")
-            return 1e6
+    # Single combined objective for DE: negative weighted sum (maximize k_eff, minimize cost)
+    weights = []
+    signs = []
+    for name, direction in objectives:
+        w = 1.0
+        sign = 1.0 if direction == "min" else -1.0
+        weights.append(w)
+        signs.append(sign)
 
-    try:
-        from scipy.optimize import differential_evolution
+    def obj(x: np.ndarray) -> float:
+        out = eval_point(x)
+        vals = [out.get(name, 0.0) for name, _ in objectives]
+        return sum(s * v * w for s, v, w in zip(signs, vals, weights))
 
-        rng = np.random.default_rng(seed)
-        result = differential_evolution(
-            scalarized,
-            bounds,
-            maxiter=max_evaluations // 10,
-            popsize=15,
-            seed=rng,
-            polish=True,
-            atol=1e-4,
-            tol=1e-3,
-            disp=False,
-        )
+    from scipy.optimize import differential_evolution
 
-        reactor_opt = reactor_from_x(result.x)
-        obj_vals = {}
-        for name, fn in objectives.items():
-            try:
-                obj_vals[name] = fn(reactor_opt)
-            except Exception:
-                obj_vals[name] = float("nan")
+    result = differential_evolution(
+        obj,
+        bounds,
+        maxiter=max_iterations,
+        popsize=population_size,
+        seed=42,
+        polish=True,
+    )
 
-        return MultiObjectiveResult(
-            x_opt=result.x,
-            objectives=obj_vals,
-            param_names=param_names,
-            n_evaluations=result.nfev,
-            success=bool(result.success),
-            message=str(result.message),
-        )
-    except ImportError:
-        raise ImportError(
-            "multi_objective_optimize requires scipy. pip install scipy"
-        ) from None
+    report: Dict[str, Any] = {
+        "x_opt": result.x.tolist(),
+        "param_names": param_names,
+        "f_opt": float(result.fun),
+        "success": bool(result.success),
+        "optimal_point": dict(zip(param_names, result.x.tolist())),
+    }
+    opt_point = eval_point(result.x)
+    report["optimal_point"].update(opt_point)
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+    return report

@@ -1,31 +1,23 @@
-"""SMRForge CLI command handlers."""
+"""
+GitHub Actions command handlers and metadata.
+"""
 
 import json
 import sys
 from pathlib import Path
+from typing import Any, Dict
 
-from ..utils import (
-    _GLYPH_ERROR,
-    _GLYPH_SUCCESS,
+from smrforge.cli.common import (
+    Table,
     _RICH_AVAILABLE,
-    _YAML_AVAILABLE,
     _print_error,
     _print_info,
     _print_success,
-    _print_warning,
-    _save_workflow_plot,
-    _to_jsonable,
     console,
-    rprint,
-    yaml,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
 
+
+# GitHub Actions: feature IDs and metadata (must match scripts/github_workflow_check.py)
 GITHUB_ACTIONS_FEATURES = [
     {
         "id": "ci",
@@ -80,7 +72,6 @@ GITHUB_ACTIONS_FEATURES = [
 ]
 
 
-
 def _github_repo_root(args: Any) -> Path:
     """Repo root for GitHub commands (--repo-root or cwd)."""
     root = getattr(args, "repo_root", None)
@@ -93,14 +84,10 @@ def _github_repo_root(args: Any) -> Path:
     return Path.cwd().resolve()
 
 
-
-
 def _github_paths(root: Path) -> tuple[Path, Path]:
     """Return (workflows-enabled path, workflows-config path)."""
     gh = root / ".github"
     return gh / "workflows-enabled", gh / "workflows-config.json"
-
-
 
 
 def _read_workflows_enabled(root: Path) -> bool:
@@ -109,8 +96,6 @@ def _read_workflows_enabled(root: Path) -> bool:
     if not p.exists():
         return False
     return p.read_text().strip().lower() == "true"
-
-
 
 
 def _read_workflows_config(root: Path) -> Dict[str, bool]:
@@ -130,8 +115,6 @@ def _read_workflows_config(root: Path) -> Dict[str, bool]:
     return out
 
 
-
-
 def _write_workflows_config(root: Path, config: Dict[str, bool]) -> None:
     """Write workflows-config.json (creates .github if needed)."""
     _, config_path = _github_paths(root)
@@ -139,8 +122,6 @@ def _write_workflows_config(root: Path, config: Dict[str, bool]) -> None:
     # Only include known feature IDs
     out = {f["id"]: config.get(f["id"], True) for f in GITHUB_ACTIONS_FEATURES}
     config_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
-
-
 
 
 def github_actions_status(args: Any) -> None:
@@ -210,8 +191,6 @@ def github_actions_status(args: Any) -> None:
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def github_actions_enable(args: Any) -> None:
     """Enable GitHub Actions (global)."""
     try:
@@ -233,8 +212,6 @@ def github_actions_enable(args: Any) -> None:
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def github_actions_disable(args: Any) -> None:
     """Disable GitHub Actions (global)."""
     try:
@@ -252,8 +229,6 @@ def github_actions_disable(args: Any) -> None:
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def github_actions_list(args: Any) -> None:
@@ -299,8 +274,6 @@ def github_actions_list(args: Any) -> None:
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def github_actions_set(args: Any) -> None:
     """Set one feature on or off."""
     try:
@@ -324,8 +297,6 @@ def github_actions_set(args: Any) -> None:
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def github_actions_configure(args: Any) -> None:
@@ -388,5 +359,3 @@ def github_actions_configure(args: Any) -> None:
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-

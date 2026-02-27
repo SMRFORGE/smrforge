@@ -253,16 +253,36 @@ class TestListAnalysisTypes:
         assert "burnup" in result
 
 
+class TestProAvailable:
+    def test_pro_available(self):
+        """pro_available returns bool; True when Pro importable, False otherwise."""
+        from smrforge import pro_available
+
+        # Result depends on whether smrforge_pro is installed
+        result = pro_available()
+        assert isinstance(result, bool)
+
+
 class TestListSurrogates:
-    def test_requires_pro(self):
-        """Community: list_surrogates raises ImportError (Pro tier only)."""
+    def test_returns_empty_when_pro_unavailable(self):
+        """Community: list_surrogates returns [] when Pro not installed."""
         from unittest.mock import patch
 
         from smrforge import list_surrogates
 
         with patch("smrforge.workflows.plugin_registry._PRO_AVAILABLE", False):
-            with pytest.raises(ImportError, match="SMRForge Pro"):
-                list_surrogates()
+            result = list_surrogates()
+        assert result == []
+
+    def test_get_surrogate_returns_none_when_pro_unavailable(self):
+        """Community: get_surrogate returns None when Pro not installed."""
+        from unittest.mock import patch
+
+        from smrforge.workflows.plugin_registry import get_surrogate
+
+        with patch("smrforge.workflows.plugin_registry._PRO_AVAILABLE", False):
+            result = get_surrogate("rbf")
+        assert result is None
 
 
 class TestQuickDownloadEndf:

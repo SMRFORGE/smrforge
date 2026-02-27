@@ -1,11 +1,9 @@
 """
-SMRForge Pro converters - full Serpent, OpenMC, and MCNP export/import.
-
-Pro tier: Full implementations delegated from smrforge.io.converters.
+Pro converters: Serpent, OpenMC, MCNP full implementation.
 """
 
-from .mcnp import MCNPConverter
-from .openmc import OpenMCConverter
 from .serpent import SerpentConverter
+from .openmc import OpenMCConverter
+from .mcnp import MCNPConverter
 
-__all__ = ["MCNPConverter", "OpenMCConverter", "SerpentConverter"]
+__all__ = ["SerpentConverter", "OpenMCConverter", "MCNPConverter"]

@@ -1,0 +1,52 @@
+# Benchmark validation CI - runs key benchmarks and documents results
+# Runs on push to main and scheduled daily
+name: Benchmark CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Execute and document benchmarks
+        run: |
+          python -c "
+          from pathlib import Path
+          from smrforge.validation.benchmark_runner import execute_and_document_benchmarks
+          results, out = execute_and_document_benchmarks(output_dir=Path('benchmark_results'))
+          n_pass = sum(1 for r in results if r.passed)
+          n_total = len(results)
+          print(f'Benchmarks: {n_pass}/{n_total} passed')
+          if n_pass < n_total:
+            import sys
+            sys.exit(1)
+          "
+        id: run_benchmarks
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: benchmark_results/
+          retention-days: 30

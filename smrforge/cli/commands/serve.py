@@ -1,30 +1,14 @@
-"""SMRForge CLI command handlers."""
+"""Serve command: launch the SMRForge web dashboard."""
 
-import json
 import sys
-from pathlib import Path
 
-from ..utils import (
-    _GLYPH_ERROR,
-    _GLYPH_SUCCESS,
+from smrforge.cli.common import (
+    Panel,
     _RICH_AVAILABLE,
-    _YAML_AVAILABLE,
     _print_error,
-    _print_info,
-    _print_success,
-    _print_warning,
-    _save_workflow_plot,
-    _to_jsonable,
     console,
-    rprint,
-    yaml,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
+
 
 def serve_dashboard(args):
     """
@@ -111,5 +95,3 @@ def serve_dashboard(args):
         print("  2. Port is not already in use (try different port with --port)")
         print("  3. Firewall allows connections on the specified port")
         sys.exit(1)
-
-

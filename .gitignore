@@ -36,6 +36,9 @@ venv.bak/
 *~
 .DS_Store
 
+# Minimal ENDF data (run scripts/setup_minimal_endf.py to create)
+.endf_minimal/
+
 # Testing
 .pytest_cache/
 .coverage

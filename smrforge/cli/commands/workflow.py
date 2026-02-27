@@ -1,15 +1,14 @@
-"""SMRForge CLI command handlers."""
+"""Workflow command handlers."""
 
 import glob
 import json
 import sys
-
-import numpy as np
 from pathlib import Path
 
-from ..utils import (
-    _GLYPH_ERROR,
-    _GLYPH_SUCCESS,
+import numpy as np
+
+from smrforge.cli.common import (
+    Table,
     _RICH_AVAILABLE,
     _YAML_AVAILABLE,
     _print_error,
@@ -19,16 +18,8 @@ from ..utils import (
     _save_workflow_plot,
     _to_jsonable,
     console,
-    rprint,
     yaml,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
-from .reactor import _load_reactor_from_args
 
 def workflow_run(args):
     """Run workflow from YAML file."""
@@ -197,6 +188,86 @@ def workflow_run(args):
         sys.exit(1)
 
 
+def sweep_run(args):
+    """Run parameter sweep workflow."""
+    try:
+        from pathlib import Path
+
+        from smrforge.workflows import ParameterSweep, SweepConfig
+
+        # Load config from file or build from args
+        if getattr(args, "config", None) and Path(args.config).exists():
+            config = SweepConfig.from_file(args.config)  # pragma: no cover
+            if args.output:  # pragma: no cover
+                config.output_dir = Path(args.output)  # pragma: no cover
+            if getattr(args, "no_parallel", False):  # pragma: no cover
+                config.parallel = False  # pragma: no cover
+            if getattr(args, "workers", None) is not None:  # pragma: no cover
+                config.max_workers = args.workers  # pragma: no cover
+            if getattr(args, "surrogate", None) is not None:  # pragma: no cover
+                config.surrogate_path = Path(args.surrogate)  # pragma: no cover
+            if getattr(args, "seed", None) is not None:  # pragma: no cover
+                config.seed = args.seed  # pragma: no cover
+        else:
+            if not getattr(args, "params", None) or not args.params:
+                _print_error(
+                    "Either --config FILE or --params ... is required"
+                )  # pragma: no cover
+                sys.exit(1)  # pragma: no cover
+            parameters = {}
+            for param_spec in args.params:
+                parts = param_spec.split(":")
+                if len(parts) == 4:
+                    name, start, end, step = parts
+                    parameters[name] = (float(start), float(end), float(step))
+                elif len(parts) == 2:
+                    name, values_str = parts
+                    values = [float(v) for v in values_str.split(",")]
+                    parameters[name] = values
+            reactor_template = None
+            if args.reactor:
+                if Path(args.reactor).exists():
+                    import json
+
+                    with open(args.reactor) as f:
+                        reactor_template = json.load(f)
+                else:
+                    reactor_template = {"name": args.reactor}
+            config = SweepConfig(
+                parameters=parameters,
+                analysis_types=args.analysis or ["keff"],
+                reactor_template=reactor_template,
+                output_dir=Path(args.output) if args.output else Path("sweep_results"),
+                parallel=not getattr(args, "no_parallel", False),
+                max_workers=getattr(args, "workers", None),
+                surrogate_path=getattr(args, "surrogate", None),
+                seed=getattr(args, "seed", None),
+            )
+
+        sweep = ParameterSweep(config)
+        results = sweep.run(
+            resume=getattr(args, "resume", False),
+            show_progress=getattr(args, "progress", False),
+        )
+
+        output_dir = config.output_dir
+        output_file = output_dir / "sweep_results.json"
+        results.save(output_file)
+
+        _print_success(f"\nSweep complete! Results saved to {output_file}")
+        _print_info(f"Total cases: {len(results.results)}")
+        _print_info(f"Failed cases: {len(results.failed_cases)}")
+
+    except ImportError as e:  # pragma: no cover
+        _print_error(f"Failed to import required modules: {e}")  # pragma: no cover
+        sys.exit(1)  # pragma: no cover
+    except Exception as e:  # pragma: no cover
+        _print_error(f"Failed to run parameter sweep: {e}")  # pragma: no cover
+        if args.verbose if hasattr(args, "verbose") else False:  # pragma: no cover
+            import traceback  # pragma: no cover
+
+            traceback.print_exc()  # pragma: no cover
+        sys.exit(1)  # pragma: no cover
 
 
 def batch_keff_run(args):
@@ -292,8 +363,6 @@ def batch_keff_run(args):
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def workflow_design_point(args):
     """Print or save steady-state design point summary for a reactor."""
     try:
@@ -325,8 +394,6 @@ def workflow_design_point(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def workflow_safety_report(args):
@@ -382,6 +449,34 @@ def workflow_safety_report(args):
         sys.exit(1)  # pragma: no cover
 
 
+def _load_reactor_from_args(args):
+    """Load reactor from --reactor (file or preset name)."""
+    from smrforge.convenience import create_reactor  # pragma: no cover
+
+    r = getattr(args, "reactor", None)  # pragma: no cover
+    if not r:  # pragma: no cover
+        _print_error("--reactor FILE or preset name required")  # pragma: no cover
+        sys.exit(1)  # pragma: no cover
+    r = (
+        Path(r)
+        if isinstance(r, str)
+        and (r.endswith(".json") or r.endswith(".yaml") or r.endswith(".yml"))
+        else r
+    )  # pragma: no cover
+    if isinstance(r, Path) and r.exists():  # pragma: no cover
+        with open(r, encoding="utf-8") as f:  # pragma: no cover
+            raw = f.read()  # pragma: no cover
+        if r.suffix.lower() in (".yaml", ".yml"):  # pragma: no cover
+            if not _YAML_AVAILABLE:  # pragma: no cover
+                _print_error(
+                    "PyYAML required for YAML reactor files"
+                )  # pragma: no cover
+                sys.exit(1)  # pragma: no cover
+            data = yaml.safe_load(raw)  # pragma: no cover
+        else:  # pragma: no cover
+            data = json.loads(raw)  # pragma: no cover
+        return create_reactor(**data)  # pragma: no cover
+    return create_reactor(name=str(r))  # pragma: no cover
 
 
 def workflow_doe(args):
@@ -453,11 +548,11 @@ def workflow_doe(args):
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def workflow_pareto(args):
     """Compute and export Pareto front from sweep results."""
     try:
+        import pandas as pd
+
         from smrforge.visualization.sweep_plots import _pareto_front_mask, _to_dataframe
 
         p = Path(getattr(args, "sweep_results", None) or "")
@@ -467,10 +562,10 @@ def workflow_pareto(args):
         with open(p, encoding="utf-8") as f:
             data = json.load(f)
         results = data.get("results", data) if isinstance(data, dict) else data
-        # Use _to_dataframe for consistent handling (supports Polars fast path)
-        df = _to_dataframe(
-            {"results": results} if isinstance(results, list) else results,
-            include_failed=True,
+        df = (
+            pd.DataFrame(results)
+            if isinstance(results, list)
+            else pd.DataFrame([results])
         )
         if df.empty:
             _print_error("No results in sweep file")  # pragma: no cover
@@ -489,7 +584,6 @@ def workflow_pareto(args):
                 f"Metrics {mx}, {my} not in results. Columns: {list(df.columns)}"
             )  # pragma: no cover
             sys.exit(1)  # pragma: no cover
-        import pandas as pd
         x = pd.to_numeric(df[mx], errors="coerce").to_numpy()
         y = pd.to_numeric(df[my], errors="coerce").to_numpy()
         ok = np.isfinite(x) & np.isfinite(y)
@@ -551,8 +645,6 @@ def workflow_pareto(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def workflow_optimize(args):
@@ -686,8 +778,6 @@ def workflow_optimize(args):
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def workflow_uq(args):
     """Run uncertainty quantification on a reactor (Monte Carlo sampling)."""
     try:
@@ -809,8 +899,6 @@ def workflow_uq(args):
         sys.exit(1)
 
 
-
-
 def _write_design_study_html(out_dir, design_point, safety_report):
     """Write a simple combined HTML report (design point + safety margins)."""
     from smrforge.validation.safety_report import margin_narrative
@@ -869,8 +957,6 @@ def _write_design_study_html(out_dir, design_point, safety_report):
 </html>
 """
     (out_dir / "design_study_report.html").write_text(html, encoding="utf-8")
-
-
 
 
 def workflow_design_study(args):
@@ -958,8 +1044,6 @@ def workflow_design_study(args):
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def workflow_variant(args):
     """Save reactor design as a named variant."""
     try:
@@ -977,8 +1061,6 @@ def workflow_variant(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def workflow_sensitivity(args):
@@ -1050,8 +1132,6 @@ def workflow_sensitivity(args):
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def workflow_sobol(args):
     """Compute Sobol indices from sweep or UQ results."""
     try:
@@ -1110,8 +1190,6 @@ def workflow_sobol(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
 
 
 def workflow_scenario(args):
@@ -1181,8 +1259,6 @@ def workflow_scenario(args):
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def workflow_atlas(args):
     """Build design space atlas (catalog of presets with design point + safety)."""
     try:
@@ -1217,23 +1293,23 @@ def workflow_atlas(args):
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def workflow_surrogate(args):
     """Fit surrogate model from sweep results for fast evaluation. Pro tier only."""
     try:
         from smrforge_pro.workflows.surrogate import surrogate_from_sweep_results
     except ImportError:
         _print_error(
-            "Surrogate workflow requires SMRForge Pro. Upgrade at https://smrforge.io"
+            "Surrogate workflow requires SMRForge Pro.\n"
+            "  Alternative: Use 'smrforge workflow sweep' for physics-based parameter studies.\n"
+            "  Upgrade: https://smrforge.io or pip install smrforge-pro"
         )
         sys.exit(1)
+        return  # unreachable; prevents fall-through when sys.exit is mocked in tests
     p = Path(getattr(args, "sweep_results", None) or "")
     if not p.exists():
         _print_error(f"Sweep results file not found: {p}")
         sys.exit(1)
     import json
-
     with open(p) as f:
         data = json.load(f)
     results = data.get("results", data) if isinstance(data, dict) else data
@@ -1253,38 +1329,167 @@ def workflow_surrogate(args):
         _print_success("Surrogate fitted successfully (use --output to save)")
 
 
-
-
-def workflow_ml_export(args):
-    """Export sweep results to Parquet/HDF5 for ML. Pro tier only."""
+def workflow_surrogate_validate(args):
+    """Generate surrogate validation report (Pro tier). Compare surrogate to physics on holdout set."""
     try:
-        from smrforge.workflows.ml_export import export_ml_dataset
+        from smrforge_pro.ai.surrogates import load_surrogate_from_path
+        from smrforge_pro.workflows.surrogate_validation import generate_surrogate_validation_report
     except ImportError:
         _print_error(
-            "ML export requires SMRForge Pro. Upgrade at https://smrforge.io"
+            "Surrogate validation report requires SMRForge Pro.\n"
+            "Upgrade: https://smrforge.io or pip install smrforge-pro"
         )
         sys.exit(1)
-    results_path = Path(getattr(args, "results", None) or "")
-    output_path = getattr(args, "output", None)
-    if not results_path.exists():
-        _print_error(f"Results file not found: {results_path}")
+
+    surr_path = getattr(args, "surrogate", None) or Path()
+    holdout_path = getattr(args, "holdout", None) or Path()
+    if not surr_path or not Path(surr_path).exists():
+        _print_error("--surrogate PATH required (path to .pkl/.pt/.onnx model)")
         sys.exit(1)
-    output_path = Path(output_path) if output_path else results_path.parent / "design_points.parquet"
-    import json
-    with open(results_path) as f:
+    if not holdout_path or not Path(holdout_path).exists():
+        _print_error("--holdout PATH required (path to holdout results JSON)")
+        sys.exit(1)
+
+    params = getattr(args, "params", None) or []
+    if not params:
+        _print_error("--params name1 name2 ... required")
+        sys.exit(1)
+
+    with open(holdout_path) as f:
         data = json.load(f)
-    results = data.get("results", data) if isinstance(data, dict) else data
-    if not isinstance(results, list):
-        _print_error("Results must be a list of design points")
+    holdout = data.get("results", data) if isinstance(data, dict) else data
+    if not isinstance(holdout, list):
+        _print_error("Holdout file must contain list of results or {results: [...]}")
         sys.exit(1)
+
+    surrogate = load_surrogate_from_path(Path(surr_path), param_names=params)
+    metric = getattr(args, "metric", "k_eff") or "k_eff"
+    out_path = getattr(args, "output", None)
+    fmt = getattr(args, "format", "both") or "both"
+
+    report = generate_surrogate_validation_report(
+        surrogate,
+        holdout,
+        param_names=params,
+        output_metric=metric,
+        output_path=Path(out_path) if out_path else None,
+        format=fmt,
+    )
+
+    passed = report["summary"]["passed"]
+    if passed:
+        _print_success(f"Validation passed. MAE={report['summary']['mae']:.4e}, R²={report['summary']['r_squared']:.4f}")
+    else:
+        _print_warning(f"Validation did not pass. MAE={report['summary']['mae']:.4e}")
+    if out_path:
+        _print_success(f"Report saved to {out_path}.json and {out_path}.md" if fmt == "both" else f"Report saved to {out_path}")
+
+
+def workflow_code_verify(args):
+    """Run code-to-code verification (Pro). Diffusion, OpenMC, Serpent, MCNP on same reactor."""
     try:
-        out = export_ml_dataset(results, output_path)
-        _print_success(f"ML dataset saved to {out}")
-    except Exception as e:
-        _print_error(f"ML export failed: {e}")
+        from smrforge_pro.workflows.code_verification import run_code_verification
+        from smrforge.convenience import create_reactor
+    except ImportError:
+        _print_error("Code verification requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro")
         sys.exit(1)
+    reactor = _load_reactor_from_args(args)
+    codes = getattr(args, "codes", None) or ["diffusion", "openmc"]
+    out = getattr(args, "output", None)
+    report = run_code_verification(reactor, codes=codes, output_path=Path(out) if out else None)
+    _print_success("Code verification complete")
+    if _RICH_AVAILABLE:
+        table = Table(title="Code verification")
+        table.add_column("Code", style="cyan")
+        table.add_column("k_eff", justify="right")
+        for code, res in report.get("results", {}).items():
+            k = res.get("k_eff")
+            table.add_row(code, f"{k:.6f}" if k is not None else str(res.get("error", "N/A")))
+        console.print(table)
+    if out:
+        _print_info(f"Report saved to {out}")
 
 
+def workflow_regulatory_package(args):
+    """Generate regulatory submission package (Pro). NRC/IAEA: inputs, outputs, traceability."""
+    try:
+        from smrforge_pro.workflows.regulatory_package import generate_regulatory_package
+    except ImportError:
+        _print_error("Regulatory package requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro")
+        sys.exit(1)
+    reactor = _load_reactor_from_args(args)
+    out_dir = Path(getattr(args, "output_dir", None) or "regulatory_package")
+    preset = getattr(args, "preset", "10_CFR_50") or "10_CFR_50"
+    manifest = generate_regulatory_package(reactor, out_dir, preset=preset)
+    _print_success(f"Regulatory package written to {out_dir}")
+    _print_info(f"Files: {manifest.get('files', [])}")
+
+
+def workflow_benchmark(args):
+    """Reproduce benchmark and compare to reference (Pro)."""
+    try:
+        from smrforge_pro.workflows.benchmark_reproduction import reproduce_benchmark
+    except ImportError:
+        _print_error("Benchmark reproduction requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro")
+        sys.exit(1)
+    bid = getattr(args, "benchmark", None)
+    if not bid:
+        _print_error("--benchmark ID required")
+        sys.exit(1)
+    out_dir = getattr(args, "output_dir", None)
+    report = reproduce_benchmark(bid, output_dir=Path(out_dir) if out_dir else None)
+    passed = report.get("passed", False)
+    delta = report.get("delta")
+    if passed:
+        _print_success(f"Benchmark {bid}: passed" + (f" (delta={delta:.4e})" if delta is not None else ""))
+    else:
+        _print_warning(f"Benchmark {bid}: failed" + (f" (delta={delta:.4e})" if delta is not None else ""))
+
+
+def workflow_multi_optimize(args):
+    """Multi-objective optimization (Pro). k_eff, safety, economics; differential evolution."""
+    try:
+        from smrforge_pro.workflows.multi_objective_optimization import multi_objective_optimize
+        from smrforge.convenience import create_reactor
+    except ImportError:
+        _print_error("Multi-objective optimization requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro")
+        sys.exit(1)
+    reactor_path = getattr(args, "reactor", None)
+    if not reactor_path:
+        _print_error("--reactor base design JSON required")
+        sys.exit(1)
+    with open(Path(reactor_path), encoding="utf-8") as f:
+        template = json.load(f)
+    param_specs = getattr(args, "params", None) or []
+    param_bounds = {}
+    for spec in param_specs:
+        parts = spec.split(":")
+        if len(parts) != 3:
+            _print_error("Each --params must be name:low:high")
+            sys.exit(1)
+        name, low, high = parts[0].strip(), float(parts[1]), float(parts[2])
+        param_bounds[name] = (low, high)
+    if not param_bounds:
+        _print_error("At least one --params name:low:high required")
+        sys.exit(1)
+    obj_raw = getattr(args, "objectives", None) or ["k_eff:max"]
+    objectives = []
+    for o in obj_raw:
+        parts = o.split(":")
+        objectives.append((parts[0].strip(), (parts[1] if len(parts) > 1 else "max").strip()))
+    report = multi_objective_optimize(
+        template,
+        objectives=objectives,
+        param_bounds=param_bounds,
+        max_iterations=int(getattr(args, "max_iter", 50)),
+        output_path=Path(args.output) if getattr(args, "output", None) else None,
+    )
+    _print_success(f"Optimization complete. f_opt={report.get('f_opt'):.6g}")
+    if _RICH_AVAILABLE:
+        table = Table(title="Optimal parameters")
+        for k, v in report.get("optimal_point", {}).items():
+            table.add_row(k, f"{v:.6g}" if isinstance(v, (int, float)) else str(v))
+        console.print(table)
 
 
 def workflow_requirements_to_constraints(args):
@@ -1318,201 +1523,3 @@ def workflow_requirements_to_constraints(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
-def workflow_nl_design(args):
-    """Natural-language reactor design. Pro tier."""
-    try:
-        from smrforge_pro.ai.nl_design import design_from_nl
-    except ImportError:
-        _print_error(
-            "Natural-language design requires SMRForge Pro. pip install smrforge-pro"
-        )
-        sys.exit(1)
-    text = getattr(args, "text", None) or ""
-    if not text:
-        _print_error("--text required (e.g. '10 MW HTGR with k-eff 1.0-1.05')")
-        sys.exit(1)
-    try:
-        result = design_from_nl(text, run_analysis=True)
-        _print_success("Design created and analyzed")
-        if result.analysis and "k_eff" in result.analysis:
-            _print_info(f"k_eff: {result.analysis['k_eff']:.6f}")
-        if result.constraints_met is not None:
-            _print_info(f"Constraints met: {result.constraints_met}")
-        out = getattr(args, "output", None)
-        if out:
-            Path(out).parent.mkdir(parents=True, exist_ok=True)
-            spec = result.spec
-            if spec and hasattr(spec, "model_dump"):
-                data = spec.model_dump()
-            else:
-                data = {"intent": result.intent_parsed}
-            with open(out, "w") as f:
-                json.dump(_to_jsonable(data), f, indent=2)
-            _print_success(f"Saved to {out}")
-    except Exception as e:
-        _print_error(f"NL design failed: {e}")
-        sys.exit(1)
-
-
-def workflow_code_verify(args):
-    """Unified code-to-code verification. Pro tier."""
-    try:
-        from smrforge_pro.workflows.code_verification import run_code_verification
-    except ImportError:
-        _print_error(
-            "Code verification requires SMRForge Pro. pip install smrforge-pro"
-        )
-        sys.exit(1)
-    reactor = getattr(args, "reactor", None) or ""
-    output = getattr(args, "output", None) or Path("verification_output")
-    if not reactor:
-        _print_error("--reactor preset or file required")
-        sys.exit(1)
-    try:
-        report = run_code_verification(reactor, output_dir=output)
-        _print_success(f"Verification report: {output / 'verification_report.json'}")
-        if _RICH_AVAILABLE and Table and console:
-            table = Table(title="Code Verification")
-            table.add_column("Code", style="cyan")
-            table.add_column("k_eff", justify="right")
-            table.add_column("Status")
-            for r in report.results:
-                k = f"{r.k_eff:.6f}" if r.k_eff is not None else (r.error or "export only")
-                table.add_row(r.code, k, "OK" if r.error is None else "export only")
-            console.print(table)
-    except Exception as e:
-        _print_error(f"Code verification failed: {e}")
-        sys.exit(1)
-
-
-def workflow_regulatory_package(args):
-    """Generate regulatory submission package. Pro tier."""
-    try:
-        from smrforge_pro.workflows.regulatory_package import (
-            RegulatoryPackageConfig,
-            generate_regulatory_package,
-        )
-    except ImportError:
-        _print_error(
-            "Regulatory package requires SMRForge Pro. pip install smrforge-pro"
-        )
-        sys.exit(1)
-    reactor = getattr(args, "reactor", None)
-    output = getattr(args, "output", None) or Path("regulatory_package")
-    if not reactor:
-        _print_error("--reactor preset or file required")
-        sys.exit(1)
-    reactor_obj = _load_reactor_from_args(args)
-    try:
-        cfg = RegulatoryPackageConfig(framework=getattr(args, "framework", "NRC"))
-        path = generate_regulatory_package(reactor_obj, output_dir=output, config=cfg)
-        _print_success(f"Regulatory package: {path}")
-    except Exception as e:
-        _print_error(f"Regulatory package failed: {e}")
-        sys.exit(1)
-
-
-def workflow_benchmark(args):
-    """One-click benchmark reproduction. Pro tier."""
-    try:
-        from smrforge_pro.workflows.benchmark_reproduction import (
-            list_benchmarks,
-            reproduce_benchmark,
-        )
-    except ImportError:
-        _print_error(
-            "Benchmark reproduction requires SMRForge Pro. pip install smrforge-pro"
-        )
-        sys.exit(1)
-    bid = getattr(args, "benchmark_id", None) or getattr(args, "id", None)
-    if not bid:
-        _print_info("Available benchmarks: " + ", ".join(list_benchmarks()))
-        _print_error("--id BENCHMARK_ID required")
-        sys.exit(1)
-    output = getattr(args, "output", None)
-    try:
-        result = reproduce_benchmark(bid, output_dir=output)
-        if isinstance(result, tuple):
-            results_list, out_path = result
-            n_pass = sum(1 for r in results_list if getattr(r, "passed", False))
-            n_total = len(results_list)
-            _print_success(f"Benchmark suite {bid}: {n_pass}/{n_total} passed")
-            _print_info(f"Report: {out_path / 'BENCHMARK_SUMMARY.md'}")
-        else:
-            status = "PASS" if result.passed else "FAIL"
-            _print_success(f"Benchmark {bid}: {status}")
-            _print_info(f"Report: {result.output_dir / 'report.json'}")
-    except Exception as e:
-        _print_error(f"Benchmark failed: {e}")
-        sys.exit(1)
-
-
-def workflow_multi_optimize(args):
-    """Multi-objective design optimization. Pro tier."""
-    try:
-        from smrforge_pro.workflows.multi_objective_optimization import (
-            multi_objective_optimize,
-        )
-    except ImportError:
-        _print_error(
-            "Multi-objective optimization requires SMRForge Pro. pip install smrforge-pro"
-        )
-        sys.exit(1)
-    reactor_path = getattr(args, "reactor", None)
-    params = getattr(args, "params", None) or []
-    if not reactor_path or not params:
-        _print_error("--reactor and --params name:low:high required")
-        sys.exit(1)
-    with open(Path(reactor_path)) as f:
-        base_spec = json.load(f)
-    bounds = []
-    param_names = []
-    for spec in params:
-        parts = spec.split(":")
-        if len(parts) != 3:
-            _print_error("Each --params must be name:low:high")
-            sys.exit(1)
-        name, low, high = parts[0].strip(), float(parts[1]), float(parts[2])
-        param_names.append(name)
-        bounds.append((low, high))
-
-    def reactor_from_x(x):
-        sp = dict(base_spec)
-        for i, n in enumerate(param_names):
-            sp[n] = float(x[i])
-        from smrforge.convenience import create_reactor
-
-        return create_reactor(**sp)
-
-    try:
-        result = multi_objective_optimize(
-            reactor_from_x,
-            bounds,
-            param_names,
-            max_evaluations=int(getattr(args, "max_eval", 100)),
-            seed=getattr(args, "seed"),
-        )
-        _print_success(f"Optimization: success={result.success}")
-        for k, v in result.objectives.items():
-            _print_info(f"  {k}: {v:.6g}")
-        out = getattr(args, "output", None)
-        if out:
-            Path(out).parent.mkdir(parents=True, exist_ok=True)
-            with open(out, "w") as f:
-                json.dump(
-                    {
-                        "x_opt": result.x_opt.tolist(),
-                        "param_names": param_names,
-                        "objectives": result.objectives,
-                        "success": result.success,
-                    },
-                    f,
-                    indent=2,
-                )
-            _print_success(f"Saved to {out}")
-    except Exception as e:
-        _print_error(f"Multi-objective optimization failed: {e}")
-        sys.exit(1)
-

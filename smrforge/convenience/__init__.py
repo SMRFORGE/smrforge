@@ -105,6 +105,16 @@ def _get_library() -> DesignLibrary:
 _CONVENIENCE_MAIN_AVAILABLE = True
 
 
+def pro_available() -> bool:
+    """Return True if SMRForge Pro is installed and usable."""
+    try:
+        import smrforge_pro  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
 def list_presets() -> List[str]:
     """List all available preset reactor designs."""
     return _get_library().list_designs()
@@ -243,7 +253,7 @@ def list_analysis_types() -> List[str]:
 
 
 def list_surrogates() -> List[str]:
-    """List names of registered surrogate models. Pro tier only."""
+    """List names of registered surrogate models. Returns [] if Pro not installed."""
     from ..workflows.plugin_registry import list_surrogates as _list
 
     return _list()

@@ -1,9 +1,7 @@
 """
-SMRForge Pro visualization - OpenMC tally visualization.
-
-Pro tier: visualize_openmc_tallies loads OpenMC statepoint and plots mesh tallies.
+Pro visualization: OpenMC tally results, 1D/2D Plotly plots with ±1σ.
 """
 
-from .openmc_tally_viz import visualize_openmc_tallies
+from .tally import load_tally_results, visualize_tally
 
-__all__ = ["visualize_openmc_tallies"]
+__all__ = ["load_tally_results", "visualize_tally"]

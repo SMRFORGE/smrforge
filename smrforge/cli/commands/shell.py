@@ -1,30 +1,11 @@
-"""SMRForge CLI command handlers."""
+"""
+Shell command handler: shell_interactive.
+"""
 
-import json
 import sys
-from pathlib import Path
 
-from ..utils import (
-    _GLYPH_ERROR,
-    _GLYPH_SUCCESS,
-    _RICH_AVAILABLE,
-    _YAML_AVAILABLE,
-    _print_error,
-    _print_info,
-    _print_success,
-    _print_warning,
-    _save_workflow_plot,
-    _to_jsonable,
-    console,
-    rprint,
-    yaml,
-)
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
+from smrforge.cli.common import _print_error
+
 
 def shell_interactive(args):
     """Launch interactive Python shell with SMRForge pre-loaded."""
@@ -144,5 +125,3 @@ Type 'help(smr)' for more information or 'exit()' to quit.  # pragma: no cover
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-

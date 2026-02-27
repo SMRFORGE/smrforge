@@ -1,14 +1,13 @@
-"""SMRForge CLI command handlers."""
+"""Reactor commands: create, analyze, list, compare."""
 
 import glob
 import json
 import sys
-
-import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from ..utils import (
+from smrforge.cli.common import (
+    Table,
     _GLYPH_ERROR,
     _GLYPH_SUCCESS,
     _RICH_AVAILABLE,
@@ -17,18 +16,11 @@ from ..utils import (
     _print_info,
     _print_success,
     _print_warning,
-    _save_workflow_plot,
     _to_jsonable,
     console,
-    rprint,
     yaml,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
+
 
 def reactor_create(args):
     """Create a reactor from preset or configuration."""
@@ -250,8 +242,6 @@ def reactor_create(args):
         sys.exit(1)
 
 
-
-
 def reactor_analyze(args):
     """Run analysis on a reactor."""
     try:
@@ -347,8 +337,6 @@ def reactor_analyze(args):
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
         return  # pragma: no cover
-
-
 
 
 def _reactor_analyze_batch(args):
@@ -626,8 +614,6 @@ def _reactor_analyze_batch(args):
         sys.exit(1)
 
 
-
-
 def reactor_list(args):
     """List available preset reactor designs."""
     try:
@@ -715,8 +701,6 @@ def reactor_list(args):
         sys.exit(1)  # pragma: no cover
 
 
-
-
 def reactor_compare(args):
     """Compare multiple reactor designs with enhanced metrics."""
     try:
@@ -758,6 +742,8 @@ def reactor_compare(args):
             sys.exit(1)
 
         # Extract metrics
+        import numpy as np
+
         metrics = args.metrics or ["k_eff", "power", "temperature"]
         comparison = {}
 
@@ -787,8 +773,6 @@ def reactor_compare(args):
 
         # Display comparison table
         if _RICH_AVAILABLE:
-            from rich.table import Table
-
             table = Table(title="Design Comparison")
             table.add_column("Design", style="cyan")
             for metric in metrics:
@@ -868,152 +852,3 @@ def reactor_compare(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
-
-
-def _load_reactor_from_args(args):
-    """Load reactor from --reactor (file or preset name)."""
-    from smrforge.convenience import create_reactor  # pragma: no cover
-
-    r = getattr(args, "reactor", None)  # pragma: no cover
-    if not r:  # pragma: no cover
-        _print_error("--reactor FILE or preset name required")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
-    r = (
-        Path(r)
-        if isinstance(r, str)
-        and (r.endswith(".json") or r.endswith(".yaml") or r.endswith(".yml"))
-        else r
-    )  # pragma: no cover
-    if isinstance(r, Path) and r.exists():  # pragma: no cover
-        with open(r, encoding="utf-8") as f:  # pragma: no cover
-            raw = f.read()  # pragma: no cover
-        if r.suffix.lower() in (".yaml", ".yml"):  # pragma: no cover
-            if not _YAML_AVAILABLE:  # pragma: no cover
-                _print_error(
-                    "PyYAML required for YAML reactor files"
-                )  # pragma: no cover
-                sys.exit(1)  # pragma: no cover
-            data = yaml.safe_load(raw)  # pragma: no cover
-        else:  # pragma: no cover
-            data = json.loads(raw)  # pragma: no cover
-        return create_reactor(**data)  # pragma: no cover
-    return create_reactor(name=str(r))  # pragma: no cover
-
-
-
-
-def template_create(args):
-    """Create reactor template from preset or existing design."""
-    try:
-        from smrforge.workflows.templates import ReactorTemplate, TemplateLibrary
-
-        if args.from_preset:
-            template = ReactorTemplate.from_preset(args.from_preset, name=args.name)
-        elif args.from_file:
-            import json  # pragma: no cover
-            from pathlib import Path  # pragma: no cover
-
-            with open(Path(args.from_file)) as f:  # pragma: no cover
-                reactor_data = json.load(f)  # pragma: no cover
-            template = ReactorTemplate(  # pragma: no cover
-                name=args.name or "template",
-                description=args.description or "Template from file",
-                base_preset=reactor_data.get("name"),
-                parameters={},
-            )
-        else:
-            _print_error("Must specify --from-preset or --from-file")
-            sys.exit(1)
-
-        # Save template
-        output_file = (
-            Path(args.output) if args.output else Path(f"{template.name}.json")
-        )
-        template.save(output_file)  # pragma: no cover
-
-        if args.library:  # pragma: no cover
-            library = TemplateLibrary()  # pragma: no cover
-            library.save_template(template)  # pragma: no cover
-            _print_success(
-                f"Template saved to library and {output_file}"
-            )  # pragma: no cover
-        else:  # pragma: no cover
-            _print_success(f"Template saved to {output_file}")  # pragma: no cover
-
-    except Exception as e:
-        _print_error(f"Failed to create template: {e}")
-        if args.verbose if hasattr(args, "verbose") else False:
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
-        sys.exit(1)
-
-
-
-
-def template_modify(args):
-    """Modify reactor template parameters."""
-    try:
-        from smrforge.workflows.templates import ReactorTemplate
-
-        template = ReactorTemplate.load(Path(args.template))
-
-        # Modify parameters
-        if args.param:
-            for param_spec in args.param:
-                # Format: name=value
-                if "=" not in param_spec:
-                    _print_error(
-                        f"Invalid parameter format: {param_spec}. Use name=value"
-                    )  # pragma: no cover
-                    sys.exit(1)  # pragma: no cover
-                name, value = param_spec.split("=", 1)
-                # Try to convert to number
-                try:
-                    value = float(value) if "." in value else int(value)
-                except ValueError:  # pragma: no cover
-                    pass  # pragma: no cover
-
-                if name not in template.parameters:
-                    template.parameters[name] = {
-                        "default": value,
-                        "type": type(value).__name__,
-                        "description": "",
-                    }
-                else:
-                    template.parameters[name]["default"] = value  # pragma: no cover
-
-        # Save modified template
-        template.save(Path(args.template))
-        _print_success(f"Template modified: {args.template}")
-
-    except Exception as e:
-        _print_error(f"Failed to modify template: {e}")
-        sys.exit(1)
-
-
-
-
-def template_validate(args):
-    """Validate reactor template."""
-    try:
-        from smrforge.workflows.templates import ReactorTemplate
-
-        template = ReactorTemplate.load(Path(args.template))
-        errors = template.validate()
-
-        if errors:
-            _print_error("Template validation failed:")
-            for error in errors:
-                _print_error(f"  - {error}")
-            sys.exit(1)
-        else:
-            _print_success("Template is valid!")
-
-    except Exception as e:  # pragma: no cover
-        _print_error(f"Failed to validate template: {e}")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
-
-

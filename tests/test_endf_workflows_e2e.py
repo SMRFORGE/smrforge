@@ -5,9 +5,6 @@ These tests validate complete workflows from ENDF file loading through
 to final calculation results, ensuring all components integrate correctly.
 """
 
-import os
-from pathlib import Path
-
 import numpy as np
 import pytest
 
@@ -18,7 +15,6 @@ from smrforge.core.gamma_production_parser import ENDFGammaProductionParser
 from smrforge.core.photon_parser import ENDFPhotonParser
 from smrforge.core.reactor_core import (
     Library,
-    NuclearDataCache,
     Nuclide,
     get_fission_yield_data,
     get_thermal_scattering_data,
@@ -29,32 +25,6 @@ from smrforge.gamma_transport import GammaTransportOptions, GammaTransportSolver
 from smrforge.geometry import PrismaticCore
 from smrforge.neutronics.solver import MultiGroupDiffusion
 from smrforge.validation.models import CrossSectionData, SolverOptions
-
-
-@pytest.fixture
-def cache_with_endf():
-    """Create cache with ENDF directory if available (uses SMRFORGE_ENDF_DIR, LOCAL_ENDF_DIR, or known paths)."""
-    for env_name in ("SMRFORGE_ENDF_DIR", "LOCAL_ENDF_DIR"):
-        env_dir = os.environ.get(env_name)
-        if env_dir:
-            endf_dir = Path(env_dir).expanduser().resolve()
-            if endf_dir.exists():
-                cache = NuclearDataCache(local_endf_dir=endf_dir)
-                return cache
-
-    possible_dirs = [
-        Path.home() / "Downloads" / "ENDF-B-VIII.1",
-        Path(r"C:/Users/cmwha/Downloads/ENDF-B-VIII.1"),
-    ]
-
-    for endf_dir in possible_dirs:
-        if endf_dir.exists():
-            cache = NuclearDataCache(local_endf_dir=endf_dir)
-            return cache
-
-    pytest.skip(
-        "ENDF-B-VIII.1 directory not found. Set local_endf_dir to run validation tests."
-    )
 
 
 class TestENDFFileDiscovery:

@@ -12,43 +12,13 @@ This test file implements the validation tasks from the development roadmap:
 8. Add performance benchmarking (timing measurements)
 """
 
-import os
-from pathlib import Path
-
 import numpy as np
 import pytest
 
 from smrforge.burnup import BurnupOptions
-from smrforge.core.reactor_core import Library, NuclearDataCache, Nuclide
+from smrforge.core.reactor_core import Library, Nuclide
 from smrforge.geometry import PrismaticCore
 from tests.validation_benchmarks import ValidationBenchmarker
-
-
-@pytest.fixture
-def cache_with_endf():
-    """Create cache with ENDF directory if available (uses SMRFORGE_ENDF_DIR, LOCAL_ENDF_DIR, or known paths)."""
-    for env_name in ("SMRFORGE_ENDF_DIR", "LOCAL_ENDF_DIR"):
-        env_dir = os.environ.get(env_name)
-        if env_dir:
-            endf_dir = Path(env_dir).expanduser().resolve()
-            if endf_dir.exists():
-                cache = NuclearDataCache(local_endf_dir=endf_dir)
-                return cache
-
-    possible_dirs = [
-        Path.home() / "Downloads" / "ENDF-B-VIII.1",
-        Path(r"C:/Users/cmwha/Downloads/ENDF-B-VIII.1"),
-        Path("/data/ENDF-B-VIII.1"),  # Common server location
-    ]
-
-    for endf_dir in possible_dirs:
-        if endf_dir.exists():
-            cache = NuclearDataCache(local_endf_dir=endf_dir)
-            return cache
-
-    pytest.skip(
-        "ENDF-B-VIII.1 directory not found. Set local_endf_dir to run validation tests."
-    )
 
 
 class TestTSLValidationComprehensive:

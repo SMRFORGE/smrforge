@@ -1,3 +1,10 @@
+[project]
+name = "smrforge"
+version = "0.1.0"
+description = "Small Modular Reactor Design and Analysis Toolkit"
+readme = "README.md"
+requires-python = ">=3.8"
+
 [tool.black]
 line-length = 88
 target-version = ['py38', 'py39', 'py310', 'py311', 'py312']

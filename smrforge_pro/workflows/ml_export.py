@@ -1,30 +1,12 @@
 """
-ML-friendly data export for SMRForge - Parquet and HDF5.
-
-Pro tier: Full implementation of export_ml_dataset.
-Uses Polars for fast Parquet export when available (performance-critical).
+ML dataset export for Pro tier.
 """
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-
-try:
-    import polars as pl
-
-    _POLARS_AVAILABLE = True
-except ImportError:
-    pl = None  # type: ignore
-    _POLARS_AVAILABLE = False
-
-try:
-    import pandas as pd
-
-    _PANDAS_AVAILABLE = True
-except ImportError:
-    pd = None  # type: ignore
-    _PANDAS_AVAILABLE = False
+import pandas as pd
 
 
 def export_ml_dataset(
@@ -35,84 +17,53 @@ def export_ml_dataset(
     format: Optional[str] = None,
 ) -> Path:
     """
-    Export sweep/ML dataset to Parquet or HDF5.
+    Export parameter sweep results to ML-friendly format (Parquet or HDF5).
 
     Args:
-        results: List of {"parameters": {p: v}, "k_eff": ..., ...}
+        results: List of {parameters: {...}, metric: value, ...}
         output_path: Output file path
-        param_names: Parameter keys to include as columns (default: all from first)
-        output_metrics: Output keys (default: infer from first result)
-        format: "parquet" or "hdf5" (default: from path suffix)
+        param_names: Parameter keys to include (default: from first result)
+        output_metrics: Metric keys to include (default: k_eff, burnup, etc.)
+        format: "parquet" or "hdf5" (default: from extension)
 
     Returns:
         Path to written file
     """
     output_path = Path(output_path)
     if not results:
-        raise ValueError("Results list is empty")
+        raise ValueError("No results to export")
 
-    # Infer param names and metrics
     first = results[0]
     params = first.get("parameters", first)
-    if param_names is None:
-        param_names = [k for k in params.keys() if isinstance(params[k], (int, float))]
-    if output_metrics is None:
-        output_metrics = [
-            k for k in first.keys()
-            if k != "parameters" and isinstance(first.get(k), (int, float, np.floating))
-        ]
+    param_names = param_names or list(params.keys()) if isinstance(params, dict) else []
+    output_metrics = output_metrics or _infer_metrics(results)
 
-    # Build flat rows
     rows = []
     for r in results:
-        if "error" in r:
-            continue
-        params = r.get("parameters", r)
-        row = {p: float(params.get(p, np.nan)) for p in param_names}
+        params = r.get("parameters", {})
+        row = {k: params.get(k) for k in param_names}
         for m in output_metrics:
-            val = r.get(m)
-            if isinstance(val, (int, float, np.floating)):
-                row[m] = float(val)
-            else:
-                row[m] = np.nan
+            if m in r:
+                row[m] = r[m]
         rows.append(row)
 
+    df = pd.DataFrame(rows)
     fmt = format or output_path.suffix.lower().lstrip(".")
     if fmt in ("parquet", ""):
-        fmt = "parquet"
+        df.to_parquet(output_path, index=False)
     elif fmt in ("h5", "hdf5"):
-        fmt = "hdf5"
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    if fmt == "parquet":
-        if output_path.suffix.lower() != ".parquet":
-            output_path = output_path.with_suffix(".parquet")
-        try:
-            if _POLARS_AVAILABLE and rows:
-                pl.DataFrame(rows).write_parquet(output_path)
-            elif _PANDAS_AVAILABLE:
-                pd.DataFrame(rows).to_parquet(output_path, index=False)
-            else:
-                raise ImportError(
-                    "Parquet export requires polars or pandas+pyarrow. pip install polars or pyarrow"
-                )
-        except ImportError as e:
-            raise ImportError(
-                "Parquet export requires pyarrow or fastparquet. pip install pyarrow or smrforge-pro[ml]"
-            ) from e
-    elif fmt == "hdf5":
-        if output_path.suffix.lower() not in (".h5", ".hdf5"):
-            output_path = output_path.with_suffix(".h5")
-        try:
-            if not _PANDAS_AVAILABLE:
-                raise ImportError("HDF5 export requires pandas. pip install pandas")
-            pd.DataFrame(rows).to_hdf(output_path, key="data", mode="w", format="table")
-        except ImportError as e:
-            raise ImportError(
-                "HDF5 export requires pytables. pip install tables"
-            ) from e
+        df.to_hdf(output_path, key="data", mode="w", index=False)
     else:
-        raise ValueError(f"Unsupported format: {format}. Use parquet or hdf5.")
+        df.to_parquet(output_path.with_suffix(".parquet"), index=False)
 
     return output_path
+
+
+def _infer_metrics(results: List[Dict]) -> List[str]:
+    """Infer metric keys from results."""
+    seen = set()
+    for r in results:
+        for k in r:
+            if k != "parameters" and not isinstance(r.get(k), dict):
+                seen.add(k)
+    return sorted(seen) if seen else ["k_eff"]

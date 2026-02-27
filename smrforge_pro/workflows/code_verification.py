@@ -1,12 +1,11 @@
 """
-Unified code-to-code verification (Pro).
+Code-to-code verification: run diffusion, MC, OpenMC, Serpent, MCNP on same reactor.
 
-Export the same reactor to SMRForge diffusion, built-in MC, OpenMC, Serpent, MCNP
-and produce a single comparison report.
+Pro tier — unified comparison report for V&V.
 """
 
 import json
-from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -15,213 +14,129 @@ from smrforge.utils.logging import get_logger
 logger = get_logger("smrforge_pro.workflows.code_verification")
 
 
-@dataclass
-class CodeResult:
-    """Result from a single code."""
-
-    code: str
-    k_eff: Optional[float] = None
-    k_std: Optional[float] = None
-    output_path: Optional[Path] = None
-    error: Optional[str] = None
-    available: bool = True
-
-
-@dataclass
-class VerificationReport:
-    """Unified verification report across codes."""
-
-    reactor_name: str
-    results: List[CodeResult] = field(default_factory=list)
-    reference_code: str = "diffusion"
-    output_dir: Path = field(default_factory=lambda: Path("verification_output"))
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "reactor_name": self.reactor_name,
-            "reference_code": self.reference_code,
-            "results": [
-                {
-                    "code": r.code,
-                    "k_eff": r.k_eff,
-                    "k_std": r.k_std,
-                    "output_path": str(r.output_path) if r.output_path else None,
-                    "error": r.error,
-                    "available": r.available,
-                }
-                for r in self.results
-            ],
-        }
-
-    def save_json(self, path: Path) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(self.to_dict(), f, indent=2)
-
-
 def run_code_verification(
     reactor: Any,
-    output_dir: Optional[Path] = None,
     codes: Optional[List[str]] = None,
-) -> VerificationReport:
+    output_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     """
-    Run reactor through available codes and collect k-eff for comparison.
+    Run multiple neutronics codes on the same reactor and produce unified comparison report.
 
     Args:
-        reactor: SimpleReactor or preset name
-        output_dir: Where to write exports
-        codes: List of codes to run (default: diffusion, monte_carlo, openmc, serpent, mcnp)
+        reactor: Reactor instance (PrismaticCore, PebbleBedCore, or preset)
+        codes: List of codes to run: ["diffusion", "mc", "openmc", "serpent", "mcnp"].
+               Default: ["diffusion", "openmc"] (most available).
+        output_path: Path to save report.json
 
     Returns:
-        VerificationReport with results from each available code
+        Dict with code results, k_eff per code, comparison summary.
     """
-    if output_dir is None:
-        output_dir = Path("verification_output")
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    codes = codes or ["diffusion", "openmc"]
+    report: Dict[str, Any] = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "codes": codes,
+        "results": {},
+        "summary": {},
+    }
 
-    if codes is None:
-        codes = ["diffusion", "monte_carlo", "openmc", "serpent", "mcnp"]
+    core = _get_core(reactor)
 
-    try:
-        from smrforge.convenience import create_reactor
-
-        if isinstance(reactor, str):
-            reactor = create_reactor(reactor)
-    except ImportError:
-        raise ImportError(
-            "run_code_verification requires smrforge. pip install smrforge"
-        ) from None
-
-    reactor_name = (
-        reactor.spec.name
-        if hasattr(reactor, "spec") and hasattr(reactor.spec, "name")
-        else "reactor"
-    )
-    report = VerificationReport(
-        reactor_name=reactor_name,
-        results=[],
-        reference_code="diffusion",
-        output_dir=output_dir,
-    )
-
-    # 1. SMRForge diffusion
     if "diffusion" in codes:
         try:
-            results = reactor.solve()
-            k = results.get("k_eff")
-            report.results.append(
-                CodeResult(
-                    code="diffusion",
-                    k_eff=float(k) if k is not None else None,
-                    output_path=None,
-                    available=True,
-                )
-            )
+            k = _run_diffusion(reactor)
+            report["results"]["diffusion"] = {"k_eff": k}
         except Exception as e:
-            report.results.append(
-                CodeResult(code="diffusion", error=str(e), available=True)
-            )
+            report["results"]["diffusion"] = {"k_eff": None, "error": str(e)}
 
-    # 2. SMRForge built-in Monte Carlo
-    if "monte_carlo" in codes:
+    if "mc" in codes or "openmc" in codes:
         try:
-            from smrforge.neutronics.monte_carlo import MonteCarloSolver
-            from smrforge.neutronics.monte_carlo import SimplifiedGeometry
-            from smrforge.validation.models import CrossSectionData
-
-            core = reactor._get_core()
-            geom = SimplifiedGeometry(
-                core_diameter=core.core_diameter or 100,
-                core_height=core.core_height or 200,
-                reflector_thickness=30,
-            )
-            xs = getattr(reactor, "_xs_data", None) or CrossSectionData(
-                n_groups=2,
-                n_materials=2,
-                sigma_t=[[0.5], [0.3]],
-                sigma_a=[[0.05], [0.01]],
-                sigma_f=[[0.04], [0.0]],
-                nu_sigma_f=[[0.10], [0.0]],
-                sigma_s=[[[0.41]], [[0.29]]],
-                chi=[[1.0], [1.0]],
-                D=[[1.0], [1.5]],
-            )
-            mc = MonteCarloSolver(geom, xs, n_particles=1000, n_generations=20)
-            out = mc.run_eigenvalue()
-            report.results.append(
-                CodeResult(
-                    code="monte_carlo",
-                    k_eff=out.get("k_eff"),
-                    k_std=out.get("k_std"),
-                    available=True,
-                )
-            )
+            k = _run_openmc(reactor)
+            report["results"]["openmc"] = {"k_eff": k}
         except Exception as e:
-            logger.debug(f"Monte Carlo not run: {e}")
-            report.results.append(
-                CodeResult(code="monte_carlo", error=str(e), available=False)
-            )
+            report["results"]["openmc"] = {"k_eff": None, "error": str(e)}
 
-    # 3. OpenMC export (run requires openmc executable)
-    if "openmc" in codes:
-        try:
-            from smrforge.io.converters import OpenMCConverter
-
-            openmc_dir = output_dir / "openmc"
-            OpenMCConverter.export_reactor(reactor, openmc_dir, particles=500, batches=10)
-            report.results.append(
-                CodeResult(
-                    code="openmc",
-                    output_path=openmc_dir,
-                    error="Export only; run openmc manually and add results",
-                    available=True,
-                )
-            )
-        except Exception as e:
-            report.results.append(
-                CodeResult(code="openmc", error=str(e), available=False)
-            )
-
-    # 4. Serpent export
     if "serpent" in codes:
         try:
-            from smrforge.io.converters import SerpentConverter
-
-            serp_path = output_dir / "reactor.serp"
-            SerpentConverter.export_reactor(reactor, serp_path)
-            report.results.append(
-                CodeResult(
-                    code="serpent",
-                    output_path=serp_path,
-                    error="Export only; run serpent manually",
-                    available=True,
-                )
-            )
+            k = _run_serpent(reactor)
+            report["results"]["serpent"] = {"k_eff": k}
         except Exception as e:
-            report.results.append(
-                CodeResult(code="serpent", error=str(e), available=False)
-            )
+            report["results"]["serpent"] = {"k_eff": None, "error": str(e)}
 
-    # 5. MCNP export
     if "mcnp" in codes:
         try:
-            from smrforge.io.converters import MCNPConverter
-
-            mcnp_path = output_dir / "reactor.mcnp"
-            MCNPConverter.export_reactor(reactor, mcnp_path)
-            report.results.append(
-                CodeResult(
-                    code="mcnp",
-                    output_path=mcnp_path,
-                    error="Export only; run MCNP manually",
-                    available=True,
-                )
-            )
+            k = _run_mcnp(reactor)
+            report["results"]["mcnp"] = {"k_eff": k}
         except Exception as e:
-            report.results.append(
-                CodeResult(code="mcnp", error=str(e), available=False)
-            )
+            report["results"]["mcnp"] = {"k_eff": None, "error": str(e)}
 
-    report.save_json(output_dir / "verification_report.json")
+    keffs = {
+        k: v.get("k_eff")
+        for k, v in report["results"].items()
+        if v.get("k_eff") is not None
+    }
+    if len(keffs) >= 2:
+        vals = list(keffs.values())
+        report["summary"] = {
+            "mean_keff": sum(vals) / len(vals),
+            "max_diff": max(vals) - min(vals),
+            "codes_converged": list(keffs.keys()),
+        }
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
+
     return report
+
+
+def _get_core(reactor):
+    if hasattr(reactor, "core"):
+        return reactor.core
+    if hasattr(reactor, "build_core"):
+        reactor.build_core()
+        return getattr(reactor, "core", reactor)
+    return reactor
+
+
+def _run_diffusion(reactor):
+    if hasattr(reactor, "solve_keff"):
+        return reactor.solve_keff()
+    from smrforge.convenience import create_reactor, get_design_point
+    r = create_reactor(name=str(reactor)) if isinstance(reactor, str) else reactor
+    return get_design_point(r).get("k_eff")
+
+
+def _run_openmc(reactor):
+    from smrforge.io.converters import OpenMCConverter
+    from smrforge.io.openmc_run import run_and_parse
+
+    out_dir = Path("code_verify_openmc")
+    out_dir.mkdir(exist_ok=True)
+    OpenMCConverter.export_reactor(reactor, out_dir)
+    parsed = run_and_parse(out_dir)
+    return parsed.get("k_eff")
+
+
+def _run_serpent(reactor):
+    from smrforge.io.converters import SerpentConverter
+    from smrforge.io.serpent_run import run_serpent, parse_res_file
+
+    out_dir = Path("code_verify_serpent")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    inp = out_dir / "model.serp"
+    SerpentConverter.export_reactor(reactor, inp)
+    run_serpent(out_dir, inp)
+    res = parse_res_file(out_dir / "model_res.m")
+    return res.get("k_eff")
+
+def _run_mcnp(reactor):
+    from smrforge.io.converters import MCNPConverter
+    from smrforge.io.mcnp_run import run_mcnp, parse_mcnp_output
+
+    out_dir = Path("code_verify_mcnp")
+    out_dir.mkdir(exist_ok=True)
+    inp = out_dir / "model.inp"
+    MCNPConverter.export_reactor(reactor, inp)
+    proc = run_mcnp(out_dir, inp)
+    parsed = parse_mcnp_output((proc.stdout or "") + (proc.stderr or ""))
+    return parsed.get("k_eff")

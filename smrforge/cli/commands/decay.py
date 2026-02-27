@@ -1,30 +1,24 @@
-"""SMRForge CLI command handlers."""
+"""
+Decay heat command handler: decay_heat_calculate.
+"""
 
 import json
 import sys
 from pathlib import Path
 
-from ..utils import (
-    _GLYPH_ERROR,
-    _GLYPH_SUCCESS,
+from smrforge.cli.common import (
+    Table,
     _RICH_AVAILABLE,
-    _YAML_AVAILABLE,
     _print_error,
     _print_info,
     _print_success,
     _print_warning,
-    _save_workflow_plot,
     _to_jsonable,
     console,
-    rprint,
-    yaml,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
+
+import numpy as np
+
 
 def decay_heat_calculate(args):
     """Calculate decay heat over time."""
@@ -62,7 +56,7 @@ def decay_heat_calculate(args):
             # Extract nuclide concentrations
             if (
                 "nuclides" in inventory_data and "concentrations" in inventory_data
-            ):  # pragma: no cover
+            ):
                 nuclide_names = inventory_data["nuclides"]  # pragma: no cover
                 conc_values = inventory_data["concentrations"]  # pragma: no cover
 
@@ -345,60 +339,3 @@ def decay_heat_calculate(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)  # pragma: no cover
-
-
-# GitHub Actions: feature IDs and metadata (must match scripts/github_workflow_check.py)
-GITHUB_ACTIONS_FEATURES = [
-    {
-        "id": "ci",
-        "name": "CI",
-        "description": "Tests, lint, build, validation, coverage",
-    },
-    {
-        "id": "ci-quick",
-        "name": "CI (quick)",
-        "description": "Fast check: single Python, tests without coverage",
-    },
-    {
-        "id": "docs",
-        "name": "Docs",
-        "description": "Build and deploy documentation (GitHub Pages)",
-    },
-    {
-        "id": "performance",
-        "name": "Performance",
-        "description": "Performance benchmarks",
-    },
-    {
-        "id": "security",
-        "name": "Security",
-        "description": "Security audit (pip-audit, bandit)",
-    },
-    {
-        "id": "release",
-        "name": "Release",
-        "description": "Build and publish to PyPI on version tags",
-    },
-    {
-        "id": "nightly",
-        "name": "Nightly",
-        "description": "Scheduled full test and validation run",
-    },
-    {
-        "id": "docker",
-        "name": "Docker",
-        "description": "Build and push container image (GHCR)",
-    },
-    {
-        "id": "dependabot",
-        "name": "Dependabot",
-        "description": "Run tests on Dependabot dependency PRs",
-    },
-    {
-        "id": "stale",
-        "name": "Stale",
-        "description": "Mark and close stale issues and PRs",
-    },
-]
-
-

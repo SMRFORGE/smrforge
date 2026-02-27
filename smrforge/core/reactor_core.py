@@ -222,7 +222,7 @@ class NuclearDataCache:
         auto_detect = local_endf_dir is _AUTO_LOCAL_ENDF_DIR
         if auto_detect:
             local_endf_dir = None
-            env_dir = os.getenv("SMRFORGE_ENDF_DIR")
+            env_dir = os.getenv("SMRFORGE_ENDF_DIR") or os.getenv("LOCAL_ENDF_DIR")
             if env_dir:
                 local_endf_dir = Path(env_dir).expanduser().resolve()
 
@@ -346,7 +346,7 @@ class NuclearDataCache:
         nuclide: Nuclide,
         reaction: str,
         temperature: float = 293.6,
-        library: Library = Library.ENDF_B_VIII,
+        library: Library = Library.ENDF_B_VIII_1,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get cross section data with aggressive caching.
@@ -817,7 +817,7 @@ class NuclearDataCache:
         nuclide: Nuclide,
         reaction: str,
         temperature: float = 293.6,
-        library: Library = Library.ENDF_B_VIII,
+        library: Library = Library.ENDF_B_VIII_1,
         client: Optional[Any] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -2473,8 +2473,14 @@ class NuclearDataCache:
         if not gammas_dir.exists():
             return index
 
-        # Scan for gamma production files (gammas-*.endf)
-        gamma_patterns = ["gammas-*.endf", "gammas-*.ENDF", "gammas-*.Endf"]
+        # Scan for gamma production files (gammas-*.endf or g-*.endf for IAEA naming)
+        gamma_patterns = [
+            "gammas-*.endf",
+            "gammas-*.ENDF",
+            "gammas-*.Endf",
+            "g-*.endf",
+            "g-*.ENDF",
+        ]
         all_gamma_files = []
         for pattern in gamma_patterns:
             all_gamma_files.extend(gammas_dir.glob(pattern))
@@ -2492,31 +2498,45 @@ class NuclearDataCache:
             if not self._validate_endf_file(gamma_file):
                 continue
 
-            # Extract nuclide from filename: gammas-ZZZ_Element_AAA.endf
-            # Convert "gammas-092_U_235.endf" to "n-092_U_235.endf" format
-            filename_for_parsing = gamma_file.name.replace("gammas-", "n-")
+            # Extract nuclide from filename: gammas-ZZZ_Element_AAA.endf or g-ZZZ_Element_AAA.endf
+            # Convert to "n-092_U_235.endf" format for parsing
+            stem = gamma_file.stem
+            if stem.startswith("gammas-"):
+                filename_for_parsing = gamma_file.name.replace("gammas-", "n-")
+            elif stem.startswith("g-"):
+                filename_for_parsing = gamma_file.name.replace("g-", "n-", 1)
+            else:
+                filename_for_parsing = gamma_file.name
             nuclide = self._endf_filename_to_nuclide(filename_for_parsing)
             if nuclide is None:
                 # Try alternative parsing - extract from filename directly
                 from .constants import ELEMENT_SYMBOLS
 
                 try:
-                    # Pattern: gammas-092_U_235.endf -> Z=92, A=235
-                    parts = gamma_file.stem.replace("gammas-", "").split("_")
-                    if len(parts) >= 2:
+                    # Pattern: gammas-092_U_235.endf or g-092_U_235.endf -> Z=92, A=235
+                    stem = gamma_file.stem
+                    stem_clean = stem.replace("gammas-", "").replace("g-", "", 1)
+                    parts = stem_clean.split("_")
+                    if len(parts) >= 3:
+                        # Format: ZZZ_Element_AAA (e.g. 001_H_002)
+                        z_str = parts[0].lstrip("0") or "0"
+                        a_str = parts[2].lstrip("0") or "0"
+                    elif len(parts) >= 2:
                         z_str = parts[0].lstrip("0") or "0"
                         a_str = parts[1].lstrip("0") or "0"
-                        Z = int(z_str)
-                        A = int(a_str)
-                        m = 0
-                        # Check for metastable in filename
-                        if "m" in parts[-1].lower():
-                            m_part = parts[-1].lower().split("m")[-1]
-                            try:
-                                m = int(m_part)
-                            except ValueError:  # pragma: no cover
-                                m = 0
-                        nuclide = Nuclide(Z=Z, A=A, m=m)
+                    else:
+                        continue
+                    Z = int(z_str)
+                    A = int(a_str)
+                    m = 0
+                    # Check for metastable in filename
+                    if "m" in parts[-1].lower():
+                        m_part = parts[-1].lower().split("m")[-1]
+                        try:
+                            m = int(m_part)
+                        except ValueError:  # pragma: no cover
+                            m = 0
+                    nuclide = Nuclide(Z=Z, A=A, m=m)
                 except (ValueError, IndexError, KeyError):
                     continue
 
@@ -3539,7 +3559,7 @@ def get_cross_section_with_self_shielding(
     nuclide: Nuclide,
     reaction: str,
     temperature: float = 293.6,
-    library: Library = Library.ENDF_B_VIII,
+    library: Library = Library.ENDF_B_VIII_1,
     sigma_0: float = 1000.0,  # Background cross-section [barns]
     use_self_shielding: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
