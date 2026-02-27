@@ -23,8 +23,9 @@ def main() -> int:
     try:
         from smrforge_pro.api import check_api_stability
     except ImportError:
-        print("ERROR: smrforge_pro not installed", file=sys.stderr)
-        return 1
+        # Community repo: smrforge_pro lives in smrforge-pro; skip gracefully
+        print("OK: smrforge_pro not in repo (Community-only); API stability check skipped")
+        return 0
 
     code, issues = check_api_stability(args.module)
     if issues:

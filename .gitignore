@@ -112,7 +112,8 @@ scripts/show_coverage_progress.ps1
 scripts/transition_to_smrforge_org.py
 scripts/transition_docs.py
 
-# Pro tier (Community repo: exclude; Pro repo: include)
+# Pro tier (Community repo: exclude; Pro lives in https://github.com/SMRFORGE/smrforge-pro)
+smrforge_pro/
 docs/pro/
 docs/guides/pro/
 docs/pro_index.rst

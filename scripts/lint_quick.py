@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DIRS = ["smrforge", "smrforge_pro", "tests", "examples"]
+DIRS = ["smrforge", "tests", "examples"]
 
 
 def run(cmd: List[str]) -> int:
@@ -26,12 +26,12 @@ def main() -> int:
     fix = "--fix" in sys.argv or "-w" in sys.argv
 
     # black
-    black_args = ["black", "--check", "smrforge", "smrforge_pro", "tests", "examples"]
+    black_args = ["black", "--check", "smrforge", "tests", "examples"]
     if fix:
-        black_args = ["black", "smrforge", "smrforge_pro", "tests", "examples"]
+        black_args = ["black", "smrforge", "tests", "examples"]
     code = run(black_args)
     if code != 0:
-        print("black failed. Run: black smrforge smrforge_pro tests examples")
+        print("black failed. Run: black smrforge tests examples")
         if not fix:
             return 1
 
@@ -41,15 +41,14 @@ def main() -> int:
         "--check-only",
         "--diff",
         "smrforge",
-        "smrforge_pro",
         "tests",
         "examples",
     ]
     if fix:
-        isort_args = ["isort", "smrforge", "smrforge_pro", "tests", "examples"]
+        isort_args = ["isort", "smrforge", "tests", "examples"]
     code = run(isort_args)
     if code != 0:
-        print("isort failed. Run: isort smrforge smrforge_pro tests examples")
+        print("isort failed. Run: isort smrforge tests examples")
         if not fix:
             return 1
 
