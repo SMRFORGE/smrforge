@@ -6,8 +6,7 @@
 #
 # Last Updated: February 2026
 # Tier: Community (SMRFORGE_TIER=community)
-# For Pro (NL design, code verification, regulatory package, benchmark reproduction,
-# multi-objective optimization, physics-informed surrogates), use Dockerfile.pro.
+# Pro tier: Built in https://github.com/SMRFORGE/smrforge-pro (separate repo).
 # Recent Additions (February 2026):
 # - Pro enhancements: Serpent import, MCNP converter, CLI (convert, ml-export, report validation), workflow hooks (pre_export, post_sweep), CHANGELOG_PRO.md, API_STABILITY Pro section. Use Dockerfile.pro for Pro.
 # - OpenMC tally visualization: Pro tier (smrforge visualize tally --statepoint X). See Dockerfile.pro.

@@ -42,7 +42,8 @@ docs/.doctrees/
 # Backup and redundant directories
 backup_*/
 smrforge-*/
-# smrforge_pro/ included for Dockerfile.pro
+# Pro tier lives in smrforge-pro repo; smrforge_pro/ not in Community
+smrforge_pro/
 
 # Coverage and test artifacts
 .coverage

@@ -32,26 +32,8 @@ services:
       - "8050:8050"
     command: smrforge serve --host 0.0.0.0 --port 8050
 
-  smrforge-pro:
-    build:
-      context: .
-      dockerfile: Dockerfile.pro
-    image: smrforge-pro:latest
-    # Tier: Pro — NL design, code verification, regulatory package, benchmark reproduction, multi-objective, physics-informed surrogates
-    volumes:
-      - ./data:/app/data:rw
-      - ./output:/app/output:rw
-      - ./results:/app/results:rw
-      - ./examples:/app/examples:ro
-      - ${SMRFORGE_ENDF_HOST_DIR:-./data/endf-data}:/app/endf-data:ro
-    working_dir: /app
-    environment:
-      - PYTHONUNBUFFERED=1
-      - SMRFORGE_ENDF_DIR=/app/endf-data
-      - SMRFORGE_TIER=pro
-    ports:
-      - "8051:8050"
-    command: smrforge serve --host 0.0.0.0 --port 8050
+  # smrforge-pro: Pro tier images are built in https://github.com/SMRFORGE/smrforge-pro
+  # Clone that repo and use its docker-compose for Pro.
 
   smrforge-dev:
     build:

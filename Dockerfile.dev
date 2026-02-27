@@ -6,8 +6,7 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
-# - Pro: Serpent import, MCNP converter, OpenMC tally viz, CLI convert/ml-export/report validation.
-#   Pro workflows: nl-design, code-verify, regulatory-package, benchmark, multi-optimize. Build with -f Dockerfile.pro for Pro.
+# - Pro: Lives in smrforge-pro repo. Use that repo's Dockerfile for Pro images.
 # - Dependency alignment: setup.py, requirements.txt, requirements-lock.txt consistent (httpx, tqdm).
 # - Coding guidelines: optional deps fallbacks, Rich, convenience APIs, kwargs hygiene, path handling (docs/development/code-style.md).
 # - Discovery and help: system_info(), help_topics(), list_constraint_sets(), get_example_path(), list_examples(), list_nuclides(), list_sweepable_params(); quick_optimize(), quick_uq(). See examples/discovery_help_example.py.

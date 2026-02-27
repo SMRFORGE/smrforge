@@ -4,6 +4,8 @@
 
 This guide explains how to use SMRForge with Docker Desktop, including setup, usage, and troubleshooting.
 
+**Tiers:** This repo provides Community images. Pro tier images are built in the [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro) repo (private, licensed).
+
 ## Prerequisites
 
 - **Docker Desktop** installed and running
