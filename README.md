@@ -8,6 +8,8 @@
 
 *Last updated: February 2026*
 
+**Repositories:** Community code lives in [github.com/SMRFORGE/smrforge](https://github.com/SMRFORGE/smrforge). Pro tier lives in the separate private repo [github.com/SMRFORGE/smrforge-pro](https://github.com/SMRFORGE/smrforge-pro).
+
 SMRForge is a comprehensive Python toolkit for nuclear reactor design, analysis, and optimization with a focus on Small Modular Reactors (SMRs).
 
 **Quick links:** [Quickstart (5 min)](docs/guides/quickstart.md) | [Community vs Pro](docs/community_vs_pro.md) | [FAQ](docs/FAQ.md) | [Troubleshooting](docs/guides/troubleshooting.md)
@@ -488,7 +490,7 @@ See [`docs/guides/usage.md`](docs/guides/usage.md) for more examples and the [`e
 **Tier Comparison:**
 - **[Community vs Pro](docs/community_vs_pro.md)** - Tier comparison and upgrade path
 - **[Community Docs](docs/community/README.md)** - Community tier features and workflows
-- **[Pro Docs](docs/pro/README.md)** - Pro tier features (Serpent/MCNP, benchmarks, AI/surrogate)
+- **[Pro Overview](docs/pro-tier-overview.md)** - Pro tier (separate repo: smrforge-pro)
 
 **Reference:**
 - **[API Documentation](https://SMRFORGE.github.io/smrforge/)** - Complete API reference

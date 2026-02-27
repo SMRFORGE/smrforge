@@ -57,10 +57,18 @@ Throughout the Community docs, you may see callouts like:
 
 These indicate features available in the Pro tier. If you need them, consider upgrading.
 
+## Repositories
+
+| Tier | Repository | Visibility |
+|------|------------|------------|
+| **Community** | [github.com/SMRFORGE/smrforge](https://github.com/SMRFORGE/smrforge) | Public (MIT) |
+| **Pro** | [github.com/SMRFORGE/smrforge-pro](https://github.com/SMRFORGE/smrforge-pro) | Private (licensed) |
+
+Community is open-source; Pro is developed in a separate private repo and distributed under license.
+
 ## Learn More
 
-- **Community docs:** This documentation (smrforge.readthedocs.io)
-- **Pro docs:** Available with SMRForge Pro license
+- **Community docs:** [smrforge.readthedocs.io](https://smrforge.readthedocs.io)
+- **Pro overview:** [docs/pro-tier-overview.md](pro-tier-overview.md) (in Community repo)
 - **Install Community:** `pip install smrforge`
-- **Install Pro:** `pip install smrforge-pro` (requires license)
-- **Pro optional extras:** `pip install smrforge-pro[ai,reporting,ml]` for ONNX/Torch, PDF reports, Parquet/HDF5
+- **Install Pro:** Requires Pro license; install from private PyPI or `pip install smrforge-pro`
