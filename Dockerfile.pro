@@ -1,7 +1,8 @@
 # SMRForge Pro Dockerfile — See smrforge-pro repo
 #
 # Pro tier lives in https://github.com/SMRFORGE/smrforge-pro (private).
-# Pro Docker images are built there. This Community repo has no smrforge_pro/.
+# Pro adds: CAD/DAGMC import, OpenMC tally viz, Serpent/MCNP full, AI/surrogate.
+# This Community repo has no smrforge_pro/ — placeholder only.
 #
 # To build Pro:
 #   Clone smrforge-pro, then: docker build -f Dockerfile.pro -t smrforge-pro:latest .
