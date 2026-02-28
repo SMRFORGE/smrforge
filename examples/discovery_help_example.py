@@ -2,6 +2,7 @@
 Example demonstrating SMRForge discovery and help functions.
 
 Shows system_info(), help_topics(), list_*(), get_example_path(),
+check_setup(), get_cheat_sheet(), list_cli_commands(), suggest_next_steps(),
 quick_sweep, quick_economics, quick_optimize, quick_uq, etc.
 """
 
@@ -48,11 +49,24 @@ def main():
     path = smr.get_example_path("reactor")
     print(f"  get_example_path('reactor') -> {path}")
 
-    # 5. Default directories
-    print("\n5. Default directories:")
+    # 5. Default directories and paths
+    print("\n5. Default directories and data paths:")
     print("-" * 70)
     print(f"  get_default_output_dir: {smr.get_default_output_dir()}")
     print(f"  get_default_endf_dir: {smr.get_default_endf_dir()}")
+    paths = smr.get_data_paths()
+    print(f"  get_data_paths keys: {list(paths.keys())}")
+    print(f"  find_endf_directory: {smr.find_endf_directory()}")
+
+    # 5b. Help and setup functions
+    print("\n5b. Help and setup:")
+    print("-" * 70)
+    setup = smr.check_setup()
+    print(f"  check_setup ok: {setup.get('ok')}, checks: {[c['name'] for c in setup.get('checks', [])]}")
+    print(f"  list_cli_commands (first 3): {[c['command'] for c in smr.list_cli_commands()[:3]]}")
+    print(f"  get_quick_start_commands: {len(smr.get_quick_start_commands())} suggestions")
+    print(f"  suggest_next_steps('quick_keff'): {smr.suggest_next_steps('quick_keff')}")
+    print(f"  get_cheat_sheet (first line): {smr.get_cheat_sheet().split(chr(10))[0]}")
 
     # 6. Load and run from example
     print("\n6. Load reactor from example and solve k-eff:")
@@ -105,6 +119,8 @@ def main():
 
     print("\n" + "=" * 70)
     print("Try: smr.help('convenience') for full list")
+    print("Try: smr.get_cheat_sheet() for quick reference")
+    print("Try: smr.check_setup() to verify environment")
     print("=" * 70)
 
 

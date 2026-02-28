@@ -9,8 +9,8 @@
 # - Pro: Lives in smrforge-pro repo. Use that repo's Dockerfile for Pro images.
 # - Dependency alignment: setup.py, requirements.txt, requirements-lock.txt consistent (httpx, tqdm).
 # - Coding guidelines: optional deps fallbacks, Rich, convenience APIs, kwargs hygiene, path handling (docs/development/code-style.md).
-# - Discovery and help: system_info(), help_topics(), list_constraint_sets(), get_example_path(), list_examples(), list_nuclides(), list_sweepable_params(); quick_optimize(), quick_uq(). See examples/discovery_help_example.py.
-# - New convenience helpers: get_default_endf_dir(), list_endf_libraries(), list_geometry_types(), list_analysis_types(), list_surrogates(), quick_download_endf(). Also: quick_benchmark(), quick_safety_report(), quick_template_from_preset(), list_export_formats(), list_transient_types(), get_config(). Discovery: list_uq_sampling_methods(), list_optimization_objectives(), list_optimization_methods(), list_distributions(), list_economics_outputs(). Paths: get_default_config_path(), get_benchmark_path(). I/O: list_templates(), quick_export().
+# - Discovery and help: system_info(), help_topics(), check_setup(), get_cheat_sheet(), list_cli_commands(), get_quick_start_commands(), suggest_next_steps(), get_data_paths(), find_endf_directory(); quick_optimize(), quick_uq(). See examples/discovery_help_example.py.
+# - Convenience: quick_design_study(), quick_atlas(), quick_doe(), quick_pareto(), quick_sensitivity(), quick_openmc_run(), quick_preprocessed_data(). Discovery: list_convenience_functions(), list_cli_commands(), get_quick_start_commands(), list_validation_benchmarks(), list_preset_types(), get_tier_info(), list_workflows(). Paths: find_endf_directory(), get_data_paths(), list_available_benchmarks(). Help: check_setup(), get_support_info(), suggest_next_steps(), get_cheat_sheet().
 # - Rich display: system_info(display=True), quick_*(display=True); ENDF setup wizard uses Rich Panel/Table.
 # - Convenience API consolidated: Legacy smrforge/convenience.py removed; all in smrforge/convenience/ package. No API changes.
 # - Stable API (smrforge.api), AI audit (smrforge.ai), ML export (export_ml_dataset)

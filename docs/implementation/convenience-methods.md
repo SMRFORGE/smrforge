@@ -1,7 +1,7 @@
 # Convenience Methods and Functions Summary
 
 **Date:** January 1, 2026  
-**Last Updated:** January 1, 2026  
+**Last Updated:** February 2026  
 **Status:** ✅ Complete
 
 ---
@@ -324,6 +324,69 @@ python examples/convenience_methods_example.py
 
 ---
 
+## New Convenience Functions (February 2026)
+
+### Workflow One-Liners
+
+| Function | Description |
+|----------|-------------|
+| `quick_validation_run()` | Run validation suite (mirror CLI `validate run`) |
+| `quick_openmc_run()` | Export reactor → run OpenMC → parse statepoint |
+| `quick_preprocessed_data()` | Download preprocessed library with defaults |
+| `quick_design_study()` | Design point + safety report in one call |
+| `quick_atlas()` | Build design-space atlas for presets |
+| `quick_doe()` | Design of Experiments (factorial, LHS, Sobol, random) |
+| `quick_pareto()` | Extract Pareto front from sweep results |
+| `quick_sensitivity()` | Sensitivity ranking from sweep results |
+
+### Discovery Functions
+
+| Function | Description |
+|----------|-------------|
+| `list_validation_benchmarks()` | Benchmark IDs from validation_benchmarks.json |
+| `list_preset_types()` | Presets grouped by type (HTGR, LWR, MSR) |
+| `list_pro_features()` | Pro-only feature names |
+| `list_tier_capabilities()` / `get_tier_info()` | Community vs Pro capabilities |
+| `list_workflows()` | Workflow subcommand names |
+| `list_convenience_functions()` | All quick_*, list_*, get_* names |
+| `list_cli_commands()` | Top-level CLI commands |
+| `get_quick_start_commands()` | Suggested first commands |
+| `list_functions_by_category()` | Functions grouped by topic |
+
+### Data & Paths
+
+| Function | Description |
+|----------|-------------|
+| `find_endf_directory()` | Search for ENDF data |
+| `get_data_paths()` | Standard paths (endf, output, config, examples) |
+| `list_available_benchmarks()` | Benchmarks with optional metadata |
+
+### Help Functions
+
+| Function | Description |
+|----------|-------------|
+| `check_setup()` | Verify ENDF, OpenMC, optional deps |
+| `get_environment_summary()` | Paths, env vars, optional deps status |
+| `validate_installation()` | Basic sanity checks for bug reports |
+| `get_support_info()` | Version/platform/config for support |
+| `get_function_signature()` | Callable signature string |
+| `suggest_next_steps()` | Suggested workflows based on completed actions |
+| `what_can_i_do_with()` | Suggested functions for an object |
+| `get_workflow_help()` | Argparse help for workflow subcommands |
+| `get_upgrade_benefits()` | Human-readable Pro benefits |
+| `check_pro_feature()` | (available, message) for a Pro feature |
+| `list_pro_vs_community()` | Structured tier comparison |
+| `help_search()` | Search topics and functions |
+| `list_help_topics()` | Alias for help_topics() |
+| `get_cheat_sheet()` | Compact one-liner reference |
+
+### Pro-Only (Stubs in Community)
+
+When Pro is not installed, these raise a clear upgrade message:
+`quick_code_verify`, `quick_regulatory_package`, `quick_benchmark_reproduce`, `quick_surrogate_fit`, `quick_nl_design`, `quick_multi_optimize`, `quick_tally_visualization`
+
+---
+
 ## Future Enhancements
 
 Potential additions:
@@ -334,5 +397,5 @@ Potential additions:
 
 ---
 
-*Implementation completed January 2025*
+*Implementation completed January 2025; extended February 2026*
 

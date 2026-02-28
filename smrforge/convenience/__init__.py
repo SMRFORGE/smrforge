@@ -714,6 +714,13 @@ def create_reactor(
                 }
             )
 
+        try:
+            from ..presets.msr import LiquidFuelMSR
+
+            preset_class_map["msr-liquid"] = LiquidFuelMSR
+        except ImportError:
+            pass
+
         preset_class = preset_class_map.get(name)
 
         if preset_class is None:
@@ -842,6 +849,719 @@ def save_variant(
     path = output_dir / f"design_{safe_name}.json"
     reactor.save(path)
     return path
+
+
+def _resolve_reactor(reactor_or_preset: Union[str, Path, "SimpleReactor"]) -> "SimpleReactor":
+    """Load reactor from path or preset name."""
+    if isinstance(reactor_or_preset, (str, Path)):
+        p = Path(reactor_or_preset)
+        return load_reactor(p) if p.exists() else create_reactor(name=str(reactor_or_preset))
+    return reactor_or_preset
+
+
+# Re-export from convenience_utils for main API consistency
+def get_nuclide(name: str) -> "Nuclide":
+    """Parse nuclide string (e.g. 'U235') to Nuclide instance."""
+    from ..convenience_utils import get_nuclide as _get_nuclide
+
+    return _get_nuclide(name)
+
+
+def quick_decay_heat(
+    nuclides: Dict[str, float],
+    time_seconds: float = 86400.0,
+    cache: Optional[Any] = None,
+) -> float:
+    """One-liner decay heat calculation [W] for nuclide inventory."""
+    from ..convenience_utils import quick_decay_heat as _quick_decay_heat
+
+    return _quick_decay_heat(nuclides, time_seconds, cache)
+
+
+def quick_validation_run(
+    endf_dir: Optional[Union[str, Path]] = None,
+    benchmarks_path: Optional[Union[str, Path]] = None,
+    output_dir: Optional[Union[str, Path]] = None,
+    test_files: Optional[List[str]] = None,
+    verbose: bool = False,
+) -> Dict[str, Any]:
+    """
+    Run validation suite (mirror of CLI `validate run`).
+
+    Args:
+        endf_dir: Path to ENDF-B-VIII.1 (uses SMRFORGE_ENDF_DIR if None).
+        benchmarks_path: Path to validation_benchmarks.json.
+        output_dir: Output directory for reports (default: output/validation).
+        test_files: Specific test files (default: comprehensive + e2e).
+        verbose: Pass -s to pytest.
+
+    Returns:
+        Dict with exit_code, report_path, json_path, metadata.
+    """
+    import os
+
+    import pytest
+
+    base = Path(__file__).resolve().parents[2]
+    if benchmarks_path is None:
+        benchmarks_path = base / "benchmarks" / "validation_benchmarks.json"
+    else:
+        benchmarks_path = Path(benchmarks_path)
+    if endf_dir:
+        endf_abs = str(Path(endf_dir).absolute())
+        os.environ["LOCAL_ENDF_DIR"] = endf_abs
+        os.environ["SMRFORGE_ENDF_DIR"] = endf_abs
+    out_dir = Path(output_dir) if output_dir else base / "output" / "validation"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = out_dir / f"validation_report_{timestamp}.txt"
+    json_path = out_dir / f"validation_report_{timestamp}.json"
+    files = test_files or [
+        "tests/test_validation_comprehensive.py",
+        "tests/test_endf_workflows_e2e.py",
+    ]
+    pytest_args = list(files) + ["-v", "--tb=short"]
+    if verbose:
+        pytest_args.append("-s")
+    exit_code = pytest.main(pytest_args)
+    return {
+        "exit_code": exit_code,
+        "report_path": str(report_path),
+        "json_path": str(json_path),
+        "benchmarks_path": str(benchmarks_path),
+    }
+
+
+def quick_openmc_run(
+    reactor: Union["SimpleReactor", "PrismaticCore", "PebbleBedCore"],
+    output_dir: Optional[Union[str, Path]] = None,
+    particles: int = 1000,
+    batches: int = 20,
+    timeout: Optional[float] = None,
+) -> Dict[str, Any]:
+    """
+    Export reactor to OpenMC, run, parse statepoint in one call.
+
+    Args:
+        reactor: Reactor or core to export.
+        output_dir: Output dir (default: openmc_run).
+        particles: Neutrons per generation.
+        batches: Number of batches.
+        timeout: Run timeout [s].
+
+    Returns:
+        Dict with returncode, k_eff, k_eff_std, batches, tallies, etc.
+    """
+    from ..io.openmc_export import export_reactor_to_openmc
+    from ..io.openmc_run import run_and_parse
+
+    out = Path(output_dir or "openmc_run")
+    if hasattr(reactor, "build_core") and not hasattr(reactor, "core"):
+        reactor.build_core()
+    export_reactor_to_openmc(reactor, out, particles=particles, batches=batches)
+    return run_and_parse(out, timeout=timeout)
+
+
+def quick_preprocessed_data(
+    nuclides: Union[str, List[Any]] = "common_smr",
+    output_dir: Optional[Union[str, Path]] = None,
+    offline_path: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
+    """
+    Download preprocessed library with sensible defaults.
+
+    Args:
+        nuclides: Set name ('common_smr', 'quickstart') or list of Nuclide.
+        output_dir: Output directory (default: standard ENDF dir).
+        offline_path: Air-gapped path to existing .zarr or ENDF dir.
+
+    Returns:
+        Dict with downloaded, failed, output_dir, etc.
+    """
+    from ..data_downloader import download_preprocessed_library
+
+    return download_preprocessed_library(
+        nuclides=nuclides,
+        output_dir=output_dir,
+        offline_path=offline_path,
+        show_progress=True,
+    )
+
+
+def quick_design_study(
+    reactor_or_preset: Union[str, Path, "SimpleReactor"],
+    output_dir: Optional[Union[str, Path]] = None,
+    constraint_set: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """
+    Run design point + safety report in one call.
+
+    Args:
+        reactor_or_preset: Reactor, preset name, or path to JSON.
+        output_dir: Output directory (default: design_study_output).
+        constraint_set: Optional ConstraintSet (default: regulatory limits).
+
+    Returns:
+        Dict with design_point, safety_report, output_dir.
+    """
+    from ..validation.safety_report import safety_margin_report
+
+    r = _resolve_reactor(reactor_or_preset)
+    out = Path(output_dir or "design_study_output")
+    out.mkdir(parents=True, exist_ok=True)
+    point = get_design_point(r)
+    with open(out / "design_point.json", "w", encoding="utf-8") as f:
+        json.dump(point, f, indent=2)
+    if constraint_set is None:
+        from ..validation.constraints import ConstraintSet
+
+        constraint_set = ConstraintSet.get_regulatory_limits()
+    report = safety_margin_report(r, constraint_set=constraint_set)
+    with open(out / "safety_report.json", "w", encoding="utf-8") as f:
+        json.dump(report.to_dict(), f, indent=2)
+    return {"design_point": point, "safety_report": report.to_dict(), "output_dir": str(out)}
+
+
+def quick_atlas(
+    presets: Optional[List[str]] = None,
+    output_dir: Optional[Union[str, Path]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Build design-space atlas for selected presets.
+
+    Args:
+        presets: Preset names (default: all from list_presets).
+        output_dir: Output directory (default: atlas_output).
+
+    Returns:
+        List of AtlasEntry-like dicts (design_id, power_mw, passed, etc.).
+    """
+    from dataclasses import asdict
+
+    from ..workflows.atlas import build_atlas
+
+    out = Path(output_dir or "atlas_output")
+    entries = build_atlas(out, presets=presets)
+    return [asdict(e) for e in entries]
+
+
+def list_validation_benchmarks(
+    benchmarks_path: Optional[Union[str, Path]] = None,
+) -> Dict[str, List[str]]:
+    """
+    List benchmark IDs from validation_benchmarks.json.
+
+    Returns:
+        Dict with keys decay_heat, cross_section, burnup, gamma_transport;
+        values are lists of benchmark IDs.
+    """
+    base = Path(__file__).resolve().parents[2]
+    path = Path(benchmarks_path) if benchmarks_path else base / "benchmarks" / "validation_benchmarks.json"
+    if not path.exists():
+        return {"decay_heat": [], "cross_section": [], "burnup": [], "gamma_transport": []}
+    data = json.loads(path.read_text())
+    return {
+        "decay_heat": list(data.get("decay_heat_benchmarks", {}).keys()),
+        "cross_section": list(data.get("cross_section_benchmarks", {}).keys()),
+        "burnup": list(data.get("burnup_benchmarks", {}).keys()),
+        "gamma_transport": list(data.get("gamma_transport_benchmarks", {}).keys()),
+    }
+
+
+def list_preset_types() -> Dict[str, List[str]]:
+    """
+    List presets grouped by reactor type (HTGR, LWR, MSR).
+
+    Returns:
+        Dict mapping type name to list of preset IDs.
+    """
+    presets = list_presets()
+    htgr = ["valar-10", "gt-mhr-350", "htr-pm-200", "micro-htgr-1"]
+    lwr = ["nuscale-77mwe", "smart-100mwe", "carem-32mwe", "bwrx-300"]
+    msr = ["msr-liquid"]
+    out: Dict[str, List[str]] = {"HTGR": [], "LWR": [], "MSR": []}
+    for p in presets:
+        if p in htgr:
+            out["HTGR"].append(p)
+        elif p in lwr:
+            out["LWR"].append(p)
+        elif p in msr:
+            out["MSR"].append(p)
+    return out
+
+
+def list_pro_features() -> List[str]:
+    """List Pro-only feature names for upgrade messaging."""
+    return [
+        "Serpent export/import",
+        "OpenMC tally visualization",
+        "MCNP full export",
+        "Natural-language design",
+        "Code-to-code verification",
+        "Regulatory package (NRC/IAEA)",
+        "Benchmark reproduction",
+        "Multi-objective optimization",
+        "AI/surrogate workflows",
+        "Physics-informed surrogates",
+    ]
+
+
+def list_tier_capabilities() -> Dict[str, Dict[str, bool]]:
+    """Summary of Community vs Pro capabilities for current install."""
+    return {
+        "Community": {
+            "diffusion": True,
+            "builtin_mc": True,
+            "openmc_export": True,
+            "basic_reporting": True,
+        },
+        "Pro": {
+            "serpent": pro_available(),
+            "tally_viz": pro_available(),
+            "mcnp_full": pro_available(),
+            "nl_design": pro_available(),
+            "code_verify": pro_available(),
+            "regulatory_package": pro_available(),
+            "benchmark_reproduce": pro_available(),
+            "multi_optimize": pro_available(),
+            "surrogate": pro_available(),
+        },
+    }
+
+
+def get_tier_info() -> Dict[str, Any]:
+    """Get tier summary (equivalent to list_tier_capabilities with extra metadata)."""
+    cap = list_tier_capabilities()
+    cap["pro_available"] = pro_available()
+    cap["current_tier"] = "Pro" if pro_available() else "Community"
+    return cap
+
+
+def list_workflows() -> List[str]:
+    """List workflow subcommand names (smrforge workflow <name>)."""
+    return [
+        "run",
+        "batch-keff",
+        "design-point",
+        "safety-report",
+        "doe",
+        "pareto",
+        "optimize",
+        "uq",
+        "design-study",
+        "variant",
+        "sensitivity",
+        "sobol",
+        "scenario",
+        "atlas",
+        "surrogate",
+        "surrogate-validate",
+        "code-verify",
+        "regulatory-package",
+        "benchmark",
+        "multi-optimize",
+        "requirements-to-constraints",
+        "ml-export",
+        "nl-design",
+    ]
+
+
+def list_convenience_functions(
+    group_by_prefix: bool = False,
+) -> Union[List[str], Dict[str, List[str]]]:
+    """
+    List all convenience function names (quick_*, list_*, get_*).
+
+    Args:
+        group_by_prefix: If True, return dict with keys quick, list, get.
+
+    Returns:
+        List of names, or dict of lists if group_by_prefix.
+    """
+    try:
+        import smrforge as smr
+
+        names = [n for n in dir(smr) if not n.startswith("_")]
+    except ImportError:
+        names = []
+    quick = sorted([n for n in names if n.startswith("quick_")])
+    lst = sorted([n for n in names if n.startswith("list_")])
+    get = sorted([n for n in names if n.startswith("get_")])
+    if group_by_prefix:
+        return {"quick": quick, "list": lst, "get": get}
+    return quick + lst + get
+
+
+def list_cli_commands() -> List[Dict[str, str]]:
+    """List top-level CLI commands with help text (smrforge <command>)."""
+    return [
+        {"command": "serve", "help": "Launch the SMRForge web dashboard"},
+        {"command": "shell", "help": "Launch interactive Python shell with SMRForge pre-loaded"},
+        {"command": "workflow", "help": "Workflow operations"},
+        {"command": "reactor", "help": "Reactor operations (create, analyze, list, compare)"},
+        {"command": "data", "help": "Data management (setup, download, validate)"},
+        {"command": "burnup", "help": "Burnup/depletion operations"},
+        {"command": "decay", "help": "Decay heat calculations"},
+        {"command": "validate", "help": "Validation and testing"},
+        {"command": "visualize", "help": "Visualization (geometry, flux)"},
+        {"command": "sweep", "help": "Parameter sweep and sensitivity"},
+        {"command": "report", "help": "Generate design reports"},
+        {"command": "config", "help": "Configuration management"},
+        {"command": "github", "help": "GitHub Actions workflow management"},
+        {"command": "transient", "help": "Transient analysis"},
+        {"command": "thermal", "help": "Thermal-hydraulics operations"},
+    ]
+
+
+def get_quick_start_commands() -> List[Dict[str, str]]:
+    """Suggested first commands for new users."""
+    return [
+        {"api": "create_reactor('valar-10')", "cli": "smrforge reactor create --preset valar-10 --output reactor.json", "desc": "Create a reactor from preset"},
+        {"api": "quick_keff('valar-10')", "cli": "smrforge reactor analyze --reactor reactor.json --keff", "desc": "Compute k-eff"},
+        {"api": "list_presets()", "cli": "smrforge reactor list", "desc": "List presets"},
+        {"api": "quick_design_study('valar-10')", "cli": "smrforge workflow design-study --reactor valar-10", "desc": "Design point + safety report"},
+        {"api": "help()", "cli": "smrforge shell  # then smr.help()", "desc": "Interactive help"},
+    ]
+
+
+def list_functions_by_category(category: str) -> List[str]:
+    """
+    List functions grouped by category (geometry, neutronics, burnup, etc.).
+
+    Args:
+        category: One of geometry, neutronics, burnup, thermal, decay, gamma,
+                  visualization, materials, nuclides, convenience, workflows.
+
+    Returns:
+        List of function/class names in that category.
+    """
+    _CATEGORY_MAP: Dict[str, List[str]] = {
+        "geometry": ["create_simple_core", "PrismaticCore", "PebbleBedCore", "quick_mesh_extraction"],
+        "neutronics": ["quick_keff", "MultiGroupDiffusion", "create_simple_solver", "quick_keff_calculation"],
+        "burnup": ["quick_burnup_calculation", "BurnupSolver", "BurnupOptions"],
+        "thermal": ["ChannelThermalHydraulics", "ThermalHydraulics"],
+        "decay": ["quick_decay_heat", "DecayHeatCalculator", "decay_heat_removal"],
+        "gamma": ["GammaTransportSolver", "GammaTransportOptions"],
+        "visualization": ["quick_plot_core", "quick_plot_mesh", "plot_core_layout"],
+        "materials": ["get_material", "list_materials"],
+        "nuclides": ["get_nuclide", "create_nuclide_list", "list_nuclides"],
+        "convenience": ["create_reactor", "quick_validate", "quick_sweep", "quick_design_study", "load_reactor"],
+        "workflows": ["quick_doe", "quick_pareto", "quick_sensitivity", "quick_atlas"],
+    }
+    c = category.lower()
+    if c not in _CATEGORY_MAP:
+        return []
+    return _CATEGORY_MAP[c]
+
+
+def find_endf_directory() -> Optional[Path]:
+    """
+    Search common locations for ENDF data directory.
+
+    Checks: SMRFORGE_ENDF_DIR, LOCAL_ENDF_DIR, ~/ENDF-Data, standard paths.
+
+    Returns:
+        Path if found (and has content), else None.
+    """
+    import os
+
+    from ..core.reactor_core import get_standard_endf_directory
+
+    for env in ("SMRFORGE_ENDF_DIR", "LOCAL_ENDF_DIR"):
+        val = os.environ.get(env)
+        if val:
+            p = Path(val).expanduser().resolve()
+            if p.is_dir():
+                return p
+    default = get_standard_endf_directory()
+    if default.is_dir():
+        return default
+    return None
+
+
+def get_data_paths() -> Dict[str, Path]:
+    """Return dict of standard paths (endf, output, config, examples)."""
+    base = Path(__file__).resolve().parents[2]
+    try:
+        endf = get_default_endf_dir()
+        output = get_default_output_dir()
+    except Exception:
+        endf = Path.home() / "ENDF-Data"
+        output = base / "output"
+    return {
+        "endf": endf,
+        "output": output,
+        "config": base / "config",
+        "examples": base / "examples",
+        "benchmarks": base / "benchmarks",
+    }
+
+
+def list_available_benchmarks(
+    benchmarks_path: Optional[Union[str, Path]] = None,
+    detailed: bool = False,
+) -> Union[Dict[str, List[str]], Dict[str, Dict[str, Any]]]:
+    """
+    List validation benchmarks, optionally with metadata.
+
+    Args:
+        benchmarks_path: Path to validation_benchmarks.json.
+        detailed: If True, return full benchmark metadata per ID.
+
+    Returns:
+        If detailed=False: dict of category -> list of IDs.
+        If detailed=True: dict of category -> {id: benchmark_dict}.
+    """
+    base = Path(__file__).resolve().parents[2]
+    path = Path(benchmarks_path) if benchmarks_path else base / "benchmarks" / "validation_benchmarks.json"
+    if not path.exists():
+        return {"decay_heat": {}, "cross_section": {}, "burnup": {}, "gamma_transport": {}} if detailed else {"decay_heat": [], "cross_section": [], "burnup": [], "gamma_transport": []}
+    data = json.loads(path.read_text())
+    cats = ["decay_heat", "cross_section", "burnup", "gamma_transport"]
+    key_map = {"decay_heat": "decay_heat_benchmarks", "cross_section": "cross_section_benchmarks", "burnup": "burnup_benchmarks", "gamma_transport": "gamma_transport_benchmarks"}
+    out: Dict[str, Any] = {}
+    for c in cats:
+        raw = data.get(key_map[c], {})
+        if detailed:
+            out[c] = dict(raw)
+        else:
+            out[c] = list(raw.keys())
+    return out
+
+
+def quick_doe(
+    method: str = "lhs",
+    factors: Union[Dict[str, List[float]], List[Tuple[str, Tuple[float, float]]]] = None,
+    n_samples: int = 10,
+    seed: Optional[int] = None,
+) -> List[Dict[str, float]]:
+    """
+    Design of Experiments one-liner (factorial, LHS, Sobol, random).
+
+    Args:
+        method: 'factorial', 'lhs', 'sobol', 'random'.
+        factors: For factorial: {name: [v1,v2,...]}. For lhs/sobol/random: [(name, (low, high)), ...].
+        n_samples: Samples for lhs/sobol/random.
+        seed: Random seed.
+
+    Returns:
+        List of design points (dicts).
+    """
+    from ..workflows.doe import (
+        full_factorial,
+        latin_hypercube,
+        random_space_filling,
+        sobol_space_filling,
+    )
+
+    if factors is None:
+        factors = [("enrichment", (0.15, 0.25)), ("power_mw", (50.0, 200.0))]
+    if isinstance(factors, dict):
+        return full_factorial(factors)
+    names = [f[0] for f in factors]
+    bounds = [f[1] for f in factors]
+    m = method.lower()
+    if m == "lhs":
+        return latin_hypercube(names, bounds, n_samples, seed=seed)
+    if m == "sobol":
+        return sobol_space_filling(names, bounds, n_samples, seed=seed)
+    if m == "random":
+        return random_space_filling(names, bounds, n_samples, seed=seed)
+    raise ValueError(f"Unknown method '{method}'. Use factorial, lhs, sobol, random.")
+
+
+def quick_pareto(
+    sweep_results: Union[str, Path, List[Dict], Dict],
+    metric_x: str = "k_eff",
+    metric_y: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Extract Pareto front from sweep results.
+
+    Args:
+        sweep_results: Path to JSON or list/dict of results.
+        metric_x: First objective column.
+        metric_y: Second objective (default: first other numeric).
+
+    Returns:
+        List of Pareto-optimal result dicts.
+    """
+    import numpy as np
+
+    from ..visualization.sweep_plots import _flatten_parameters_column, _pareto_front_mask
+
+    if isinstance(sweep_results, (str, Path)):
+        data = json.loads(Path(sweep_results).read_text())
+    else:
+        data = sweep_results
+    results = data.get("results", data) if isinstance(data, dict) else data
+    if not isinstance(results, list):
+        results = [results]
+    try:
+        import pandas as pd
+
+        df = pd.DataFrame(results)
+        df = _flatten_parameters_column(df)
+    except ImportError:
+        raise ImportError("pandas required for quick_pareto. pip install pandas")
+    numeric = df.select_dtypes(include=[np.number]).columns.tolist()
+    my = metric_y or (([c for c in numeric if c != metric_x][0]) if len(numeric) > 1 else (numeric[0] if numeric else None))
+    if my is None or metric_x not in df.columns:
+        return []
+    x = pd.to_numeric(df[metric_x], errors="coerce").to_numpy()
+    y = pd.to_numeric(df[my], errors="coerce").to_numpy()
+    ok = np.isfinite(x) & np.isfinite(y)
+    mask = _pareto_front_mask(x[ok], y[ok], maximize_x=True, maximize_y=True)
+    return [results[i] for i in np.where(ok)[0][mask]]
+
+
+def quick_sensitivity(
+    sweep_results: Union[str, Path, List[Dict], Dict],
+    params: Optional[List[str]] = None,
+    metric: str = "k_eff",
+) -> List[Dict[str, Any]]:
+    """
+    Sensitivity ranking from sweep results (OAT).
+
+    Args:
+        sweep_results: Path to JSON or list/dict of results.
+        params: Parameter names (default: from first result).
+        metric: Output metric to rank by.
+
+    Returns:
+        List of {"parameter", "effect", "rank"} dicts.
+    """
+    from ..workflows.sensitivity import one_at_a_time_from_sweep
+
+    if isinstance(sweep_results, (str, Path)):
+        data = json.loads(Path(sweep_results).read_text())
+    else:
+        data = sweep_results
+    results = data.get("results", data) if isinstance(data, dict) else data
+    if not isinstance(results, list):
+        results = [results]
+    if not params and results:
+        p0 = results[0].get("parameters", results[0])
+        params = [k for k in p0 if isinstance(p0.get(k), (int, float))]
+    if not params:
+        return []
+    rankings = one_at_a_time_from_sweep(results, params, output_metric=metric)
+    return [{"parameter": r.parameter, "effect": r.effect, "rank": r.rank} for r in rankings]
+
+
+def _require_pro(feature: str) -> None:
+    """Raise if Pro is not available."""
+    if not pro_available():
+        raise ImportError(
+            f"{feature} requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro"
+        )
+
+
+def quick_code_verify(
+    reactor_or_preset: Union[str, Path, "SimpleReactor"],
+    codes: Optional[List[str]] = None,
+    output_path: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
+    """Code-to-code verification (Pro)."""
+    _require_pro("Code-to-code verification")
+    from smrforge_pro.workflows.code_verification import run_code_verification
+
+    r = _resolve_reactor(reactor_or_preset)
+    return run_code_verification(r, codes=codes or ["diffusion", "openmc"], output_path=Path(output_path) if output_path else None)
+
+
+def quick_regulatory_package(
+    reactor_or_preset: Union[str, Path, "SimpleReactor"],
+    output_dir: Optional[Union[str, Path]] = None,
+    preset: str = "10_CFR_50",
+) -> Dict[str, Any]:
+    """Generate regulatory submission package (Pro)."""
+    _require_pro("Regulatory package")
+    from smrforge_pro.workflows.regulatory_package import generate_regulatory_package
+
+    r = _resolve_reactor(reactor_or_preset)
+    return generate_regulatory_package(r, Path(output_dir or "regulatory_package"), preset=preset)
+
+
+def quick_benchmark_reproduce(
+    benchmark_id: str,
+    output_dir: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
+    """Reproduce benchmark and compare to reference (Pro)."""
+    _require_pro("Benchmark reproduction")
+    from smrforge_pro.workflows.benchmark_reproduction import reproduce_benchmark
+
+    return reproduce_benchmark(benchmark_id, output_dir=Path(output_dir) if output_dir else None)
+
+
+def quick_surrogate_fit(
+    sweep_results: Union[str, Path, List[Dict], Dict],
+    params: List[str],
+    metric: str = "k_eff",
+    method: str = "rbf",
+    output_path: Optional[Union[str, Path]] = None,
+) -> Any:
+    """Fit surrogate from sweep results (Pro)."""
+    _require_pro("Surrogate fit")
+    from smrforge_pro.workflows.surrogate import surrogate_from_sweep_results
+
+    if isinstance(sweep_results, (str, Path)):
+        data = json.loads(Path(sweep_results).read_text())
+    else:
+        data = sweep_results
+    results = data.get("results", data) if isinstance(data, dict) else data
+    if not isinstance(results, list):
+        results = [results]
+    return surrogate_from_sweep_results(results, params, output_metric=metric, method=method, output_path=output_path)
+
+
+def quick_nl_design(spec: str) -> "ReactorSpecification":
+    """Parse natural-language design spec to reactor spec (Pro)."""
+    _require_pro("Natural-language design")
+    from smrforge_pro.workflows.nl_design import parse_nl_design
+
+    return parse_nl_design(spec)
+
+
+def quick_multi_optimize(
+    reactor_path: Union[str, Path],
+    param_bounds: Dict[str, Tuple[float, float]],
+    objectives: Optional[List[Tuple[str, str]]] = None,
+    max_iter: int = 50,
+    output_path: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
+    """Multi-objective optimization (Pro)."""
+    _require_pro("Multi-objective optimization")
+    from smrforge_pro.workflows.multi_objective_optimization import multi_objective_optimize
+
+    with open(Path(reactor_path)) as f:
+        template = json.load(f)
+    obj = objectives or [("k_eff", "max")]
+    return multi_objective_optimize(
+        template,
+        objectives=obj,
+        param_bounds=param_bounds,
+        max_iterations=max_iter,
+        output_path=Path(output_path) if output_path else None,
+    )
+
+
+def quick_tally_visualization(
+    statepoint_path: Union[str, Path],
+    tally_ids: Optional[List[int]] = None,
+    output_path: Optional[Union[str, Path]] = None,
+) -> Any:
+    """Load OpenMC tally HDF5 and plot (Pro)."""
+    _require_pro("Tally visualization")
+    from smrforge_pro.workflows.tally_visualization import plot_tally
+
+    return plot_tally(
+        Path(statepoint_path),
+        tally_ids=tally_ids,
+        output_path=Path(output_path) if output_path else None,
+    )
 
 
 def quick_sweep(
@@ -1518,6 +2238,36 @@ __all__ = [
     "compare_designs",
     "get_design_point",
     "save_variant",
+    "get_nuclide",
+    "quick_decay_heat",
+    "quick_validation_run",
+    "quick_openmc_run",
+    "quick_preprocessed_data",
+    "quick_design_study",
+    "quick_atlas",
+    "list_validation_benchmarks",
+    "list_preset_types",
+    "list_pro_features",
+    "list_tier_capabilities",
+    "get_tier_info",
+    "list_workflows",
+    "list_convenience_functions",
+    "list_cli_commands",
+    "get_quick_start_commands",
+    "list_functions_by_category",
+    "find_endf_directory",
+    "get_data_paths",
+    "list_available_benchmarks",
+    "quick_doe",
+    "quick_pareto",
+    "quick_sensitivity",
+    "quick_code_verify",
+    "quick_regulatory_package",
+    "quick_benchmark_reproduce",
+    "quick_surrogate_fit",
+    "quick_nl_design",
+    "quick_multi_optimize",
+    "quick_tally_visualization",
     "quick_keff",
     "SimpleReactor",
 ]

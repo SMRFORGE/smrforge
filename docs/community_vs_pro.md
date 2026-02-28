@@ -68,6 +68,26 @@ Community is open-source; Pro is developed in a separate private repo and distri
 
 **Pro distribution:** Pro and the air-gapped Pro version live in [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro). Paid-tier bundles are delivered via **GitHub Packages**—wheel bundles on Releases, Docker images on `ghcr.io/smrforge/smrforge-pro`. Access requires Pro license and authenticated GitHub credentials.
 
+## Convenience & Help Functions by Tier
+
+### Community (All Available)
+
+**Workflows:** `quick_validation_run`, `quick_openmc_run`, `quick_preprocessed_data`, `quick_design_study`, `quick_atlas`, `quick_doe`, `quick_pareto`, `quick_sensitivity`
+
+**Discovery:** `list_validation_benchmarks`, `list_preset_types`, `list_pro_features`, `list_tier_capabilities`, `get_tier_info`, `list_workflows`, `list_convenience_functions`, `list_cli_commands`, `get_quick_start_commands`, `list_functions_by_category`
+
+**Data & Paths:** `find_endf_directory`, `get_data_paths`, `list_available_benchmarks`
+
+**Help:** `check_setup`, `get_environment_summary`, `validate_installation`, `get_support_info`, `get_function_signature`, `suggest_next_steps`, `what_can_i_do_with`, `get_workflow_help`, `help_search`, `list_help_topics`, `get_cheat_sheet`
+
+**Pro messaging:** `get_upgrade_benefits`, `check_pro_feature`, `list_pro_vs_community`
+
+### Pro (Additional)
+
+`quick_code_verify`, `quick_regulatory_package`, `quick_benchmark_reproduce`, `quick_surrogate_fit`, `quick_nl_design`, `quick_multi_optimize`, `quick_tally_visualization` — these raise a clear upgrade message when Pro is not installed.
+
+---
+
 ## Learn More
 
 - **Community docs:** [smrforge.readthedocs.io](https://smrforge.readthedocs.io)

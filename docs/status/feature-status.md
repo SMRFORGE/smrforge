@@ -121,6 +121,11 @@ These modules are fully implemented, tested, and ready for production use:
 - ✅ **quick_export** - Export reactor to JSON/OpenMC/Serpent/MCNP in one call
 - ✅ **get_config** - Read `~/.smrforge/config.yaml`; full config or dotted-key lookup
 - ✅ **SimpleReactor** - High-level reactor wrapper
+- ✅ **Workflow one-liners (Feb 2026)**: quick_validation_run, quick_openmc_run, quick_preprocessed_data, quick_design_study, quick_atlas, quick_doe, quick_pareto, quick_sensitivity
+- ✅ **Discovery (Feb 2026)**: list_convenience_functions, list_cli_commands, get_quick_start_commands, list_functions_by_category, list_validation_benchmarks, list_preset_types, list_pro_features, get_tier_info, list_workflows
+- ✅ **Data & paths**: find_endf_directory, get_data_paths, list_available_benchmarks
+- ✅ **Help functions**: check_setup, get_environment_summary, validate_installation, get_support_info, get_function_signature, suggest_next_steps, what_can_i_do_with, get_workflow_help, get_upgrade_benefits, check_pro_feature, list_pro_vs_community, help_search, list_help_topics, get_cheat_sheet
+- ✅ **Pro stubs** (raise upgrade message when Pro not installed): quick_code_verify, quick_regulatory_package, quick_benchmark_reproduce, quick_surrogate_fit, quick_nl_design, quick_multi_optimize, quick_tally_visualization
 
 ### Visualization
 - ✅ **Geometry Visualization** (`smrforge.visualization.geometry`)

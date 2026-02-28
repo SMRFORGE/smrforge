@@ -1393,5 +1393,347 @@ def _get_examples() -> Dict[str, List[Dict[str, str]]]:
     }
 
 
+def check_setup() -> Dict[str, Any]:
+    """
+    Verify ENDF path, OpenMC, optional deps. Return pass/fail and messages.
+
+    Returns:
+        Dict with ok (bool), checks (list of {name, passed, message}), summary.
+    """
+    result: Dict[str, Any] = {"ok": True, "checks": [], "summary": ""}
+    checks = []
+
+    # ENDF directory
+    try:
+        from smrforge.convenience import find_endf_directory
+
+        endf = find_endf_directory()
+        passed = endf is not None and endf.is_dir()
+        checks.append({"name": "ENDF", "passed": passed, "message": str(endf) if endf else "Not found (set SMRFORGE_ENDF_DIR or use data download)"})
+        if not passed:
+            result["ok"] = False
+    except Exception as e:
+        checks.append({"name": "ENDF", "passed": False, "message": str(e)})
+        result["ok"] = False
+
+    # OpenMC
+    try:
+        import shutil
+
+        openmc = shutil.which("openmc") or shutil.which("openmc.exe")
+        passed = openmc is not None
+        checks.append({"name": "OpenMC", "passed": passed, "message": openmc or "Not on PATH (optional for quick_openmc_run)"})
+    except Exception as e:
+        checks.append({"name": "OpenMC", "passed": False, "message": str(e)})
+
+    # Core imports
+    try:
+        import smrforge
+
+        passed = getattr(smrforge, "_CONVENIENCE_AVAILABLE", False)
+        checks.append({"name": "convenience", "passed": passed, "message": "OK" if passed else "Import failed"})
+        if not passed:
+            result["ok"] = False
+    except Exception as e:
+        checks.append({"name": "convenience", "passed": False, "message": str(e)})
+        result["ok"] = False
+
+    result["checks"] = checks
+    result["summary"] = "All checks passed" if result["ok"] else "Some checks failed. See checks for details."
+    return result
+
+
+def get_environment_summary() -> Dict[str, Any]:
+    """Return paths, env vars, optional dependency status."""
+    import os
+    import platform
+    import sys
+
+    out: Dict[str, Any] = {
+        "platform": platform.platform(),
+        "python": sys.version.split()[0],
+        "cwd": str(os.getcwd()),
+        "env": {
+            "SMRFORGE_ENDF_DIR": os.environ.get("SMRFORGE_ENDF_DIR"),
+            "LOCAL_ENDF_DIR": os.environ.get("LOCAL_ENDF_DIR"),
+            "OPENMC_CROSS_SECTIONS": (
+            (lambda v: v[:80] + "..." if v and len(v) > 80 else v)(os.environ.get("OPENMC_CROSS_SECTIONS"))
+        ),
+        },
+    }
+    try:
+        from smrforge import get_data_paths
+
+        out["paths"] = {k: str(v) for k, v in get_data_paths().items()}
+    except Exception:
+        out["paths"] = {}
+    try:
+        out["system_info"] = system_info()
+    except Exception:
+        out["system_info"] = {}
+    return out
+
+
+def validate_installation() -> Dict[str, Any]:
+    """Run basic sanity checks (imports, paths, write access) for bug-report prep."""
+    result: Dict[str, Any] = {"passed": True, "errors": [], "warnings": []}
+    smr = None
+    try:
+        import smrforge as smr
+
+        _ = smr.__version__
+    except Exception as e:
+        result["passed"] = False
+        result["errors"].append(f"Import smrforge: {e}")
+    try:
+        from pathlib import Path
+
+        if smr is not None:
+            base = Path(smr.__file__).parent.parent
+            if not (base / "smrforge").is_dir():
+                result["warnings"].append(f"Unexpected package layout: {base}")
+    except Exception as e:
+        result["warnings"].append(f"Path check: {e}")
+    setup = check_setup()
+    if not setup.get("ok"):
+        result["warnings"].append("Setup check reported issues (see check_setup())")
+    result["check_setup"] = setup
+    return result
+
+
+def get_support_info() -> Dict[str, Any]:
+    """Dict suitable for bug reports: version, platform, config."""
+    import platform
+    import sys
+
+    out = get_environment_summary()
+    try:
+        from smrforge.__version__ import __version__
+
+        out["smrforge_version"] = __version__
+    except Exception:
+        out["smrforge_version"] = "unknown"
+    return out
+
+
+def get_function_signature(name: str) -> Optional[str]:
+    """Return callable signature string for a function/class, or None."""
+    import inspect
+
+    smr = _get_smr_module()
+    if smr is None:
+        return None
+    obj = getattr(smr, name, None)
+    if obj is None:
+        return None
+    try:
+        sig = inspect.signature(obj)
+        return f"{name}{sig}"
+    except (TypeError, ValueError):
+        return None
+
+
+def suggest_next_steps(completed: Optional[Union[str, List[str]]] = None) -> List[Dict[str, str]]:
+    """
+    Suggest next workflows based on completed actions.
+
+    Args:
+        completed: Single action or list (e.g. "quick_keff", "create_reactor").
+
+    Returns:
+        List of {action, reason} suggestions.
+    """
+    done = {completed} if isinstance(completed, str) else set(completed or [])
+    suggestions = []
+    if "create_reactor" in done or "load_reactor" in done:
+        if "quick_keff" not in done:
+            suggestions.append({"action": "quick_keff", "reason": "Compute k-eff for your reactor"})
+        if "quick_design_study" not in done:
+            suggestions.append({"action": "quick_design_study", "reason": "Get design point and safety margin report"})
+    if "quick_keff" in done:
+        if "quick_sweep" not in done:
+            suggestions.append({"action": "quick_sweep", "reason": "Explore parameter space (enrichment, power)"})
+    if "quick_sweep" in done:
+        suggestions.append({"action": "quick_pareto", "reason": "Extract Pareto front from sweep results"})
+        suggestions.append({"action": "quick_sensitivity", "reason": "Rank parameters by sensitivity"})
+    if not done:
+        suggestions.append({"action": "create_reactor", "reason": "Start with a preset reactor"})
+        suggestions.append({"action": "list_presets", "reason": "Explore available reactor designs"})
+    return suggestions
+
+
+def what_can_i_do_with(obj: Any) -> List[str]:
+    """
+    Suggest relevant functions given an object (reactor, path, preset name).
+
+    Returns:
+        List of suggested function names.
+    """
+    from pathlib import Path
+
+    suggestions = []
+    if obj is None:
+        return ["list_presets", "create_reactor", "help"]
+    if hasattr(obj, "spec") or hasattr(obj, "build_core"):
+        suggestions = ["quick_keff", "get_design_point", "quick_validate", "quick_export", "quick_design_study"]
+    elif isinstance(obj, (str, type(Path))) or (hasattr(obj, "exists") and hasattr(obj, "read_text")):
+        p = Path(obj) if isinstance(obj, str) else obj
+        if hasattr(p, "exists") and p.exists():
+            suggestions = ["load_reactor", "quick_validate"]
+        else:
+            suggestions = ["create_reactor", "get_preset"]
+    elif isinstance(obj, (list, dict)) and "results" in (obj if isinstance(obj, dict) else {}):
+        suggestions = ["quick_pareto", "quick_sensitivity"]
+    else:
+        suggestions = ["help", "list_convenience_functions"]
+    return suggestions
+
+
+def get_workflow_help(cmd: str) -> Optional[str]:
+    """Return argparse help string for a workflow subcommand."""
+    try:
+        from smrforge.cli.parser import build_parser
+
+        parser = build_parser()
+        # Find workflow subparser: main parser has subparsers with "workflow" choice
+        for action in parser._actions:
+            if getattr(action, "choices", None) and "workflow" in action.choices:
+                wf_parser = action.choices["workflow"]
+                # Workflow parser has subparsers with workflow subcommands
+                for sub_action in wf_parser._actions:
+                    if getattr(sub_action, "choices", None) and cmd in sub_action.choices:
+                        sub_parser = sub_action.choices[cmd]
+                        return sub_parser.format_help()
+                break
+    except Exception:
+        pass
+    return None
+
+
+def get_upgrade_benefits() -> List[str]:
+    """Human-readable benefits of SMRForge Pro."""
+    return [
+        "Serpent and MCNP full export/import",
+        "OpenMC tally visualization",
+        "Natural-language design: parse '10 MW HTGR, k-eff 1.0-1.05' → reactor spec",
+        "Code-to-code verification: diffusion, OpenMC, Serpent, MCNP comparison",
+        "Regulatory submission package (NRC/IAEA)",
+        "Benchmark reproduction with reference comparison",
+        "Multi-objective optimization (k_eff, safety, economics)",
+        "AI/surrogate workflows with validation reports",
+        "Physics-informed surrogates with UQ",
+    ]
+
+
+def check_pro_feature(feature: str) -> tuple:
+    """
+    Return (available: bool, message: str) for a Pro feature.
+
+    Args:
+        feature: Feature name (e.g. 'code_verify', 'surrogate', 'nl_design').
+    """
+    try:
+        from smrforge.convenience import pro_available
+
+        avail = pro_available()
+    except Exception:
+        avail = False
+    name_map = {
+        "code_verify": "Code-to-code verification",
+        "surrogate": "AI/surrogate workflows",
+        "nl_design": "Natural-language design",
+        "regulatory_package": "Regulatory package",
+        "benchmark_reproduce": "Benchmark reproduction",
+        "multi_optimize": "Multi-objective optimization",
+        "tally_viz": "OpenMC tally visualization",
+        "serpent": "Serpent export/import",
+        "mcnp": "MCNP full export",
+    }
+    label = name_map.get(feature, feature)
+    if avail:
+        return (True, f"{label} is available (Pro)")
+    return (False, f"{label} requires SMRForge Pro. Upgrade: https://smrforge.io")
+
+
+def list_pro_vs_community() -> Dict[str, Dict[str, Union[bool, str]]]:
+    """Structured comparison table: {capability: {community: bool, pro: bool}}."""
+    return {
+        "diffusion": {"community": True, "pro": True},
+        "openmc_export": {"community": True, "pro": True},
+        "serpent": {"community": False, "pro": True},
+        "mcnp_full": {"community": False, "pro": True},
+        "tally_viz": {"community": False, "pro": True},
+        "nl_design": {"community": False, "pro": True},
+        "code_verify": {"community": False, "pro": True},
+        "regulatory_package": {"community": False, "pro": True},
+        "benchmark_reproduce": {"community": False, "pro": True},
+        "multi_optimize": {"community": False, "pro": True},
+        "surrogate": {"community": False, "pro": True},
+    }
+
+
+def help_search(query: str) -> List[Dict[str, str]]:
+    """Search help topics and functions by name/keyword. Returns list of {topic, match_type}."""
+    query_lower = query.lower()
+    results = []
+    topics = help_topics()
+    for t in topics:
+        if query_lower in t.lower():
+            results.append({"topic": t, "match_type": "topic"})
+    smr = _get_smr_module()
+    if smr:
+        for name in dir(smr):
+            if not name.startswith("_") and query_lower in name.lower():
+                results.append({"topic": name, "match_type": "function"})
+    return results
+
+
+def list_help_topics() -> List[str]:
+    """Alias for help_topics() for discoverability."""
+    return help_topics()
+
+
+def get_cheat_sheet() -> str:
+    """Compact one-liner reference for common operations."""
+    lines = [
+        "# SMRForge Cheat Sheet",
+        "",
+        "## Reactors",
+        "  create_reactor('valar-10')  load_reactor(path)  get_preset(name)  list_presets()",
+        "",
+        "## Analysis",
+        "  quick_keff(reactor)  quick_design_study(reactor)  quick_validate(reactor)",
+        "",
+        "## Parameter Studies",
+        "  quick_sweep(preset, params)  quick_doe(method, factors)  quick_pareto(sweep_json)  quick_sensitivity(sweep_json)",
+        "",
+        "## Data",
+        "  quick_preprocessed_data()  quick_download_endf()  find_endf_directory()",
+        "",
+        "## Help",
+        "  help()  help('topic')  check_setup()  get_support_info()  list_cli_commands()",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 # Make help available as a module-level function
-__all__ = ["help", "system_info", "help_topics"]
+__all__ = [
+    "help",
+    "system_info",
+    "help_topics",
+    "check_setup",
+    "get_environment_summary",
+    "validate_installation",
+    "get_support_info",
+    "get_function_signature",
+    "suggest_next_steps",
+    "what_can_i_do_with",
+    "get_workflow_help",
+    "get_upgrade_benefits",
+    "check_pro_feature",
+    "list_pro_vs_community",
+    "help_search",
+    "list_help_topics",
+    "get_cheat_sheet",
+]

@@ -26,6 +26,11 @@ from smrforge import (
     run_complete_analysis,
     get_material,
     list_materials,
+    quick_design_study,
+    quick_atlas,
+    quick_doe,
+    list_validation_benchmarks,
+    list_preset_types,
 )
 
 
@@ -158,6 +163,21 @@ def main():
     except Exception as e:
         print(f"   Note: Class methods may not be available: {e}")
 
+    # 9. New workflow and discovery functions (Feb 2026)
+    print("\n9. New Workflow & Discovery Functions")
+    print("-" * 60)
+    try:
+        benchmarks = list_validation_benchmarks()
+        print(f"  list_validation_benchmarks: {list(benchmarks.keys())}")
+        preset_types = list_preset_types()
+        print(f"  list_preset_types: {list(preset_types.keys())}")
+        doe = quick_doe(method="lhs", n_samples=5, seed=42)
+        print(f"  quick_doe (lhs, 5 samples): {len(doe)} design points")
+        atlas = quick_atlas(presets=["valar-10"], output_dir="_tmp_atlas_ex")
+        print(f"  quick_atlas (valar-10): {len(atlas)} entries")
+    except Exception as e:
+        print(f"  Note: Some functions may require presets: {e}")
+
     print("\n" + "=" * 60)
     print("Example completed!")
     print("=" * 60)
@@ -165,16 +185,15 @@ def main():
     print("  - load_reactor(path) - Load reactor from JSON")
     print("  - quick_validate(reactor_or_path) - Validate design")
     print("  - create_reactor(config=path) - Create reactor from JSON")
+    print("  - quick_design_study() - Design point + safety report")
+    print("  - quick_atlas() - Build design-space atlas")
+    print("  - quick_doe() - Design of Experiments")
     print("  - create_simple_core() - Quick core creation")
     print("  - create_simple_solver() - Quick solver setup")
-    print("  - create_simple_xs_data() - Quick cross-section creation")
-    print("  - get_nuclide() - Get nuclide from name")
-    print("  - create_nuclide_list() - Create nuclide list")
+    print("  - get_nuclide(), create_nuclide_list() - Nuclide helpers")
     print("  - quick_keff_calculation() - Quick k-eff")
-    print("  - quick_mesh_extraction() - Quick mesh extraction")
-    print("  - get_material() - Get material from database")
-    print("  - list_materials() - List available materials")
-    print("  - run_complete_analysis() - Complete workflow")
+    print("  - get_material(), list_materials() - Material access")
+    print("  - list_validation_benchmarks(), list_preset_types() - Discovery")
 
 
 if __name__ == "__main__":
