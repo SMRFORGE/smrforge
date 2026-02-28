@@ -6,6 +6,7 @@
 #
 # Last Updated: February 2026
 # Recent Additions (February 2026):
+# - Community/Pro tiers: Parametric builders (create_fuel_pin, create_moderator_block, create_simple_prismatic_core), 2D Plotly flux maps (plot_flux_map_2d). CAD/DAGMC import gated to Pro.
 # - Pro: Lives in smrforge-pro repo. Use that repo's Dockerfile for Pro images.
 # - Dependency alignment: setup.py, requirements.txt, requirements-lock.txt consistent (httpx, tqdm).
 # - Coding guidelines: optional deps fallbacks, Rich, convenience APIs, kwargs hygiene, path handling (docs/development/code-style.md).
@@ -233,6 +234,7 @@ EXPOSE 8050 8888
 #   smrforge validate run (validation framework - run validation tests)
 #   smrforge validate design (design constraints validation)
 #   smrforge visualize geometry/flux
+#   Community geometry: create_fuel_pin, create_moderator_block, create_simple_prismatic_core. plot_flux_map_2d for flux maps.
 #   smrforge config show/set/init
 #   smrforge shell (interactive IPython/REPL)
 #   smrforge workflow run (YAML workflows)

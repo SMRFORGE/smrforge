@@ -18,21 +18,31 @@ class TestDAGMCImport:
         result = dagmc_available()
         assert isinstance(result, bool)
 
-    def test_import_dagmc_returns_none_when_unavailable(self):
-        """import_dagmc_geometry returns None when DAGMC not available."""
+    def test_import_dagmc_raises_without_pro(self):
+        """import_dagmc_geometry raises ImportError when Pro not available (Community)."""
         from smrforge.geometry.dagmc_import import import_dagmc_geometry
 
-        with patch("smrforge.geometry.dagmc_import.dagmc_available", return_value=False):
-            result = import_dagmc_geometry(Path("/nonexistent/file.h5m"))
-            assert result is None
+        with patch("smrforge.geometry.dagmc_import._pro_available", return_value=False):
+            with pytest.raises(ImportError, match="SMRForge Pro"):
+                import_dagmc_geometry(Path("/nonexistent/file.h5m"))
+
+    def test_import_dagmc_returns_none_when_unavailable(self):
+        """import_dagmc_geometry returns None when DAGMC not available (Pro install)."""
+        from smrforge.geometry.dagmc_import import import_dagmc_geometry
+
+        with patch("smrforge.geometry.dagmc_import._pro_available", return_value=True):
+            with patch("smrforge.geometry.dagmc_import.dagmc_available", return_value=False):
+                result = import_dagmc_geometry(Path("/nonexistent/file.h5m"))
+                assert result is None
 
     def test_import_dagmc_returns_none_for_missing_file(self):
         """import_dagmc_geometry returns None when file does not exist."""
         from smrforge.geometry.dagmc_import import import_dagmc_geometry
 
-        with patch("smrforge.geometry.dagmc_import.dagmc_available", return_value=True):
-            result = import_dagmc_geometry(Path("/nonexistent/dagmc.h5m"))
-            assert result is None
+        with patch("smrforge.geometry.dagmc_import._pro_available", return_value=True):
+            with patch("smrforge.geometry.dagmc_import.dagmc_available", return_value=True):
+                result = import_dagmc_geometry(Path("/nonexistent/dagmc.h5m"))
+                assert result is None
 
     def test_import_dagmc_with_mock_bbox(self, tmp_path):
         """import_dagmc_geometry returns PrismaticCore when bbox extracted."""
@@ -40,12 +50,13 @@ class TestDAGMCImport:
 
         h5m = tmp_path / "test.h5m"
         h5m.write_bytes(b"dummy")
-        with patch("smrforge.geometry.dagmc_import.dagmc_available", return_value=True):
-            with patch(
-                "smrforge.geometry.dagmc_import._get_bbox_from_h5m",
-                return_value=((0, 0, 0), (10, 10, 100)),
-            ):
-                result = import_dagmc_geometry(h5m, n_radial=4, n_axial=4)
+        with patch("smrforge.geometry.dagmc_import._pro_available", return_value=True):
+            with patch("smrforge.geometry.dagmc_import.dagmc_available", return_value=True):
+                with patch(
+                    "smrforge.geometry.dagmc_import._get_bbox_from_h5m",
+                    return_value=((0, 0, 0), (10, 10, 100)),
+                ):
+                    result = import_dagmc_geometry(h5m, n_radial=4, n_axial=4)
         assert result is not None
         assert hasattr(result, "core_height")
         assert hasattr(result, "core_diameter")
@@ -59,12 +70,13 @@ class TestDAGMCImport:
 
         h5m = tmp_path / "test.h5m"
         h5m.write_bytes(b"dummy")
-        with patch("smrforge.geometry.dagmc_import.dagmc_available", return_value=True):
-            with patch(
-                "smrforge.geometry.dagmc_import._get_bbox_from_h5m",
-                return_value=None,
-            ):
-                result = import_dagmc_geometry(h5m)
+        with patch("smrforge.geometry.dagmc_import._pro_available", return_value=True):
+            with patch("smrforge.geometry.dagmc_import.dagmc_available", return_value=True):
+                with patch(
+                    "smrforge.geometry.dagmc_import._get_bbox_from_h5m",
+                    return_value=None,
+                ):
+                    result = import_dagmc_geometry(h5m)
         assert result is not None
         assert result.core_height == 100.0
         assert result.core_diameter == 50.0

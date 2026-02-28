@@ -8,6 +8,7 @@
 # Tier: Community (SMRFORGE_TIER=community)
 # Pro tier: Built in https://github.com/SMRFORGE/smrforge-pro (separate repo).
 # Recent Additions (February 2026):
+# - Community/Pro tiers: Parametric builders (create_fuel_pin, create_moderator_block, create_simple_prismatic_core), 2D Plotly flux maps (plot_flux_map_2d). CAD/DAGMC import gated to Pro; Community stubs prompt upgrade.
 # - Pro enhancements: Serpent import, MCNP converter, CLI (convert, ml-export, report validation), workflow hooks (pre_export, post_sweep), CHANGELOG_PRO.md, API_STABILITY Pro section. Use Dockerfile.pro for Pro.
 # - OpenMC tally visualization: Pro tier (smrforge visualize tally --statepoint X). See Dockerfile.pro.
 # - Dependency alignment: setup.py, requirements.txt, requirements-lock.txt now consistent (httpx, tqdm in all).
@@ -281,6 +282,7 @@ EXPOSE 8050
 #   Phase 3: Implicit Monte Carlo (5-10x faster transients), Enhanced memory pooling (5-10% speedup), Memory-mapped files (large datasets)
 #   smrforge validate design (design constraints validation)
 #   smrforge visualize geometry/flux
+#   Community geometry: create_fuel_pin, create_moderator_block, create_simple_prismatic_core (parametric builders). plot_flux_map_2d for tally flux maps.
 #   smrforge config show/set/init
 #   smrforge shell (interactive IPython/REPL)
 #   smrforge workflow run (YAML workflows)

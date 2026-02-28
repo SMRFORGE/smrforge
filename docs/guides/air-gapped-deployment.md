@@ -26,22 +26,22 @@ Pre-download all wheels and the SMRForge package, then install offline.
 # From SMRForge repo root
 cd /path/to/smrforge
 
-# Create wheels directory
+# Automated: run bundle script (creates offline-wheels/)
+./scripts/bundle_offline_wheels.sh
+# Windows: .\scripts\bundle_offline_wheels.ps1
+
+# Or manually:
 mkdir -p offline-wheels
-
-# Download all dependencies
 pip download -r requirements-lock.txt -d ./offline-wheels
-pip download . -d ./offline-wheels  # SMRForge and any extras
+pip download . -d ./offline-wheels
 
-# Copy entire repo (including offline-wheels/) to removable media
+# Copy offline-wheels/ to removable media
 ```
 
 **On air-gapped machine:**
 
 ```bash
-# After copying smrforge directory to target
-cd /path/to/smrforge
-
+cd /path/to/transferred/smrforge
 pip install --no-index --find-links ./offline-wheels -r requirements-lock.txt
 pip install --no-index --find-links ./offline-wheels .
 ```
@@ -120,9 +120,24 @@ See the **air-gapped Pro** guide in smrforge-pro (`docs/deployment/air-gapped-pr
 
 ## Nuclear Data (ENDF)
 
-SMRForge does **not** require network access for nuclear data at runtime when using local files:
+SMRForge does **not** require network access for nuclear data at runtime when using local files.
 
-1. **Pre-stage ENDF-B-VIII.1** (or compatible) on the connected machine.
+**Option A: Bundle script (recommended)**
+
+```bash
+# On connected: download ENDF first, then bundle
+smrforge data download  # or python -m smrforge.core.endf_setup
+./scripts/bundle_nuclear_data.sh [ENDF_DIR] [output.tar.gz]
+# Transfer nuclear-data-bundle.tar.gz
+
+# On air-gapped:
+tar -xzf nuclear-data-bundle.tar.gz -C /install/path
+export SMRFORGE_ENDF_DIR=/install/path/ENDF-B-VIII.1
+```
+
+**Option B: Manual copy**
+
+1. Pre-stage ENDF-B-VIII.1 on the connected machine (via `smrforge data download` or manual).
 2. Copy the directory to the air-gapped system (e.g., `C:\ENDF\ENDF-B-VIII.1` or `/opt/endf/ENDF-B-VIII.1`).
 3. Set `SMRFORGE_ENDF_DIR` to that path (environment variable or `NuclearDataCache(local_endf_dir=...)`).
 
@@ -139,6 +154,59 @@ ENDF-B-VIII.1/
 
 See [ENDF Test Setup](../development/ENDF-TEST-SETUP.md) for layout details.
 
+### Option C: Pre-Processed Zarr Library (Faster First-Run)
+
+Pre-parse ENDF cross-sections into Zarr format to avoid runtime parsing.
+
+**On connected machine:**
+
+```bash
+# Generate preprocessed Zarr bundle from ENDF
+python scripts/generate_preprocessed_library.py \
+  --endf-dir $SMRFORGE_ENDF_DIR \
+  --output preprocessed-common.zarr \
+  --zip
+
+# Transfer preprocessed-common.zarr.zip to air-gapped system
+```
+
+**On air-gapped machine:**
+
+```bash
+# Extract the bundle
+unzip preprocessed-common.zarr.zip -d /install/path/
+
+# Use via NuclearDataCache or download_preprocessed_library
+python -c "
+from smrforge import download_preprocessed_library
+stats = download_preprocessed_library(offline_path='/install/path/preprocessed-common.zarr')
+print(stats)
+"
+```
+
+**Hosting on GitHub Releases:** Publish `preprocessed-common.zarr.zip` as a Release asset. Users with network access can download via:
+
+```python
+download_preprocessed_library(
+    releases_url="https://github.com/SMRFORGE/smrforge/releases/download/v0.1.0/preprocessed-common.zarr.zip",
+    output_dir="/path/to/install"
+)
+```
+
+---
+
+## Validation and Benchmarks (Air-Gapped)
+
+To run validation benchmarks offline:
+
+1. **Pre-stage** on connected machine: ENDF data + `benchmarks/validation_benchmarks.json` (default; includes decay heat, cross-section, and k_eff benchmarks).
+2. **Transfer** with wheel bundle and nuclear data.
+3. **On air-gapped**: `smrforge validate run --endf-dir $SMRFORGE_ENDF_DIR --output output/validation/report.txt`
+   - Uses `benchmarks/validation_benchmarks.json` by default when present.
+   - Or: `python scripts/run_validation.py --endf-dir $SMRFORGE_ENDF_DIR --benchmarks benchmarks/validation_benchmarks.json`
+
+See [Validation Accuracy Metrics](../validation/accuracy-metrics.md) and [Validation Execution Guide](../validation/validation-execution-guide.md).
+
 ---
 
 ## Verification
@@ -152,6 +220,24 @@ print('SMRForge version:', smr.__version__)
 k = smr.quick_keff()
 print('quick_keff():', round(k, 6))
 "
+```
+
+**Community tier features** (parametric builders, 2D flux maps — work offline):
+
+```python
+# Parametric geometry builders
+from smrforge.geometry import create_fuel_pin, create_moderator_block, create_simple_prismatic_core
+pin = create_fuel_pin(radius=0.41, height=200.0)
+block = create_moderator_block(flat_to_flat=36.0)
+core = create_simple_prismatic_core(n_rings=2)
+print("Parametric builders OK:", len(core.blocks), "blocks")
+
+# 2D Plotly flux map (Community tally viz)
+import numpy as np
+from smrforge.visualization import plot_flux_map_2d
+flux = np.random.rand(10, 15)
+fig = plot_flux_map_2d(flux, backend="plotly")
+print("plot_flux_map_2d OK:", fig is not None)
 ```
 
 With ENDF data:
@@ -177,7 +263,7 @@ print("TSL materials found:", len(materials))
 | 4 | On air-gapped machine: `pip install --no-index --find-links <dir> -r requirements-lock.txt` |
 | 5 | Install SMRForge: `pip install --no-index --find-links <dir> .` |
 | 6 | (Optional) Pre-stage ENDF data; set `SMRFORGE_ENDF_DIR` |
-| 7 | Run verification script above |
+| 7 | Run verification script above (includes parametric builders, plot_flux_map_2d) |
 
 ---
 

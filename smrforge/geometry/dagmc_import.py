@@ -1,9 +1,11 @@
 """
 DAGMC/CAD geometry import for complex geometries.
 
+Pro tier: Full DAGMC h5m import with hybrid CSG/mesh support.
+Community: Stub with upgrade prompt. Use parametric builders instead.
+
 Optional integration with PyNE/DAGMC for CAD-based geometry.
 Uses dagmc-h5m-file-inspector or pymoab when available to extract bounding box.
-Falls back to stub when DAGMC not available.
 """
 
 from pathlib import Path
@@ -14,6 +16,21 @@ import numpy as np
 from ..utils.logging import get_logger
 
 logger = get_logger("smrforge.geometry.dagmc")
+
+_DAGMC_UPGRADE_MSG = (
+    "DAGMC geometry import requires SMRForge Pro. "
+    "Upgrade to Pro for STEP/STL→DAGMC workflows and unstructured mesh support. "
+    "See docs/community_vs_pro.md or https://smrforge.io"
+)
+
+
+def _pro_available() -> bool:
+    """Check if SMRForge Pro is installed (avoids circular import)."""
+    try:
+        import smrforge_pro  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
 def _get_bbox_from_h5m(filepath: Path) -> Optional[Tuple[Tuple[float, float, float], Tuple[float, float, float]]]:
@@ -78,6 +95,10 @@ def import_dagmc_geometry(
     """
     Import geometry from DAGMC/CAD file (e.g. .h5m from PyNE/DAGMC).
 
+    Pro tier only. Community users receive an upgrade prompt.
+    Use parametric builders (create_fuel_pin, create_moderator_block) for
+    geometry creation in Community tier.
+
     Extracts bounding box when dagmc-h5m-file-inspector, pymoab, or openmc
     with DAGMC is available. Converts to PrismaticCore cylindrical approximation.
 
@@ -90,6 +111,8 @@ def import_dagmc_geometry(
     Returns:
         PrismaticCore if successful, None if DAGMC not available
     """
+    if not _pro_available():
+        raise ImportError(_DAGMC_UPGRADE_MSG)
     if not dagmc_available():
         logger.info(
             "DAGMC not available. Install: pip install dagmc-h5m-file-inspector "

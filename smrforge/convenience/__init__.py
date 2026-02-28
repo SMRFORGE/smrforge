@@ -1120,6 +1120,8 @@ def list_tier_capabilities() -> Dict[str, Dict[str, bool]]:
         "Pro": {
             "serpent": pro_available(),
             "tally_viz": pro_available(),
+            "cad_import": pro_available(),
+            "dagmc_import": pro_available(),
             "mcnp_full": pro_available(),
             "nl_design": pro_available(),
             "code_verify": pro_available(),

@@ -255,6 +255,122 @@ def plot_flux_spectrum_comparison(
     raise ValueError(f"Unknown backend: {backend}")
 
 
+def plot_flux_map_2d(
+    flux_2d: np.ndarray,
+    r_coords: Optional[np.ndarray] = None,
+    z_coords: Optional[np.ndarray] = None,
+    x_coords: Optional[np.ndarray] = None,
+    y_coords: Optional[np.ndarray] = None,
+    title: str = "Flux map",
+    backend: str = "plotly",
+    uncertainty: Optional[np.ndarray] = None,
+    **kwargs,
+):
+    """
+    Plot 2D flux map (R-Z or X-Y) — Community tier.
+
+    Basic 2D Plotly/Matplotlib export for tally results (flux maps). Supports
+    cylindrical (r-z) or Cartesian (x-y) geometries common in SMR diffusion/MC.
+
+    Args:
+        flux_2d: 2D flux array [nr, nz] or [nx, ny]
+        r_coords: Radial (or x) coordinates [nr] — optional
+        z_coords: Axial (or y) coordinates [nz] — optional
+        x_coords: X coordinates [nx] — for Cartesian
+        y_coords: Y coordinates [ny] — for Cartesian
+        title: Plot title
+        backend: 'plotly' or 'matplotlib'
+        uncertainty: Optional 2D uncertainty array (same shape as flux_2d)
+        **kwargs: Passed to heatmap (colorscale, cmap, etc.)
+
+    Returns:
+        Plotly Figure or (matplotlib Figure, Axes)
+
+    Example:
+        >>> flux_rz = np.sum(solver.get_flux(), axis=-1)  # [nr, nz]
+        >>> fig = plot_flux_map_2d(flux_rz, r_coords=r, z_coords=z)
+    """
+    arr = np.asarray(flux_2d)
+    if arr.ndim != 2:
+        raise ValueError("flux_2d must be 2D (e.g. [nr,nz] or [nx,ny])")
+
+    use_rz = r_coords is not None and z_coords is not None
+    use_xy = x_coords is not None and y_coords is not None
+    if not use_rz and not use_xy:
+        # Fallback: use indices
+        r_coords = np.arange(arr.shape[0], dtype=float)
+        z_coords = np.arange(arr.shape[1], dtype=float)
+        xlabel, ylabel = "r index", "z index"
+    elif use_rz:
+        r_coords = np.asarray(r_coords)
+        z_coords = np.asarray(z_coords)
+        xlabel, ylabel = "r (cm)", "z (cm)"
+    else:
+        x_coords = np.asarray(x_coords)
+        y_coords = np.asarray(y_coords)
+        r_coords, z_coords = x_coords, y_coords
+        xlabel, ylabel = "x (cm)", "y (cm)"
+
+    if backend == "plotly":
+        if not _PLOTLY_AVAILABLE:
+            raise ImportError("plotly is required. pip install plotly")
+        fig = go.Figure()
+        fig.add_trace(
+            go.Heatmap(
+                x=z_coords,
+                y=r_coords,
+                z=arr,
+                colorscale=kwargs.get("colorscale", "Viridis"),
+                colorbar=dict(title="Flux"),
+            )
+        )
+        fig.update_layout(
+            title=title,
+            xaxis_title=ylabel,
+            yaxis_title=xlabel,
+            height=kwargs.get("height", 500),
+        )
+        if uncertainty is not None:
+            unc = np.asarray(uncertainty)
+            if unc.shape == arr.shape:
+                fig.add_annotation(
+                    text="Uncertainty overlay: Pro tier",
+                    xref="paper",
+                    yref="paper",
+                    x=0.5,
+                    y=1.02,
+                    showarrow=False,
+                    font=dict(size=10),
+                )
+        return fig
+
+    if backend == "matplotlib":
+        if not _MATPLOTLIB_AVAILABLE:
+            raise ImportError("matplotlib is required")
+        fig, ax = plt.subplots(figsize=kwargs.get("figsize", (8, 6)))
+        if len(z_coords) > 1 and len(r_coords) > 1:
+            extent = (z_coords[0], z_coords[-1], r_coords[0], r_coords[-1])
+            im = ax.imshow(
+                arr,
+                extent=extent,
+                origin="lower",
+                aspect="auto",
+                cmap=kwargs.get("cmap", "viridis"),
+            )
+        else:
+            im = ax.imshow(
+                arr, origin="lower", aspect="auto", cmap=kwargs.get("cmap", "viridis")
+            )
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        plt.colorbar(im, ax=ax, label="Flux")
+        plt.tight_layout()
+        return fig, ax
+
+    raise ValueError(f"Unknown backend: {backend}")
+
+
 def plot_neutronics_dashboard(
     flux: np.ndarray,
     energy_groups: np.ndarray,
@@ -700,6 +816,7 @@ def _plot_uncertainty_matplotlib(mean, uncertainty, positions, **kwargs):
 
 __all__ = [
     "plot_energy_spectrum",
+    "plot_flux_map_2d",
     "plot_flux_spectrum_comparison",
     "plot_neutronics_dashboard",
     "plot_spatial_distribution",

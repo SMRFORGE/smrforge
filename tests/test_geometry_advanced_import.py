@@ -560,65 +560,78 @@ lat 2 rect 20.0 20.0 800.0 5 5 1
         except ImportError:
             pytest.skip("PrismaticCore not available")
 
-    def test_from_cad_with_trimesh(self):
-        """Test from_cad when trimesh is available."""
+    def test_from_cad_raises_without_pro(self):
+        """Test from_cad raises ImportError when Pro not available (Community)."""
         if not ADVANCED_IMPORT_AVAILABLE:
             pytest.skip("Advanced import module not available")
 
-        with patch("smrforge.geometry.advanced_import._TRIMESH_AVAILABLE", True):
-            with patch("smrforge.geometry.advanced_import.trimesh") as mock_trimesh:
-                mock_mesh = MagicMock()
-                mock_mesh.bounds = np.array([[0, 0, 0], [100, 100, 800]])
-                mock_trimesh.load_mesh.return_value = mock_mesh
+        from smrforge.geometry.advanced_import import AdvancedGeometryImporter
 
-                filepath = Path("test.stl")
-                with patch("pathlib.Path.exists", return_value=True):
-                    result = AdvancedGeometryImporter.from_cad(filepath)
-                    # Should parse CAD file
-                    assert result is not None or True
+        with patch("smrforge.geometry.advanced_import._pro_available", return_value=False):
+            with pytest.raises(ImportError, match="SMRForge Pro"):
+                AdvancedGeometryImporter.from_cad(Path("test.step"))
+
+    def test_from_cad_with_trimesh(self):
+        """Test from_cad when trimesh is available (Pro tier)."""
+        if not ADVANCED_IMPORT_AVAILABLE:
+            pytest.skip("Advanced import module not available")
+
+        with patch("smrforge.geometry.advanced_import._pro_available", return_value=True):
+            with patch("smrforge.geometry.advanced_import._TRIMESH_AVAILABLE", True):
+                with patch("smrforge.geometry.advanced_import.trimesh") as mock_trimesh:
+                    mock_mesh = MagicMock()
+                    mock_mesh.bounds = np.array([[0, 0, 0], [100, 100, 800]])
+                    mock_trimesh.load_mesh.return_value = mock_mesh
+
+                    filepath = Path("test.stl")
+                    with patch("pathlib.Path.exists", return_value=True):
+                        result = AdvancedGeometryImporter.from_cad(filepath)
+                        assert result is not None
 
     def test_from_cad_without_trimesh(self):
         """Test from_cad when trimesh is not available."""
         if not ADVANCED_IMPORT_AVAILABLE:
             pytest.skip("Advanced import module not available")
 
-        with patch("smrforge.geometry.advanced_import._TRIMESH_AVAILABLE", False):
-            filepath = Path("test.stl")
-            with pytest.raises(ImportError, match="trimesh is required"):
-                AdvancedGeometryImporter.from_cad(filepath)
+        with patch("smrforge.geometry.advanced_import._pro_available", return_value=True):
+            with patch("smrforge.geometry.advanced_import._TRIMESH_AVAILABLE", False):
+                filepath = Path("test.stl")
+                with pytest.raises(ImportError, match="trimesh is required"):
+                    AdvancedGeometryImporter.from_cad(filepath)
 
     def test_from_cad_auto_detect_format(self):
         """Test from_cad auto-detects format from extension."""
         if not ADVANCED_IMPORT_AVAILABLE:
             pytest.skip("Advanced import module not available")
 
-        with patch("smrforge.geometry.advanced_import._TRIMESH_AVAILABLE", True):
-            with patch("smrforge.geometry.advanced_import.trimesh") as mock_trimesh:
-                mock_mesh = MagicMock()
-                mock_mesh.bounds = np.array([[0, 0, 0], [100, 100, 800]])
-                mock_trimesh.load_mesh.return_value = mock_mesh
+        with patch("smrforge.geometry.advanced_import._pro_available", return_value=True):
+            with patch("smrforge.geometry.advanced_import._TRIMESH_AVAILABLE", True):
+                with patch("smrforge.geometry.advanced_import.trimesh") as mock_trimesh:
+                    mock_mesh = MagicMock()
+                    mock_mesh.bounds = np.array([[0, 0, 0], [100, 100, 800]])
+                    mock_trimesh.load_mesh.return_value = mock_mesh
 
-                # Test different extensions
-                for ext in [".step", ".stp", ".iges", ".igs", ".stl"]:
-                    filepath = Path(f"test{ext}")
-                    with patch("pathlib.Path.exists", return_value=True):
-                        result = AdvancedGeometryImporter.from_cad(filepath)
-                        # Should auto-detect format
-                        assert result is not None or True
+                    # Test different extensions
+                    for ext in [".step", ".stp", ".iges", ".igs", ".stl"]:
+                        filepath = Path(f"test{ext}")
+                        with patch("pathlib.Path.exists", return_value=True):
+                            result = AdvancedGeometryImporter.from_cad(filepath)
+                            assert result is not None
 
     def test_from_cad_parse_error(self):
         """Test from_cad with parse error."""
         if not ADVANCED_IMPORT_AVAILABLE:
             pytest.skip("Advanced import module not available")
 
-        with patch("smrforge.geometry.advanced_import._TRIMESH_AVAILABLE", True):
-            with patch("smrforge.geometry.advanced_import.trimesh") as mock_trimesh:
-                mock_trimesh.load_mesh.side_effect = Exception("Parse error")
+        with patch("smrforge.geometry.advanced_import._pro_available", return_value=True):
+            with patch("smrforge.geometry.advanced_import._TRIMESH_AVAILABLE", True):
+                with patch("smrforge.geometry.advanced_import.trimesh") as mock_trimesh:
+                    mock_trimesh.load_mesh.side_effect = Exception("Parse error")
 
-                filepath = Path("test.stl")
-                with patch("pathlib.Path.exists", return_value=True):
-                    with pytest.raises(ValueError, match="Error parsing CAD file"):
-                        AdvancedGeometryImporter.from_cad(filepath)
+                    filepath = Path("test.stl")
+                    with patch("pathlib.Path.exists", return_value=True):
+                        with pytest.raises(ValueError, match="Error parsing CAD file"):
+                            AdvancedGeometryImporter.from_cad(filepath)
 
     def test_from_mcnp(self):
         """Test from_mcnp method."""

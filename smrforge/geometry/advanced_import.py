@@ -45,6 +45,21 @@ from smrforge.geometry.core_geometry import (
     PrismaticCore,
 )
 
+_CAD_UPGRADE_MSG = (
+    "CAD import (STEP, IGES, STL) requires SMRForge Pro. "
+    "Upgrade to Pro for direct CAD geometry import. "
+    "See docs/community_vs_pro.md or https://smrforge.io"
+)
+
+
+def _pro_available() -> bool:
+    """Check if SMRForge Pro is installed (avoids circular import)."""
+    try:
+        import smrforge_pro  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
 
 @dataclass
 class CSGSurface:
@@ -570,6 +585,10 @@ class AdvancedGeometryImporter:
         """
         Import geometry from CAD formats (STEP, IGES, STL).
 
+        Pro tier only. Community users receive an upgrade prompt.
+        Use parametric builders (create_fuel_pin, create_moderator_block) for
+        geometry creation in Community tier.
+
         Args:
             filepath: Path to CAD file
             format: Optional format specification ('step', 'iges', 'stl')
@@ -586,10 +605,12 @@ class AdvancedGeometryImporter:
             >>> from pathlib import Path
             >>> from smrforge.geometry.advanced_import import AdvancedGeometryImporter
             >>>
-            >>> # Import from STEP file
+            >>> # Import from STEP file (Pro tier)
             >>> core = AdvancedGeometryImporter.from_cad(Path("geometry.step"))
             >>> print(f"Imported geometry with {len(core.blocks)} blocks")
         """
+        if not _pro_available():
+            raise ImportError(_CAD_UPGRADE_MSG)
         if not _TRIMESH_AVAILABLE:
             raise ImportError(
                 "trimesh is required for CAD import. Install with: pip install trimesh[all]"

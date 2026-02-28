@@ -8,6 +8,12 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 |------------|-----------|-----|
 | Multi-group diffusion | ✅ | ✅ |
 | Monte Carlo (built-in) | ✅ | ✅ |
+| **Geometry** | | |
+| Parametric builders (fuel pins, moderators) | ✅ | ✅ |
+| 2D Plotly flux maps, Matplotlib static plots | ✅ | ✅ |
+| CAD import (STEP, IGES, STL) | ❌ | ✅ Direct |
+| DAGMC h5m import | ❌ | ✅ Direct |
+| Interactive 3D viz, geometry debugging | ❌ | ✅ |
 | Serpent export | ❌ | ✅ Full |
 | Serpent import | ❌ | ✅ Basic (materials, surfaces, cells) |
 | Serpent run+parse (round-trip) | ✅ | ✅ |
@@ -30,12 +36,17 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 ## When to Use Community
 
 - **Research and education:** Concept exploration, teaching, quick scoping
+- **Parametric SMR design:** Use `create_fuel_pin`, `create_moderator_block`, `create_simple_prismatic_core` for geometry without CAD
+- **Basic tally visualization:** 2D Plotly flux maps (`plot_flux_map_2d`), Matplotlib static plots
 - **No external MC required:** Diffusion and built-in MC are sufficient
 - **Basic reporting:** Markdown design summaries via `smrforge report design`
 - **Open source workflow:** Contributions, transparency, no license cost
+- **CAD workflows:** Document external CAD→DAGMC workflows; upgrade to Pro for direct STEP/STL import
 
 ## When to Use Pro
 
+- **CAD and DAGMC:** Direct STEP/STL/IGES import, DAGMC h5m, tessellation controls, hybrid CSG/mesh
+- **Interactive 3D visualization:** Geometry debugging, ray-tracing previews, multiphysics overlays
 - **Licensing preparation:** Need Serpent, OpenMC, or MCNP for regulatory submissions
 - **Validation:** Full benchmark suite with automated comparison and reports
 - **Regulatory traceability:** 10 CFR 50, IAEA SSR-2/1, ANS-5.1 presets

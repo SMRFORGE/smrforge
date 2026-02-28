@@ -175,6 +175,23 @@ except ImportError as e:
     warnings.warn(f"Could not import LWR SMR geometry: {e}", ImportWarning)
     _LWR_SMR_AVAILABLE = False
 
+# Parametric builders (Community tier) - always available
+try:
+    from smrforge.geometry.parametric_builders import (
+        create_fuel_pin,
+        create_hexagonal_moderator_ring,
+        create_moderator_block,
+        create_rectangular_fuel_lattice,
+        create_simple_prismatic_core,
+    )
+
+    _PARAMETRIC_BUILDERS_AVAILABLE = True
+except ImportError as e:
+    import warnings
+
+    warnings.warn(f"Could not import parametric builders: {e}", ImportWarning)
+    _PARAMETRIC_BUILDERS_AVAILABLE = False
+
 # Import Fast Reactor SMR geometry if available
 try:
     from smrforge.geometry.fast_reactor_smr import (
@@ -326,6 +343,17 @@ if _ASSEMBLY_AVAILABLE:
 
 if _IMPORTERS_AVAILABLE:
     __all__.append("GeometryImporter")
+
+if _PARAMETRIC_BUILDERS_AVAILABLE:
+    __all__.extend(
+        [
+            "create_fuel_pin",
+            "create_moderator_block",
+            "create_rectangular_fuel_lattice",
+            "create_hexagonal_moderator_ring",
+            "create_simple_prismatic_core",
+        ]
+    )
 
 if _ADVANCED_IMPORTERS_AVAILABLE:
     __all__.extend(

@@ -143,6 +143,7 @@ except ImportError:
 try:
     from smrforge.visualization.tally_data import (
         plot_energy_spectrum,
+        plot_flux_map_2d,
         plot_flux_spectrum_comparison,
         plot_neutronics_dashboard,
         plot_spatial_distribution,
@@ -339,6 +340,7 @@ if _TALLY_DATA_AVAILABLE:
     __all__.extend(
         [
             "plot_energy_spectrum",
+            "plot_flux_map_2d",
             "plot_flux_spectrum_comparison",
             "plot_neutronics_dashboard",
             "plot_spatial_distribution",
