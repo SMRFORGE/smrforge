@@ -316,6 +316,7 @@ EXPOSE 8050 8888
 #   - General I/O Utilities (file readers/writers, format converters for Serpent/OpenMC)
 #   - Advanced interfacial transfer models for two-phase flow
 #   - Comprehensive test suite (5001 tests, 44 skipped; pytest --ignore tests/test_smrforge_pro)
+#     * PINN tests: test_pinn_synthetic_data (always runs), test_pinn_mvp/test_pinn_cli (skip without torch/Pro)
 #     * Phase 1/2 module tests: parameter_sweep, templates, constraints, converters, checkpointing
 #     * Utility module tests: memory_mapped (100%), parallel_batch (67.2%), error_messages (98.2%), optimization_utils (97.8%), memory_pool (100%), material_mapping (100%), units (improved), logo (improved), logging (improved)
 #     * __init__.py import error path tests: burnup, validation, convenience, presets

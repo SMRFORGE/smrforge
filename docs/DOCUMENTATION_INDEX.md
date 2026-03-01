@@ -80,10 +80,9 @@ This document provides a comprehensive index of all SMRForge documentation files
 
 ## 🗺️ Roadmaps
 
-**Roadmaps moved to SMRForge-Private (local docs, not in repo).** If you have access, see `SMRForge-Private/roadmaps/` for:
-- CONSOLIDATED-ROADMAP.md (primary)
-- development-roadmap.md, implementation-priority-analysis.md
-- optimization-suggestions.md, cli-enhancement-plan.md
+- **[PINN Implementation Roadmap](roadmaps/PINN_IMPLEMENTATION_ROADMAP.md)** - MVP (Option 1) → Phase 2a–2c → full PINN surrogates for Pro tier (SimpleDiffusionPINN, AutoDatasetGenerator, SurrogateOptimizer, validation).
+
+**Other roadmaps (SMRForge-Private, local):** See `SMRForge-Private/roadmaps/` for CONSOLIDATED-ROADMAP.md (primary), development-roadmap.md, implementation-priority-analysis.md, optimization-suggestions.md, cli-enhancement-plan.md
 
 **Archived (in repo):** [next-steps](archive/roadmaps-superseded/next-steps.md), [next-work-options](archive/roadmaps-superseded/next-work-options.md), [NEXT-FEATURES](archive/roadmaps-superseded/NEXT-FEATURES.md) → `archive/roadmaps-superseded/`
 
@@ -126,6 +125,13 @@ This document provides a comprehensive index of all SMRForge documentation files
 - ~~`advanced-capabilities-gaps-analysis.md`~~ → Consolidated into `capability-gaps-analysis.md`
 - ~~`missing-features-analysis.md`~~ → Consolidated into `capability-gaps-analysis.md`
 - ~~`missing-reactor-types-analysis.md`~~ → Consolidated into `capability-gaps-analysis.md`
+
+---
+
+## 📋 Analysis Documents (`analysis/`)
+
+- **[ENDF File Types and Parsers](analysis/endf_file_types_and_parsers.md)** - ENDF file types and parser analysis
+- **[VS Code GUI Feasibility](analysis/vscode-gui-feasibility.md)** - GUI feasibility assessment
 
 ---
 

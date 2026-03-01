@@ -2,7 +2,7 @@
 #
 # Pro tier lives in https://github.com/SMRFORGE/smrforge-pro (private).
 # Pro adds: Serpent/MCNP full export+import, CAD/DAGMC import, advanced variance reduction (CADIS),
-# OpenMC tally viz, AI/surrogate, regulatory package. Air-gap Pro = full Pro (feature parity).
+# OpenMC tally viz, AI/surrogate, regulatory package, PINN surrogates (pinn train/predict). Air-gap Pro = full Pro (feature parity).
 # This Community repo has no smrforge_pro/ — placeholder only.
 #
 # To build Pro:

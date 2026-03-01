@@ -15,6 +15,7 @@
 # - Dependency alignment: setup.py, requirements.txt, requirements-lock.txt now consistent (httpx, tqdm in all).
 # - For reproducible production builds: docker build --build-arg USE_LOCKED=1 -t smrforge:prod .
 # - Full test suite: 5001 passed, 44 skipped (pytest --ignore tests/test_smrforge_pro for Community-only).
+# - PINN MVP: examples/pinn_mvp_synthetic_data.py for synthetic training data; tests/test_pinn_*.py (skips without torch/Pro).
 # - Coding guidelines: optional deps fallbacks, Rich, convenience APIs, kwargs hygiene, path handling (docs/development/code-style.md).
 # - Discovery and help: system_info(), help_topics(), check_setup(), get_cheat_sheet(), list_cli_commands(), get_quick_start_commands(), suggest_next_steps(), get_data_paths(), find_endf_directory(), list_validation_benchmarks(), list_preset_types(), get_tier_info(), list_workflows(). See examples/discovery_help_example.py.
 # - New convenience: quick_design_study(), quick_atlas(), quick_doe(), quick_pareto(), quick_sensitivity(), quick_openmc_run(), quick_preprocessed_data(), quick_validation_run(). Discovery: list_convenience_functions(), list_cli_commands(), get_quick_start_commands(), list_functions_by_category(), list_validation_benchmarks(), list_preset_types(), get_tier_info(), list_workflows(). Paths: find_endf_directory(), get_data_paths(), list_available_benchmarks(). Help: check_setup(), get_support_info(), suggest_next_steps(), get_cheat_sheet(). See smr.help('convenience').
