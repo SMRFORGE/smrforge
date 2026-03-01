@@ -8,6 +8,7 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 |------------|-----------|-----|
 | Multi-group diffusion | ✅ | ✅ |
 | Monte Carlo (built-in) | ✅ | ✅ |
+| **Variance reduction** | Basic (ImportanceMap, WeightWindow) | ✅ Advanced (CADIS from diffusion adjoint, SMR presets) |
 | **Geometry** | | |
 | Parametric builders (fuel pins, moderators) | ✅ | ✅ |
 | 2D Plotly flux maps, Matplotlib static plots | ✅ | ✅ |
@@ -45,6 +46,7 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 
 ## When to Use Pro
 
+- **Advanced variance reduction:** CADIS-style weight windows from diffusion adjoint (single Python stack, no external codes); SMR presets; export to OpenMC/MCNP
 - **CAD and DAGMC:** Direct STEP/STL/IGES import, DAGMC h5m, tessellation controls, hybrid CSG/mesh
 - **Interactive 3D visualization:** Geometry debugging, ray-tracing previews, multiphysics overlays
 - **Licensing preparation:** Need Serpent, OpenMC, or MCNP for regulatory submissions

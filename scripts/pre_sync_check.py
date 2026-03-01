@@ -37,6 +37,9 @@ WHITELIST_SMRFORGE_PRO = {
     "smrforge/workflows/parameter_sweep.py",
     "smrforge/ai/audit.py",
     "smrforge/cli/",
+    "smrforge/neutronics/variance_reduction.py",  # Pro: CADIS weight windows
+    "smrforge/geometry/dagmc_import.py",  # Pro: DAGMC h5m import delegation
+    "smrforge/geometry/advanced_import.py",  # Pro: CAD import delegation
 }
 
 

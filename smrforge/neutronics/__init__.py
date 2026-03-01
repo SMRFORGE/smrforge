@@ -115,3 +115,27 @@ if _IMC_AVAILABLE:
     __all__.extend(
         ["ImplicitMonteCarloSolver", "IMCTimeStep", "create_implicit_mc_solver"]
     )
+
+# Variance reduction (Community: basic; Pro: CADIS from diffusion adjoint)
+try:
+    from smrforge.neutronics.variance_reduction import (
+        export_weight_windows_to_openmc,
+        generate_cadis_weight_windows_from_diffusion,
+        get_smr_preset_importance,
+    )
+
+    _VARIANCE_REDUCTION_AVAILABLE = True
+except ImportError as e:  # pragma: no cover
+    import warnings
+
+    warnings.warn(f"Could not import variance reduction: {e}", ImportWarning)
+    _VARIANCE_REDUCTION_AVAILABLE = False
+
+if _VARIANCE_REDUCTION_AVAILABLE:
+    __all__.extend(
+        [
+            "generate_cadis_weight_windows_from_diffusion",
+            "export_weight_windows_to_openmc",
+            "get_smr_preset_importance",
+        ]
+    )

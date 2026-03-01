@@ -30,9 +30,9 @@ Transfer this directory to the air-gapped machine, then:
 For nuclear data, also run scripts/bundle_nuclear_data.sh and transfer that archive.
 See docs/guides/air-gapped-deployment.md for full guide.
 
-Community tier includes: parametric builders (create_fuel_pin, create_moderator_block,
-create_simple_prismatic_core), 2D Plotly flux maps (plot_flux_map_2d), diffusion,
-built-in MC, OpenMC export. CAD/DAGMC import require Pro.
+Community tier includes: parametric builders, 2D Plotly flux maps, diffusion, built-in MC,
+basic variance reduction (ImportanceMap, WeightWindow), OpenMC export.
+Pro adds: CAD/DAGMC import, advanced variance reduction (CADIS from diffusion adjoint).
 "@ | Out-File -FilePath (Join-Path $OutputDir "INSTALL.md") -Encoding utf8
 
 Write-Host "==> Done. Transfer $OutputDir to air-gapped machine."

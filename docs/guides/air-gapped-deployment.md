@@ -222,7 +222,7 @@ print('quick_keff():', round(k, 6))
 "
 ```
 
-**Community tier features** (parametric builders, 2D flux maps — work offline):
+**Community tier features** (parametric builders, 2D flux maps, basic variance reduction — work offline):
 
 ```python
 # Parametric geometry builders
@@ -238,6 +238,9 @@ from smrforge.visualization import plot_flux_map_2d
 flux = np.random.rand(10, 15)
 fig = plot_flux_map_2d(flux, backend="plotly")
 print("plot_flux_map_2d OK:", fig is not None)
+
+# Advanced variance reduction (Pro tier only—Community has basic ImportanceMap/WeightWindow)
+# Pro: generate_cadis_weight_windows_from_diffusion, get_smr_preset_importance
 ```
 
 With ENDF data:
