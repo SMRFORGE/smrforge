@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: smrforge:latest
-    # Tier: Community — parametric builders, plot_flux_map_2d; for Pro (CAD/DAGMC, tally viz, NL design, regulatory) use smrforge-pro
+    # Tier: Community — parametric builders, plot_flux_map_2d, basic variance reduction; Pro (Serpent/MCNP full, CAD/DAGMC, advanced VR, tally viz, air-gap parity): smrforge-pro
     # Avoid pinning container_name to prevent name collisions across projects.
     volumes:
       # Mount your data directory

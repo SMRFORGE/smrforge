@@ -1,7 +1,8 @@
 # SMRForge Pro Dockerfile — See smrforge-pro repo
 #
 # Pro tier lives in https://github.com/SMRFORGE/smrforge-pro (private).
-# Pro adds: CAD/DAGMC import, OpenMC tally viz, Serpent/MCNP full, AI/surrogate.
+# Pro adds: Serpent/MCNP full export+import, CAD/DAGMC import, advanced variance reduction (CADIS),
+# OpenMC tally viz, AI/surrogate, regulatory package. Air-gap Pro = full Pro (feature parity).
 # This Community repo has no smrforge_pro/ — placeholder only.
 #
 # To build Pro:

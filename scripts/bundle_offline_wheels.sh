@@ -34,7 +34,8 @@ See docs/guides/air-gapped-deployment.md for full guide.
 
 Community tier includes: parametric builders, 2D Plotly flux maps, diffusion, built-in MC,
 basic variance reduction (ImportanceMap, WeightWindow), OpenMC export.
-Pro adds: CAD/DAGMC import, advanced variance reduction (CADIS from diffusion adjoint).
+Pro (separate air-gap bundle in smrforge-pro): Serpent/MCNP full export+import,
+CAD/DAGMC import, advanced variance reduction (CADIS), tally viz, AI/surrogate, regulatory.
 EOF
 
 echo "==> Done. Transfer $OUTPUT_DIR to air-gapped machine, then:"

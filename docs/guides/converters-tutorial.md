@@ -45,9 +45,9 @@ See `examples/converters_workflow_example.py` for a full example.
 
 ## Community vs Pro
 
-| Feature        | Community | Pro   |
-|----------------|-----------|-------|
+| Feature        | Community | Pro (incl. air-gap) |
+|----------------|-----------|---------------------|
 | Serpent export | Placeholder | Full |
 | Serpent import | Not available | Full |
-| MCNP export    | Full (delegates to Pro if installed) | Full |
-| OpenMC export | Full      | Enhanced |
+| MCNP export    | Placeholder | Full |
+| OpenMC export | Full      | Full (enhanced viz) |

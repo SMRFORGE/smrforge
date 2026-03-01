@@ -8,19 +8,19 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 |------------|-----------|-----|
 | Multi-group diffusion | ✅ | ✅ |
 | Monte Carlo (built-in) | ✅ | ✅ |
-| **Variance reduction** | Basic (ImportanceMap, WeightWindow) | ✅ Advanced (CADIS from diffusion adjoint, SMR presets) |
+| **Variance reduction** | Basic (ImportanceMap, WeightWindow) | ✅ Advanced (CADIS; Pro + air-gap) |
 | **Geometry** | | |
 | Parametric builders (fuel pins, moderators) | ✅ | ✅ |
 | 2D Plotly flux maps, Matplotlib static plots | ✅ | ✅ |
-| CAD import (STEP, IGES, STL) | ❌ | ✅ Direct |
-| DAGMC h5m import | ❌ | ✅ Direct |
+| CAD import (STEP, IGES, STL) | ❌ | ✅ Direct (Pro + air-gap) |
+| DAGMC h5m import | ❌ | ✅ Direct (Pro + air-gap) |
 | Interactive 3D viz, geometry debugging | ❌ | ✅ |
-| Serpent export | ❌ | ✅ Full |
-| Serpent import | ❌ | ✅ Basic (materials, surfaces, cells) |
+| Serpent export | ❌ | ✅ Full (Pro + air-gap) |
+| Serpent import | ❌ | ✅ Full (reactor, materials, surfaces, cells, lattices; Pro + air-gap) |
 | Serpent run+parse (round-trip) | ✅ | ✅ |
 | OpenMC export/import | ✅ Full | ✅ Full |
 | OpenMC tally visualization | ❌ | ✅ |
-| MCNP export | Placeholder | ✅ Full |
+| MCNP export | Placeholder | ✅ Full (Pro + air-gap) |
 | Benchmark suite | ✅ 3 cases | ✅ Same + extended (planned) |
 | Report generator | ✅ Basic (Markdown) | ✅ Full (PDF, traceability) |
 | Regulatory traceability | Basic | Full (10 CFR, IAEA, ANS) |
@@ -66,7 +66,7 @@ SMRForge is available in two tiers: **Community** (open-source, MIT) and **Pro**
 
 Throughout the Community docs, you may see callouts like:
 
-> **Pro:** For Serpent/MCNP export, tally visualization, AI/surrogate features, natural-language design, code-to-code verification, regulatory package, benchmark reproduction, multi-objective optimization, and physics-informed surrogates, use SMRForge Pro. OpenMC export/import is available in Community.
+> **Pro:** For Serpent/MCNP export and import, tally visualization, AI/surrogate features, natural-language design, code-to-code verification, regulatory package, benchmark reproduction, multi-objective optimization, and physics-informed surrogates, use SMRForge Pro. All Pro features are available in air-gapped deployments. OpenMC export/import is available in Community.
 
 These indicate features available in the Pro tier. If you need them, consider upgrading.
 
@@ -80,6 +80,8 @@ These indicate features available in the Pro tier. If you need them, consider up
 Community is open-source; Pro is developed in a separate private repo and distributed under license.
 
 **Pro distribution:** Pro and the air-gapped Pro version live in [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro). Paid-tier bundles are delivered via **GitHub Packages**—wheel bundles on Releases, Docker images on `ghcr.io/smrforge/smrforge-pro`. Access requires Pro license and authenticated GitHub credentials.
+
+**Air-gapped Pro = Pro (full feature parity):** Air-gapped Pro has the same features as Pro-tier when running offline. No capabilities are disabled. Use `scripts/airgap/bundle_wheels.sh` or `airgap-bundle-*.zip` from Pro Releases. Pre-stage ENDF data per the [Air-Gapped Deployment Guide](guides/air-gapped-deployment.md).
 
 ## Convenience & Help Functions by Tier
 

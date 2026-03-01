@@ -43,6 +43,20 @@ pip download . -d "$OUTPUT_DIR"
 echo "==> Pro repo: including smrforge (Community) from PyPI"
 pip download smrforge -d "$OUTPUT_DIR" || true
 
+cat > "$OUTPUT_DIR/INSTALL.md" << 'INSTALLMD'
+# Air-Gap Installation (Pro)
+
+Same features as Pro-tier; no capabilities disabled offline.
+
+Transfer this directory to the air-gapped machine, then:
+
+  pip install --no-index --find-links ./offline-wheels -r requirements-lock.txt
+  pip install --no-index --find-links ./offline-wheels smrforge
+  pip install --no-index --find-links ./offline-wheels .
+
+Pre-stage ENDF data; set SMRFORGE_ENDF_DIR. See docs/deployment/air-gapped-pro.md.
+INSTALLMD
+
 echo "==> Done. Transfer $OUTPUT_DIR to air-gapped machine, then:"
 echo "    pip install --no-index --find-links $OUTPUT_DIR -r $REQ_FILE"
 echo "    pip install --no-index --find-links $OUTPUT_DIR smrforge"
@@ -125,9 +139,24 @@ cat > "$PRO_ROOT/docs/deployment/air-gapped-pro.md" << 'AIRGAP_PRO'
 
 ---
 
+## Feature Parity
+
+**Air-gapped Pro has the same features as Pro-tier** when running in an air-gapped environment. No capabilities are disabled. All Pro features work offline:
+
+- Serpent/MCNP full export and import
+- CAD/DAGMC import
+- Advanced variance reduction (CADIS from diffusion adjoint)
+- Tally visualization, AI/surrogate, regulatory package
+- Benchmark reproduction, code-to-code verification
+- Natural-language design, multi-objective optimization
+
+Licensing validation runs offline (RSA-signed keys; no phone-home). Pre-stage nuclear data (ENDF) and optional preprocessed libraries per the Nuclear Data section in the Community [Air-Gapped Deployment Guide](https://smrforge.readthedocs.io/en/latest/guides/air-gapped-deployment.html).
+
+---
+
 ## Overview
 
-Pro supports full air-gapped deployment. Licensing validation runs offline (RSA-signed keys, no phone-home).
+Pro supports full air-gapped deployment.
 
 **Distribution:** Wheel bundles on GitHub Releases, Docker images on `ghcr.io/smrforge/smrforge-pro`. Access requires Pro license and authenticated GitHub access.
 
@@ -202,10 +231,17 @@ jobs:
       - name: Create INSTALL.md
         run: |
           cat > offline-wheels/INSTALL.md << 'EOF'
-          # Air-Gap Installation
-          pip install --no-index --find-links ./offline-wheels -r requirements-lock.txt
-          pip install --no-index --find-links ./offline-wheels smrforge
-          pip install --no-index --find-links ./offline-wheels .
+          # Air-Gap Installation (Pro)
+
+          Same features as Pro-tier; no capabilities disabled offline.
+
+          Transfer this directory to the air-gapped machine, then:
+
+            pip install --no-index --find-links ./offline-wheels -r requirements-lock.txt
+            pip install --no-index --find-links ./offline-wheels smrforge
+            pip install --no-index --find-links ./offline-wheels .
+
+          Pre-stage ENDF data; set SMRFORGE_ENDF_DIR. See docs/deployment/air-gapped-pro.md.
           EOF
       - name: Create bundle zip
         run: |

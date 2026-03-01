@@ -107,7 +107,11 @@ docker run -v /path/to/ENDF-B-VIII.1:/data/endf -e SMRFORGE_ENDF_DIR=/data/endf 
 
 ## SMRForge Pro (Licensed)
 
-Pro and the air-gapped Pro version live in the Pro-tier repo [https://github.com/SMRFORGE/smrforge-pro](https://github.com/SMRFORGE/smrforge-pro). For air-gapped Pro deployment:
+Pro and the air-gapped Pro version live in the Pro-tier repo [https://github.com/SMRFORGE/smrforge-pro](https://github.com/SMRFORGE/smrforge-pro).
+
+**Feature parity:** Air-gapped Pro has the same features as Pro-tier when running in an air-gapped environment. No capabilities are disabled—Serpent/MCNP full export and import, CAD/DAGMC import, advanced variance reduction (CADIS), tally visualization, AI/surrogate, regulatory package, benchmark reproduction, code-to-code verification, and all other Pro features work offline. License validation is local (RSA-signed keys; no phone-home). Pre-stage nuclear data (ENDF) per options below.
+
+For air-gapped Pro deployment:
 
 1. **Use bundle scripts** (in smrforge-pro repo): `./scripts/airgap/bundle_wheels.sh`, `./scripts/airgap/bundle_docker.sh`
 2. **Or from Releases**: Download `airgap-bundle-*.zip` from [Pro Releases](https://github.com/SMRFORGE/smrforge-pro/releases)
@@ -115,6 +119,8 @@ Pro and the air-gapped Pro version live in the Pro-tier repo [https://github.com
 4. Install: `pip install --no-index --find-links ./offline-wheels -r requirements-lock.txt` then `pip install --no-index --find-links ./offline-wheels .`
 
 See the **air-gapped Pro** guide in smrforge-pro (`docs/deployment/air-gapped-pro.md`). To bootstrap air-gap files into a new Pro repo, run `./scripts/setup_pro_airgap.sh /path/to/smrforge-pro` from the Community repo.
+
+**Pro feature parity checklist:** With Pro air-gap install + pre-staged ENDF, all Pro features work offline: Serpent/MCNP full export/import, CAD/DAGMC import, advanced variance reduction (CADIS), tally viz, AI/surrogate, regulatory package, benchmark reproduction, code-to-code verification. License validation is local; no phone-home.
 
 ---
 
