@@ -30,5 +30,5 @@ Once build succeeds:
 
 The documentation will automatically update when you push to GitHub.
 
-For detailed setup instructions, see `README_READTHEDOCS.md`.
+For detailed setup instructions, see [Read the Docs Deployment Guide](guides/readthedocs-deployment.md).
 

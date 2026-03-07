@@ -28,6 +28,20 @@ Core Functionality
    api/smrforge.presets
    api/smrforge.convenience
 
+Physics and Analysis
+~~~~~~~~~~~~~~~~~~~~
+
+Burnup, decay heat, gamma transport, mechanics, and fuel cycle:
+
+.. toctree::
+   :maxdepth: 2
+
+   api/smrforge.burnup
+   api/smrforge.decay_heat
+   api/smrforge.gamma_transport
+   api/smrforge.mechanics
+   api/smrforge.fuel_cycle
+
 Workflows and Design Study
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -44,6 +58,18 @@ scenario-based design, and design-space atlas:
    api/smrforge.validation.requirements_parser
    api/smrforge.visualization.design_study_plots
 
+User Interface
+~~~~~~~~~~~~~~
+
+CLI, GUI, and reporting:
+
+.. toctree::
+   :maxdepth: 2
+
+   api/smrforge.cli
+   api/smrforge.gui
+   api/smrforge.reporting
+
 Utilities and Additional Modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -53,6 +79,8 @@ Utilities and Additional Modules
    api/smrforge.utils
    api/smrforge.safety
    api/smrforge.uncertainty
+   api/smrforge.benchmarks
+   api/smrforge.coupling
 
 Optional/Experimental Modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,4 +93,5 @@ Optional/Experimental Modules
    api/smrforge.optimization
    api/smrforge.control
    api/smrforge.economics
+   api/smrforge.ai
 
