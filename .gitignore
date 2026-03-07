@@ -119,6 +119,10 @@ docs/guides/pro/
 docs/pro_index.rst
 examples/pro/
 tests/test_smrforge_pro/
+# Pro air-gap (must not exist in Community; belongs in smrforge-pro)
+scripts/airgap/
+docs/deployment/
+.github/workflows/release-airgap.yml
 
 # IDE / local
 .cursor/
