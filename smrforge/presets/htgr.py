@@ -33,6 +33,16 @@ try:
 except Exception:
     _LWR_PRESETS_AVAILABLE = False
 
+try:
+    from .msr import LiquidFuelMSR
+
+    _MSR_PRESETS_AVAILABLE = True
+except Exception:
+    _MSR_PRESETS_AVAILABLE = False
+
+    class LiquidFuelMSR:  # type: ignore[no-redef]
+        pass
+
 
 class ValarAtomicsReactor:
     """
@@ -384,6 +394,10 @@ class DesignLibrary:
             self.designs["smart-100mwe"] = smart.spec
             self.designs["carem-32mwe"] = carem.spec
             self.designs["bwrx-300"] = bwrx.spec
+
+        if _MSR_PRESETS_AVAILABLE:
+            msr = LiquidFuelMSR()
+            self.designs["msr-liquid"] = msr.spec
 
     def get_design(self, name: str) -> ReactorSpecification:
         """Retrieve a validated design by name."""

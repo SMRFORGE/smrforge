@@ -43,6 +43,7 @@ This directory contains documentation and utilities for validation and benchmark
 
 ### Execution Guides
 - **`validation-execution-guide.md`** - Complete guide for running validation, adding benchmarks, comparing results, and documenting
+- **`accuracy-metrics.md`** - Benchmark categories, tolerances, and interpretation of accuracy metrics
 
 ### Templates
 - **`validation-results-template.md`** - Template for validation results reports

@@ -80,7 +80,7 @@ This document provides a comprehensive index of all SMRForge documentation files
 
 ## 🗺️ Roadmaps
 
-- **[PINN Implementation Roadmap](roadmaps/PINN_IMPLEMENTATION_ROADMAP.md)** - MVP (Option 1) → Phase 2a–2c → full PINN surrogates for Pro tier (SimpleDiffusionPINN, AutoDatasetGenerator, SurrogateOptimizer, validation).
+- **[PINN Implementation Roadmap](roadmaps/PINN_IMPLEMENTATION_ROADMAP.md)** - **Pro tier only.** MVP (Option 1) → Phase 2a–2c → full PINN surrogates (SimpleDiffusionPINN, AutoDatasetGenerator, SurrogateOptimizer, validation). PINN is not available in Community.
 
 **Other roadmaps (SMRForge-Private, local):** See `SMRForge-Private/roadmaps/` for CONSOLIDATED-ROADMAP.md (primary), development-roadmap.md, implementation-priority-analysis.md, optimization-suggestions.md, cli-enhancement-plan.md
 

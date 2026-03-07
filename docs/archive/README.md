@@ -4,6 +4,8 @@ Outdated, superseded, or session-specific documents are kept here for reference.
 
 **Current docs:** See [DOCUMENTATION_INDEX](../DOCUMENTATION_INDEX.md) and [docs README](../README.md).
 
+**Note:** Some archived documents may reference features (e.g., SerpentConverter, OpenMCConverter, Pro workflows) that have since moved to the Pro tier. Pro code and documentation live in [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro).
+
 ---
 
 ## Subdirectories

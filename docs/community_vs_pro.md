@@ -103,6 +103,143 @@ Community is open-source; Pro is developed in a separate private repo and distri
 
 ---
 
+## Code Examples by Tier
+
+### Community Examples
+
+**Quick k-eff (no data required):**
+```python
+import smrforge as smr
+
+# Create preset reactor and solve
+reactor = smr.create_reactor("valar-10")
+k_eff, flux = smr.quick_keff_calculation(core=reactor.build_core())
+print(f"k-eff: {k_eff:.6f}")
+```
+
+**OpenMC export and run (Community):**
+```python
+from pathlib import Path
+import smrforge as smr
+from smrforge.io import OpenMCConverter
+from smrforge.io.openmc_run import run_and_parse
+
+reactor = smr.create_reactor("valar-10")
+reactor.build_core()
+out = Path("output/openmc")
+OpenMCConverter.export_reactor(reactor, out, particles=1000, batches=20)
+results = run_and_parse(out, timeout=60)  # Requires OpenMC installed
+print(f"k_eff: {results['k_eff']:.6f} ± {results['k_eff_std']:.6f}")
+```
+
+**Serpent run+parse (Community — works with Pro-exported input):**
+```python
+from pathlib import Path
+from smrforge.io import run_serpent, parse_serpent_res
+
+work_dir = Path("serpent_work")
+proc = run_serpent(work_dir, "model.sss", timeout=300)  # Requires Serpent 2
+if proc.returncode == 0:
+    parsed = parse_serpent_res(work_dir / "model_res.m")
+    print(f"k_eff: {parsed['k_eff']:.6f}")
+```
+
+**Design point and safety report (Community):**
+```python
+import smrforge as smr
+from smrforge.validation.safety_report import safety_margin_report
+from smrforge.validation.constraint_builder import constraint_set_from_design_and_report
+
+reactor = smr.create_reactor("valar-10")
+point = smr.get_design_point(reactor)
+cs = constraint_set_from_design_and_report(reactor, margin_report=None)
+report = safety_margin_report(reactor, constraint_set=cs)
+print(report.to_text())
+```
+
+**Community benchmark suite:**
+```python
+from smrforge.benchmarks import CommunityBenchmarkRunner
+
+runner = CommunityBenchmarkRunner()
+results = runner.run_all()
+runner.generate_report(results, output_path=Path("output/community_benchmark_report.md"))
+```
+
+**CLI equivalents:**
+```bash
+smrforge workflow design-point --reactor valar-10 --output design_point.json
+smrforge workflow safety-report --reactor valar-10 --output safety_report.json
+smrforge report design --preset valar-10 -o design_summary.md
+smrforge decay calculate --inventory inventory.json --cooling-time 3600
+```
+
+### Pro Examples
+
+Pro examples live in [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro). Install Pro and run from `examples/pro/` there.
+
+**Natural-language design (Pro):**
+```python
+from smrforge_pro.ai.nl_design import design_from_nl, parse_nl_design
+
+intent = parse_nl_design("10 MW HTGR with k-eff 1.0-1.05, enrichment <20%")
+result = design_from_nl("10 MW HTGR", run_analysis=True)
+```
+
+**Serpent full export (Pro):**
+```python
+from pathlib import Path
+import smrforge as smr
+from smrforge_pro.converters.serpent import SerpentConverter
+
+reactor = smr.create_reactor("valar-10")
+SerpentConverter.export_reactor(reactor, Path("serpent_output"))
+```
+
+**Code-to-code verification (Pro):**
+```python
+from pathlib import Path
+from smrforge_pro.workflows.code_verification import run_code_verification
+
+report = run_code_verification("valar-10", output_dir=Path("verification_output"))
+```
+
+**Regulatory package (Pro):**
+```python
+from pathlib import Path
+from smrforge_pro.workflows.regulatory_package import generate_regulatory_package
+
+path = generate_regulatory_package(reactor, output_dir=Path("regulatory_package"))
+```
+
+**Benchmark reproduction (Pro):**
+```python
+from pathlib import Path
+from smrforge_pro.workflows.benchmark_reproduction import list_benchmarks, reproduce_benchmark
+
+for bid in list_benchmarks():
+    result = reproduce_benchmark(bid, output_dir=Path("benchmark_output"))
+```
+
+**Multi-objective optimization (Pro):**
+```python
+from smrforge_pro.workflows.multi_objective_optimization import multi_objective_optimize
+
+result = multi_objective_optimize(reactor_from_x, bounds, param_names, max_evaluations=50)
+```
+
+**Physics-informed surrogate (Pro):**
+```python
+from smrforge_pro.ai.physics_informed import physics_informed_surrogate_from_sweep
+
+predictor = physics_informed_surrogate_from_sweep(
+    results, ["enrichment"], output_metric="k_eff"
+)
+pred = predictor(np.array([0.19]))
+```
+
+---
+
 ## Learn More
 
 - **Community docs:** [smrforge.readthedocs.io](https://smrforge.readthedocs.io)

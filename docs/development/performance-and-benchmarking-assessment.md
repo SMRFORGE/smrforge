@@ -1,7 +1,7 @@
 # Performance and Benchmarking Assessment
 
 **Last Updated:** January 2026  
-**Based on:** Memory and Performance Assessment Plan (`.cursor/plans/memory_and_performance_assessment_*.plan.md`).
+**Based on:** Memory and Performance Assessment Plan.
 
 This report assesses SMRForge’s **performance and benchmarking** setup and **current results**, relative to the plan’s deliverables and existing optimization work.
 

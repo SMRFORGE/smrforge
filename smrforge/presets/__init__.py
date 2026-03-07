@@ -15,6 +15,11 @@ try:
         ValarAtomicsReactor,
     )
 
+    try:
+        from smrforge.presets.msr import LiquidFuelMSR
+    except ImportError:
+        LiquidFuelMSR = None  # type: ignore[misc, assignment]
+
     _PRESETS_AVAILABLE = True
 except ImportError as e:
     import warnings
@@ -37,3 +42,5 @@ if _PRESETS_AVAILABLE:
             "BWRX300",
         ]
     )
+    if LiquidFuelMSR is not None:
+        __all__.append("LiquidFuelMSR")

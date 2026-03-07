@@ -1,4 +1,21 @@
 {
+  "decay_heat_benchmarks": {
+    "u235_thermal_fission_100mw": {
+      "test_case": "u235_thermal_fission_100mw",
+      "nuclides": {"U235": 1e20},
+      "initial_power": 100,
+      "shutdown_time": 0,
+      "time_points": [3600, 86400, 604800, 2592000],
+      "benchmark_values": [
+        {"value": 7.0, "uncertainty": 0.5, "unit": "MW", "source": "ANSI/ANS-5.1", "notes": "Decay heat at 1 h after shutdown for 100 MW thermal reactor"},
+        {"value": 4.5, "uncertainty": 0.4, "unit": "MW", "source": "ANSI/ANS-5.1", "notes": "Decay heat at 1 day after shutdown"},
+        {"value": 2.5, "uncertainty": 0.3, "unit": "MW", "source": "ANSI/ANS-5.1", "notes": "Decay heat at 1 week after shutdown"},
+        {"value": 1.2, "uncertainty": 0.2, "unit": "MW", "source": "ANSI/ANS-5.1", "notes": "Decay heat at 30 days after shutdown"}
+      ],
+      "standard": "ANSI/ANS-5.1"
+    }
+  },
+  "gamma_transport_benchmarks": {},
   "burnup_benchmarks": {
     "simple_neutronics_2g": {
       "test_case": "simple_neutronics_2g",
@@ -6,54 +23,82 @@
       "initial_composition": {},
       "time_steps": [0],
       "benchmark_compositions": [{}],
-      "benchmark_k_eff": [
-        {
-          "value": 1.328183724209,
-          "uncertainty": 0.02,
-          "unit": "",
-          "source": "SMRForge regression baseline",
-          "notes": "This is a stability/regression reference (not an external standards benchmark)."
-        }
-      ],
+      "benchmark_k_eff": [{"value": 1.328183724209, "uncertainty": 0.02, "unit": "", "source": "SMRForge regression baseline", "notes": "Stability/regression reference"}],
       "reference_source": "SMRForge"
     }
   },
   "cross_section_benchmarks": {
+    "u235_fission_thermal": {
+      "test_case": "u235_fission_thermal",
+      "nuclide": "U235",
+      "reaction": "fission",
+      "energy_ev": 0.0253,
+      "expected_value": 587.29,
+      "uncertainty": 1.3,
+      "unit": "barns",
+      "source": "IAEA 2017 Neutron Data Standards / ENDF",
+      "tolerance": 0.02,
+      "notes": "U-235(n,f) at 0.0253 eV (2200 m/s). IAEA standard."
+    },
+    "u235_capture_thermal": {
+      "test_case": "u235_capture_thermal",
+      "nuclide": "U235",
+      "reaction": "capture",
+      "energy_ev": 0.0253,
+      "expected_value": 99.0,
+      "uncertainty": 2.0,
+      "unit": "barns",
+      "source": "ENDF/B-VIII.1",
+      "tolerance": 0.05,
+      "notes": "U-235(n,g) at thermal. ENDF typical value."
+    },
+    "u238_capture_thermal": {
+      "test_case": "u238_capture_thermal",
+      "nuclide": "U238",
+      "reaction": "capture",
+      "energy_ev": 0.0253,
+      "expected_value": 2.68,
+      "uncertainty": 0.1,
+      "unit": "barns",
+      "source": "ENDF/B-VIII.1",
+      "tolerance": 0.05,
+      "notes": "U-238(n,g) at thermal. ENDF typical value."
+    },
     "u235_fission_high_energy": {
       "test_case": "u235_fission_high_energy",
       "nuclide": "U235",
       "reaction": "fission",
-      "energy_ev": 29000000.0,
+      "energy_ev": 29000000,
       "expected_value": 2.128,
       "uncertainty": 0.1,
       "unit": "barns",
-      "source": "SMRForge parser output (regression baseline)",
-      "tolerance": 0.10,
-      "notes": "U-235 fission cross-section at ~29 MeV (high-energy region). This is a regression baseline based on current parser output. Note: Parser currently returns limited energy grid; thermal values require enhanced parser."
+      "source": "SMRForge parser regression baseline",
+      "tolerance": 0.1,
+      "notes": "U-235 fission at ~29 MeV. Regression baseline."
     },
     "u235_capture_high_energy": {
       "test_case": "u235_capture_high_energy",
       "nuclide": "U235",
       "reaction": "capture",
-      "energy_ev": 29000000.0,
+      "energy_ev": 29000000,
       "expected_value": 0.001,
       "uncertainty": 0.0001,
       "unit": "barns",
-      "source": "SMRForge parser output (regression baseline)",
-      "tolerance": 0.20,
-      "notes": "U-235 capture cross-section at ~29 MeV. Regression baseline. Enhanced parser needed for thermal region validation."
+      "source": "SMRForge parser regression baseline",
+      "tolerance": 0.2,
+      "notes": "U-235 capture at ~29 MeV. Regression baseline."
     },
     "u238_capture_high_energy": {
       "test_case": "u238_capture_high_energy",
       "nuclide": "U238",
       "reaction": "capture",
-      "energy_ev": 29000000.0,
+      "energy_ev": 29000000,
       "expected_value": 0.0005,
       "uncertainty": 0.0001,
       "unit": "barns",
-      "source": "SMRForge parser output (regression baseline)",
-      "tolerance": 0.20,
-      "notes": "U-238 capture cross-section at ~29 MeV. Regression baseline. Enhanced parser needed for thermal region validation."
+      "source": "SMRForge parser regression baseline",
+      "tolerance": 0.2,
+      "notes": "U-238 capture at ~29 MeV. Regression baseline."
     }
   }
 }

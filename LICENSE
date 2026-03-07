@@ -1,21 +1,94 @@
-MIT License
+# SMRForge Community Tier License
 
-Copyright (c) 2025 SMRForge Development Team
+**Version 1.0, Effective Date: March 1, 2026**
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+**Copyright (c) 2026 SMRForge LLC. All rights reserved.**
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## Definitions
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+**"Software"** means the SMRForge Community Tier codebase, documentation, and associated materials provided under this License. Third-party components (e.g., libraries, tools) included in or used with the Software may be subject to their own licenses; such components remain governed by those licenses. This License applies solely to the SMRForge Community Tier materials.
+
+## Preamble
+
+SMRForge Community Tier (the "Software") is provided as an open-source tool to facilitate innovation in small modular reactor (SMR) design and nuclear simulation. This license grants limited rights to use, modify, and distribute the Software, subject to strict compliance with U.S. export control laws and restrictions on geographic use. The Software involves technologies related to nuclear energy, which are regulated under U.S. federal laws, including but not limited to the Export Administration Regulations (EAR), International Traffic in Arms Regulations (ITAR), and 10 CFR Part 810 (Assistance to Foreign Atomic Energy Activities) administered by the U.S. Department of Energy (DOE).
+
+By downloading, installing, using, or otherwise accessing the Software, you agree to be bound by the terms of this License. If you do not agree, do not access or use the Software.
+
+This License is based on the Apache License 2.0 but includes additional restrictions to ensure compliance with U.S. export controls and to limit use to within the United States. For commercial or advanced features, please upgrade to the Pro or Enterprise tiers, which are available under separate proprietary licenses and are separate products from the Community Tier.
+
+## Grant of License
+
+Subject to the terms and conditions of this License, SMRForge LLC hereby grants you a non-exclusive, non-transferable, royalty-free license (terminable only as set forth in the Termination section below) to:
+
+1. **Use** the Software solely within the territory of the United States of America (including its territories and possessions) for any purpose, including research, educational, or commercial activities, provided such use complies with all applicable laws.
+
+2. **Modify** the Software for your internal use within the United States. You may not distribute, publish, or otherwise make available any modified version of the Software without prior written approval from SMRForge LLC.
+
+3. **Distribute** copies of the unmodified Software solely to other persons or entities located within the United States, provided that you include this License in its entirety with each copy and ensure recipients comply with its terms.
+
+This License does not grant any rights to use the Software in connection with the Pro or Enterprise tiers, which require separate licensing agreements.
+
+## Patent Grant
+
+To the extent consistent with the restrictions in this License, SMRForge LLC grants you a non-exclusive, worldwide, royalty-free patent license under its licensable patent claims to make, use, sell, offer to sell, import, and otherwise run, modify, and propagate the Software. This grant does not extend to uses that violate any restriction in this License (including geographic, export control, or nuclear-use restrictions). This patent grant terminates automatically if you bring any patent claim against SMRForge LLC or any contributor alleging that the Software infringes a patent.
+
+## Restrictions
+
+1. **Geographic Restriction**: The Software may only be used, installed, or accessed by individuals or entities physically located within the United States. Use outside the United States is strictly prohibited. You may not export, re-export, ship, transfer, or otherwise make the Software available to any person, entity, or destination outside the United States without obtaining all necessary authorizations from the relevant U.S. government agencies.
+
+2. **Export Controls Compliance**: You must comply with all U.S. export control laws and regulations, including but not limited to:
+   - The Export Administration Regulations (EAR) administered by the U.S. Department of Commerce, Bureau of Industry and Security (BIS).
+   - The International Traffic in Arms Regulations (ITAR) administered by the U.S. Department of State.
+   - **10 CFR Part 810** administered by the U.S. Department of Energy, which regulates unclassified assistance to foreign atomic energy activities, including transfers of nuclear technology or software that could aid in the production of special nuclear material outside the U.S.
+
+   Prohibited activities include, without limitation:
+   - Exporting or re-exporting the Software without DOE authorization under 10 CFR Part 810.
+   - Providing assistance to foreign entities for activities like uranium enrichment, reactor development, or fuel reprocessing without approval.
+   - Providing the Software to any embargoed or sanctioned country (e.g., Cuba, Iran, North Korea, Syria, or certain regions of Ukraine/Russia as designated by OFAC).
+   - Use by or for the benefit of any denied party or restricted entity listed by the U.S. government.
+   - Use in connection with the design, development, production, or use of nuclear weapons, missiles, chemical/biological weapons, or any other weapons of mass destruction.
+   - Any "deemed export" to foreign nationals (e.g., sharing with non-U.S. persons) without proper checks or authorization under 10 CFR Part 810. For example, sharing the Software or related technical information with foreign nationals in the United States may constitute a deemed export and may require authorization.
+
+   You are solely responsible for obtaining any required authorizations. For more information on 10 CFR Part 810, visit [energy.gov/nnsa/10-cfr-part-810](https://energy.gov/nnsa/10-cfr-part-810). SMRForge LLC does not provide compliance advice.
+
+3. **No Nuclear Safety or Regulatory Use**: The Software is provided for informational and developmental purposes only and is not certified for use in safety-critical applications, regulatory submissions, or operational nuclear facilities. You may not use the Software in any manner that could affect the safety or licensing of a nuclear reactor without obtaining separate certification (e.g., under NQA-1 standards) and written approval from SMRForge LLC.
+
+4. **No Sublicensing or Transfer**: You may not sublicense, assign, or transfer this License without prior written consent from SMRForge LLC.
+
+5. **Prohibited Modifications and Distributions**: You may not remove or alter any copyright notices, disclaimers, or this License from the Software. Any distribution must be of the complete, unmodified Software package. Distribution of modified versions is prohibited except with prior written approval from SMRForge LLC.
+
+6. **Integration with Restricted Tools**: The Software may interface with third-party nuclear simulation tools (e.g., Serpent, OpenMC, MCNP), which have their own export restrictions and licenses. You are responsible for independently complying with the licensing and export terms of those tools. SMRForge LLC does not grant rights under this License with respect to such third-party tools, and your use or distribution of the Software in combination with them remains subject to their respective terms.
+
+## Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. SMRFORGE LLC MAKES NO REPRESENTATIONS REGARDING THE ACCURACY, RELIABILITY, OR SUITABILITY OF THE SOFTWARE FOR NUCLEAR OR ANY OTHER APPLICATIONS. YOU ASSUME ALL RISKS ASSOCIATED WITH YOUR USE OF THE SOFTWARE.
+
+## Limitation of Liability
+
+IN NO EVENT SHALL SMRFORGE LLC BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## Indemnification
+
+You agree to indemnify, defend, and hold harmless SMRForge LLC, its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses (including reasonable attorneys' fees) arising out of or related to your violation of this License, including any breach of export control obligations such as those under 10 CFR Part 810.
+
+## Termination
+
+This License terminates automatically if you violate any of its terms, including export controls under 10 CFR Part 810. Upon termination, you must immediately cease all use and distribution of the Software and destroy all copies in your possession.
+
+## Versioning
+
+This is License Version 1.0. SMRForge LLC may publish updated versions of this License. Continued use of the Software after publication of a new version may be deemed acceptance of the new terms, unless SMRForge LLC specifies otherwise.
+
+## Governing Law
+
+This License shall be governed by the laws of the Commonwealth of Virginia, United States, without regard to its conflict of laws principles. Any disputes arising under this License shall be resolved exclusively in the state or federal courts located in Virginia.
+
+## Contact
+
+For questions about this License or to request approvals (e.g., for export or modifications), contact: legal@smrforge.com.
+
+## Acknowledgment
+
+Portions of this License are derived from the Apache License 2.0. For the full text of the Apache License 2.0, see: https://www.apache.org/licenses/LICENSE-2.0.
+
+By using the Software, you acknowledge that you have read this License, understand it, and agree to be bound by its terms.

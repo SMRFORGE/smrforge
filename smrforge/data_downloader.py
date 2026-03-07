@@ -26,7 +26,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 try:
     import requests
@@ -437,7 +437,7 @@ def download_endf_data(
     validate: bool = True,
     organize: bool = True,
     max_workers: int = 5,
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """
     Download ENDF nuclear data files from NNDC/IAEA.
 
@@ -775,50 +775,74 @@ def download_preprocessed_library(
     nuclides: Union[str, List[Nuclide]] = "common_smr",
     output_dir: Optional[Union[str, Path]] = None,
     show_progress: bool = True,
-) -> Dict[str, any]:
+    offline_path: Optional[Union[str, Path]] = None,
+    releases_url: Optional[str] = None,
+) -> Dict[str, Any]:
     """
-    Download pre-processed Zarr library (placeholder for Phase 2).
+    Download or use pre-processed Zarr/ENDF library.
 
-    This function will be implemented in Phase 2 to download pre-processed
-    libraries from GitHub Releases or Zenodo. Currently falls back to
-    downloading raw ENDF files.
+    Supports: (1) offline_path for air-gapped Zarr or ENDF dir,
+    (2) releases_url to download .zarr.zip from GitHub Releases,
+    (3) fallback to raw ENDF download.
 
     Args:
         library: Library version (e.g., "ENDF/B-VIII.1") or Library enum.
         nuclides: Nuclide set name (e.g., "common_smr") or list of Nuclide instances.
         output_dir: Output directory. Defaults to standard ENDF directory.
         show_progress: If True, show progress indicators.
+        offline_path: Path to pre-staged ENDF dir or pre-processed .zarr bundle (air-gapped).
+        releases_url: URL to .zarr.zip asset (e.g. GitHub Releases). Download and extract.
 
     Returns:
-        Dictionary with download statistics (same format as `download_endf_data`).
-
-    Raises:
-        ImportError: If requests library is not available.
-        ValueError: If no nuclides are specified or invalid library version.
-        IOError: If output directory cannot be created or accessed.
-
-    Note:
-        This is a placeholder function. It currently calls `download_endf_data()`
-        to download raw ENDF files. Pre-processed library support will be added
-        in Phase 2 of the data import improvements.
+        Dictionary with download statistics.
 
     Example:
-        >>> from smrforge.data_downloader import download_preprocessed_library
-        >>>
-        >>> # Download common SMR nuclides (currently downloads raw ENDF)
-        >>> stats = download_preprocessed_library(
-        ...     library="ENDF/B-VIII.1",
-        ...     nuclides="common_smr",
-        ...     output_dir="~/ENDF-Data"
-        ... )
+        >>> stats = download_preprocessed_library(offline_path="/transfer/preprocessed-common.zarr")
+        >>> stats = download_preprocessed_library(releases_url="https://.../preprocessed-common.zarr.zip")
     """
-    logger.warning(
-        "Pre-processed library download not yet implemented. "
-        "This feature will be available in Phase 2. "
-        "Use download_endf_data() to download raw ENDF files instead."
-    )
+    # Air-gapped: use local pre-staged path when provided
+    if offline_path is not None:
+        op = Path(offline_path).expanduser().resolve()
+        if op.is_dir():
+            # Zarr bundle (e.g. preprocessed-common.zarr) or ENDF dir
+            is_zarr = ".zarr" in op.name or (op / ".zgroup").exists()
+            return {
+                "downloaded": 0,
+                "failed": 0,
+                "skipped": 0,
+                "output_dir": str(op),
+                "offline": True,
+                "format": "zarr" if is_zarr else "endf",
+                "message": f"Using offline path: {op}",
+            }
+        logger.warning("offline_path %s not found or not a directory; falling back", op)
 
-    # For now, fall back to raw ENDF download
+    # Download from Releases URL if provided
+    if releases_url:
+        try:
+            out_dir = Path(output_dir) if output_dir else get_standard_endf_directory()
+            out_dir = out_dir.expanduser().resolve()
+            out_dir.mkdir(parents=True, exist_ok=True)
+            zip_path = out_dir / "preprocessed.zarr.zip"
+            if download_file(releases_url, zip_path, show_progress=show_progress):
+                import zipfile
+
+                with zipfile.ZipFile(zip_path, "r") as zf:
+                    zf.extractall(out_dir)
+                zarr_path = out_dir / "preprocessed-common.zarr"
+                final_dir = zarr_path if zarr_path.exists() else out_dir
+                return {
+                    "downloaded": 1,
+                    "failed": 0,
+                    "skipped": 0,
+                    "output_dir": str(final_dir),
+                    "offline": False,
+                    "message": f"Downloaded and extracted to {out_dir}",
+                }
+        except Exception as e:
+            logger.warning("Releases download failed: %s. Falling back.", e)
+
+    # Fallback to raw ENDF download
     if isinstance(nuclides, str):
         return download_endf_data(
             library=library,

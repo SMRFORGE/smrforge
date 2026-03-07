@@ -54,4 +54,61 @@ Optional for ENDF data fetching: `endf-parserpy` or `sandy` (see [Nuclear Data S
 
 1. **Tutorial:** [docs/guides/community/tutorial.md](../guides/community/tutorial.md)
 2. **CLI Quickstart:** [docs/guides/cli-guide.md](../guides/cli-guide.md)
-3. **Examples:** `examples/community/`
+3. **Examples:** `examples/` — see [Community Examples Index](../guides/community/community-examples-index.md)
+
+## Quick Code Examples (Community)
+
+**Quick k-eff (no data required):**
+```python
+import smrforge as smr
+
+reactor = smr.create_reactor("valar-10")
+core = reactor.build_core()
+k_eff, flux = smr.quick_keff_calculation(core=core)
+print(f"k-eff: {k_eff:.6f}")
+```
+
+**Design point and safety report:**
+```python
+import smrforge as smr
+from smrforge.validation.safety_report import safety_margin_report
+from smrforge.validation.constraint_builder import constraint_set_from_design_and_report
+
+reactor = smr.create_reactor("valar-10")
+point = smr.get_design_point(reactor)
+cs = constraint_set_from_design_and_report(reactor, margin_report=None)
+report = safety_margin_report(reactor, constraint_set=cs)
+print(report.to_text())
+```
+
+**OpenMC export and run:**
+```python
+from pathlib import Path
+import smrforge as smr
+from smrforge.io import OpenMCConverter
+from smrforge.io.openmc_run import run_and_parse
+
+reactor = smr.create_reactor("valar-10")
+reactor.build_core()
+out = Path("output/openmc")
+OpenMCConverter.export_reactor(reactor, out, particles=1000, batches=20)
+results = run_and_parse(out, timeout=60)  # Requires OpenMC installed
+```
+
+**Community benchmark suite:**
+```python
+from pathlib import Path
+from smrforge.benchmarks import CommunityBenchmarkRunner
+
+runner = CommunityBenchmarkRunner()
+results = runner.run_all()
+runner.generate_report(results, output_path=Path("output/community_benchmark_report.md"))
+```
+
+**CLI equivalents:**
+```bash
+smrforge workflow design-point --reactor valar-10 --output design_point.json
+smrforge workflow safety-report --reactor valar-10 --output safety_report.json
+smrforge report design --preset valar-10 -o design_summary.md
+smrforge decay calculate --inventory inventory.json --cooling-time 3600
+```

@@ -2,7 +2,7 @@
 
 **Small Modular Reactor Design and Analysis Toolkit — Pro Tier**
 
-*Use this as `README.md` in the [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro) repository.*
+> **⚠️ Pro repository template only.** This file is a template for the [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro) README. It is **not** the Community README and should not be used for the public smrforge repo.
 
 ---
 

@@ -13,19 +13,19 @@ sphinx:
   configuration: docs/conf.py
   builder: html
 
-# Python requirements to install for documentation building
+# Python requirements to install for documentation building.
+# Install docs deps first (ensures sphinx-autodoc-typehints etc.), then the package.
 python:
   install:
-    - method: pip
-      path: .
+    - requirements: docs/requirements.txt
+    - path: .
       extra_requirements:
         - docs
 
-# Optional: Set the default branch
-# defaults:
-#   branches:
-#     latest: main
-#     stable: main
+# Set default branch for Community docs (latest = main)
+defaults:
+  branches:
+    latest: main
 
 # Optional: Additional build commands (if needed)
 # build:

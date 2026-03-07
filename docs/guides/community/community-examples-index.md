@@ -1,22 +1,23 @@
 # Community Tier — Examples Index
 
-All Community edition examples with workflow and required data.
+All Community edition examples with workflow and required data. Examples live in `examples/` in the Community repo.
 
 ---
 
 ## Location
 
-**Path:** `examples/community/`
+**Path:** `examples/` (Community repo root)
 
 ---
 
-## Quick Start
+## Quick Start (No Data Required)
 
-| Example | Workflow | Required Data |
-|---------|----------|---------------|
-| `basic_neutronics.py` | Multi-group k-eff | None (synthetic XS) |
-| `preset_designs.py` | Preset reactors | None |
-| `convenience_methods_example.py` | Convenience API | None |
+| Example | Path | Workflow | Required Data |
+|---------|------|----------|---------------|
+| Quick start | `quick_start_community.py` | Minimal 5-line workflow | None |
+| Basic neutronics | `basic_neutronics.py` | Multi-group k-eff | None (synthetic XS) |
+| Preset designs | `preset_designs.py` | Preset reactors | None |
+| Convenience API | `convenience_methods_example.py` | quick_keff, create_simple_* | None |
 
 ---
 
@@ -94,3 +95,14 @@ All Community edition examples with workflow and required data.
 | `lwr_smr_example.py` | LWR SMR geometry | Dimensions |
 | `thermal_analysis.py` | Thermal-hydraulics | Core, channel geometry |
 | `assembly_refueling_example.py` | Assembly refueling | Core |
+
+---
+
+## I/O & External Codes
+
+| Example | Description | Data |
+|---------|-------------|------|
+| `openmc_export_example.py` | OpenMC export/import, run, statepoint parse | Optional: OpenMC |
+| `serpent_run_example.py` | Serpent run+parse (works with Pro export) | Serpent 2 |
+| `community_benchmark_example.py` | Run Community benchmarks, generate report | None |
+

@@ -27,7 +27,7 @@ The coverage run is actively running in the background. The process will continu
 Get-Process -Id 1672 -ErrorAction SilentlyContinue
 
 # Check output file
-Get-Content "C:\Users\cmwha\.cursor\projects\c-Users-cmwha-OneDrive-Documents-GitHub-smrforge\terminals\169153.txt" -Tail 20
+Get-Content "<path-to-terminal-output>.txt" -Tail 20
 ```
 
 ---

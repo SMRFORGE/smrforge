@@ -1,7 +1,7 @@
 # VS Code as GUI Foundation: Feasibility Analysis
 
 **Date:** January 2026  
-**Question:** How difficult would it be to follow Cursor's strategy and use VS Code as a GUI foundation for SMRForge?
+**Question:** How difficult would it be to use VS Code as a GUI foundation for SMRForge (e.g., by forking it like some AI-powered editors do)?
 
 ---
 
@@ -22,11 +22,11 @@
 
 ---
 
-## Understanding Cursor's Approach
+## Understanding the VS Code Fork Approach
 
-### What Cursor Does
+### What AI-Powered VS Code Forks Do
 
-**Cursor** is a fork of VS Code that adds AI features (GitHub Copilot-style):
+Some editors fork VS Code to add AI features (GitHub Copilot-style):
 - Forked VS Code's codebase
 - Added AI integration (completion, chat)
 - Maintains VS Code's UI/UX
@@ -38,7 +38,7 @@
 - Can customize everything
 - Heavy development/maintenance burden
 
-### Why It Works for Cursor
+### Why It Works for AI Editor Vendors
 
 1. **AI Integration Needs Deep Integration** - Requires access to editor internals, language servers
 2. **VS Code's Extension API Isn't Enough** - Needs to modify core behavior
@@ -71,7 +71,7 @@ smrforge serve  # Opens in browser at http://127.0.0.1:8050
 
 ---
 
-## Option 1: VS Code Fork/Clone (Like Cursor)
+## Option 1: VS Code Fork/Clone
 
 ### Difficulty: **HIGH (6-10 weeks)**
 
@@ -314,7 +314,7 @@ You already have a working Dash dashboard. Just continue using it.
 
 | Option | Development Time | Difficulty | Maintenance | User Experience | Recommendation |
 |--------|-----------------|------------|-------------|-----------------|----------------|
-| **VS Code Fork** (Cursor-style) | 6-10 weeks | Very High | High | Excellent | ❌ **Too much work** |
+| **VS Code Fork** | 6-10 weeks | Very High | High | Excellent | ❌ **Too much work** |
 | **VS Code Extension** | 1-2 weeks | Medium | Low | Good (for VS Code users) | ✅ **If you want VS Code integration** |
 | **Electron Wrapper** | 2-3 weeks | Low-Medium | Low | Good (desktop app) | ✅ **If you want standalone app** |
 | **Continue with Dash** | 0 weeks | None | Low | Good (web app) | ✅ **RECOMMENDED** |
@@ -357,25 +357,25 @@ Keep using your existing Dash dashboard. It works well and meets most needs.
 
 ---
 
-## Why NOT to Fork VS Code (Like Cursor)
+## Why NOT to Fork VS Code
 
 ### 1. **Different Use Case**
 
-- **Cursor:** Code editor with AI → Needs deep editor integration
+- **AI-powered editors:** Code editor with AI → Needs deep editor integration
 - **SMRForge:** Reactor analysis tool → Doesn't need code editor features
 
 VS Code is designed for **code editing**, not reactor analysis. You'd be fighting against its architecture.
 
 ### 2. **Massive Overhead**
 
-- **Cursor:** Worth it because AI needs deep integration
+- **AI editor vendors:** Worth it because AI needs deep integration
 - **SMRForge:** Not worth it because Dash dashboard already works
 
 You'd spend 6-10 weeks recreating what you already have, just to have a VS Code-like UI.
 
 ### 3. **Maintenance Burden**
 
-- **Cursor:** Commercial product, has team to maintain VS Code fork
+- **Commercial VS Code forks:** Have teams to maintain the fork
 - **SMRForge:** Open source, would need to keep up with VS Code updates yourself
 
 VS Code updates frequently. You'd need to constantly merge updates and fix conflicts.
@@ -391,7 +391,7 @@ Your team knows Python, not TypeScript. Forking VS Code would require learning a
 
 ## Conclusion
 
-**Don't fork VS Code like Cursor.** It's too much work for what you'd get.
+**Don't fork VS Code.** It's too much work for what you'd get.
 
 **Instead:**
 
