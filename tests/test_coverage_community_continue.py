@@ -272,8 +272,9 @@ class TestParameterSweepCoverage:
             parameters={"x": [1.0]},
             analysis_types=["keff"],
             output_dir=Path("."),
-            reactor_template=[],  # not a valid type; falls through to else
+            reactor_template=None,
         )
+        config.reactor_template = []  # invalid type; bypasses Pydantic, exercises else branch
         sweep = ParameterSweep(config)
         cfg = sweep._get_reactor_template()
         assert cfg == {}

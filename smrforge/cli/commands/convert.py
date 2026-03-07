@@ -41,6 +41,7 @@ def convert_export(args):
     if not reactor_spec or not output:
         _print_error("--reactor and --output required")
         sys.exit(1)
+        return  # no fall-through when sys.exit is mocked
     try:
         if Path(reactor_spec).exists():
             import json

@@ -770,6 +770,52 @@ def _download_parallel(
         pbar.close()
 
 
+def validate_preprocessed_library(path: Union[str, Path]) -> Dict[str, Any]:
+    """
+    Validate a preprocessed nuclear data library (Zarr or ENDF directory).
+
+    Args:
+        path: Path to preprocessed library directory or Zarr bundle.
+
+    Returns:
+        Dict with keys: valid (bool), errors (list), nuclides_found (list),
+        missing_nuclides (list). When valid is False, errors contains messages.
+    """
+    path = Path(path).expanduser().resolve()
+    result: Dict[str, Any] = {
+        "valid": True,
+        "errors": [],
+        "nuclides_found": [],
+        "missing_nuclides": [],
+    }
+    if not path.exists():
+        result["valid"] = False
+        result["errors"].append(f"Path does not exist: {path}")
+        return result
+    if not path.is_dir():
+        result["valid"] = False
+        result["errors"].append(f"Path is not a directory: {path}")
+        return result
+    # Check for Zarr structure (.zgroup) or ENDF-like content
+    if (path / ".zgroup").exists():
+        try:
+            import zarr
+            root = zarr.open(path, mode="r")
+            if hasattr(root, "keys"):
+                result["nuclides_found"] = list(root.keys())[:100]  # Limit for large libs
+        except Exception as e:
+            result["valid"] = False
+            result["errors"].append(str(e))
+    else:
+        # ENDF directory: look for .endf or similar files
+        for f in path.iterdir():
+            if f.suffix.lower() in (".endf", ".endf8", ".endf7"):
+                result["nuclides_found"].append(f.stem)
+                if len(result["nuclides_found"]) >= 100:
+                    break
+    return result
+
+
 def download_preprocessed_library(
     library: Union[str, Library] = "ENDF/B-VIII.1",
     nuclides: Union[str, List[Nuclide]] = "common_smr",

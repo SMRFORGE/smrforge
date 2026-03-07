@@ -121,3 +121,12 @@ def visualize_flux(args):
 
             traceback.print_exc()  # pragma: no cover
         sys.exit(1)
+
+
+def visualize_tally(args):
+    """Visualize OpenMC tally from statepoint (Pro tier)."""
+    _print_error(
+        "Tally visualization requires SMRForge Pro.\n"
+        "Upgrade: https://smrforge.io or pip install smrforge-pro"
+    )
+    sys.exit(1)

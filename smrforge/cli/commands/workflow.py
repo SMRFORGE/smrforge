@@ -1446,6 +1446,28 @@ def workflow_benchmark(args):
         _print_warning(f"Benchmark {bid}: failed" + (f" (delta={delta:.4e})" if delta is not None else ""))
 
 
+def workflow_ml_export(args):
+    """Export sweep/design results to ML-friendly format (Parquet/HDF5). Pro tier."""
+    results_path = getattr(args, "results", None)
+    if not results_path or not Path(results_path).exists():
+        _print_error("--results PATH required (path to sweep_results.json or design study JSON)")
+        sys.exit(1)
+        return
+    try:
+        from smrforge_pro.workflows.ml_export import export_ml_dataset as _export_ml_dataset
+    except ImportError:
+        _print_error(
+            "ML export requires SMRForge Pro.\n"
+            "Upgrade: https://smrforge.io or pip install smrforge-pro"
+        )
+        sys.exit(1)
+        return
+    out = getattr(args, "output", None)
+    fmt = getattr(args, "format", "parquet") or "parquet"
+    _export_ml_dataset(Path(results_path), output_path=Path(out) if out else None, format=fmt)
+    _print_success(f"ML dataset exported" + (f" to {out}" if out else ""))
+
+
 def workflow_multi_optimize(args):
     """Multi-objective optimization (Pro). k_eff, safety, economics; differential evolution."""
     try:

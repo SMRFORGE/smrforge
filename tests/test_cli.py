@@ -3422,6 +3422,8 @@ class TestSweepRun:
             no_parallel=False,
             workers=4,
             verbose=False,
+            surrogate=None,
+            seed=None,
         )
 
         mock_sweep = Mock()
@@ -3452,6 +3454,8 @@ class TestSweepRun:
             no_parallel=False,
             workers=4,
             verbose=False,
+            surrogate=None,
+            seed=None,
         )
 
         mock_sweep = Mock()
@@ -3479,6 +3483,8 @@ class TestSweepRun:
             no_parallel=False,
             workers=4,
             verbose=False,
+            surrogate=None,
+            seed=None,
         )
 
         mock_sweep = Mock()
