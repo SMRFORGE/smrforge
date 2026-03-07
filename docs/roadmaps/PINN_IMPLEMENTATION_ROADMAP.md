@@ -1,5 +1,7 @@
 # PINN Implementation Roadmap
 
+> **Pro tier only.** PINN (Physics-Informed Neural Networks) is implemented in [SMRForge Pro](https://github.com/SMRFORGE/smrforge-pro) only. It is not available in the Community tier. This roadmap describes the Pro implementation for reference.
+
 **Purpose:** Guide the progression from Option 1 MVP to full PINN implementation in SMRForge Pro.
 
 **Status:** MVP (Option 1) implemented. Full implementation planned for Phase 2a–2c.

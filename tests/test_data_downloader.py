@@ -475,6 +475,16 @@ class TestDownloadPreprocessedLibrary:
         call_kwargs = mock_download.call_args[1]
         assert call_kwargs["nuclides"] == nuclides
 
+    def test_download_preprocessed_library_offline_path(self, tmp_path):
+        """Test download_preprocessed_library with offline_path (air-gapped)."""
+        result = downloader_module.download_preprocessed_library(
+            offline_path=str(tmp_path),
+            show_progress=False,
+        )
+        assert result["offline"] is True
+        assert result["output_dir"] == str(tmp_path.resolve())
+        assert result["downloaded"] == 0
+
 
 class TestParseIsotopeStringExtended:
     """Extended tests for _parse_isotope_string function."""

@@ -20,6 +20,41 @@ from smrforge.cli.common import (
 import numpy as np
 
 
+def data_bundle(args):
+    """Bundle nuclear data (ENDF) for air-gapped transfer."""
+    import os
+
+    endf_dir = getattr(args, "endf_dir", None) or os.environ.get(
+        "SMRFORGE_ENDF_DIR", "ENDF-B-VIII.1"
+    )
+    endf_path = Path(endf_dir).expanduser().resolve()
+    output = getattr(args, "output", None) or Path("nuclear-data-bundle.tar.gz")
+    output = Path(output).expanduser().resolve()
+
+    if not endf_path.exists():
+        _print_error(f"ENDF directory not found: {endf_path}")
+        _print_info(
+            "Download ENDF first: smrforge data download"
+            " or python -m smrforge.core.endf_setup"
+        )
+        sys.exit(1)
+
+    _print_info(f"Bundling nuclear data from {endf_path}")
+    try:
+        import tarfile
+
+        with tarfile.open(output, "w:gz") as tar:
+            tar.add(endf_path, arcname=endf_path.name)
+        _print_success(f"Created {output}")
+        _print_info(
+            "Transfer to air-gapped system, then: tar -xzf nuclear-data-bundle.tar.gz -C /install/path"
+        )
+        _print_info(f"  export SMRFORGE_ENDF_DIR=/install/path/{endf_path.name}")
+    except Exception as e:
+        _print_error(f"Bundle failed: {e}")
+        sys.exit(1)
+
+
 def data_setup(args):
     """Setup ENDF data directory (integrate existing command)."""
     try:

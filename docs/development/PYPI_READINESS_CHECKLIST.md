@@ -8,7 +8,7 @@ This checklist ensures SMRForge is ready for publication on PyPI.
 - [x] **Package Name**: `smrforge` (lowercase, no dashes, matches PyPI naming)
 - [x] **Package Discovery**: `find_packages()` correctly configured
 - [x] **MANIFEST.in**: Includes README.md, LICENSE, docs/logo images, pyproject.toml
-- [x] **LICENSE**: MIT License file present
+- [x] **LICENSE**: SMRForge Community Tier License file present
 - [x] **README.md**: Comprehensive with installation, usage, examples
 
 ## ⚠️ Required Updates (Before Publishing)
@@ -54,7 +54,7 @@ This checklist ensures SMRForge is ready for publication on PyPI.
   - Development status (Alpha)
   - Intended audience (Science/Research)
   - Topic (Scientific/Engineering/Physics)
-  - License (MIT)
+  - License (SMRForge Community Tier License - Free To Use But Restricted)
   - Python versions (3.8-3.12)
   - OS Independent
 
@@ -158,6 +158,8 @@ pip install -i https://test.pypi.org/simple/ smrforge
 
 ## 📦 PyPI Publishing Steps
 
+0. **PyPI account** (required): Register at [pypi.org](https://pypi.org/account/register/). Create API token (Account → API tokens) with scope for project `smrforge`.
+
 1. **Update Contact Information** (REQUIRED)
    - Edit `setup.py`: Update `author_email`
    - Edit `README.md`: Update citation and contact sections
@@ -184,6 +186,12 @@ pip install -i https://test.pypi.org/simple/ smrforge
 
 6. **Upload to PyPI**
    ```bash
+   # Using publish script (recommended)
+   ./scripts/publish_pypi.sh           # Bash: upload to PyPI
+   .\scripts\publish_pypi.ps1          # PowerShell: upload to PyPI
+   .\scripts\publish_pypi.ps1 -Test    # PowerShell: upload to TestPyPI first
+
+   # Or manually (set TWINE_USERNAME=__token__ and TWINE_PASSWORD=pypi-xxx)
    python -m twine upload dist/*
    ```
 
@@ -207,7 +215,7 @@ After successful publication:
 
 - **Development Status**: Currently "Alpha" - appropriate for 0.1.0 release
 - **Optional Dependencies**: SALib and seaborn are optional (UQ features work without them but with reduced functionality)
-- **License**: MIT License - confirmed
+- **License**: SMRForge Community Tier License (US-only, export restrictions) - see LICENSE file
 - **Python Support**: 3.8+ confirmed in setup.py
 
 ## ❌ Known Issues / Limitations

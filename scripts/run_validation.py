@@ -19,11 +19,12 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import json
 import os
 import platform
-import pytest
-import json
 from datetime import datetime
+
+import pytest
 
 
 def _to_jsonable(obj):
@@ -66,48 +67,51 @@ def _result_to_dict(result):
         "comparison_data": _to_jsonable(getattr(result, "comparison_data", None)),
     }
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run validation tests with ENDF files and generate reports"
     )
     parser.add_argument(
-        "--endf-dir",
-        type=Path,
-        help="Path to ENDF-B-VIII.1 directory",
-        default=None
+        "--endf-dir", type=Path, help="Path to ENDF-B-VIII.1 directory", default=None
     )
     parser.add_argument(
         "--output",
         type=Path,
         help="Output file for validation report (default: validation_report_YYYYMMDD_HHMMSS.txt)",
-        default=None
+        default=None,
     )
     parser.add_argument(
         "--json-output",
         type=Path,
         help="Output file for JSON results (optional)",
-        default=None
+        default=None,
     )
     parser.add_argument(
         "--benchmarks",
         type=Path,
-        help="Benchmark database JSON file (optional)",
+        help="Benchmark database JSON file (default: benchmarks/validation_benchmarks.json)",
         default=None,
     )
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Verbose output"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument(
         "--tests",
         nargs="+",
         help="Specific test files or patterns to run (default: all validation tests)",
-        default=None
+        default=None,
     )
-    
+
     args = parser.parse_args()
-    
+
+    # Default benchmark DB to benchmarks/validation_benchmarks.json if it exists
+    if args.benchmarks is None:
+        default_benchmarks = (
+            Path(__file__).parent.parent / "benchmarks" / "validation_benchmarks.json"
+        )
+        if default_benchmarks.exists():
+            args.benchmarks = default_benchmarks
+            print(f"Using benchmark database: {args.benchmarks}")
+
     # Set ENDF directory if provided
     if args.endf_dir:
         endf_abs = str(args.endf_dir.absolute())
@@ -115,7 +119,7 @@ def main():
         os.environ["LOCAL_ENDF_DIR"] = endf_abs
         os.environ["SMRFORGE_ENDF_DIR"] = endf_abs
         print(f"Using ENDF directory: {args.endf_dir}")
-    
+
     # Determine output file
     if args.output is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -128,7 +132,7 @@ def main():
         except Exception:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             args.json_output = Path(f"validation_results_{timestamp}.json")
-    
+
     # Determine which tests to run
     if args.tests is None:
         test_files = [
@@ -137,24 +141,24 @@ def main():
         ]
     else:
         test_files = args.tests
-    
+
     print("=" * 80)
     print("SMRForge Validation Test Runner")
     print("=" * 80)
     print(f"Output file: {args.output}")
     print(f"Test files: {', '.join(test_files)}")
     print()
-    
+
     # Build pytest command
     pytest_args = [
         *test_files,
         "-v",
         "--tb=short",
     ]
-    
+
     if args.verbose:
         pytest_args.append("-s")
-    
+
     # Run tests
     print("Running validation tests...")
     exit_code = pytest.main(pytest_args)
@@ -167,7 +171,8 @@ def main():
             "platform": platform.platform(),
             "python": sys.version,
             "cwd": str(Path.cwd()),
-            "endf_dir": os.environ.get("SMRFORGE_ENDF_DIR") or os.environ.get("LOCAL_ENDF_DIR"),
+            "endf_dir": os.environ.get("SMRFORGE_ENDF_DIR")
+            or os.environ.get("LOCAL_ENDF_DIR"),
             "benchmarks_file": str(args.benchmarks) if args.benchmarks else None,
         },
         "pytest_exit_code": int(exit_code),
@@ -178,26 +183,37 @@ def main():
     try:
         from smrforge.core.reactor_core import scan_endf_directory
 
-        endf_dir = os.environ.get("SMRFORGE_ENDF_DIR") or os.environ.get("LOCAL_ENDF_DIR")
+        endf_dir = os.environ.get("SMRFORGE_ENDF_DIR") or os.environ.get(
+            "LOCAL_ENDF_DIR"
+        )
         if endf_dir:
-            results_payload["metadata"]["endf_inventory"] = scan_endf_directory(Path(endf_dir))
+            results_payload["metadata"]["endf_inventory"] = scan_endf_directory(
+                Path(endf_dir)
+            )
     except Exception as e:
         results_payload["metadata"]["endf_inventory_error"] = str(e)
 
     # Run structured validations/benchmarks (best-effort; does not affect pytest exit code)
     try:
-        from smrforge.core.reactor_core import NuclearDataCache
-        from smrforge.geometry import PrismaticCore
-        from smrforge.validation.models import CrossSectionData, SolverOptions
-        from smrforge.neutronics.solver import MultiGroupDiffusion
-        from smrforge.burnup import BurnupOptions
-        from smrforge.core.reactor_core import Nuclide
-        from tests.validation_benchmarks import ValidationBenchmarker
-        from tests.validation_benchmark_data import BenchmarkDatabase
         import numpy as np
 
-        endf_dir = os.environ.get("SMRFORGE_ENDF_DIR") or os.environ.get("LOCAL_ENDF_DIR")
-        cache = NuclearDataCache(local_endf_dir=Path(endf_dir)) if endf_dir else NuclearDataCache()
+        from smrforge.burnup import BurnupOptions
+        from smrforge.core.constants import parse_nuclide_string
+        from smrforge.core.reactor_core import NuclearDataCache, Nuclide
+        from smrforge.geometry import PrismaticCore
+        from smrforge.neutronics.solver import MultiGroupDiffusion
+        from smrforge.validation.models import CrossSectionData, SolverOptions
+        from tests.validation_benchmark_data import BenchmarkDatabase
+        from tests.validation_benchmarks import ValidationBenchmarker
+
+        endf_dir = os.environ.get("SMRFORGE_ENDF_DIR") or os.environ.get(
+            "LOCAL_ENDF_DIR"
+        )
+        cache = (
+            NuclearDataCache(local_endf_dir=Path(endf_dir))
+            if endf_dir
+            else NuclearDataCache()
+        )
         benchmark_db = None
         if args.benchmarks and args.benchmarks.exists():
             benchmark_db = BenchmarkDatabase(args.benchmarks)
@@ -217,21 +233,46 @@ def main():
             results_payload["metadata"]["tsl_validation_error"] = str(e)
 
         # Fission yields
-        for nuclide in [Nuclide(Z=92, A=235), Nuclide(Z=92, A=238), Nuclide(Z=94, A=239)]:
+        for nuclide in [
+            Nuclide(Z=92, A=235),
+            Nuclide(Z=92, A=238),
+            Nuclide(Z=94, A=239),
+        ]:
             try:
                 bench.results.append(bench.validate_fission_yield_parser(nuclide))
             except Exception as e:
-                results_payload["metadata"][f"fission_yield_validation_error_{nuclide}"] = str(e)
+                results_payload["metadata"][
+                    f"fission_yield_validation_error_{nuclide}"
+                ] = str(e)
 
-        # Decay heat
+        # Decay heat (from benchmark DB if available, else default)
         try:
-            nuclides = {
-                Nuclide(Z=92, A=235): 1e20,
-                Nuclide(Z=55, A=137): 1e19,
-                Nuclide(Z=38, A=90): 1e19,
-            }
-            times = np.array([0, 3600, 86400, 604800, 2592000], dtype=float)
-            bench.results.append(bench.validate_decay_heat_ans_standard(nuclides, times))
+            if benchmark_db and benchmark_db.decay_heat_benchmarks:
+                for name, dh_bm in benchmark_db.decay_heat_benchmarks.items():
+                    # Convert nuclide dict (e.g. {"U235": 1e20}) to Nuclide -> float
+                    nuclides = {}
+                    for nstr, conc in dh_bm.nuclides.items():
+                        nstr = nstr.strip()
+                        try:
+                            Z, A, m = parse_nuclide_string(nstr)
+                            nuclides[Nuclide(Z=Z, A=A, m=m)] = float(conc)
+                        except ValueError:
+                            pass
+                    if nuclides:
+                        times = np.array(dh_bm.time_points, dtype=float)
+                        bench.results.append(
+                            bench.validate_decay_heat_ans_standard(nuclides, times)
+                        )
+            else:
+                nuclides = {
+                    Nuclide(Z=92, A=235): 1e20,
+                    Nuclide(Z=55, A=137): 1e19,
+                    Nuclide(Z=38, A=90): 1e19,
+                }
+                times = np.array([0, 3600, 86400, 604800, 2592000], dtype=float)
+                bench.results.append(
+                    bench.validate_decay_heat_ans_standard(nuclides, times)
+                )
         except Exception as e:
             results_payload["metadata"]["decay_heat_validation_error"] = str(e)
 
@@ -251,31 +292,40 @@ def main():
             geometry.core_height = 100.0
             geometry.core_diameter = 50.0
             geometry.generate_mesh(n_radial=3, n_axial=2)
-            burnup_options = BurnupOptions(time_steps=[0, 30, 60, 90], initial_enrichment=0.195)
-            bench.results.append(bench.validate_burnup_reference(geometry, burnup_options))
+            burnup_options = BurnupOptions(
+                time_steps=[0, 30, 60, 90], initial_enrichment=0.195
+            )
+            bench.results.append(
+                bench.validate_burnup_reference(geometry, burnup_options)
+            )
         except Exception as e:
             results_payload["metadata"]["burnup_validation_error"] = str(e)
 
         # Cross-section spot checks (if benchmark database has cross-section benchmarks)
-        if benchmark_db and hasattr(benchmark_db, "cross_section_benchmarks") and benchmark_db.cross_section_benchmarks:
+        if (
+            benchmark_db
+            and hasattr(benchmark_db, "cross_section_benchmarks")
+            and benchmark_db.cross_section_benchmarks
+        ):
             try:
-                from tests.validation_benchmark_data import BenchmarkValue
                 for test_case, xs_bm in benchmark_db.cross_section_benchmarks.items():
-                    nuclide_str = xs_bm.get("nuclide", "")
-                    # Parse nuclide string (e.g., "U235" -> Z=92, A=235)
-                    if nuclide_str.startswith("U") and len(nuclide_str) >= 4:
-                        A = int(nuclide_str[1:])
-                        Z = 92  # Uranium
-                        nuclide = Nuclide(Z=Z, A=A)
-                        reaction = xs_bm.get("reaction", "fission")
-                        energy_ev = float(xs_bm.get("energy_ev", 0.0253))
-                        expected_value = float(xs_bm.get("expected_value", 0.0))
-                        tolerance = float(xs_bm.get("tolerance", 0.05))
-                        bench.results.append(
-                            bench.validate_cross_section_spot_check(
-                                nuclide, reaction, energy_ev, expected_value, tolerance
-                            )
+                    nuclide_str = xs_bm.get("nuclide", "").strip()
+                    if not nuclide_str:
+                        continue
+                    try:
+                        Z, A, m = parse_nuclide_string(nuclide_str)
+                        nuclide = Nuclide(Z=Z, A=A, m=m)
+                    except ValueError:
+                        continue
+                    reaction = xs_bm.get("reaction", "fission")
+                    energy_ev = float(xs_bm.get("energy_ev", 0.0253))
+                    expected_value = float(xs_bm.get("expected_value", 0.0))
+                    tolerance = float(xs_bm.get("tolerance", 0.05))
+                    bench.results.append(
+                        bench.validate_cross_section_spot_check(
+                            nuclide, reaction, energy_ev, expected_value, tolerance
                         )
+                    )
             except Exception as e:
                 results_payload["metadata"]["cross_section_benchmark_error"] = str(e)
 
@@ -299,7 +349,9 @@ def main():
                     chi=np.array([[1.0, 0.0]]),
                     D=np.array([[1.5, 0.4]]),
                 )
-                solver = MultiGroupDiffusion(geometry, xs_data, SolverOptions(max_iterations=50, tolerance=1e-5))
+                solver = MultiGroupDiffusion(
+                    geometry, xs_data, SolverOptions(max_iterations=50, tolerance=1e-5)
+                )
                 k_eff, _ = solver.solve_steady_state()
 
                 # Prefer a specifically named benchmark if present, else first entry
@@ -309,12 +361,16 @@ def main():
                 else:
                     bm = next(iter(benchmark_db.burnup_benchmarks.values()))
 
-                bench.results.append(bench.benchmark_k_eff([float(k_eff)], bm, tolerance=0.01))
+                bench.results.append(
+                    bench.benchmark_k_eff([float(k_eff)], bm, tolerance=0.01)
+                )
             except Exception as e:
                 results_payload["metadata"]["k_eff_benchmark_error"] = str(e)
 
         # Write artifacts
-        results_payload["results"] = [_result_to_dict(r) for r in getattr(bench, "results", [])]
+        results_payload["results"] = [
+            _result_to_dict(r) for r in getattr(bench, "results", [])
+        ]
         args.json_output.write_text(json.dumps(_to_jsonable(results_payload), indent=2))
         bench.generate_report(output_file=args.output)
         print(f"JSON results saved to: {args.json_output}")
@@ -325,14 +381,14 @@ def main():
         args.json_output.write_text(json.dumps(_to_jsonable(results_payload), indent=2))
         print(f"WARNING: Structured reporting failed: {e}")
         print(f"Minimal JSON results saved to: {args.json_output}")
-    
+
     print()
     print("=" * 80)
     print(f"Validation tests completed. Exit code: {exit_code}")
     print(f"Check test output above for results.")
     print(f"Artifacts: report={args.output} json={args.json_output}")
     print("=" * 80)
-    
+
     return exit_code
 
 

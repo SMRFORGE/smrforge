@@ -106,7 +106,7 @@ This section assumes you have **never** used SMRForge before. Follow these steps
 Many examples online use Bash line continuations (`\`). **PowerShell does not use `\`**.
 
 - **PowerShell**: multi-line commands use the **backtick** (`` ` ``) at end-of-line.
-- **Git Bash**: Bash-compatible (supports `\`). Install “Git for Windows”, then select **Git Bash** as your Cursor terminal profile.
+- **Git Bash**: Bash-compatible (supports `\`). Install “Git for Windows”, then select **Git Bash** as your integrated terminal profile.
 - **WSL (Ubuntu)**: Bash-compatible, but requires WSL to be installed first.
 
 ### Step 1 — Confirm SMRForge runs

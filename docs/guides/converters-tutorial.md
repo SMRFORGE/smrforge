@@ -2,6 +2,8 @@
 
 SMRForge exports reactor designs to Serpent, OpenMC, and MCNP formats for use in external Monte Carlo codes.
 
+> **Tier note:** Community tier has **full OpenMC export**. Serpent and MCNP export are **placeholders** in Community; full implementation requires [SMRForge Pro](https://github.com/SMRFORGE/smrforge-pro). See [Community vs Pro](../community_vs_pro.md).
+
 ## Quick Start
 
 ```python

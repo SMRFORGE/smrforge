@@ -14,6 +14,7 @@ from .commands.burnup import burnup_run
 from .commands.config import config_init, config_set, config_show
 from .commands.convert import convert_export
 from .commands.data import (
+    data_bundle,
     data_download,
     data_interpolate,
     data_setup,
@@ -791,6 +792,18 @@ Note: All features are also available via Python API:
         help="Compare shielded and unshielded cross-sections",
     )
     shield_parser.set_defaults(func=data_shield)
+
+    # data bundle (air-gapped nuclear data)
+    bundle_parser = data_subparsers.add_parser(
+        "bundle", help="Bundle ENDF nuclear data for air-gapped transfer"
+    )
+    bundle_parser.add_argument(
+        "--endf-dir", type=Path, dest="endf_dir", help="ENDF directory (default: SMRFORGE_ENDF_DIR or ENDF-B-VIII.1)"
+    )
+    bundle_parser.add_argument(
+        "--output", type=Path, help="Output archive (default: nuclear-data-bundle.tar.gz)"
+    )
+    bundle_parser.set_defaults(func=data_bundle)
 
     # Burnup subcommands
     burnup_parser = subparsers.add_parser("burnup", help="Burnup/depletion operations")

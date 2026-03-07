@@ -459,12 +459,14 @@ class ValidationBenchmarker:
             )
 
             def get_xs():
-                return self.cache.get_cross_section(nuclide, reaction, energy_ev)
+                return self.cache.get_cross_section(
+                    nuclide, reaction, temperature=293.6
+                )
 
             timing = self.time_function(get_xs)
 
             energy_array, sigma_array = self.cache.get_cross_section(
-                nuclide, reaction, energy_ev
+                nuclide, reaction, temperature=293.6
             )
 
             if len(energy_array) == 0 or len(sigma_array) == 0:
@@ -475,14 +477,14 @@ class ValidationBenchmarker:
                     timing=timing,
                 )
 
-            # Interpolate to exact energy if needed
-            if energy_ev not in energy_array:
-                # Find nearest point or interpolate
+            # Interpolate to exact energy
+            if energy_ev <= energy_array.min() or energy_ev >= energy_array.max():
                 idx = np.argmin(np.abs(energy_array - energy_ev))
                 calculated_value = float(sigma_array[idx])
             else:
-                idx = np.where(energy_array == energy_ev)[0][0]
-                calculated_value = float(sigma_array[idx])
+                calculated_value = float(
+                    np.interp(energy_ev, energy_array, sigma_array)
+                )
 
             benchmark_value = BenchmarkValue(
                 value=expected_value,
