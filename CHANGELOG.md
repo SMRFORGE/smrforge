@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated:** February 2026
+**Last Updated:** March 2026
 
 All notable changes to SMRForge will be documented in this file.
 
@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Convenience API consolidation:** Removed legacy `smrforge/convenience.py`; all convenience functionality now lives in `smrforge/convenience/` package. No public API changes—`from smrforge.convenience import create_reactor` and `smrforge.create_reactor` work unchanged.
+- **CLI refactoring:** Consolidated sweep logic into `workflow.sweep_run`; added shared helpers `_exit_error`, `_require_path`, `_load_json_or_yaml`, `load_reactor_from_path` in `smrforge.cli.common`; workflow, visualize, burnup, and thermal commands now use these helpers for consistent error handling and config loading.
 
 ### Fixed
 - **Validation warnings:** Downgraded pydantic_layer design-hint validation from `warnings.warn` to `logging.info`/`logger.warning` (HALEU, mesh, temperature, power density, etc.) to eliminate pytest warning noise. HEU (>20% enrichment) remains as `logger.warning` for licensing notice.
@@ -31,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation:** Updated `__init__.py` docstring to reference `docs/status/feature-status.md` (was ambiguous FEATURE_STATUS.md).
 - **Coverage:** Removed stale `*/convenience.py` from `.coveragerc` omit list (file no longer exists).
 - **Documentation:** Coding guidelines expanded in `docs/development/code-style.md` (optional deps, Rich, convenience APIs, kwargs hygiene, path handling). CONTRIBUTING.md PR checklist updated (changelog, Docker, docstrings). Testing-and-coverage.md: "Testing Optional Features" and "Coverage Exclusions" sections. Help examples for `system_info`, `quick_sweep`, `quick_economics`, `quick_optimize`, `quick_uq` (including `display=True`). Discovery example (`examples/discovery_help_example.py`) extended with `quick_optimize` and `quick_uq` demos.
+- **CLI tests:** Updated `test_burnup_run_no_reactor`, `test_burnup_run_file_not_found`, `test_visualize_geometry_file_not_found` to use `side_effect=SystemExit` when patching `sys.exit`, so the first exit raises and stops execution correctly.
 
 ## [0.2.0] - 2026-02-XX (Beta)
 

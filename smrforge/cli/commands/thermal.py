@@ -9,6 +9,8 @@ from ..utils import (
     _GLYPH_SUCCESS,
     _RICH_AVAILABLE,
     _YAML_AVAILABLE,
+    _exit_error,
+    _load_json_or_yaml,
     _parse_heat_source_safe,
     _print_error,
     _print_info,
@@ -19,13 +21,9 @@ from ..utils import (
     console,
     rprint,
     yaml,
+    Panel,
+    Table,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
 
 def thermal_lumped(args):
     """Run lumped-parameter thermal-hydraulics analysis."""
@@ -39,22 +37,9 @@ def thermal_lumped(args):
         if args.config:
             # Load configuration from file
             if not args.config.exists():
-                _print_error(
-                    f"Config file not found: {args.config}"
-                )  # pragma: no cover
-                sys.exit(1)  # pragma: no cover
+                _exit_error(f"Config file not found: {args.config}")
 
-            if args.config.suffix in [".yaml", ".yml"]:
-                if not _YAML_AVAILABLE:
-                    _print_error(
-                        "YAML support not available. Install PyYAML: pip install pyyaml"
-                    )
-                    sys.exit(1)
-                with open(args.config) as f:
-                    config = yaml.safe_load(f)
-            else:
-                with open(args.config) as f:
-                    config = json.load(f)
+            config = _load_json_or_yaml(args.config)
 
             # Build lumps and resistances from config
             lumps = {}

@@ -1,6 +1,6 @@
 # SMRForge Documentation Index
 
-**Last Updated:** February 2026  
+**Last Updated:** March 2026  
 **Status:** Consolidated and reorganized — API reference and workflow docs updated
 
 This document provides a comprehensive index of all SMRForge documentation files.

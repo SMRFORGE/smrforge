@@ -1,6 +1,6 @@
 # SMRForge Installation Guide
 
-**Last Updated:** February 2026
+**Last Updated:** March 2026
 
 ## Python Version Compatibility
 

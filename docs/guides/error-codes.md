@@ -1,6 +1,6 @@
 # SMRForge Error Codes
 
-**Last Updated:** February 2026
+**Last Updated:** March 2026
 
 Each SMRForge error includes a code (e.g., `SMR-E001`) for easy lookup and documentation.
 

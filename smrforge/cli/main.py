@@ -43,7 +43,6 @@ from .commands.reactor import (
 from .commands.report import report_design, report_validation
 from .commands.serve import serve_dashboard
 from .commands.shell import shell_interactive
-from .commands.sweep import sweep_run
 from .commands.thermal import thermal_lumped
 from .commands.transient import transient_run
 from .commands.validate import validate_benchmark, validate_design, validate_run
@@ -55,6 +54,7 @@ from .commands.visualize import (
 )
 from .commands.workflow import (
     batch_keff_run,
+    sweep_run,
     workflow_atlas,
     workflow_benchmark,
     workflow_code_verify,

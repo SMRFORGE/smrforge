@@ -7,9 +7,13 @@ import sys
 from pathlib import Path
 
 from smrforge.cli.common import (
-    _print_error,
+    _exit_error,
+    _exit_pro_required,
+    _load_json_or_yaml,
     _print_info,
     _print_success,
+    load_reactor_from_path,
+    _require_path,
 )
 
 
@@ -25,16 +29,8 @@ def visualize_geometry(args):
             plot_ray_traced_geometry,
         )
 
-        # Load reactor
-        if not args.reactor.exists():
-            _print_error(f"Reactor file not found: {args.reactor}")
-            sys.exit(1)
-            return  # ensure we don't fall through when exit is mocked
-
-        with open(args.reactor) as f:
-            reactor_data = json.load(f)
-
-        reactor = create_reactor(**reactor_data)
+        reactor_path = _require_path(args, "reactor", "Reactor file not found")
+        reactor = load_reactor_from_path(reactor_path)
         core = reactor._get_core()
 
         _print_info("Generating geometry visualization...")
@@ -71,17 +67,9 @@ def visualize_geometry(args):
                 )  # pragma: no cover
 
     except ImportError as e:  # pragma: no cover
-        _print_error(f"Failed to import visualization modules: {e}")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
-        return  # pragma: no cover
+        _exit_error(f"Failed to import visualization modules: {e}")  # pragma: no cover
     except Exception as e:  # pragma: no cover
-        _print_error(f"Failed to visualize geometry: {e}")  # pragma: no cover
-        if args.verbose if hasattr(args, "verbose") else False:  # pragma: no cover
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
-        return  # pragma: no cover
+        _exit_error(f"Failed to visualize geometry: {e}")  # pragma: no cover
 
 
 def visualize_flux(args):
@@ -91,13 +79,8 @@ def visualize_flux(args):
 
         from smrforge.visualization.geometry import plot_flux_on_geometry
 
-        # Load results
-        if not args.results.exists():
-            _print_error(f"Results file not found: {args.results}")
-            sys.exit(1)
-
-        with open(args.results) as f:
-            results_data = json.load(f)
+        results_path = _require_path(args, "results", "Results file not found")
+        results_data = _load_json_or_yaml(results_path)
 
         _print_info("Generating flux visualization...")
 
@@ -112,21 +95,11 @@ def visualize_flux(args):
             _print_info("Save visualization using Python API")  # pragma: no cover
 
     except ImportError as e:
-        _print_error(f"Failed to import visualization modules: {e}")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
+        _exit_error(f"Failed to import visualization modules: {e}")  # pragma: no cover
     except Exception as e:
-        _print_error(f"Failed to visualize flux: {e}")
-        if args.verbose if hasattr(args, "verbose") else False:
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
-        sys.exit(1)
+        _exit_error(f"Failed to visualize flux: {e}")
 
 
 def visualize_tally(args):
     """Visualize OpenMC tally from statepoint (Pro tier)."""
-    _print_error(
-        "Tally visualization requires SMRForge Pro.\n"
-        "Upgrade: https://smrforge.io or pip install smrforge-pro"
-    )
-    sys.exit(1)
+    _exit_pro_required("Tally visualization")

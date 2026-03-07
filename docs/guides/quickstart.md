@@ -1,6 +1,6 @@
 # SMRForge Quickstart — First 5 Minutes
 
-**Last Updated:** February 2026  
+**Last Updated:** March 2026  
 **Audience:** New users who want to run SMRForge in under 5 minutes
 
 ---

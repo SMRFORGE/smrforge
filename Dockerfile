@@ -4,7 +4,7 @@
 # Build: docker build -t smrforge:latest .
 # Run:   docker run -it smrforge:latest
 #
-# Last Updated: February 2026
+# Last Updated: March 2026
 # Tier: Community (SMRFORGE_TIER=community)
 # Pro tier: Built in https://github.com/SMRFORGE/smrforge-pro (separate repo).
 # Recent Additions (February 2026):

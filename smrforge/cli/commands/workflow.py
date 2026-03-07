@@ -11,10 +11,15 @@ from smrforge.cli.common import (
     Table,
     _RICH_AVAILABLE,
     _YAML_AVAILABLE,
+    _exit_error,
+    _exit_pro_required,
+    _load_json_or_yaml,
+    _load_reactor_from_args,
     _print_error,
     _print_info,
     _print_success,
     _print_warning,
+    _require_path,
     _save_workflow_plot,
     _to_jsonable,
     console,
@@ -25,22 +30,19 @@ def workflow_run(args):
     """Run workflow from YAML file."""
     try:
         if not _YAML_AVAILABLE:
-            _print_error(
+            _exit_error(
                 "YAML support not available. Install PyYAML: pip install pyyaml"
             )
-            sys.exit(1)
 
         # Load workflow file
         if not args.workflow.exists():
-            _print_error(f"Workflow file not found: {args.workflow}")
-            sys.exit(1)
+            _exit_error(f"Workflow file not found: {args.workflow}")
 
         with open(args.workflow) as f:
             workflow_data = yaml.safe_load(f)
 
         if not workflow_data or "steps" not in workflow_data:
-            _print_error("Invalid workflow file: must contain 'steps' key")
-            sys.exit(1)
+            _exit_error("Invalid workflow file: must contain 'steps' key")
 
         _print_info(f"Running workflow: {args.workflow}")
         _print_info(f"Steps: {len(workflow_data['steps'])}")
@@ -72,11 +74,7 @@ def workflow_run(args):
                         )  # pragma: no cover
                         continue  # pragma: no cover
 
-                    with open(config_path) as f:
-                        if config_path.suffix.lower() in [".yaml", ".yml"]:
-                            config_data = yaml.safe_load(f)  # pragma: no cover
-                        else:
-                            config_data = json.load(f)
+                    config_data = _load_json_or_yaml(config_path)
 
                     reactor = create_reactor(**config_data)
                     _print_success(f"Created reactor from config: {config_path}")
@@ -177,15 +175,9 @@ def workflow_run(args):
         _print_success("\nWorkflow completed successfully!")
 
     except ImportError as e:
-        _print_error(f"Failed to import required modules: {e}")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
+        _exit_error(f"Failed to import required modules: {e}")  # pragma: no cover
     except Exception as e:
-        _print_error(f"Failed to run workflow: {e}")
-        if args.verbose if hasattr(args, "verbose") else False:
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
-        sys.exit(1)
+        _exit_error(f"Failed to run workflow: {e}")
 
 
 def sweep_run(args):
@@ -210,10 +202,9 @@ def sweep_run(args):
                 config.seed = args.seed  # pragma: no cover
         else:
             if not getattr(args, "params", None) or not args.params:
-                _print_error(
+                _exit_error(
                     "Either --config FILE or --params ... is required"
                 )  # pragma: no cover
-                sys.exit(1)  # pragma: no cover
             parameters = {}
             for param_spec in args.params:
                 parts = param_spec.split(":")
@@ -227,10 +218,7 @@ def sweep_run(args):
             reactor_template = None
             if args.reactor:
                 if Path(args.reactor).exists():
-                    import json
-
-                    with open(args.reactor) as f:
-                        reactor_template = json.load(f)
+                    reactor_template = _load_json_or_yaml(Path(args.reactor))
                 else:
                     reactor_template = {"name": args.reactor}
             config = SweepConfig(
@@ -259,15 +247,9 @@ def sweep_run(args):
         _print_info(f"Failed cases: {len(results.failed_cases)}")
 
     except ImportError as e:  # pragma: no cover
-        _print_error(f"Failed to import required modules: {e}")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
+        _exit_error(f"Failed to import required modules: {e}")  # pragma: no cover
     except Exception as e:  # pragma: no cover
-        _print_error(f"Failed to run parameter sweep: {e}")  # pragma: no cover
-        if args.verbose if hasattr(args, "verbose") else False:  # pragma: no cover
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
+        _exit_error(f"Failed to run parameter sweep: {e}")  # pragma: no cover
 
 
 def batch_keff_run(args):
@@ -280,10 +262,9 @@ def batch_keff_run(args):
 
         patterns = getattr(args, "reactors", None) or []
         if not patterns:
-            _print_error(
+            _exit_error(
                 "Specify at least one reactor file or glob (e.g. reactors/*.json)"
             )
-            sys.exit(1)
         reactor_files = []
         for pattern in patterns:
             matched = glob.glob(pattern, recursive=True)
@@ -293,28 +274,16 @@ def batch_keff_run(args):
                     reactor_files.append(p)
         reactor_files = list(dict.fromkeys(reactor_files))
         if not reactor_files:
-            _print_error("No valid reactor files found")  # pragma: no cover
-            sys.exit(1)  # pragma: no cover
+            _exit_error("No valid reactor files found")  # pragma: no cover
 
         _print_info(f"Loading {len(reactor_files)} reactor(s)...")
         reactors = []
         for p in reactor_files:
             try:
-                with open(p, encoding="utf-8") as f:
-                    raw = f.read()
-                if p.suffix.lower() in (".yaml", ".yml"):
-                    if not _YAML_AVAILABLE:  # pragma: no cover
-                        _print_error(
-                            "YAML file given but PyYAML not installed. Install: pip install pyyaml"
-                        )  # pragma: no cover
-                        sys.exit(1)  # pragma: no cover
-                    data = yaml.safe_load(raw)  # pragma: no cover
-                else:
-                    data = json.loads(raw)
+                data = _load_json_or_yaml(p)
                 reactors.append(create_reactor(**data))
             except Exception as e:  # pragma: no cover
-                _print_error(f"Failed to load {p}: {e}")  # pragma: no cover
-                sys.exit(1)  # pragma: no cover
+                _exit_error(f"Failed to load {p}: {e}")  # pragma: no cover
 
         parallel = not getattr(args, "no_parallel", False)
         workers = getattr(args, "workers", None)
@@ -355,12 +324,7 @@ def batch_keff_run(args):
             for p, k in zip(reactor_files, k_effs):  # pragma: no cover
                 print(f"{p.name}: {k}")  # pragma: no cover
     except Exception as e:
-        _print_error(f"Batch k-eff failed: {e}")  # pragma: no cover
-        if getattr(args, "verbose", False):  # pragma: no cover
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
+        _exit_error(f"Batch k-eff failed: {e}")  # pragma: no cover
 
 
 def workflow_design_point(args):
@@ -388,12 +352,7 @@ def workflow_design_point(args):
         else:  # pragma: no cover
             print(json.dumps(point, indent=2))
     except Exception as e:  # pragma: no cover
-        _print_error(f"Design point failed: {e}")  # pragma: no cover
-        if getattr(args, "verbose", False):  # pragma: no cover
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
+        _exit_error(f"Design point failed: {e}")  # pragma: no cover
 
 
 def workflow_safety_report(args):
@@ -441,42 +400,7 @@ def workflow_safety_report(args):
         else:  # pragma: no cover
             print(json.dumps(report.to_dict(), indent=2))
     except Exception as e:  # pragma: no cover
-        _print_error(f"Safety report failed: {e}")  # pragma: no cover
-        if getattr(args, "verbose", False):  # pragma: no cover
-            import traceback  # pragma: no cover
-
-            traceback.print_exc()  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
-
-
-def _load_reactor_from_args(args):
-    """Load reactor from --reactor (file or preset name)."""
-    from smrforge.convenience import create_reactor  # pragma: no cover
-
-    r = getattr(args, "reactor", None)  # pragma: no cover
-    if not r:  # pragma: no cover
-        _print_error("--reactor FILE or preset name required")  # pragma: no cover
-        sys.exit(1)  # pragma: no cover
-    r = (
-        Path(r)
-        if isinstance(r, str)
-        and (r.endswith(".json") or r.endswith(".yaml") or r.endswith(".yml"))
-        else r
-    )  # pragma: no cover
-    if isinstance(r, Path) and r.exists():  # pragma: no cover
-        with open(r, encoding="utf-8") as f:  # pragma: no cover
-            raw = f.read()  # pragma: no cover
-        if r.suffix.lower() in (".yaml", ".yml"):  # pragma: no cover
-            if not _YAML_AVAILABLE:  # pragma: no cover
-                _print_error(
-                    "PyYAML required for YAML reactor files"
-                )  # pragma: no cover
-                sys.exit(1)  # pragma: no cover
-            data = yaml.safe_load(raw)  # pragma: no cover
-        else:  # pragma: no cover
-            data = json.loads(raw)  # pragma: no cover
-        return create_reactor(**data)  # pragma: no cover
-    return create_reactor(name=str(r))  # pragma: no cover
+        _exit_error(f"Safety report failed: {e}")  # pragma: no cover
 
 
 def workflow_doe(args):
@@ -1298,25 +1222,22 @@ def workflow_surrogate(args):
     try:
         from smrforge_pro.workflows.surrogate import surrogate_from_sweep_results
     except ImportError:
-        _print_error(
-            "Surrogate workflow requires SMRForge Pro.\n"
-            "  Alternative: Use 'smrforge workflow sweep' for physics-based parameter studies.\n"
-            "  Upgrade: https://smrforge.io or pip install smrforge-pro"
+        _exit_pro_required(
+            "Surrogate workflow",
+            extra="Alternative: Use 'smrforge workflow sweep' for physics-based parameter studies.",
         )
-        sys.exit(1)
-        return  # unreachable; prevents fall-through when sys.exit is mocked in tests
-    p = Path(getattr(args, "sweep_results", None) or "")
-    if not p.exists():
-        _print_error(f"Sweep results file not found: {p}")
-        sys.exit(1)
+        return  # no fall-through when sys.exit is mocked in tests
+    p = _require_path(
+        args, "sweep_results",
+        "Sweep results file not found (--sweep-results PATH required)",
+    )
     import json
     with open(p) as f:
         data = json.load(f)
     results = data.get("results", data) if isinstance(data, dict) else data
     params = getattr(args, "params", None) or []
     if not params:
-        _print_error("--params name1 name2 ... required")
-        sys.exit(1)
+        _exit_error("--params name1 name2 ... required")
     metric = getattr(args, "metric", "k_eff") or "k_eff"
     method = getattr(args, "method", "rbf") or "rbf"
     out_path = getattr(args, "output", None)
@@ -1335,32 +1256,26 @@ def workflow_surrogate_validate(args):
         from smrforge_pro.ai.surrogates import load_surrogate_from_path
         from smrforge_pro.workflows.surrogate_validation import generate_surrogate_validation_report
     except ImportError:
-        _print_error(
-            "Surrogate validation report requires SMRForge Pro.\n"
-            "Upgrade: https://smrforge.io or pip install smrforge-pro"
-        )
-        sys.exit(1)
+        _exit_pro_required("Surrogate validation report")
 
-    surr_path = getattr(args, "surrogate", None) or Path()
-    holdout_path = getattr(args, "holdout", None) or Path()
-    if not surr_path or not Path(surr_path).exists():
-        _print_error("--surrogate PATH required (path to .pkl/.pt/.onnx model)")
-        sys.exit(1)
-    if not holdout_path or not Path(holdout_path).exists():
-        _print_error("--holdout PATH required (path to holdout results JSON)")
-        sys.exit(1)
+    surr_path = _require_path(
+        args, "surrogate",
+        "--surrogate PATH required (path to .pkl/.pt/.onnx model)",
+    )
+    holdout_path = _require_path(
+        args, "holdout",
+        "--holdout PATH required (path to holdout results JSON)",
+    )
 
     params = getattr(args, "params", None) or []
     if not params:
-        _print_error("--params name1 name2 ... required")
-        sys.exit(1)
+        _exit_error("--params name1 name2 ... required")
 
     with open(holdout_path) as f:
         data = json.load(f)
     holdout = data.get("results", data) if isinstance(data, dict) else data
     if not isinstance(holdout, list):
-        _print_error("Holdout file must contain list of results or {results: [...]}")
-        sys.exit(1)
+        _exit_error("Holdout file must contain list of results or {results: [...]}")
 
     surrogate = load_surrogate_from_path(Path(surr_path), param_names=params)
     metric = getattr(args, "metric", "k_eff") or "k_eff"
@@ -1391,8 +1306,7 @@ def workflow_code_verify(args):
         from smrforge_pro.workflows.code_verification import run_code_verification
         from smrforge.convenience import create_reactor
     except ImportError:
-        _print_error("Code verification requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro")
-        sys.exit(1)
+        _exit_pro_required("Code verification")
     reactor = _load_reactor_from_args(args)
     codes = getattr(args, "codes", None) or ["diffusion", "openmc"]
     out = getattr(args, "output", None)
@@ -1415,8 +1329,7 @@ def workflow_regulatory_package(args):
     try:
         from smrforge_pro.workflows.regulatory_package import generate_regulatory_package
     except ImportError:
-        _print_error("Regulatory package requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro")
-        sys.exit(1)
+        _exit_pro_required("Regulatory package")
     reactor = _load_reactor_from_args(args)
     out_dir = Path(getattr(args, "output_dir", None) or "regulatory_package")
     preset = getattr(args, "preset", "10_CFR_50") or "10_CFR_50"
@@ -1430,12 +1343,10 @@ def workflow_benchmark(args):
     try:
         from smrforge_pro.workflows.benchmark_reproduction import reproduce_benchmark
     except ImportError:
-        _print_error("Benchmark reproduction requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro")
-        sys.exit(1)
+        _exit_pro_required("Benchmark reproduction")
     bid = getattr(args, "benchmark", None)
     if not bid:
-        _print_error("--benchmark ID required")
-        sys.exit(1)
+        _exit_error("--benchmark ID required")
     out_dir = getattr(args, "output_dir", None)
     report = reproduce_benchmark(bid, output_dir=Path(out_dir) if out_dir else None)
     passed = report.get("passed", False)
@@ -1448,20 +1359,15 @@ def workflow_benchmark(args):
 
 def workflow_ml_export(args):
     """Export sweep/design results to ML-friendly format (Parquet/HDF5). Pro tier."""
-    results_path = getattr(args, "results", None)
-    if not results_path or not Path(results_path).exists():
-        _print_error("--results PATH required (path to sweep_results.json or design study JSON)")
-        sys.exit(1)
-        return
+    results_path = _require_path(
+        args, "results",
+        "--results PATH required (path to sweep_results.json or design study JSON)",
+    )
     try:
         from smrforge_pro.workflows.ml_export import export_ml_dataset as _export_ml_dataset
     except ImportError:
-        _print_error(
-            "ML export requires SMRForge Pro.\n"
-            "Upgrade: https://smrforge.io or pip install smrforge-pro"
-        )
-        sys.exit(1)
-        return
+        _exit_pro_required("ML export")
+        return  # no fall-through when sys.exit is mocked in tests
     out = getattr(args, "output", None)
     fmt = getattr(args, "format", "parquet") or "parquet"
     _export_ml_dataset(Path(results_path), output_path=Path(out) if out else None, format=fmt)
@@ -1474,8 +1380,7 @@ def workflow_multi_optimize(args):
         from smrforge_pro.workflows.multi_objective_optimization import multi_objective_optimize
         from smrforge.convenience import create_reactor
     except ImportError:
-        _print_error("Multi-objective optimization requires SMRForge Pro. Upgrade: https://smrforge.io or pip install smrforge-pro")
-        sys.exit(1)
+        _exit_pro_required("Multi-objective optimization")
     reactor_path = getattr(args, "reactor", None)
     if not reactor_path:
         _print_error("--reactor base design JSON required")

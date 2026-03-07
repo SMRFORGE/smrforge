@@ -1138,8 +1138,9 @@ class TestBurnupRun:
         """Test burnup_run without reactor file."""
         args = Mock(reactor=None, time_steps=[], output=None, verbose=False)
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
-            cli_module.burnup_run(args)
+        with patch("smrforge.cli.common.sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                cli_module.burnup_run(args)
             mock_exit.assert_called_once_with(1)
 
     def test_burnup_run_file_not_found(self, tmp_path):
@@ -1150,8 +1151,9 @@ class TestBurnupRun:
             reactor=reactor_file, time_steps=[0, 365], output=None, verbose=False
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
-            cli_module.burnup_run(args)
+        with patch("smrforge.cli.common.sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                cli_module.burnup_run(args)
             mock_exit.assert_called_once_with(1)
 
     def test_burnup_run_basic(self, tmp_path):
@@ -3093,8 +3095,9 @@ class TestVisualizeGeometry:
             verbose=False,
         )
 
-        with patch("smrforge.cli.sys.exit") as mock_exit:
-            cli_module.visualize_geometry(args)
+        with patch("smrforge.cli.common.sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                cli_module.visualize_geometry(args)
             mock_exit.assert_called_once_with(1)
 
     def test_visualize_geometry_2d(self, tmp_path):
@@ -4426,8 +4429,8 @@ class TestBatchKeffAndWorkflowHandlers:
             )
 
         args = Mock(sweep_results=Path("/nonexistent.json"), params=["p1"], verbose=False)
-        with patch("smrforge.cli.commands.workflow._print_error") as mock_err:
-            with patch("smrforge.cli.commands.workflow.sys.exit") as mock_exit:
+        with patch("smrforge.cli.common._print_error") as mock_err:
+            with patch("smrforge.cli.common.sys.exit") as mock_exit:
                 cli_module.workflow_surrogate(args)
         mock_err.assert_called()
         assert "Pro" in str(mock_err.call_args)

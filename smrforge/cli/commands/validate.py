@@ -18,13 +18,9 @@ from ..utils import (
     console,
     rprint,
     yaml,
+    Panel,
+    Table,
 )
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
 
 def validate_run(args):
     """

@@ -9,23 +9,21 @@ from ..utils import (
     _GLYPH_SUCCESS,
     _RICH_AVAILABLE,
     _YAML_AVAILABLE,
+    _exit_error,
+    _exit_pro_required,
     _print_error,
     _print_info,
     _print_success,
     _print_warning,
+    _require_path,
     _save_workflow_plot,
     _to_jsonable,
     console,
     rprint,
     yaml,
+    Panel,
+    Table,
 )
-
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
 
 
 def report_design(args):
@@ -42,14 +40,12 @@ def report_design(args):
             results = reactor.solve()
             title = f"Design Summary: {args.reactor.stem}"
         else:
-            _print_error("Specify --preset or --reactor.")
-            sys.exit(1)
+            _exit_error("Specify --preset or --reactor.")
         out = Path(args.output) if args.output else Path("design_report.md")
         generate_markdown_report(results, title=title, output_path=out)
         _print_success(f"Report saved to {out}")
     except Exception as e:
-        _print_error(f"Report generation failed: {e}")
-        sys.exit(1)
+        _exit_error(f"Report generation failed: {e}")
 
 
 def report_validation(args):
@@ -60,18 +56,16 @@ def report_validation(args):
             SurrogateValidationReport,
         )
     except ImportError:
-        _print_error(
-            "Validation report requires SMRForge Pro. Upgrade at https://smrforge.io"
-        )
-        sys.exit(1)
+        _exit_pro_required("Validation report")
     import numpy as np
 
-    pred_path = Path(getattr(args, "predictions", None) or "")
-    ref_path = Path(getattr(args, "reference", None) or "")
+    pred_path = _require_path(
+        args, "predictions", "--predictions and --reference files required"
+    )
+    ref_path = _require_path(
+        args, "reference", "--predictions and --reference files required"
+    )
     output = Path(getattr(args, "output", None) or "validation_report.json")
-    if not pred_path.exists() or not ref_path.exists():
-        _print_error("--predictions and --reference files required")
-        sys.exit(1)
     if pred_path.suffix == ".npy":
         pred = np.load(pred_path)
     else:

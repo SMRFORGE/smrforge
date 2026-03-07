@@ -92,6 +92,7 @@ class TestWorkflowMlExport:
 
         args = Mock(results=Path("/nonexistent_12345.json"), output=None)
         with patch("smrforge.cli.commands.workflow._print_error"):
-            with patch("sys.exit") as mock_exit:
-                workflow_ml_export(args)
+            with patch("smrforge.cli.common.sys.exit", side_effect=SystemExit) as mock_exit:
+                with pytest.raises(SystemExit):
+                    workflow_ml_export(args)
         mock_exit.assert_called_once_with(1)

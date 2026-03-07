@@ -38,8 +38,10 @@ try:
     _RICH_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _RICH_AVAILABLE = False  # pragma: no cover
-    # Fallback to basic print
     rprint = print  # pragma: no cover
+    Console = None  # type: ignore
+    Panel = None  # type: ignore
+    Table = None  # type: ignore
 
 console = Console() if _RICH_AVAILABLE else None
 
@@ -91,6 +93,46 @@ _GLYPH_SUCCESS = "✓" if _supports_unicode("✓") else "OK"
 _GLYPH_ERROR = "✗" if _supports_unicode("✗") else "X"
 _GLYPH_INFO = "ℹ" if _supports_unicode("ℹ") else "i"
 _GLYPH_WARNING = "⚠" if _supports_unicode("⚠") else "!"
+
+
+def _load_json_or_yaml(path: Path) -> Any:
+    """
+    Load JSON or YAML file from path. Detects format by suffix.
+    Raises if YAML requested but PyYAML not available.
+    """
+    path = Path(path)
+    with open(path, encoding="utf-8") as f:
+        raw = f.read()
+    suffix = path.suffix.lower()
+    if suffix in (".yaml", ".yml"):
+        if not _YAML_AVAILABLE:
+            raise ImportError("PyYAML required for YAML files. Install: pip install pyyaml")
+        return yaml.safe_load(raw)
+    return json.loads(raw)
+
+
+def load_reactor_from_path(path_or_preset: str | Path):
+    """
+    Load reactor from file path (JSON/YAML) or preset name.
+    Returns create_reactor(**data) for files, create_reactor(name=...) for presets.
+    """
+    from smrforge.convenience import create_reactor
+
+    p = Path(path_or_preset) if isinstance(path_or_preset, str) and (
+        path_or_preset.endswith(".json") or path_or_preset.endswith(".yaml") or path_or_preset.endswith(".yml")
+    ) else path_or_preset
+    if isinstance(p, Path) and p.exists():
+        data = _load_json_or_yaml(p)
+        return create_reactor(**data)
+    return create_reactor(name=str(path_or_preset))
+
+
+def _load_reactor_from_args(args: Any):
+    """Load reactor from args.reactor (file path or preset name)."""
+    r = getattr(args, "reactor", None)
+    if not r:
+        _exit_error("--reactor FILE or preset name required")
+    return load_reactor_from_path(r)
 
 
 def _to_jsonable(obj: Any) -> Any:
@@ -172,3 +214,50 @@ def _print_warning(message: str):
             print(f"{_GLYPH_WARNING} {message}")  # pragma: no cover
     else:  # pragma: no cover
         print(f"{_GLYPH_WARNING} {message}")
+
+
+def _exit_error(message: str) -> None:
+    """
+    Print error message and exit with code 1.
+    Use for CLI validation failures (missing args, file not found, etc.).
+    Never returns.
+    """
+    _print_error(message)
+    sys.exit(1)
+
+
+def _require_path(args: Any, attr: str, error_msg: str) -> Path:
+    """
+    Get path from args.attr; exit with error if missing or not existing.
+
+    Args:
+        args: Parsed args object (or Mock)
+        attr: Attribute name (e.g. "reactor", "results")
+        error_msg: Message to show when path is invalid
+
+    Returns:
+        Path instance (never returns if invalid)
+    """
+    val = getattr(args, attr, None)
+    if not val:
+        _exit_error(error_msg)
+    p = Path(val)
+    if not p.exists():
+        _exit_error(error_msg)
+    return p
+
+
+def _exit_pro_required(feature_name: str, extra: str = "") -> None:
+    """
+    Print standard Pro-required message and exit with code 1.
+    Use in except ImportError when smrforge_pro is missing.
+
+    Args:
+        feature_name: Human-readable feature name (e.g. "Surrogate workflow")
+        extra: Optional additional text (e.g. "Alternative: Use 'smrforge workflow sweep'")
+    """
+    msg = f"{feature_name} requires SMRForge Pro.\nUpgrade: https://smrforge.io or pip install smrforge-pro"
+    if extra:
+        msg = f"{feature_name} requires SMRForge Pro.\n{extra}\nUpgrade: https://smrforge.io or pip install smrforge-pro"
+    _print_error(msg)
+    sys.exit(1)

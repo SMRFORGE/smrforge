@@ -1,6 +1,6 @@
 # Air-Gapped Deployment Guide
 
-**Last Updated:** February 2026  
+**Last Updated:** March 2026  
 **Purpose:** Enable SMRForge installation and use in environments without internet access.  
 **Audience:** Site administrators, V&V teams, regulated (NQA-1) deployments.
 

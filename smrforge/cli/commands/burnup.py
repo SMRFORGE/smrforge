@@ -9,12 +9,15 @@ from pathlib import Path
 from smrforge.cli.common import (
     Table,
     _RICH_AVAILABLE,
+    _exit_error,
     _print_error,
     _print_info,
     _print_success,
     _print_warning,
+    _require_path,
     _to_jsonable,
     console,
+    load_reactor_from_path,
 )
 
 import numpy as np
@@ -33,20 +36,8 @@ def burnup_run(args):
         from smrforge.validation.models import CrossSectionData, SolverOptions
 
         # Load reactor
-        if args.reactor:
-            if not args.reactor.exists():
-                _print_error(f"Reactor file not found: {args.reactor}")
-                sys.exit(1)
-                return  # ensure we don't fall through when exit is mocked
-
-            with open(args.reactor) as f:
-                reactor_data = json.load(f)
-
-            reactor = create_reactor(**reactor_data)
-        else:
-            _print_error("Must specify --reactor FILE")
-            sys.exit(1)
-            return  # ensure we don't fall through when exit is mocked
+        reactor_path = _require_path(args, "reactor", "Must specify --reactor FILE")
+        reactor = load_reactor_from_path(reactor_path)
 
         # Parse time steps
         if args.time_steps:

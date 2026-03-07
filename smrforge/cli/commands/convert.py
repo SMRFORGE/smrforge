@@ -9,23 +9,19 @@ from ..utils import (
     _GLYPH_SUCCESS,
     _RICH_AVAILABLE,
     _YAML_AVAILABLE,
+    _exit_error,
     _print_error,
     _print_info,
     _print_success,
     _print_warning,
     _save_workflow_plot,
     _to_jsonable,
+    Panel,
+    Table,
     console,
     rprint,
     yaml,
 )
-
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-except ImportError:
-    Panel = None  # type: ignore
-    Table = None  # type: ignore
 
 
 def convert_export(args):
@@ -33,15 +29,13 @@ def convert_export(args):
     try:
         from smrforge.convenience import create_reactor
     except ImportError:
-        _print_error("SMRForge convenience module not available")
-        sys.exit(1)
+        _exit_error("SMRForge convenience module not available")
     reactor_spec = getattr(args, "reactor", None)
     output = getattr(args, "output", None)
     fmt = getattr(args, "format", "").lower()
     if not reactor_spec or not output:
-        _print_error("--reactor and --output required")
-        sys.exit(1)
-        return  # no fall-through when sys.exit is mocked
+        _exit_error("--reactor and --output required")
+        return  # no fall-through when sys.exit is mocked in tests
     try:
         if Path(reactor_spec).exists():
             import json
@@ -52,8 +46,7 @@ def convert_export(args):
         else:
             reactor = create_reactor(str(reactor_spec))
     except Exception as e:
-        _print_error(f"Failed to create reactor: {e}")
-        sys.exit(1)
+        _exit_error(f"Failed to create reactor: {e}")
     output = Path(output)
     try:
         if fmt == "serpent":
@@ -79,8 +72,7 @@ def convert_export(args):
                 output = output.with_suffix(".mcnp")
             MCNPConverter.export_reactor(reactor, output)
         else:
-            _print_error(f"Unsupported format: {fmt}. Use serpent, openmc, or mcnp")
-            sys.exit(1)
+            _exit_error(f"Unsupported format: {fmt}. Use serpent, openmc, or mcnp")
 
         # Rich summary (with plain fallback)
         reactor_name = (
@@ -95,5 +87,4 @@ def convert_export(args):
             print(f"Export: {reactor_name} → {fmt} → {output}")
         _print_success(f"Exported to {output}")
     except Exception as e:
-        _print_error(f"Export failed: {e}")
-        sys.exit(1)
+        _exit_error(f"Export failed: {e}")
