@@ -157,6 +157,7 @@ test*.zarr
 test_zarr*
 
 # Runtime / generated artifacts (root)
+_tmp_atlas/
 .smrforge_runs.json
 /results.json
 /sweep_results.json

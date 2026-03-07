@@ -6,7 +6,7 @@ SMRForge examples are organized by edition: **Community** (free) and **Pro** (li
 Community Examples
 ------------------
 
-**Path:** ``examples/community/``
+**Path:** ``examples/`` (Community repo root)
 
 Community examples cover:
 - Multi-group neutronics, burnup, decay heat
@@ -20,6 +20,7 @@ Quick start (no data required):
 
 .. code-block:: bash
 
+   python examples/quick_start_community.py
    python examples/convenience_methods_example.py
    python examples/preset_designs.py
    python examples/basic_neutronics.py
@@ -27,9 +28,9 @@ Quick start (no data required):
 Pro Examples
 ------------
 
-**Path:** ``examples/pro/`` (requires SMRForge Pro)
+**Pro examples live in the smrforge-pro repository** (private, licensed): https://github.com/SMRFORGE/smrforge-pro
 
-Pro examples cover:
+Pro is not included in the Community repo. Pro examples cover:
 - Serpent export/import
 - OpenMC export/import
 - Benchmark suite and benchmark reproduction
@@ -39,23 +40,12 @@ Pro examples cover:
 - Regulatory submission package
 - Multi-objective optimization
 - Physics-informed surrogates
+- PINN surrogate modeling
 
-See: ``examples/pro/README.md`` for the full index.
-
-.. code-block:: bash
-
-   python examples/pro/serpent_export_example.py
-   python examples/pro/openmc_export_example.py
-   python examples/pro/benchmark_suite_example.py
-   python examples/pro/nl_design_example.py
-   python examples/pro/code_verification_example.py
-   python examples/pro/regulatory_package_example.py
-   python examples/pro/benchmark_reproduction_example.py
-   python examples/pro/multi_objective_optimization_example.py
-   python examples/pro/physics_informed_surrogate_example.py
+To run Pro examples, install SMRForge Pro from the Pro repo and see ``examples/pro/`` there.
 
 Documentation
 -------------
 
 * Community: :doc:`community/README <community/README>` — Feature matrix, workflows, required data
-* Pro: :doc:`pro/README <pro/README>` — Serpent/OpenMC, benchmarks, NL design, code verification, regulatory package
+* Pro: See `docs/pro-tier-overview.md` and the smrforge-pro repo for Pro documentation

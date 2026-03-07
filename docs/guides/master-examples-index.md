@@ -1,13 +1,14 @@
 # SMRForge Master Examples Index
 
-**Last Updated:** February 2026
+**Last Updated:** March 2026
 
-Complete index of all example code and tutorials in SMRForge documentation.
+Complete index of all example code and tutorials in SMRForge documentation. Examples are organized by **Community** (free, in this repo) and **Pro** (licensed, in [smrforge-pro](https://github.com/SMRFORGE/smrforge-pro)).
 
 ---
 
 ## Quick Navigation
 
+- [Community Quick Start](#community-quick-start)
 - [Complete Workflows](#complete-workflows)
 - [Data Management](#data-management)
 - [Geometry Creation](#geometry-creation)
@@ -16,6 +17,41 @@ Complete index of all example code and tutorials in SMRForge documentation.
 - [Safety Analysis](#safety-analysis)
 - [Visualization](#visualization)
 - [Integration Examples](#integration-examples)
+- [I/O & External Codes (Community)](#io--external-codes-community)
+- [Pro Tier Examples](#pro-tier-examples)
+
+---
+
+## Community Quick Start
+
+### Minimal 5-Line Workflow (No Data Required)
+
+**File:** `examples/quick_start_community.py`
+
+```python
+import smrforge as smr
+
+reactor = smr.create_reactor("valar-10")
+core = reactor.build_core()
+k_eff, flux = smr.quick_keff_calculation(core=core)
+print(f"k-eff: {k_eff:.6f}")
+```
+
+**Run:**
+```bash
+python examples/quick_start_community.py
+```
+
+### More Community Examples
+
+| Example | Description | Data |
+|---------|-------------|------|
+| `convenience_methods_example.py` | quick_keff, create_simple_*, get_nuclide | None |
+| `preset_designs.py` | List and create presets | None |
+| `basic_neutronics.py` | Multi-group diffusion | Synthetic XS |
+| `community_benchmark_example.py` | Run Community benchmarks, generate report | None |
+
+See [Community Examples Index](community/community-examples-index.md) for the full list.
 
 ---
 
@@ -636,11 +672,65 @@ for name, specs in reactors.items():
 
 ---
 
+## I/O & External Codes (Community)
+
+### OpenMC Export, Run, and Parse
+
+**File:** `examples/openmc_export_example.py`
+
+Community includes full OpenMC export/import and statepoint HDF5 parsing:
+
+```python
+from pathlib import Path
+import smrforge as smr
+from smrforge.io import OpenMCConverter
+from smrforge.io.openmc_run import run_and_parse
+
+reactor = smr.create_reactor("valar-10")
+reactor.build_core()
+out = Path("output/openmc")
+OpenMCConverter.export_reactor(reactor, out, particles=1000, batches=20)
+results = run_and_parse(out, timeout=60)  # Requires OpenMC installed
+print(f"k_eff: {results['k_eff']:.6f} ± {results['k_eff_std']:.6f}")
+```
+
+### Serpent Run+Parse (Community)
+
+**File:** `examples/serpent_run_example.py`
+
+Community can run Serpent 2 and parse k-eff from `_res.m` (works with Pro-exported input):
+
+```python
+from pathlib import Path
+from smrforge.io import run_serpent, parse_serpent_res
+
+work_dir = Path("serpent_work")
+proc = run_serpent(work_dir, "model.sss", timeout=300)  # Requires Serpent 2
+if proc.returncode == 0:
+    parsed = parse_serpent_res(work_dir / "model_res.m")
+    print(f"k_eff: {parsed['k_eff']:.6f}")
+```
+
+### Community Benchmark Suite
+
+**File:** `examples/community_benchmark_example.py`
+
+```python
+from pathlib import Path
+from smrforge.benchmarks import CommunityBenchmarkRunner
+
+runner = CommunityBenchmarkRunner()
+results = runner.run_all()
+runner.generate_report(results, output_path=Path("output/community_benchmark_report.md"))
+```
+
+---
+
 ## Pro Tier Examples
 
-**Pro examples and code live in the private smrforge-pro repo:** https://github.com/SMRFORGE/smrforge-pro
+**Pro examples and code live only in the private smrforge-pro repo:** https://github.com/SMRFORGE/smrforge-pro
 
-Pro includes: natural-language design, code verification, regulatory package, benchmark reproduction, multi-objective optimization, physics-informed surrogates, Serpent/OpenMC/MCNP export, ReportGenerator, BenchmarkRunner, and more. Requires Pro license.
+Pro is **not** included in the Community package. Pro includes: natural-language design, code verification, regulatory package, benchmark reproduction, multi-objective optimization, physics-informed surrogates, Serpent/OpenMC/MCNP export, ReportGenerator, BenchmarkRunner, PINN, and more. Requires Pro license. Import paths and module structure are defined in the Pro repo.
 
 **Natural-language design (Pro):**
 ```python
@@ -701,6 +791,8 @@ All example files are in the `examples/` directory:
 - `basic_neutronics.py` - Basic neutronics
 - `burnup_example.py` - Basic burnup analysis
 - `community_benchmark_example.py` - Community benchmarks
+- `quick_start_community.py` - Minimal 5-line Community workflow
+- `serpent_run_example.py` - Serpent run+parse (Community)
 - `control_rods_example.py` - Control rod geometry
 - `convenience_methods_example.py` - Convenience API
 - `custom_reactor.py` - Custom reactor creation
