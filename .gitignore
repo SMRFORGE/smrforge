@@ -119,6 +119,7 @@ docs/guides/pro/
 docs/pro_index.rst
 examples/pro/
 tests/test_smrforge_pro/
+website/
 
 # IDE / local
 .cursor/
