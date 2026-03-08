@@ -62,7 +62,7 @@ def create_results_viewer():
                                     dbc.Tab(
                                         label="3D Geometry",
                                         tab_id="tab-3d",
-                                        children=html.Div(id="3d-plot-container"),
+                                        children=html.Div(id="plot-3d-container"),
                                     ),
                                     dbc.Tab(
                                         label="Transient Results",

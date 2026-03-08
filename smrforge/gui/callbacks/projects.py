@@ -45,7 +45,7 @@ def register_project_callbacks(app):
         if button_id == "nav-save-project":
             return _save_project(reactor_spec, results)
         elif button_id == "nav-open-project":
-            return _open_project()
+            return _open_project(reactor_spec, results)
         else:
             raise PreventUpdate
 
@@ -69,8 +69,8 @@ def register_project_callbacks(app):
                     "message": "No reactor specification to save",
                 },
                 feedback,
-                {},  # reactor-spec-store (no change)
-                {},  # analysis-results-store (no change)
+                reactor_spec or {},  # preserve current store
+                results or {},  # preserve current store
             )
 
         try:
@@ -111,8 +111,8 @@ def register_project_callbacks(app):
                     "message": f"Project saved to {project_path.absolute()}",
                 },
                 feedback,
-                {},  # reactor-spec-store (no change)
-                {},  # analysis-results-store (no change)
+                reactor_spec,  # preserve (do not clear)
+                results or {},  # preserve (do not clear)
             )
         except Exception as e:
             logger.error(f"Error saving project: {e}", exc_info=True)
@@ -127,13 +127,15 @@ def register_project_callbacks(app):
                     "message": f"Error saving project: {str(e)}",
                 },
                 feedback,
-                {},  # reactor-spec-store (no change)
-                {},  # analysis-results-store (no change)
+                reactor_spec or {},  # preserve current store
+                results or {},  # preserve current store
             )
 
-    def _open_project():
-        """Open project."""
+    def _open_project(reactor_spec, results):
+        """Open project. On error, preserves reactor_spec and results in stores."""
         logger.info("Opening project")
+        cur_reactor_spec = reactor_spec or {}
+        cur_results = results or {}
 
         try:
             import json
@@ -160,8 +162,8 @@ def register_project_callbacks(app):
                         "message": "Project file not found",
                     },
                     feedback,
-                    {},  # reactor-spec-store (no change)
-                    {},  # analysis-results-store (no change)
+                    reactor_spec,  # preserve current store
+                    results,  # preserve current store
                 )
 
             # Load project data
@@ -185,8 +187,8 @@ def register_project_callbacks(app):
                         "message": "Project file is empty or invalid",
                     },
                     feedback,
-                    {},  # reactor-spec-store (no change)
-                    {},  # analysis-results-store (no change)
+                    reactor_spec,  # preserve current store
+                    results,  # preserve current store
                 )
 
             logger.info(f"Project loaded: {project_path}")
@@ -229,8 +231,8 @@ def register_project_callbacks(app):
                     "message": f"Error parsing project file: {str(e)}",
                 },
                 feedback,
-                {},  # reactor-spec-store (no change)
-                {},  # analysis-results-store (no change)
+                reactor_spec,  # preserve current store
+                results,  # preserve current store
             )
         except Exception as e:
             logger.error(f"Error opening project: {e}", exc_info=True)
@@ -245,6 +247,6 @@ def register_project_callbacks(app):
                     "message": f"Error opening project: {str(e)}",
                 },
                 feedback,
-                {},  # reactor-spec-store (no change)
-                {},  # analysis-results-store (no change)
+                reactor_spec,  # preserve current store
+                results,  # preserve current store
             )

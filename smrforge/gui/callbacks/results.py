@@ -29,9 +29,10 @@ def register_results_callbacks(app):
     @app.callback(
         Output("results-summary", "children"),
         Input("analysis-results-store", "data"),
+        Input("nav-results", "n_clicks"),
         prevent_initial_call=True,
     )
-    def update_results_summary(results):
+    def update_results_summary(results, _nav_clicks):
         """Update results summary."""
         logger.debug(
             f"Updating results summary: {list(results.keys()) if results else 'No results'}"
@@ -118,15 +119,17 @@ def register_results_callbacks(app):
     @app.callback(
         Output("flux-plot-container", "children"),
         Input("analysis-results-store", "data"),
+        Input("nav-results", "n_clicks"),
         prevent_initial_call=True,
     )
-    def update_flux_plot(results):
+    def update_flux_plot(results, _nav_clicks):
         """Update flux distribution plot."""
         if not results or "neutronics" not in results:
-            return dbc.Alert("No flux data available.", color="info")
+            return dbc.Alert("No flux data available. Run neutronics analysis first.", color="info")
 
         neutronics = results.get("neutronics", {})
         flux_data = neutronics.get("flux")
+        k_eff = neutronics.get("k_eff")
 
         if flux_data and "sample" in flux_data:
             # Use actual flux data from solver
@@ -162,8 +165,30 @@ def register_results_callbacks(app):
                     showarrow=False,
                     font=dict(size=14),
                 )
+            elif isinstance(k_eff, (int, float)):
+                fig.add_trace(
+                    go.Indicator(
+                        mode="gauge+number",
+                        value=float(k_eff),
+                        title={"text": "k-effective"},
+                        gauge={
+                            "axis": {"range": [0.9, 1.1]},
+                            "bar": {"color": "blue"},
+                            "steps": [
+                                {"range": [0.9, 0.98], "color": "lightgray"},
+                                {"range": [0.98, 1.02], "color": "lightgreen"},
+                                {"range": [1.02, 1.1], "color": "lightgray"},
+                            ],
+                            "threshold": {
+                                "line": {"color": "red", "width": 2},
+                                "thickness": 0.75,
+                                "value": 1.0,
+                            },
+                        },
+                    )
+                )
             fig.update_layout(
-                title="Neutron Flux Distribution",
+                title="Neutron Flux Distribution" + (f" (k-eff: {k_eff:.6f})" if isinstance(k_eff, (int, float)) else ""),
                 xaxis_title="Position (cm)",
                 yaxis_title="Flux (n/cm²/s)",
             )
@@ -173,9 +198,10 @@ def register_results_callbacks(app):
     @app.callback(
         Output("power-plot-container", "children"),
         Input("analysis-results-store", "data"),
+        Input("nav-results", "n_clicks"),
         prevent_initial_call=True,
     )
-    def update_power_plot(results):
+    def update_power_plot(results, _nav_clicks):
         """Update power distribution plot."""
         if not results or "neutronics" not in results:
             return dbc.Alert("No power data available.", color="info")
@@ -218,6 +244,15 @@ def register_results_callbacks(app):
                     showarrow=False,
                     font=dict(size=14),
                 )
+            elif isinstance(neutronics.get("k_eff"), (int, float)):
+                k_eff = neutronics["k_eff"]
+                fig.add_trace(
+                    go.Indicator(
+                        mode="number",
+                        value=float(k_eff),
+                        title={"text": "k-effective (no power profile)"},
+                    )
+                )
             fig.update_layout(
                 title="Power Distribution",
                 xaxis_title="Position (cm)",
@@ -227,12 +262,13 @@ def register_results_callbacks(app):
         return dcc.Graph(figure=fig)
 
     @app.callback(
-        Output("3d-plot-container", "children"),
+        Output("plot-3d-container", "children"),
         Input("analysis-results-store", "data"),
         Input("reactor-spec-store", "data"),
+        Input("nav-results", "n_clicks"),
         prevent_initial_call=True,
     )
-    def update_3d_plot(results, reactor_spec):
+    def update_3d_plot(results, reactor_spec, _nav_clicks):
         """Update 3D geometry plot."""
         if not reactor_spec:
             return dbc.Alert(
@@ -277,9 +313,10 @@ def register_results_callbacks(app):
     @app.callback(
         Output("transient-plot-container", "children"),
         Input("analysis-results-store", "data"),
+        Input("nav-results", "n_clicks"),
         prevent_initial_call=True,
     )
-    def update_transient_plot(results):
+    def update_transient_plot(results, _nav_clicks):
         """Update transient results plot."""
         if not results:
             return dbc.Alert(
