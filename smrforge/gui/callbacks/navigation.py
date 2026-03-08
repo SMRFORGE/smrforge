@@ -32,6 +32,12 @@ def register_navigation_callbacks(app):
 
     @app.callback(
         Output("main-content", "children"),
+        Output("nav-reactor-builder", "active"),
+        Output("nav-geometry-designer", "active"),
+        Output("nav-analysis", "active"),
+        Output("nav-results", "active"),
+        Output("nav-data-manager", "active"),
+        Output("nav-feature-lab", "active"),
         Input("nav-reactor-builder", "n_clicks"),
         Input("nav-geometry-designer", "n_clicks"),
         Input("nav-analysis", "n_clicks"),
@@ -41,27 +47,33 @@ def register_navigation_callbacks(app):
         prevent_initial_call=False,
     )
     def update_main_content(n1, n2, n3, n4, n5, n6):
-        """Update main content based on navigation clicks."""
+        """Update main content and sidebar active state based on navigation clicks."""
         from dash import callback_context as ctx
+
+        def _active(active_id):
+            content_map = {
+                "nav-reactor-builder": create_reactor_builder,
+                "nav-geometry-designer": create_geometry_designer,
+                "nav-analysis": create_analysis_panel,
+                "nav-results": create_results_viewer,
+                "nav-data-manager": create_data_manager,
+                "nav-feature-lab": create_feature_lab,
+            }
+            content = content_map.get(active_id, create_reactor_builder)()
+            flags = [
+                active_id == "nav-reactor-builder",
+                active_id == "nav-geometry-designer",
+                active_id == "nav-analysis",
+                active_id == "nav-results",
+                active_id == "nav-data-manager",
+                active_id == "nav-feature-lab",
+            ]
+            return content, *flags
 
         if not ctx.triggered:
             logger.debug("Initial load: showing reactor builder")
-            return create_reactor_builder()
+            return _active("nav-reactor-builder")
 
         button_id = ctx.triggered[0]["prop_id"].split(".")[0]
         logger.info(f"Navigation: switching to {button_id}")
-
-        if button_id == "nav-reactor-builder":
-            return create_reactor_builder()
-        elif button_id == "nav-geometry-designer":
-            return create_geometry_designer()
-        elif button_id == "nav-analysis":
-            return create_analysis_panel()
-        elif button_id == "nav-results":
-            return create_results_viewer()
-        elif button_id == "nav-data-manager":
-            return create_data_manager()
-        elif button_id == "nav-feature-lab":
-            return create_feature_lab()
-
-        return create_reactor_builder()
+        return _active(button_id)
